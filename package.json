@@ -1,0 +1,15 @@
+{
+  "scripts": {
+    "start:server": "cd server && nodemon app.js",
+    "start:client": "cd client && npm run dev",
+    "start": "concurrently \"npm run start:server\" \"npm run start:client\""
+  },
+  "devDependencies": {
+    "concurrently": "^7.0.0",
+    "nodemon": "^2.0.0"
+  },
+  "dependencies": {
+    "node-opcua": "^2.148.0",
+    "react-router-dom": "^7.2.0"
+  }
+}
