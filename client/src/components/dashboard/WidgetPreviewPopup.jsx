@@ -9,12 +9,19 @@ const WidgetPreviewPopup = ({ open, onClose, onSelect }) => {
     const rowHeight = 35;
 
     return (
-        <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+        <Dialog
+            open={open}
+            onClose={onClose}
+            fullWidth
+            PaperProps={{
+                style: {
+                    maxWidth: '80vw',
+                    maxHeight: '80vh',
+                },
+            }}
+        >
             <DialogTitle>Select a Widget</DialogTitle>
-            <DialogContent
-                dividers
-                style={{ overflowY: 'auto', overflowX: 'hidden', maxHeight: '80vh' }}
-            >
+            <DialogContent dividers style={{ overflowY: 'auto', overflowX: 'auto' }}>
                 <Grid container spacing={2}>
                     {widgetTypes.map((widgetType) => {
                         const widgetMeta = widgetRegistry[widgetType];
@@ -29,7 +36,7 @@ const WidgetPreviewPopup = ({ open, onClose, onSelect }) => {
                                     style={{
                                         padding: '1rem',
                                         cursor: 'pointer',
-                                        textAlign: 'center'
+                                        textAlign: 'center',
                                     }}
                                 >
                                     <Typography variant="h6" gutterBottom>

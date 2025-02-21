@@ -2,7 +2,13 @@ import React, { useState } from 'react';
 import { Card, CardContent, Typography, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 
-const COLORS = ['#8884d8', '#FF8042', '#0088FE', '#00C49F', '#FFBB28', '#FF4444'];
+const COLORS =
+    ['#6e6e70',
+    '#ea2e2e',
+    '#61503d',
+    '#00C49F',
+    '#90aa74',
+    '#41af48'];
 
 const generateDummyPieDataToday = () => {
     return [
