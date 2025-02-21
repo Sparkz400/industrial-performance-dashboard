@@ -32,7 +32,7 @@ const generateDummyPieDataTotal = () => {
     ];
 };
 
-const OperationModePieWidget = ({ config }) => {
+const OperationModePieWidget = ({}) => {
     const [view, setView] = useState("total");
 
     const handleViewChange = (event, newView) => {

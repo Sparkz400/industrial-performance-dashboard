@@ -31,7 +31,7 @@ const HelpPage = () => {
                     <Typography variant="h6" gutterBottom>
                         Getting Started
                     </Typography>
-                    <Typography variant="body2" paragraph>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                         Learn how to navigate through the dashboard and use its features effectively.
                     </Typography>
                     <Button variant="contained" color="primary" sx={{ mr: 2 }}>
@@ -46,7 +46,7 @@ const HelpPage = () => {
                     <Typography variant="h6" gutterBottom>
                         FAQs
                     </Typography>
-                    <Typography variant="body2" paragraph>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                         Check out the most frequently asked questions to resolve common issues.
                     </Typography>
                     <Button variant="outlined" color="secondary">
@@ -58,7 +58,7 @@ const HelpPage = () => {
                     <Typography variant="h6" gutterBottom>
                         Support
                     </Typography>
-                    <Typography variant="body2" paragraph>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                         Need more help? Contact our support team for assistance.
                     </Typography>
                     <Button variant="contained" color="secondary">

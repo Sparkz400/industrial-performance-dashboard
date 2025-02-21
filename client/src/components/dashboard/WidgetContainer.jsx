@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {Paper, IconButton, Dialog, DialogTitle, DialogContent, Typography, Button, DialogActions} from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SettingsIcon from '@mui/icons-material/Settings';
-import CloseIcon from '@mui/icons-material/Close'
 
 const WidgetContainer = ({ widget, onDelete, widgetRegistry, layoutItem, onUpdateWidgetConfig  }) => {
     const widgetMeta = widgetRegistry[widget.type];
@@ -38,7 +37,7 @@ const WidgetContainer = ({ widget, onDelete, widgetRegistry, layoutItem, onUpdat
                     <IconButton
                         onClick={handleOpenSettings}
                         aria-label="settings"
-                        style={{ background: 'rgba(131,131,131,0.8)' }}
+                        sx={{ background: 'rgba(131,131,131,0.8)' }}
                         size="small"
                     >
                         <SettingsIcon fontSize="small" />
@@ -46,7 +45,7 @@ const WidgetContainer = ({ widget, onDelete, widgetRegistry, layoutItem, onUpdat
                     <IconButton
                         onClick={onDelete}
                         aria-label="delete"
-                        style={{ background: 'rgba(131,131,131,0.8)' }}
+                        sx={{ background: 'rgba(131,131,131,0.8)' }}
                         size="small"
                     >
                         <DeleteIcon fontSize="small" />
