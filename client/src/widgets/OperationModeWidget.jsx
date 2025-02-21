@@ -11,8 +11,9 @@ import {
     Brush
 } from 'recharts';
 import { Card, CardContent, Typography } from '@mui/material';
+import io from 'socket.io-client';
 
-// Mapping numeric values to operation mode labels.
+// Map numeric operation mode values to labels.
 const modeMapping = {
     0: "Off",
     1: "Error State",
@@ -22,57 +23,58 @@ const modeMapping = {
     5: "Auto (In Production)"
 };
 
-const generateInitialData = () => {
-    const data = [];
-    const now = new Date();
-    // Generate one data point per minute for the past 2 hours (120 minutes) as an example.
-    const numPoints = 120;
-    for (let i = numPoints; i >= 0; i--) {
-        const time = new Date(now.getTime() - i * 60000);
-        // For demonstration, randomly pick a mode from 0 to 5.
-        const mode = Math.floor(Math.random() * 6);
-        data.push({
-            time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            mode
+const OperationModeWidget = () => {
+    const [data, setData] = useState([]);
+
+    // Maximum number of data points to keep.
+    const MAX_POINTS = 120;
+
+    // Function to add a new data point and keep history within MAX_POINTS.
+    const addDataPoint = (newPoint) => {
+        setData((prevData) => {
+            const updated = [...prevData, newPoint];
+            return updated.length > MAX_POINTS ? updated.slice(updated.length - MAX_POINTS) : updated;
         });
-    }
-    return data;
-};
-
-const OperationModeWidget = ({ config }) => {
-    const [data, setData] = useState(generateInitialData());
-
-    // Update every minute by shifting out the oldest value and adding a new one.
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setData(prevData => {
-                const newData = [...prevData];
-                newData.shift();
-                const now = new Date();
-                const mode = Math.floor(Math.random() * 6);
-                newData.push({
-                    time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    mode
-                });
-                return newData;
-            });
-        }, 60000);
-        return () => clearInterval(interval);
-    }, []);
-
-    // Tooltip formatter to show text labels.
-    const tooltipFormatter = (value, name) => {
-        if (name === "mode") {
-            return modeMapping[value];
-        }
-        return value;
     };
 
-    // Y-axis tick formatter to display mode labels.
-    const yTickFormatter = (value) => modeMapping[value];
+    // Fetch historical data from API on mount.
+    useEffect(() => {
+        async function fetchHistoricalData() {
+            try {
+                const response = await fetch("http://localhost:3000/api/operation-mode-data");
+                const historicalData = await response.json();
+                // Expect historicalData to be an array of objects with keys "time" and "mode".
+                setData(historicalData);
+            } catch (error) {
+                console.error("Error fetching historical operation mode data:", error);
+            }
+        }
+        fetchHistoricalData().then(() => {});
+    }, []);
 
-    // Generate ticks for all possible modes.
-    const yTicks = [0, 1, 2, 3, 4, 5];
+    // Subscribe to real-time updates via Socket.IO.
+    useEffect(() => {
+        const socket = io("http://localhost:3000"); // Adjust the URL if needed.
+
+        const handleOpcuaUpdate = (nodeData) => {
+            // Process only updates for operation mode.
+            if (nodeData.key === "OperationMode" || nodeData.key === "operationMode") {
+                const now = new Date();
+                const newPoint = {
+                    time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    mode: nodeData.value
+                };
+                addDataPoint(newPoint);
+            }
+        };
+
+        socket.on("opcuaUpdate", handleOpcuaUpdate);
+
+        return () => {
+            socket.off("opcuaUpdate", handleOpcuaUpdate);
+            socket.disconnect();
+        };
+    }, []);
 
     return (
         <Card style={{ width: '100%', height: '100%' }}>
@@ -80,29 +82,21 @@ const OperationModeWidget = ({ config }) => {
                 <Typography variant="h6" gutterBottom>
                     Operation Mode Over Time
                 </Typography>
-                <div style={{ flexGrow: 1 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={data}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="time" minTickGap={20} />
-                            <YAxis tickFormatter={yTickFormatter} ticks={yTicks} domain={[0, 5]} />
-                            <Tooltip formatter={tooltipFormatter} />
-                            <Legend />
-                            <Line
-                                type="step"
-                                dataKey="mode"
-                                stroke="#82ca9d"
-                                strokeWidth={2}
-                                name="Operation Mode"
-                                dot
-                            />
-                            <Brush className="no-drag" dataKey="time" height={30} stroke="#82ca9d" />
-                        </LineChart>
-                    </ResponsiveContainer>
-                </div>
-                <Typography variant="body2" color="textSecondary">
-                    Displays operation mode transitions. Use the brush to navigate.
-                </Typography>
+                <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="time" minTickGap={20} />
+                        <YAxis
+                            tickFormatter={(value) => modeMapping[value] || value}
+                            ticks={[0, 1, 2, 3, 4, 5]}
+                            domain={[0, 5]}
+                        />
+                        <Tooltip formatter={(value, name) => name === "mode" ? modeMapping[value] : value} />
+                        <Legend />
+                        <Line type="step" dataKey="mode" stroke="#82ca9d" strokeWidth={2} dot />
+                        <Brush className=".no-drag" dataKey="time" height={30} stroke="#82ca9d" />
+                    </LineChart>
+                </ResponsiveContainer>
             </CardContent>
         </Card>
     );

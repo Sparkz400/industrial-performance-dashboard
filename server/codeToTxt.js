@@ -1,13 +1,7 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-// Convert the module URL to a file path
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
+const fs = require('fs');
+const path = require('path');
 const extensions = [".jsx", ".css", ".js"];
-const excludedDirs = new Set(["node_modules", "public", ".idea"]);
+const excludedDirs = new Set(["node_modules", "public", ".idea", 'client']);
 const outputFile = "all_code.txt";
 
 function walkDir(dir, callback) {

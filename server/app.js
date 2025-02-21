@@ -3,12 +3,12 @@ const http = require('http');
 const socketIo = require('socket.io');
 const { Client } = require('pg');
 const cors = require('cors');
-const opcuaClient = require('./src/services/opcuaClient');
+const opcuaConnectionManager = require('./src/services/opcuaConnectionManager');
 const status = require('./src/utils/status');
-const { setOpcuaStatus } = require("./src/utils/status");
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -38,59 +38,68 @@ pgClient.connect()
         status.setDatabaseStatus("error");
     });
 
-// Function to persist sensor data robustly
-function persistSensorData(data) {
+// --- OPC UA Data Handling (Queue & Worker) ---
+const opcuaDataQueue = [];
+
+function persistOpcuaData(data) {
+    opcuaDataQueue.push(data);
+}
+
+function processOpcuaDataQueue() {
+    if (opcuaDataQueue.length === 0) return;
+
+    const data = opcuaDataQueue.shift();
     pgClient.query(
-        'INSERT INTO sensor_data(timestamp, value) VALUES (to_timestamp($1 / 1000.0), $2)',
-        [data.timestamp, data.value]
+        'INSERT INTO opcua_data(node_key, node_label, timestamp, value) VALUES ($1, $2, to_timestamp($3 / 1000.0), $4)',
+        [data.key, data.label, data.timestamp, data.value]
     )
-        .then(() => {
-            // Successfully inserted
+        .then(result => {
+            console.log(`Logged ${data.key} (${data.label}): ${data.value} at ${new Date(data.timestamp).toISOString()}`);
         })
         .catch(e => {
-            console.error('Error inserting sensor data into DB:', e);
-            // Optionally retry after 5 seconds
-            setTimeout(() => persistSensorData(data), 5000);
+            console.error('Error inserting OPC UA data into DB:', e);
+            opcuaDataQueue.unshift(data);
         });
 }
+setInterval(processOpcuaDataQueue, 1000);
 
-// Listen for sensor data from OPC UA
-const { opcuaEmitter } = opcuaClient;
-opcuaEmitter.on('sensorData', (data) => {
-    // Emit data via WebSocket
-    io.emit('sensorUpdate', data);
-    // Persist data into PostgreSQL
-    persistSensorData(data);
+// --- Listen for OPC UA Data ---
+const { opcuaEmitter } = require('./src/services/opcuaClient');
+opcuaEmitter.on('nodeChanged', (data) => {
+    io.emit('opcuaUpdate', data);
+    persistOpcuaData(data);
 });
 
-// Function to start OPC UA connection with reconnection logic
-function startOpcuaConnection() {
-    opcuaClient.connectAndSubscribe()
-        .then(_ => {
-            console.log('OPC UA connection and subscription successful:');
-            setOpcuaStatus("connected");
-        })
-        .catch(err => {
-            console.error('Error during OPC UA connection and subscription:', err);
-            setOpcuaStatus("error");
-            // Retry after 5 seconds
-            setTimeout(startOpcuaConnection, 5000);
-        });
-}
+// --- Use the OPC UA Router ---
+const opcuaRoutes = require('./src/routes/opcuaRoutes');
+app.use('/api/opcua', opcuaRoutes);
 
-// Start OPC UA connection routine
-startOpcuaConnection();
-
-// --- REST Endpoints ---
+// --- Other REST Endpoints ---
 app.get('/api/status', (req, res) => {
     res.json(status.getStatus());
 });
 
-app.get('/api/data', (req, res) => {
-    pgClient.query('SELECT * FROM sensor_data ORDER BY timestamp DESC LIMIT 10')
-        .then(result => res.json(result.rows))
-        .catch(e => res.status(500).json({ error: e.message }));
+app.get('/api/operation-mode-data', async (req, res) => {
+    try {
+        const queryText = `
+      SELECT timestamp, value 
+      FROM opcua_data 
+      WHERE node_key = 'OperationMode'
+      ORDER BY timestamp
+    `;
+        const result = await pgClient.query(queryText);
+        // Map each row into an object with "time" and "mode"
+        const data = result.rows.map(row => ({
+            time: new Date(row.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            mode: row.value
+        }));
+        res.json(data);
+    } catch (err) {
+        console.error("Error fetching operation mode data:", err);
+        res.status(500).json({ error: err.message });
+    }
 });
+
 
 // --- WebSocket Setup ---
 io.on('connection', (socket) => {
@@ -99,6 +108,9 @@ io.on('connection', (socket) => {
         console.log('Client disconnected');
     });
 });
+
+// --- Start OPC UA Connection at Startup ---
+opcuaConnectionManager.startConnection();
 
 const PORT = 3000;
 server.listen(PORT, () => {

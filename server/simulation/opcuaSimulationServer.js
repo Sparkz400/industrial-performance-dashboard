@@ -24,8 +24,38 @@ server.initialize(() => {
 
     namespace.addVariable({
         componentOf: device,
-        browseName: "SensorValue",
-        nodeId: "ns=1;s=SensorValue",
+        browseName: "AirConsumption",
+        nodeId: "ns=1;s=AirConsumption",
+        dataType: "Double",
+        minimumSamplingInterval: 1000,
+        value: {
+            get: function () {
+                return new opcua.Variant({
+                    dataType: opcua.DataType.Double,
+                    value: Math.random() * 100
+                });
+            }
+        }
+    });
+    namespace.addVariable({
+        componentOf: device,
+        browseName: "OperationMode",
+        nodeId: "ns=1;s=OperationMode",
+        dataType: "Int32",
+        minimumSamplingInterval: 1000,
+        value: {
+            get: function () {
+                return new opcua.Variant({
+                    dataType: opcua.DataType.Int32,
+                    value: Math.floor(Math.random() * 6) + 1,
+                });
+            }
+        }
+    });
+    namespace.addVariable({
+        componentOf: device,
+        browseName: "PowerConsumption",
+        nodeId: "ns=1;s=PowerConsumption",
         dataType: "Double",
         minimumSamplingInterval: 1000,
         value: {
