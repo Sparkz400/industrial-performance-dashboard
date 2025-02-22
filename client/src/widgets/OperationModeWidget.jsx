@@ -94,7 +94,7 @@ const OperationModeWidget = () => {
                         <Tooltip formatter={(value, name) => name === "mode" ? modeMapping[value] : value} />
                         <Legend />
                         <Line type="step" dataKey="mode" stroke="#82ca9d" strokeWidth={2} dot />
-                        <Brush className=".no-drag" dataKey="time" height={30} stroke="#82ca9d" />
+                        <Brush dataKey="time" className="no-drag" height={30} stroke="#82ca9d" />
                     </LineChart>
                 </ResponsiveContainer>
             </CardContent>

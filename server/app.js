@@ -5,6 +5,7 @@ const { Client } = require('pg');
 const cors = require('cors');
 const opcuaConnectionManager = require('./src/services/opcuaConnectionManager');
 const status = require('./src/utils/status');
+const pgClient = require('./src/services/dbConnection');
 
 const app = express();
 app.use(cors());
@@ -18,25 +19,6 @@ const io = socketIo(server, {
         credentials: true
     }
 });
-
-// --- PostgreSQL Setup ---
-const pgClient = new Client({
-    host: 'localhost',
-    port: 5432,
-    user: 'postgres',
-    password: 'root',
-    database: 'postgres'
-});
-
-pgClient.connect()
-    .then(() => {
-        console.log('Connected to PostgreSQL');
-        status.setDatabaseStatus("connected");
-    })
-    .catch(err => {
-        console.error('PostgreSQL connection error:', err.stack);
-        status.setDatabaseStatus("error");
-    });
 
 // --- OPC UA Data Handling (Queue & Worker) ---
 const opcuaDataQueue = [];
@@ -73,6 +55,9 @@ opcuaEmitter.on('nodeChanged', (data) => {
 // --- Use the OPC UA Router ---
 const opcuaRoutes = require('./src/routes/opcuaRoutes');
 app.use('/api/opcua', opcuaRoutes);
+
+const dbRoutes = require('./src/routes/dbRoutes');
+app.use('/api/db', dbRoutes);
 
 // --- Other REST Endpoints ---
 app.get('/api/status', (req, res) => {

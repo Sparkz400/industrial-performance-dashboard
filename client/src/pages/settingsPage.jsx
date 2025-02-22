@@ -32,18 +32,49 @@ const SettingsPage = () => {
         }
     };
 
-    const handleDisconnect = () => {
-        // Optionally, you can implement a disconnect endpoint in your backend.
-        setOpcuaConnected(false);
-        setConnectedAddress('N/A');
+    const handleDisconnect = async () => {
+        try {
+            const res = await fetch('http://localhost:3000/api/opcua/disconnect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setOpcuaConnected(false);
+                setConnectedAddress('');
+            } else {
+                console.error(data.error);
+            }
+        } catch (err) {
+            console.error('Error disconnecting from OPC UA:', err);
+        }
     };
 
-    // Optionally, fetch initial connection status from your backend when the page loads
-    // (if you have an endpoint for that)
     useEffect(() => {
-        // For now, we assume the default connection is established at startup.
-        setConnectedAddress(`${ip}:${port}`);
-        setOpcuaConnected(true);
+        const fetchStatus = async () => {
+            try {
+                const res = await fetch('http://localhost:3000/api/opcua/status');
+                const data = await res.json();
+                if (res.ok) {
+                    // Update connection state based on the backend response.
+                    setOpcuaConnected(data.connected);
+                    if (data.connected && data.config) {
+                        setIp(data.config.ip);
+                        setPort(data.config.port);
+                        setResourcePath(data.config.resourcePath);
+                        setConnectedAddress(`${data.config.ip}:${data.config.port}`);
+                    } else {
+                        setConnectedAddress('');
+                    }
+                } else {
+                    console.error('Error fetching status:', data.error);
+                }
+            } catch (err) {
+                console.error('Error fetching connection status:', err);
+            }
+        };
+
+        fetchStatus().then(() => {});
     }, []);
 
     return (

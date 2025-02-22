@@ -10,6 +10,9 @@ let currentConfig = {
 
 // Store the current connection objects (client, session, subscription) so they can be closed
 let currentConnection = null;
+let client = null;
+let session = null;
+
 
 // Helper: Create the full endpoint URL from the current config.
 function getEndpointUrl(config = currentConfig) {
@@ -38,10 +41,39 @@ function startConnection() {
 
 // Disconnect the current connection if it exists.
 function disconnectConnection() {
-    if (currentConnection && opcuaClient.disconnectCurrentConnection) {
-        return opcuaClient.disconnectCurrentConnection(currentConnection)
+    if (currentConnection) {
+        const disconnectPromises = [];
+
+        // Terminate the subscription if it exists.
+        if (currentConnection.subscription) {
+            disconnectPromises.push(
+                currentConnection.subscription.terminate().catch(err => {
+                    console.error("Error terminating subscription:", err);
+                })
+            );
+        }
+
+        // Close the session if it exists.
+        if (currentConnection.session) {
+            disconnectPromises.push(
+                currentConnection.session.close().catch(err => {
+                    console.error("Error closing session:", err);
+                })
+            );
+        }
+
+        // Disconnect the client if it exists.
+        if (currentConnection.client) {
+            disconnectPromises.push(
+                currentConnection.client.disconnect().catch(err => {
+                    console.error("Error disconnecting client:", err);
+                })
+            );
+        }
+
+        return Promise.all(disconnectPromises)
             .then(() => {
-                console.log("OPC UA connection disconnected.");
+                console.log("OPC UA connection fully disconnected.");
                 setOpcuaStatus("disconnected");
                 currentConnection = null;
             })
