@@ -1,101 +1,94 @@
-const opcuaClient = require('./opcuaClient'); // your existing client service module
+const opcuaClient = require('./opcuaClient');
 const { setOpcuaStatus, getStatus } = require('../utils/status');
+const logger = require('../utils/logger');
 
-// Default OPC UA connection configuration
+let retryDelay = 5000;
+
 let currentConfig = {
-    ip: "localhost",
-    port: 4840,
-    resourcePath: "/UA/MyLittleServer"
+    ip: process.env.OPCUA_IP || "localhost",
+    port: process.env.OPCUA_PORT || 4840,
+    resourcePath: process.env.OPCUA_RESOURCE_PATH || "/UA/MyLittleServer"
 };
 
-// Store the current connection objects (client, session, subscription) so they can be closed
 let currentConnection = null;
-let client = null;
-let session = null;
 
-
-// Helper: Create the full endpoint URL from the current config.
+/**
+ * Constructs the OPC UA endpoint URL.
+ * @param {Object} config - Configuration object.
+ * @returns {string} - OPC UA endpoint URL.
+ */
 function getEndpointUrl(config = currentConfig) {
     return `opc.tcp://${config.ip}:${config.port}${config.resourcePath}`;
 }
 
-// Start the OPC UA connection using currentConfig.
-function startConnection() {
+async function startConnection() {
     const endpointUrl = getEndpointUrl();
     console.log("Attempting OPC UA connection to:", endpointUrl);
-
-    // Connect and subscribe using your client module.
-    return opcuaClient.connectAndSubscribe(endpointUrl)
-        .then(connection => {
-            currentConnection = connection;
-            console.log("OPC UA connection and subscription successful.");
-            setOpcuaStatus("connected");
-        })
-        .catch(err => {
-            console.error("Error during OPC UA connection:", err);
-            setOpcuaStatus("error");
-            // Retry after 5 seconds
-            setTimeout(startConnection, 5000);
-        });
-}
-
-// Disconnect the current connection if it exists.
-function disconnectConnection() {
-    if (currentConnection) {
-        const disconnectPromises = [];
-
-        // Terminate the subscription if it exists.
-        if (currentConnection.subscription) {
-            disconnectPromises.push(
-                currentConnection.subscription.terminate().catch(err => {
-                    console.error("Error terminating subscription:", err);
-                })
-            );
-        }
-
-        // Close the session if it exists.
-        if (currentConnection.session) {
-            disconnectPromises.push(
-                currentConnection.session.close().catch(err => {
-                    console.error("Error closing session:", err);
-                })
-            );
-        }
-
-        // Disconnect the client if it exists.
-        if (currentConnection.client) {
-            disconnectPromises.push(
-                currentConnection.client.disconnect().catch(err => {
-                    console.error("Error disconnecting client:", err);
-                })
-            );
-        }
-
-        return Promise.all(disconnectPromises)
-            .then(() => {
-                console.log("OPC UA connection fully disconnected.");
-                setOpcuaStatus("disconnected");
-                currentConnection = null;
-            })
-            .catch(err => {
-                console.error("Error disconnecting OPC UA connection:", err);
-            });
-    } else {
-        console.log("No OPC UA connection to disconnect.");
-        setOpcuaStatus("disconnected");
-        currentConnection = null;
-        return Promise.resolve();
+    try {
+        currentConnection = await opcuaClient.connectAndSubscribe(endpointUrl);
+        logger.info("OPC UA connection and subscription successful.");
+        setOpcuaStatus("connected");
+        retryDelay = 5000;
+    } catch (error) {
+        logger.error("Error during OPC UA connection:", error);
+        setOpcuaStatus("error");
+        retryDelay = Math.min(retryDelay * 2, 300000);
+        setTimeout(startConnection, retryDelay);
     }
 }
 
-// Update connection settings: disconnect current connection (if any), update config, and reconnect.
-function updateConnection(newConfig) {
-    currentConfig = { ...currentConfig, ...newConfig };
-    return disconnectConnection().then(() => startConnection())
-        .then(() => currentConfig);
+async function disconnectConnection() {
+    if (currentConnection) {
+        const { subscription, session, client } = currentConnection;
+        const disconnectPromises = [];
+        if (subscription) {
+            disconnectPromises.push(
+                subscription.terminate().catch(err => {
+                    logger.error("Error terminating subscription:", err);
+                })
+            );
+        }
+        if (session) {
+            disconnectPromises.push(
+                session.close().catch(err => {
+                    logger.error("Error closing session:", err);
+                })
+            );
+        }
+        if (client) {
+            disconnectPromises.push(
+                client.disconnect().catch(err => {
+                    logger.error("Error disconnecting client:", err);
+                })
+            );
+        }
+        await Promise.all(disconnectPromises);
+        logger.info("OPC UA connection fully disconnected.");
+        setOpcuaStatus("disconnected");
+        currentConnection = null;
+    } else {
+        logger.info("No OPC UA connection to disconnect.");
+        setOpcuaStatus("disconnected");
+    }
 }
 
-// Expose the current status (from your status utility)
+
+/**
+ * Updates the OPC UA connection configuration and restarts the connection.
+ * @param {Object} newConfig - New configuration parameters.
+ * @returns {Promise<Object>} - Updated configuration.
+ */
+async function updateConnection(newConfig) {
+    currentConfig = { ...currentConfig, ...newConfig };
+    await disconnectConnection();
+    await startConnection();
+    return currentConfig;
+}
+
+/**
+ * Retrieves the current OPC UA connection status.
+ * @returns {Object} - Current status.
+ */
 function getConnectionStatus() {
     return getStatus();
 }

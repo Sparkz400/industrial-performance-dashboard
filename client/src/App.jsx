@@ -34,18 +34,9 @@ const darkTheme = createTheme({
 });
 
 function App() {
-    const [sensorData, setSensorData] = useState([]);
     const [status, setStatus] = useState({ database: 'unknown', opcua: 'unknown' });
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [drawerWidth, setDrawerWidth] = useState(0);
-
-    useEffect(() => {
-        const socket = io('http://localhost:3000');
-        socket.on('sensorUpdate', (data) => {
-            setSensorData((prev) => [data, ...prev]);
-        });
-        return () => socket.disconnect();
-    }, []);
 
     useEffect(() => {
         async function fetchStatus() {
@@ -53,9 +44,7 @@ function App() {
                 const res = await fetch('http://localhost:3000/api/status');
                 const data = await res.json();
                 setStatus(data);
-            } catch (err) {
-                console.error('Error fetching status:', err);
-            }
+            } catch (err) {}
         }
         fetchStatus();
         const interval = setInterval(fetchStatus, 5000);
@@ -83,7 +72,7 @@ function App() {
                         maxHeight: '100vh'
                     }}>
                         <Routes>
-                            <Route path="/" element={<DashboardManager status={status} sensorData={sensorData} />} />
+                            <Route path="/" element={<DashboardManager status={status}/>} />
                             <Route path="/settings" element={<SettingsPage />} />
                             <Route path="/help" element={<HelpPage />} />
                         </Routes>

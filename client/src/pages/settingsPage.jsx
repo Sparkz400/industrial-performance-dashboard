@@ -10,18 +10,23 @@ const SettingsPage = () => {
     const [dbOnline, setDbOnline] = useState(false);
     const [connectedAddress, setConnectedAddress] = useState('');
 
-    // Function to connect to OPC UA server via our API
+    const sanitizePort = (value) => {
+        const port = parseInt(value, 10);
+        return (port > 0 && port <= 65535) ? port : 4840;
+    };
+
     const handleConnect = async () => {
         try {
+            const sanitizedPort = sanitizePort(port);
             const res = await fetch('http://localhost:3000/api/opcua/connect', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ip, port, resourcePath })
+                body: JSON.stringify({ ip, sanitizedPort, resourcePath })
             });
             const data = await res.json();
             if (res.ok) {
                 setOpcuaConnected(true);
-                setConnectedAddress(`${ip}:${port}`);
+                setConnectedAddress(`${ip}:${sanitizedPort}`);
             } else {
                 console.error(data.error);
                 setOpcuaConnected(false);
@@ -88,7 +93,7 @@ const SettingsPage = () => {
                     OPC UA Server Connection
                 </Typography>
                 <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} sm={3}>
+                    <Grid xs={12} sm={3}>
                         <TextField
                             label="IP Address"
                             variant="outlined"
@@ -97,7 +102,7 @@ const SettingsPage = () => {
                             onChange={(e) => setIp(e.target.value)}
                         />
                     </Grid>
-                    <Grid item xs={12} sm={3}>
+                    <Grid xs={12} sm={3}>
                         <TextField
                             label="Port"
                             variant="outlined"
@@ -106,7 +111,7 @@ const SettingsPage = () => {
                             onChange={(e) => setPort(e.target.value)}
                         />
                     </Grid>
-                    <Grid item xs={12} sm={3}>
+                    <Grid xs={12} sm={3}>
                         <TextField
                             label="Resource Path"
                             variant="outlined"
@@ -115,12 +120,12 @@ const SettingsPage = () => {
                             onChange={(e) => setResourcePath(e.target.value)}
                         />
                     </Grid>
-                    <Grid item xs={12} sm={3}>
+                    <Grid xs={12} sm={3}>
                         <Button variant="contained" color="primary" onClick={handleConnect}>
                             Connect
                         </Button>
                     </Grid>
-                    <Grid item xs={12} sm={3}>
+                    <Grid xs={12} sm={3}>
                         <Button variant="outlined" color="secondary" onClick={handleDisconnect}>
                             Disconnect
                         </Button>

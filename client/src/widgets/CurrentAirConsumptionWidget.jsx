@@ -28,6 +28,8 @@ const generateInitialData = () => {
 
 const currentAirConsumptionWidget = ({ config }) => {
     const [data, setData] = useState(generateInitialData());
+    // Get the simple mode flag from the config
+    const simpleMode = config.simpleMode;
 
     // Simulate live updates: every minute, remove the oldest point and add a new one.
     useEffect(() => {
@@ -53,16 +55,18 @@ const currentAirConsumptionWidget = ({ config }) => {
     return (
         <Card style={{ width: '100%', height: '100%' }}>
             <CardContent style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <Typography variant="h6" gutterBottom>
-                    Air Consumption (Last 24 Hours)
-                </Typography>
-                {/* Container that fills available space */}
+                {/* Only show the title if simple mode is not enabled */}
+                {!simpleMode && (
+                    <Typography variant="h6" gutterBottom>
+                        Air Consumption (Last 24 Hours)
+                    </Typography>
+                )}
                 <div style={{ flexGrow: 1 }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={data}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="time" minTickGap={20} />
-                            <YAxis/>
+                            <YAxis />
                             <Tooltip formatter={(value) => `${value} m³/h`} />
                             <Legend />
                             <Line
@@ -83,9 +87,12 @@ const currentAirConsumptionWidget = ({ config }) => {
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
-                <Typography variant="body2" color="textSecondary">
-                    Use the brush above to scroll back up to 24 hours.
-                </Typography>
+                {/* Only show the helper text if simple mode is not enabled */}
+                {!simpleMode && (
+                    <Typography variant="body2" color="textSecondary">
+                        Use the brush above to scroll back up to 24 hours.
+                    </Typography>
+                )}
             </CardContent>
         </Card>
     );

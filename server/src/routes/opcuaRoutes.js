@@ -1,36 +1,37 @@
 const express = require('express');
 const router = express.Router();
 const opcuaConnectionManager = require('../services/opcuaConnectionManager');
+const logger = require('../utils/logger');
 
-// Get current OPC UA connection status
+// Get current OPC UA connection status.
 router.get('/status', (req, res) => {
     res.json(opcuaConnectionManager.getConnectionStatus());
 });
-
-// Connect/update OPC UA connection using provided settings
-router.post('/connect', (req, res) => {
-    const { ip, port, resourcePath } = req.body;
-    if (!ip || !port) {
-        return res.status(400).json({ error: "IP and port are required" });
+// Connect/update OPC UA connection using provided settings.
+router.post('/connect', async (req, res) => {
+    try {
+        const { ip, port, resourcePath } = req.body;
+        if (!ip || !port) {
+            return res.status(400).json({ error: "IP and port are required" });
+        }
+        const newConfig = { ip, port, resourcePath: resourcePath || "/UA/MyLittleServer" };
+        const config = await opcuaConnectionManager.updateConnection(newConfig);
+        res.json({ message: "OPC UA connection reinitialized", config });
+    } catch (error) {
+        logger.error("Error in OPC UA connect endpoint:", error);
+        res.status(500).json({ error: error.message });
     }
-    opcuaConnectionManager.updateConnection({
-        ip,
-        port,
-        resourcePath: resourcePath || "/UA/MyLittleServer"
-    })
-        .then(newConfig => {
-            res.json({ message: "OPC UA connection reinitialized", config: newConfig });
-        })
-        .catch(err => {
-            res.status(500).json({ error: err.message });
-        });
 });
 
-// Disconnect current OPC UA connection
-router.post('/disconnect', (req, res) => {
-    opcuaConnectionManager.disconnectConnection()
-        .then(() => res.json({ message: "OPC UA connection disconnected" }))
-        .catch(err => res.status(500).json({ error: err.message }));
+// Disconnect current OPC UA connection.
+router.post('/disconnect', async (req, res) => {
+    try {
+        await opcuaConnectionManager.disconnectConnection();
+        res.json({ message: "OPC UA connection disconnected" });
+    } catch (error) {
+        logger.error("Error in OPC UA disconnect endpoint:", error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 module.exports = router;

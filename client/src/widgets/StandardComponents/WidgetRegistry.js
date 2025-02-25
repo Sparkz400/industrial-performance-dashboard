@@ -1,16 +1,10 @@
-import DummyWidget from './DummyWidget';
-import currentAirConsumptionWidget from './CurrentAirConsumptionWidget';
-import OperationModeWidget from './OperationModeWidget';
-import OperationModePieWidget from "./OperationModeWidgetPie";
-import UptimeWidget from "./Uptime/UptimeRatePerDayWidget.jsx"
-import UptimeRatePerDaySettings from "./Uptime/UptimeRatePerDaySettings.jsx";
+import currentAirConsumptionWidget from '../CurrentAirConsumptionWidget.jsx';
+import OperationModeWidget from '../OperationModeWidget.jsx';
+import OperationModePieWidget from "../OperationModeWidgetPie.jsx";
+import UptimeWidget from "../Uptime/UptimeRatePerDayWidget.jsx"
+import UptimeRatePerDaySettings from "../Uptime/UptimeRatePerDaySettings.jsx";
 
 export const widgetRegistry = {
-    dummy: {
-        component: DummyWidget,
-        minW: 2,
-        minH: 2
-    },
     currentAirConsumptionWidget: {
         component: currentAirConsumptionWidget,
         minW: 4,

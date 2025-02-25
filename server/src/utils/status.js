@@ -12,7 +12,7 @@ function setOpcuaStatus(newStatus) {
 }
 
 function getStatus() {
-    return status;
+    return { ...status };
 }
 
 module.exports = {

@@ -14,10 +14,10 @@ const HelpPage = () => {
         >
             <Paper sx={{ p: 4, borderRadius: 2, boxShadow: 3 }}>
                 <Grid container spacing={2} alignItems="center">
-                    <Grid item>
+                    <Grid>
                         <HelpOutlineIcon sx={{ fontSize: 50, color: '#b3b3b3' }} />
                     </Grid>
-                    <Grid item xs>
+                    <Grid xs>
                         <Typography variant="h4" gutterBottom>
                             Help & Documentation
                         </Typography>

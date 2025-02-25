@@ -1,6 +1,6 @@
 import React from 'react';
 import { Dialog, DialogTitle, DialogContent, Paper, Typography } from '@mui/material';
-import { widgetRegistry } from '../../widgets/WidgetRegistry';
+import { widgetRegistry } from '../../widgets/StandardComponents/WidgetRegistry.js';
 import Grid from '@mui/material/Grid2';
 
 const rowHeight = 35;

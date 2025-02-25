@@ -16,6 +16,8 @@
     "@mui/icons-material": "^6.4.5",
     "@mui/material": "^6.4.5",
     "@mui/system": "^6.4.3",
+    "eslint-plugin-jsdoc": "^50.6.3",
+    "eslint-plugin-security": "^3.0.1",
     "highcharts": "^12.1.2",
     "highcharts-react-official": "^3.2.1",
     "react": "^19.0.0",

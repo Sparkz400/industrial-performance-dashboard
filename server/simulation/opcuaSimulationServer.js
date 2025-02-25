@@ -1,7 +1,7 @@
 const opcua = require("node-opcua");
 
 const server = new opcua.OPCUAServer({
-    port: 4840,
+    port: process.env.OPCUA_PORT || 4840,
     resourcePath: "/UA/MyLittleServer",
     allowAnonymous: true,
     buildInfo: {
@@ -12,7 +12,7 @@ const server = new opcua.OPCUAServer({
 });
 
 server.initialize(() => {
-    console.log("Server initialized");
+    console.log("OPC UA Simulation Server initialized");
 
     const addressSpace = server.engine.addressSpace;
     const namespace = addressSpace.getOwnNamespace();
@@ -29,12 +29,10 @@ server.initialize(() => {
         dataType: "Double",
         minimumSamplingInterval: 1000,
         value: {
-            get: function () {
-                return new opcua.Variant({
-                    dataType: opcua.DataType.Double,
-                    value: Math.random() * 100
-                });
-            }
+            get: () => new opcua.Variant({
+                dataType: opcua.DataType.Double,
+                value: Math.random() * 100
+            })
         }
     });
     namespace.addVariable({
@@ -44,12 +42,10 @@ server.initialize(() => {
         dataType: "Int32",
         minimumSamplingInterval: 1000,
         value: {
-            get: function () {
-                return new opcua.Variant({
-                    dataType: opcua.DataType.Int32,
-                    value: Math.floor(Math.random() * 6) + 1,
-                });
-            }
+            get: () => new opcua.Variant({
+                dataType: opcua.DataType.Int32,
+                value: Math.floor(Math.random() * 6) + 1,
+            })
         }
     });
     namespace.addVariable({
@@ -59,33 +55,29 @@ server.initialize(() => {
         dataType: "Double",
         minimumSamplingInterval: 1000,
         value: {
-            get: function () {
-                return new opcua.Variant({
-                    dataType: opcua.DataType.Double,
-                    value: Math.random() * 100
-                });
-            }
+            get: () => new opcua.Variant({
+                dataType: opcua.DataType.Double,
+                value: Math.random() * 100
+            })
         }
     });
 
     server.start((err) => {
         if (err) {
-            console.error("Error starting server:", err);
+            console.error("Error starting OPC UA Simulation Server:", err);
         } else {
-            const endpointUrl = server.getEndpointUrl();
-            console.log("Server is now listening on endpoint:", endpointUrl);
+            console.log("OPC UA Simulation Server is now listening on endpoint:", server.getEndpointUrl());
         }
     });
 });
 
 function shutdownServer() {
-    console.log("Shutting down OPC UA Server...");
+    console.log("Shutting down OPC UA Simulation Server...");
     server.shutdown(1000, () => {
-        console.log("OPC UA Server shutdown complete.");
+        console.log("OPC UA Simulation Server shutdown complete.");
         process.exit(0);
     });
 }
 
-// Handle Ctrl+C (SIGINT) and termination (SIGTERM)
 process.on("SIGINT", shutdownServer);
 process.on("SIGTERM", shutdownServer);

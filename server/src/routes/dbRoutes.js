@@ -1,22 +1,17 @@
-const { Client } = require('pg');
-const status = require('../utils/status');
+const express = require('express');
+const router = express.Router();
+const dbPool = require('../services/dbConnection');
+const logger = require('../utils/logger');
 
-const client = new Client({
-    host: 'localhost',
-    port: 5432,
-    user: 'postgres',
-    password: 'root',
-    database: 'postgres'
+// A simple test endpoint to verify DB connectivity.
+router.get('/test', async (req, res, next) => {
+    try {
+        const result = await dbPool.query('SELECT NOW()');
+        res.json({ status: 'ok', time: result.rows[0] });
+    } catch (err) {
+        logger.error("Database query error:", err);
+        next(err);
+    }
 });
 
-client.connect(undefined)
-    .then(() => {
-        console.log('Connected to PostgreSQL');
-        status.setDatabaseStatus("connected");
-    })
-    .catch(err => {
-        console.error('PostgreSQL connection error:', err.stack);
-        status.setDatabaseStatus("error");
-    });
-
-module.exports = client;
+module.exports = router;

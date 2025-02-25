@@ -1,49 +1,86 @@
+require('dotenv').config();
+
 const express = require('express');
 const http = require('http');
-const socketIo = require('socket.io');
-const { Client } = require('pg');
 const cors = require('cors');
+const socketIo = require('socket.io');
+const dbClient = require('./src/services/dbConnection');
 const opcuaConnectionManager = require('./src/services/opcuaConnectionManager');
 const status = require('./src/utils/status');
-const pgClient = require('./src/services/dbConnection');
+const helmet = require('helmet');
+const { rateLimiter } = require('./src/middleware/security');
+const logger = require('./src/utils/logger');
+const { AsyncQueue } = require('./src/utils/queue');
 
 const app = express();
-app.use(cors());
+const compression = require('compression');
+
+app.use(cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    credentials: true
+}));
 app.use(express.json());
+app.use(helmet());
+app.use(rateLimiter);
+app.use(compression());
+app.set('etag', 'strong');
+app.disable('x-powered-by');
+
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+            "script-src": ["'self'", "'unsafe-inline'"], // Adjust based on needs
+        },
+    },
+    crossOriginEmbedderPolicy: false,
+}));
 
 const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
-        origin: "http://localhost:5173", // Adjust for your client URL
+        origin: process.env.CLIENT_URL || 'http://localhost:5173',
         methods: ["GET", "POST"],
         credentials: true
     }
 });
 
-// --- OPC UA Data Handling (Queue & Worker) ---
-const opcuaDataQueue = [];
+// --- OPC UA Data Queue and Worker ---
+const opcuaDataQueue = new AsyncQueue();
 
-function persistOpcuaData(data) {
-    opcuaDataQueue.push(data);
-}
+const persistOpcuaData = (data) => {
+    opcuaDataQueue.enqueue(data);
+};
 
-function processOpcuaDataQueue() {
-    if (opcuaDataQueue.length === 0) return;
 
-    const data = opcuaDataQueue.shift();
-    pgClient.query(
-        'INSERT INTO opcua_data(node_key, node_label, timestamp, value) VALUES ($1, $2, to_timestamp($3 / 1000.0), $4)',
-        [data.key, data.label, data.timestamp, data.value]
-    )
-        .then(result => {
-            console.log(`Logged ${data.key} (${data.label}): ${data.value} at ${new Date(data.timestamp).toISOString()}`);
-        })
-        .catch(e => {
-            console.error('Error inserting OPC UA data into DB:', e);
-            opcuaDataQueue.unshift(data);
-        });
-}
-setInterval(processOpcuaDataQueue, 1000);
+const processOpcuaDataQueue = async () => {
+    const batch = opcuaDataQueue.drain(100); // Process in batches of 100
+    if (batch.length === 0) return;
+
+    try {
+        await dbClient.query(`
+            INSERT INTO opcua_data(node_key, node_label, timestamp, value)
+            SELECT * FROM UNNEST($1::text[], $2::text[], $3::timestamptz[], $4::float[])
+        `, [
+            batch.map(d => d.key),
+            batch.map(d => d.label),
+            batch.map(d => new Date(d.timestamp)),
+            batch.map(d => d.value)
+        ]);
+    } catch (error) {
+        logger.error('Batch insert error:', error);
+        opcuaDataQueue.prepend(batch);
+    }
+};
+
+// Replace setInterval with more efficient processing
+const processQueue = async () => {
+    while (true) {
+        await processOpcuaDataQueue();
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+};
+processQueue();
 
 // --- Listen for OPC UA Data ---
 const { opcuaEmitter } = require('./src/services/opcuaClient');
@@ -52,52 +89,82 @@ opcuaEmitter.on('nodeChanged', (data) => {
     persistOpcuaData(data);
 });
 
-// --- Use the OPC UA Router ---
+// --- REST Routes ---
+const dashboardRoutes = require('./src/routes/dashboardRoutes');
+app.use('/api/dashboards', dashboardRoutes);
+
 const opcuaRoutes = require('./src/routes/opcuaRoutes');
 app.use('/api/opcua', opcuaRoutes);
 
 const dbRoutes = require('./src/routes/dbRoutes');
 app.use('/api/db', dbRoutes);
 
-// --- Other REST Endpoints ---
 app.get('/api/status', (req, res) => {
     res.json(status.getStatus());
 });
 
-app.get('/api/operation-mode-data', async (req, res) => {
+app.get('/api/operation-mode-data', async (req, res, next) => {
     try {
+        const limit = parseInt(req.query.limit) || 100;
+        const offset = parseInt(req.query.offset) || 0;
         const queryText = `
-      SELECT timestamp, value 
-      FROM opcua_data 
+      SELECT timestamp, value
+      FROM opcua_data
       WHERE node_key = 'OperationMode'
       ORDER BY timestamp
+      LIMIT $1 OFFSET $2
     `;
-        const result = await pgClient.query(queryText);
-        // Map each row into an object with "time" and "mode"
+        const result = await dbClient.query(queryText, [limit, offset]);
         const data = result.rows.map(row => ({
             time: new Date(row.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            mode: row.value
+            mode: row.value,
         }));
         res.json(data);
     } catch (err) {
-        console.error("Error fetching operation mode data:", err);
-        res.status(500).json({ error: err.message });
+        logger.error('Error fetching operation mode data:', err);
+        next(err);
     }
 });
 
-
-// --- WebSocket Setup ---
+// --- WebSocket Connection ---
 io.on('connection', (socket) => {
-    console.log('A client connected via WebSocket');
+    logger.info('A client connected via WebSocket');
     socket.on('disconnect', () => {
-        console.log('Client disconnected');
+        logger.info('Client disconnected');
     });
 });
 
-// --- Start OPC UA Connection at Startup ---
+// --- Start OPC UA Connection ---
 opcuaConnectionManager.startConnection();
 
-const PORT = 3000;
+// --- Global Error Handling Middleware ---
+app.use((err, req, res, next) => {
+    logger.error(err.stack);
+    const statusCode = err.statusCode || 500;
+    const message = err.isOperational ? err.message : 'Internal Server Error';
+    res.status(statusCode).json({ error: message });
+});
+
+// --- Graceful Shutdown ---
+const shutdown = async () => {
+    logger.info("Shutting down server...");
+    try {
+        await opcuaConnectionManager.disconnectConnection();
+        await dbClient.end();
+        server.close(() => {
+            logger.info("HTTP server closed.");
+            process.exit(0);
+        });
+    } catch (error) {
+        console.error("Error during shutdown:", error);
+        process.exit(1);
+    }
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    logger.info(`Server is running on http://localhost:${PORT}`);
 });
