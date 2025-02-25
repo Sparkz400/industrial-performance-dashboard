@@ -11,6 +11,7 @@ import {
     ThemeProvider
 } from '@mui/material';
 import ResponsiveSidebar from './components/sidebar/sidebar.jsx';
+import { API_ENDPOINTS, POLLING_INTERVAL_MS } from './config/config';
 
 // Lazy load pages
 const DashboardManager = React.lazy(() => import('./pages/dashboardPage.jsx'));
@@ -42,7 +43,7 @@ function App() {
     useEffect(() => {
         async function fetchStatus() {
             try {
-                const res = await fetch('http://localhost:3000/api/status');
+                const res = await fetch(API_ENDPOINTS.status);
                 const data = await res.json();
                 setStatus(data);
             } catch (err) {
@@ -50,7 +51,7 @@ function App() {
             }
         }
         fetchStatus();
-        const interval = setInterval(fetchStatus, 5000);
+        const interval = setInterval(fetchStatus, POLLING_INTERVAL_MS);
         return () => clearInterval(interval);
     }, []);
 

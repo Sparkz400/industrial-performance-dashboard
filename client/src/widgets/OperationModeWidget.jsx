@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { Card, CardContent, Typography } from '@mui/material';
 import io from 'socket.io-client';
+import { API_ENDPOINTS, WEBSOCKET_ADDR} from '../config/config';
 
 // Map numeric operation mode values to labels.
 const modeMapping = {
@@ -41,9 +42,8 @@ const OperationModeWidget = () => {
     useEffect(() => {
         async function fetchHistoricalData() {
             try {
-                const response = await fetch("http://localhost:3000/api/operation-mode-data");
+                const response = await fetch(API_ENDPOINTS.operationModeData);
                 const historicalData = await response.json();
-                // Expect historicalData to be an array of objects with keys "time" and "mode".
                 setData(historicalData);
             } catch (error) {
                 console.error("Error fetching historical operation mode data:", error);
@@ -54,7 +54,7 @@ const OperationModeWidget = () => {
 
     // Subscribe to real-time updates via Socket.IO.
     useEffect(() => {
-        const socket = io("http://localhost:3000"); // Adjust the URL if needed.
+        const socket = io(WEBSOCKET_ADDR); // Adjust the URL if needed.
 
         const handleOpcuaUpdate = (nodeData) => {
             // Process only updates for operation mode.

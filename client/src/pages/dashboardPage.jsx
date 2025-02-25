@@ -9,6 +9,7 @@ import 'react-resizable/css/styles.css';
 import AddWidgetButton from '../components/dashboard/addWidgetButton.jsx';
 import WidgetPreviewPopup from '../components/dashboard/WidgetPreviewPopup.jsx';
 import WidgetContainer from '../widgets/StandardComponents/WidgetContainer.jsx';
+import { API_ENDPOINTS} from '../config/config';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -79,7 +80,7 @@ function DashboardPage() {
 
     const handleDeleteDashboard = async (dashboardId) => {
         try {
-            await fetch(`http://localhost:3000/api/dashboards/${dashboardId}`, { method: 'DELETE' });
+            await fetch(`${API_ENDPOINTS.dashboards}/${dashboardId}`, { method: 'DELETE' });
         } catch (error) {}
         const newDashboards = dashboards.filter(d => d.id !== dashboardId);
         setDashboards(newDashboards);
@@ -113,7 +114,7 @@ function DashboardPage() {
 
     // --- Persistence Functions ---
     async function saveDashboardToDB(dashboard) {
-        const response = await fetch(`http://localhost:3000/api/dashboards/${dashboard.id}`, {
+        const response = await fetch(`${API_ENDPOINTS.dashboards}/${dashboard.id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dashboard)
@@ -155,7 +156,7 @@ function DashboardPage() {
     useEffect(() => {
         async function loadDashboards() {
             try {
-                const res = await fetch('http://localhost:3000/api/dashboards');
+                const res = await fetch(API_ENDPOINTS.dashboards);
                 if (res.ok) {
                     const dashboardsData = await res.json();
                     if (dashboardsData.length > 0) {

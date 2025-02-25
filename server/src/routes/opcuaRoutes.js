@@ -5,8 +5,17 @@ const logger = require('../utils/logger');
 
 // Get current OPC UA connection status.
 router.get('/status', (req, res) => {
-    res.json(opcuaConnectionManager.getConnectionStatus());
+    const status = opcuaConnectionManager.getConnectionStatus() || { database: "not connected", opcua: "not connected" };
+    res.json({
+        connected: status.opcua === 'connected',
+        config: {
+            ip: process.env.OPCUA_IP || "localhost",
+            port: process.env.OPCUA_PORT || 4840,
+            resourcePath: process.env.OPCUA_RESOURCE_PATH || "/UA/MyLittleServer"
+        }
+    });
 });
+
 // Connect/update OPC UA connection using provided settings.
 router.post('/connect', async (req, res) => {
     try {

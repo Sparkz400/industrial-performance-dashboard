@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Typography, Box, TextField, Button, Paper } from '@mui/material';
 import Grid from '@mui/material/Grid2';
+import API_ENDPOINTS from '../config/config';
 
 const SettingsPage = () => {
     const [ip, setIp] = useState('localhost');  // default IP
@@ -21,7 +22,7 @@ const SettingsPage = () => {
             const res = await fetch('http://localhost:3000/api/opcua/connect', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ip, sanitizedPort, resourcePath })
+                body: JSON.stringify({ ip: ip, port: sanitizedPort, resourcePath: resourcePath })
             });
             const data = await res.json();
             if (res.ok) {
@@ -65,7 +66,7 @@ const SettingsPage = () => {
                     setOpcuaConnected(data.connected);
                     if (data.connected && data.config) {
                         setIp(data.config.ip);
-                        setPort(data.config.port);
+                        setPort(data.config.port.toString());
                         setResourcePath(data.config.resourcePath);
                         setConnectedAddress(`${data.config.ip}:${data.config.port}`);
                     } else {
