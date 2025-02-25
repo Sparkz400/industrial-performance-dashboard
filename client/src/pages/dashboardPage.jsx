@@ -9,7 +9,6 @@ import 'react-resizable/css/styles.css';
 import AddWidgetButton from '../components/dashboard/addWidgetButton.jsx';
 import WidgetPreviewPopup from '../components/dashboard/WidgetPreviewPopup.jsx';
 import WidgetContainer from '../widgets/StandardComponents/WidgetContainer.jsx';
-import { debounce } from '../utils/debounce';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -114,7 +113,6 @@ function DashboardPage() {
 
     // --- Persistence Functions ---
     async function saveDashboardToDB(dashboard) {
-        console.log('Saving dashboard to DB:', dashboard);
         const response = await fetch(`http://localhost:3000/api/dashboards/${dashboard.id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -135,8 +133,11 @@ function DashboardPage() {
     // Write the entire dashboards array to local storage whenever it changes
     useEffect(() => {
         if (!initialized) return;
-        localStorage.setItem('dashboards', JSON.stringify(dashboards));
-    }, [dashboards]);
+        const handler = setTimeout(() => {
+            localStorage.setItem('dashboards', JSON.stringify(dashboards));
+        }, 1000); // Debounce delay of 1 second.
+        return () => clearTimeout(handler);
+    }, [dashboards, initialized]);
 
     // Persist current dashboard state on widget/layout change (after initialization)
     useEffect(() => {

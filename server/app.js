@@ -52,11 +52,9 @@ const persistOpcuaData = (data) => {
     opcuaDataQueue.enqueue(data);
 };
 
-
 const processOpcuaDataQueue = async () => {
     const batch = opcuaDataQueue.drain(100); // Process in batches of 100
-    if (batch.length === 0) return;
-
+    if (batch.length === 0) return false;
     try {
         await dbClient.query(`
             INSERT INTO opcua_data(node_key, node_label, timestamp, value)
@@ -66,21 +64,37 @@ const processOpcuaDataQueue = async () => {
             batch.map(d => d.label),
             batch.map(d => new Date(d.timestamp)),
             batch.map(d => d.value)
-        ]);
+        ]
+        );
+        return true;
     } catch (error) {
         logger.error('Batch insert error:', error);
         opcuaDataQueue.prepend(batch);
+        return false;
     }
 };
 
-// Replace setInterval with more efficient processing
-const processQueue = async () => {
-    while (true) {
-        await processOpcuaDataQueue();
-        await new Promise(resolve => setTimeout(resolve, 100));
+const processQueue = async (options = { delay: 500, maxRetries: 3 }) => {
+    let isRunning = true;
+
+    // Graceful shutdown handler
+    process.on('SIGTERM', () => {
+        isRunning = false;
+    });
+
+    while (isRunning) {
+        try {
+            const processed = await processOpcuaDataQueue();
+            if (!processed) {
+                await new Promise(resolve => setTimeout(resolve, options.delay));
+            }
+        } catch (error) {
+            logger.error('Queue processing error:', error);
+            await new Promise(resolve => setTimeout(resolve, options.delay));
+        }
     }
 };
-processQueue();
+void processQueue();
 
 // --- Listen for OPC UA Data ---
 const { opcuaEmitter } = require('./src/services/opcuaClient');
@@ -135,7 +149,7 @@ io.on('connection', (socket) => {
 });
 
 // --- Start OPC UA Connection ---
-opcuaConnectionManager.startConnection();
+void opcuaConnectionManager.startConnection();
 
 // --- Global Error Handling Middleware ---
 app.use((err, req, res, next) => {

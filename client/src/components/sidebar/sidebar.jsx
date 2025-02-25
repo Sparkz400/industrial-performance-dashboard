@@ -5,26 +5,32 @@ import {
     Divider,
     Drawer,
     List,
-    ListItem, ListItemButton,
+    ListItem,
+    ListItemButton,
     ListItemIcon,
     ListItemText,
-    Toolbar
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-
-// Icons
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-
 import BurgerButton from './burgerButton.jsx';
+
+// Simple debounce function.
+function debounce(func, delay) {
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            func(...args);
+        }, delay);
+    };
+}
 
 const ResponsiveSidebar = ({ open, onToggle, onWidthChange }) => {
     const theme = useTheme();
     const contentRef = useRef(null);
 
-    // measureWidth calculates how wide the content is (text + icons, if open),
-    // or icons only if open=false. We clamp to 50% viewport as an example.
     const measureWidth = useCallback(() => {
         if (!contentRef.current) return 0;
         const contentWidth = contentRef.current.scrollWidth;
@@ -33,79 +39,56 @@ const ResponsiveSidebar = ({ open, onToggle, onWidthChange }) => {
     }, []);
 
     useEffect(() => {
-        // Re-measure whenever open changes
-        if (open) {
-            // Let the text be visible, then measure
-            requestAnimationFrame(() => {
-                const w = measureWidth();
-                onWidthChange(w);
-            });
-        } else {
-            // With text hidden, measure again
-            requestAnimationFrame(() => {
-                const w = measureWidth();
-                onWidthChange(w);
-            });
-        }
+        // Measure and update sidebar width when open changes.
+        requestAnimationFrame(() => {
+            const w = measureWidth();
+            onWidthChange(w);
+        });
 
+        // Debounced resize handler.
         const handleResize = () => {
             const w = measureWidth();
             onWidthChange(w);
         };
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        const debouncedHandleResize = debounce(handleResize, 200);
+        window.addEventListener('resize', debouncedHandleResize);
+        return () => window.removeEventListener('resize', debouncedHandleResize);
     }, [open, measureWidth, onWidthChange]);
 
     return (
         <Drawer
             variant="persistent"
-            open={true}  // The drawer is always "open" from MUI's perspective, but we control the width with measure
+            open={true} // Always open from MUI's perspective; we control the width.
             PaperProps={{
                 sx: {
                     position: 'fixed',
                     overflowX: 'hidden',
                     height: '100vh',
-                }
+                },
             }}
             sx={{ flexShrink: 0 }}
         >
             <Divider />
-
             <Box
                 ref={contentRef}
                 sx={{
-                    display: 'flex',          // flex layout
-                    flexDirection: 'column',  // stack items vertically
-                    height: '100%',           // full available height
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
                     backgroundColor: theme.palette.primary.main,
                     color: theme.palette.common.white,
                     whiteSpace: 'nowrap',
                     py: 1,
-                    px: 0
+                    px: 0,
                 }}
             >
-                <List disablePadding
-                      sx={{
-                          // Let the List fill all vertical space
-                          flexGrow: 1,
-                          display: 'flex',
-                          flexDirection: 'column'
-                      }}
-                >
-                    {/* 1) Burger Button (at the top) */}
-                    <ListItem disablePadding
-                              sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  px: 2,
-                                  py: 1
-                              }}
-                    >
+                <List disablePadding sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                    {/* Burger button */}
+                    <ListItem disablePadding sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1 }}>
                         <BurgerButton checked={open} onChange={onToggle} />
                     </ListItem>
                     <Divider />
-
-                    {/* B.2) Main (top) navigation items */}
+                    {/* Navigation items */}
                     <ListItem disablePadding>
                         <ListItemButton component={Link} to="/">
                             <ListItemIcon sx={{ color: theme.palette.common.white }}>
@@ -115,13 +98,8 @@ const ResponsiveSidebar = ({ open, onToggle, onWidthChange }) => {
                         </ListItemButton>
                     </ListItem>
                     <Divider />
-
-                    {/* C) “Flex grow” spacer to push the next items to the bottom */}
                     <Box sx={{ flexGrow: 1 }} />
-
                     <Divider />
-
-                    {/* D) Bottom items */}
                     <ListItem disablePadding>
                         <ListItemButton component={Link} to="/settings">
                             <ListItemIcon sx={{ color: theme.palette.common.white }}>
@@ -130,7 +108,6 @@ const ResponsiveSidebar = ({ open, onToggle, onWidthChange }) => {
                             {open && <ListItemText primary="Settings" />}
                         </ListItemButton>
                     </ListItem>
-
                     <ListItem disablePadding>
                         <ListItemButton component={Link} to="/help">
                             <ListItemIcon sx={{ color: theme.palette.common.white }}>

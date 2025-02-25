@@ -1,15 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { Paper, IconButton, Dialog, DialogTitle, DialogContent, Typography, Button, DialogActions } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SettingsIcon from '@mui/icons-material/Settings';
 
-const WidgetContainer = ({ widget, onDelete, widgetRegistry, layoutItem, onUpdateWidgetConfig, commonData }) => {
+const WidgetContainer = memo(({widget, onDelete, widgetRegistry, layoutItem, onUpdateWidgetConfig, commonData}) => {
     const widgetMeta = widgetRegistry[widget.type];
     const WidgetComponent = widgetMeta.component;
     const CustomSettingsComponent = widgetMeta.settingsComponent; // Optional custom settings
-
     const [openSettings, setOpenSettings] = useState(false);
-
     const handleOpenSettings = () => setOpenSettings(true);
     const handleCloseSettings = () => setOpenSettings(false);
 
@@ -18,10 +16,10 @@ const WidgetContainer = ({ widget, onDelete, widgetRegistry, layoutItem, onUpdat
     };
 
     return (
-        <div style={{ position: 'relative', height: '100%' }}>
-            <Paper elevation={3} style={{ height: '100%', position: 'relative' }}>
+        <div style={{position: 'relative', height: '100%'}}>
+            <Paper elevation={3} style={{height: '100%', position: 'relative'}}>
                 {/* Render the widget's content while passing commonData */}
-                <WidgetComponent config={widget.config} commonData={commonData} />
+                <WidgetComponent config={widget.config} commonData={commonData}/>
 
                 <div style={{
                     position: 'absolute',
@@ -31,11 +29,13 @@ const WidgetContainer = ({ widget, onDelete, widgetRegistry, layoutItem, onUpdat
                     gap: '4px',
                     zIndex: 10,
                 }}>
-                    <IconButton onClick={handleOpenSettings} aria-label="settings" sx={{ background: 'rgba(131,131,131,0.8)' }} size="small">
-                        <SettingsIcon fontSize="small" />
+                    <IconButton onClick={handleOpenSettings} aria-label="settings"
+                                sx={{background: 'rgba(131,131,131,0.8)'}} size="small">
+                        <SettingsIcon fontSize="small"/>
                     </IconButton>
-                    <IconButton onClick={onDelete} aria-label="delete" sx={{ background: 'rgba(131,131,131,0.8)' }} size="small">
-                        <DeleteIcon fontSize="small" />
+                    <IconButton onClick={onDelete} aria-label="delete" sx={{background: 'rgba(131,131,131,0.8)'}}
+                                size="small">
+                        <DeleteIcon fontSize="small"/>
                     </IconButton>
                 </div>
 
@@ -61,7 +61,7 @@ const WidgetContainer = ({ widget, onDelete, widgetRegistry, layoutItem, onUpdat
                 <DialogTitle>{widget.type} Settings</DialogTitle>
                 <DialogContent dividers>
                     {CustomSettingsComponent ? (
-                        <CustomSettingsComponent config={widget.config} onConfigChange={handleConfigChange} />
+                        <CustomSettingsComponent config={widget.config} onConfigChange={handleConfigChange}/>
                     ) : (
                         <Typography variant="body1">No custom settings available for this widget.</Typography>
                     )}
@@ -74,6 +74,6 @@ const WidgetContainer = ({ widget, onDelete, widgetRegistry, layoutItem, onUpdat
             </Dialog>
         </div>
     );
-};
+});
 
 export default WidgetContainer;

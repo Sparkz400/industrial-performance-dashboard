@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const extensions = [".jsx", ".css", ".js"];
-const excludedDirs = new Set(["node_modules", "public", ".idea", "shared", "docker", "db", "logs", "simulation", "components"]);
+const excludedDirs = new Set(["node_modules", "public", ".idea", "shared", "docker", "db", "logs", "simulation"]);
 const excludedFiles = new Set(["codeToTxt.js"]);
 const outputFile = "all_code.txt";
 

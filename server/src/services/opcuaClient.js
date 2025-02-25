@@ -3,87 +3,93 @@ const EventEmitter = require('events');
 const status = require('../utils/status');
 const opcuaMapping = require('../config/opcuaMapping');
 const logger = require('../utils/logger');
+// We'll still use our custom error type if needed.
 const { OPCUAError } = require('../utils/errors');
-
-// Add exponential backoff for reconnections
-const MAX_RETRIES = 5;
-let retryCount = 0;
 
 class OPCUAEmitter extends EventEmitter {}
 const opcuaEmitter = new OPCUAEmitter();
 
-/**
- * Connects to OPC UA server and subscribes to nodes.
- * @param {string} endpointUrl - OPC UA server endpoint.
- * @returns {Promise<Object>} - Returns client, session, and subscription.
- */
 async function connectAndSubscribe(endpointUrl) {
-    try {
-        const client = opcua.OPCUAClient.create({
-            endpointMustExist: false,
-            securityMode: opcua.MessageSecurityMode.None,
-            securityPolicy: opcua.SecurityPolicy.None,
-        });
+    const MAX_RETRIES = 5;
+    let retryCount = 0;
+    let lastError = null;
 
-        await client.connect(endpointUrl);
-        console.log("Connected to OPC UA server at", endpointUrl);
-        const session = await client.createSession();
-        console.log("OPC UA session created");
-
-        const subscription = opcua.ClientSubscription.create(session, {
-            requestedPublishingInterval: 1000,
-            requestedLifetimeCount: 600,
-            requestedMaxKeepAliveCount: 10,
-            maxNotificationsPerPublish: 10,
-            publishingEnabled: true,
-            priority: 10
-        });
-
-        subscription.on("started", () => {
-            console.log("Subscription started - ID:", subscription.subscriptionId);
-        });
-        subscription.on("keepalive", () => {
-        });
-        subscription.on("terminated", () => {
-            console.log("Subscription terminated");
-            status.setOpcuaStatus("terminated");
-        });
-
-        // Subscribe for every node defined in the mapping.
-        for (const [key, nodeConfig] of Object.entries(opcuaMapping)) {
-            const monitoredItem = opcua.ClientMonitoredItem.create(
-                subscription,
-                {
-                    nodeId: nodeConfig.nodeId,
-                    attributeId: opcua.AttributeIds.Value
-                },
-                {samplingInterval: 1000, discardOldest: true, queueSize: 10},
-                opcua.TimestampsToReturn.Both
-            );
-
-            monitoredItem.on("changed", (dataValue) => {
-                const value = dataValue.value.value;
-                const eventPayload = {
-                    key,
-                    label: nodeConfig.label,
-                    timestamp: Date.now(),
-                    value
-                };
-                opcuaEmitter.emit('nodeChanged', eventPayload);
+    while (retryCount < MAX_RETRIES) {
+        try {
+            const client = opcua.OPCUAClient.create({
+                endpointMustExist: false,
+                securityMode: opcua.MessageSecurityMode.None,
+                securityPolicy: opcua.SecurityPolicy.None,
             });
-        }
-        retryCount = 0;
-        return {client, session, subscription};
-    }catch(error){
-        if (retryCount < MAX_RETRIES) {
+
+            await client.connect(endpointUrl);
+            logger.info(`Connected to OPC UA server at ${endpointUrl}`);
+            const session = await client.createSession();
+            logger.info("OPC UA session created");
+
+            const subscription = opcua.ClientSubscription.create(session, {
+                requestedPublishingInterval: 1000,
+                requestedLifetimeCount: 600,
+                requestedMaxKeepAliveCount: 10,
+                maxNotificationsPerPublish: 10,
+                publishingEnabled: true,
+                priority: 10,
+            });
+
+            subscription.on("started", () => {
+                logger.info(`Subscription started - ID: ${subscription.subscriptionId}`);
+            });
+            subscription.on("keepalive", () => {
+                // Optional: log or handle keepalive events.
+            });
+            subscription.on("terminated", () => {
+                logger.info("Subscription terminated");
+                status.setOpcuaStatus("terminated");
+            });
+
+            // Subscribe to all nodes defined in the mapping.
+            for (const [key, nodeConfig] of Object.entries(opcuaMapping)) {
+                const monitoredItem = opcua.ClientMonitoredItem.create(
+                    subscription,
+                    {
+                        nodeId: nodeConfig.nodeId,
+                        attributeId: opcua.AttributeIds.Value,
+                    },
+                    { samplingInterval: 1000, discardOldest: true, queueSize: 10 },
+                    opcua.TimestampsToReturn.Both
+                );
+
+                monitoredItem.on("changed", (dataValue) => {
+                    const value = dataValue.value.value;
+                    const eventPayload = {
+                        key,
+                        label: nodeConfig.label,
+                        timestamp: Date.now(),
+                        value,
+                    };
+                    opcuaEmitter.emit('nodeChanged', eventPayload);
+                });
+            }
+
+            // If successful, reset retryCount (or handle as needed) and return the connection details.
+            return { client, session, subscription };
+        } catch (error) {
+            lastError = error;
             retryCount++;
             const delay = Math.pow(2, retryCount) * 1000;
-            logger.warn(`Connection failed, retrying in ${delay}ms (attempt ${retryCount}/${MAX_RETRIES})`);
+            logger.warn(
+                `Connection attempt ${retryCount} failed. Retrying in ${delay}ms. Error: ${error.message}`
+            );
             await new Promise(resolve => setTimeout(resolve, delay));
-            return connectAndSubscribe(endpointUrl);
-            }
-        throw new OPCUAError(`Failed to connect after ${MAX_RETRIES} attempts`);
+        }
     }
+
+    // After exhausting retries, log error, update status, and return null.
+    logger.error(
+        `Failed to connect after ${MAX_RETRIES} attempts. Last error: ${lastError.message}. Waiting for manual retry.`
+    );
+    status.setOpcuaStatus("error");
+    return null;
 }
 
 module.exports = { connectAndSubscribe, opcuaEmitter };

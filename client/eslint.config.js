@@ -1,57 +1,74 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import react from 'eslint-plugin-react'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
+import js from '@eslint/js';
+import react from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
 import jsdoc from 'eslint-plugin-jsdoc';
 import security from 'eslint-plugin-security';
+import {browser} from "globals";
 
+// Export the configuration as an array
 export default [
-  { ignores: ['dist'] },
   {
+    // Ignore the 'dist' directory for linting
+    ignores: ['dist'],
+  },
+  {
+    // Apply to JavaScript and JSX files
     files: ['**/*.{js,jsx}'],
-    extends: [
-        "eslint:recommended",
-        "plugin:react/recommended",
-        "plugin:jsdoc/recommended",
-        "plugin:security/recommended"
-    ],
-    env: {
-      "browser": true,
-      "es2021": true
-    },
-
     languageOptions: {
+      // Use the latest ECMAScript version
       ecmaVersion: 'latest',
-      globals: globals.browser,
+      sourceType: 'module',
+      // Define globals for browser environment
+      globals: {
+        ...(browser),
+      },
       parserOptions: {
-        ecmaVersion: 'latest',
+        // Enable JSX syntax
         ecmaFeatures: { jsx: true },
-        sourceType: 'module',
       },
     },
-    settings: { react: { version: 'detect' } },
+    // Define plugins to use
     plugins: {
       react,
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
+      jsdoc,
+      security,
     },
+    // Define rules
     rules: {
-      "react/prop-types": "error",
-      "security/detect-object-injection": "warn",
-      "security/detect-non-literal-regexp": "error",
-      "no-console": ["error", { allow: ["warn", "error"] }],
-      "no-debugger": "error",
-      "no-unused-vars": ["warn", { "vars": "all", "args": "after-used", "ignoreRestSiblings": true }],
+      // Include recommended rules from ESLint, React, React Hooks, JSDoc, and Security plugins
       ...js.configs.recommended.rules,
       ...react.configs.recommended.rules,
-      ...react.configs['jsx-runtime'].rules,
       ...reactHooks.configs.recommended.rules,
-      'react/jsx-no-target-blank': 'off',
-      'react-refresh/only-export-components': [
-        'warn',
-        { allowConstantExport: true },
-      ],
+      ...jsdoc.configs.recommended.rules,
+      ...security.configs.recommended.rules,
+
+      // React rules
+      'react/prop-types': 'error', // Enforce prop-types for type safety
+      'react/jsx-key': 'error', // Ensure keys are provided for list items
+
+      // Modern JavaScript rules
+      'no-var': 'error', // Disallow 'var' (prefer 'let' or 'const')
+      'prefer-const': 'error', // Enforce 'const' for variables that are not reassigned
+      'arrow-body-style': ['error', 'as-needed'], // Enforce concise arrow function syntax
+
+      // Code quality rules
+      'no-console': ['error', { allow: ['warn', 'error'] }], // Disallow console.logs but allow warnings and errors
+      'no-debugger': 'error', // Disallow debugger statements
+      'no-unused-vars': ['warn', { vars: 'all', args: 'after-used', ignoreRestSiblings: true }], // Warn about unused variables
+
+      // Security rules
+      'security/detect-object-injection': 'error', // Enforce strict object injection checks
+      'security/detect-non-literal-regexp': 'error', // Enforce non-literal RegExp checks
+
+      // React Refresh rules
+      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }], // Ensure only components are exported
+    },
+    // React version detection settings
+    settings: {
+      react: { version: 'detect' },
     },
   },
-]
+];
