@@ -1,4 +1,4 @@
-import React, { useState, memo } from 'react';
+import React, { useState, memo, Suspense } from 'react';
 import { Paper, IconButton, Dialog, DialogTitle, DialogContent, Typography, Button, DialogActions } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -18,9 +18,9 @@ const WidgetContainer = memo(({widget, onDelete, widgetRegistry, layoutItem, onU
     return (
         <div style={{position: 'relative', height: '100%'}}>
             <Paper elevation={3} style={{height: '100%', position: 'relative'}}>
-                {/* Render the widget's content while passing commonData */}
-                <WidgetComponent config={widget.config} commonData={commonData}/>
-
+                <Suspense fallback={<div>Loading widget...</div>}>
+                    <WidgetComponent config={widget.config} commonData={commonData} />
+                </Suspense>
                 <div style={{
                     position: 'absolute',
                     top: 4,
@@ -61,7 +61,10 @@ const WidgetContainer = memo(({widget, onDelete, widgetRegistry, layoutItem, onU
                 <DialogTitle>{widget.type} Settings</DialogTitle>
                 <DialogContent dividers>
                     {CustomSettingsComponent ? (
-                        <CustomSettingsComponent config={widget.config} onConfigChange={handleConfigChange}/>
+                        <Suspense fallback={<div>Loading settings...</div>}>
+                            <CustomSettingsComponent config={widget.config} onConfigChange={handleConfigChange} />
+                        </Suspense>
+
                     ) : (
                         <Typography variant="body1">No custom settings available for this widget.</Typography>
                     )}

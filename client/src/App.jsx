@@ -43,7 +43,7 @@ function App() {
     useEffect(() => {
         async function fetchStatus() {
             try {
-                const res = await fetch(API_ENDPOINTS.status);
+                const res = await fetch(API_ENDPOINTS.opcua.status);
                 const data = await res.json();
                 setStatus(data);
             } catch (err) {

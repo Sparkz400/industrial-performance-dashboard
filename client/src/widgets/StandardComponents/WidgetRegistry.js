@@ -1,32 +1,29 @@
-import currentAirConsumptionWidget from '../CurrentAirConsumptionWidget.jsx';
-import OperationModeWidget from '../OperationModeWidget.jsx';
-import OperationModePieWidget from "../OperationModeWidgetPie.jsx";
-import UptimeWidget from "../Uptime/UptimeRatePerDayWidget.jsx"
-import UptimeRatePerDaySettings from "../Uptime/UptimeRatePerDaySettings.jsx";
+import React from 'react';
 
 export const widgetRegistry = {
     currentAirConsumptionWidget: {
-        component: currentAirConsumptionWidget,
+        component: React.lazy(() => import('../CurrentAirConsumptionWidget.jsx')),
         minW: 4,
-        minH: 9
+        minH: 9,
     },
     operationMode: {
-        component: OperationModeWidget,
+        component: React.lazy(() => import('../OperationModeWidget.jsx')),
         minW: 4,
-        minH: 6
+        minH: 6,
     },
     operationModePie: {
-        component: OperationModePieWidget,
+        component: React.lazy(() => import('../OperationModeWidgetPie.jsx')),
         minW: 4,
-        minH: 10
+        minH: 10,
     },
     upTimeRate: {
-        component: UptimeWidget,
-        settingsComponent: UptimeRatePerDaySettings,
+        component: React.lazy(() => import('../Uptime/UptimeRatePerDayWidget.jsx')),
+        settingsComponent: React.lazy(() =>
+            import('../Uptime/UptimeRatePerDaySettings.jsx')
+        ),
         minW: 4,
-        minH: 10
+        minH: 10,
     },
-
 };
 
 export default widgetRegistry;

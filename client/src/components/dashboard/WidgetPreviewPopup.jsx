@@ -1,10 +1,9 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Dialog, DialogTitle, DialogContent, Paper, Typography } from '@mui/material';
 import { widgetRegistry } from '../../widgets/StandardComponents/WidgetRegistry.js';
 import Grid from '@mui/material/Grid2';
 
 const rowHeight = 35;
-
 const dialogStyles = {
     maxWidth: '80vw',
     maxHeight: '80vh',
@@ -31,7 +30,9 @@ const renderWidgetGrid = (widgetTypes, onSelect) => {
                         {widgetType}
                     </Typography>
                     <div style={{ width: '100%', height: previewHeight }}>
-                        <WidgetComponent config={{}} />
+                        <Suspense fallback={<div>Loading preview...</div>}>
+                            <WidgetComponent config={{}} />
+                        </Suspense>
                     </div>
                     {widgetMetadata.minW && widgetMetadata.minH && (
                         <Typography variant="caption" display="block">
@@ -48,12 +49,7 @@ const WidgetPreviewPopup = ({ open, onClose, onSelect }) => {
     const widgetTypes = Object.keys(widgetRegistry);
 
     return (
-        <Dialog
-            open={open}
-            onClose={onClose}
-            fullWidth
-            PaperProps={{ style: dialogStyles }}
-        >
+        <Dialog open={open} onClose={onClose} fullWidth PaperProps={{ style: dialogStyles }}>
             <DialogTitle>Select a Widget</DialogTitle>
             <DialogContent dividers style={{ overflowY: 'auto', overflowX: 'auto' }}>
                 <Grid container spacing={3}>

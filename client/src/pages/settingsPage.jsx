@@ -62,7 +62,6 @@ const SettingsPage = () => {
                 const res = await fetch('http://localhost:3000/api/opcua/status');
                 const data = await res.json();
                 if (res.ok) {
-                    // Update connection state based on the backend response.
                     setOpcuaConnected(data.connected);
                     if (data.connected && data.config) {
                         setIp(data.config.ip);
