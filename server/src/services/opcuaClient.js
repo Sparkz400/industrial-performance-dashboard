@@ -5,6 +5,8 @@ const opcuaMapping = require('../config/opcuaMapping');
 const logger = require('../utils/logger');
 // We'll still use our custom error type if needed.
 const { OPCUAError } = require('../utils/errors');
+const StatusConstants = require("../utils/statusConstants");
+const statusManager = require("../utils/status");
 
 class OPCUAEmitter extends EventEmitter {}
 const opcuaEmitter = new OPCUAEmitter();
@@ -44,7 +46,7 @@ async function connectAndSubscribe(endpointUrl) {
             });
             subscription.on("terminated", () => {
                 logger.info("Subscription terminated");
-                status.setOpcuaStatus("terminated");
+                statusManager.setOpcuaStatus(StatusConstants.ERROR, { message: "Connection error" });
             });
 
             // Subscribe to all nodes defined in the mapping.
@@ -88,7 +90,7 @@ async function connectAndSubscribe(endpointUrl) {
     logger.error(
         `Failed to connect after ${MAX_RETRIES} attempts. Last error: ${lastError.message}. Waiting for manual retry.`
     );
-    status.setOpcuaStatus("error");
+    statusManager.setOpcuaStatus(StatusConstants.ERROR, { message: "Connection error" });
     return null;
 }
 

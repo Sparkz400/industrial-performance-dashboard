@@ -6,7 +6,6 @@ const cors = require('cors');
 const socketIo = require('socket.io');
 const dbClient = require('./src/services/dbConnection');
 const opcuaConnectionManager = require('./src/services/opcuaConnectionManager');
-const status = require('./src/utils/status');
 const helmet = require('helmet');
 const { rateLimiter } = require('./src/middleware/security');
 const logger = require('./src/utils/logger');
@@ -33,7 +32,7 @@ app.use(helmet({
             "script-src": ["'self'", "'unsafe-inline'"], // Adjust based on needs
         },
     },
-    crossOriginEmbedderPolicy: false,
+    crossOriginEmbeddedPolicy: false,
 }));
 
 const server = http.createServer(app);
@@ -98,9 +97,17 @@ void processQueue();
 
 // --- Listen for OPC UA Data ---
 const { opcuaEmitter } = require('./src/services/opcuaClient');
+const StatusConstants = require('./src/utils/statusConstants');
+
 opcuaEmitter.on('nodeChanged', (data) => {
     io.emit('opcuaUpdate', data);
     persistOpcuaData(data);
+
+    // Update status timestamp to show activity
+    statusManager.setOpcuaStatus(StatusConstants.CONNECTED, {
+        message: 'Data received',
+        lastDataTimestamp: data.timestamp
+    });
 });
 
 // --- REST Routes ---
@@ -113,9 +120,9 @@ app.use('/api/opcua', opcuaRoutes);
 const dbRoutes = require('./src/routes/dbRoutes');
 app.use('/api/db', dbRoutes);
 
-app.get('/api/status', (req, res) => {
-    res.json(status.getStatus());
-});
+const statusRoutes = require('./src/routes/statusRoutes');
+const statusManager = require("./src/utils/status");
+app.use('/api/status', statusRoutes);
 
 app.get('/api/operation-mode-data', async (req, res, next) => {
     try {
@@ -163,6 +170,13 @@ app.use((err, req, res, next) => {
 const shutdown = async () => {
     logger.info("Shutting down server...");
     try {
+        statusManager.setOpcuaStatus(StatusConstants.DISCONNECTED, {
+            message: "Server shutting down"
+        });
+        statusManager.setDatabaseStatus(StatusConstants.DISCONNECTED, {
+            message: "Server shutting down"
+        });
+
         await opcuaConnectionManager.disconnectConnection();
         await dbClient.end();
         server.close(() => {

@@ -17,7 +17,7 @@ export const API_ENDPOINTS = {
 };
 
 // Other constants
-export const POLLING_INTERVAL_MS = 5000;
+export const POLLING_INTERVAL_MS = 20000;
 export const DB_HEALTH_CHECK_INTERVAL = 60000;
 
 export default {

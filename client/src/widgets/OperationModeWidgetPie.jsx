@@ -1,38 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, Typography, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 
-const COLORS =
-    ['#6e6e70',
+const COLORS = [
+    '#6e6e70',
     '#ea2e2e',
     '#61503d',
     '#00C49F',
     '#90aa74',
-    '#41af48'];
+    '#41af48'
+];
 
-const generateDummyPieDataToday = () => {
-    return [
-        { name: "Off", value: 5 },
-        { name: "Error State", value: 5 },
-        { name: "Setup Mode", value: 10 },
-        { name: "Auto (Not Started)", value: 20 },
-        { name: "Auto (Started & Idle)", value: 30 },
-        { name: "Auto (In Production)", value: 30 }
-    ];
-};
+// Moved data generation outside component to prevent re-creation on each render
+const generateDummyPieDataToday = () => [
+    { name: "Off", value: 5 },
+    { name: "Error State", value: 5 },
+    { name: "Setup Mode", value: 10 },
+    { name: "Auto (Not Started)", value: 20 },
+    { name: "Auto (Started & Idle)", value: 30 },
+    { name: "Auto (In Production)", value: 30 }
+];
 
-const generateDummyPieDataTotal = () => {
-    return [
-        { name: "Off", value: 10 },
-        { name: "Error State", value: 5 },
-        { name: "Setup Mode", value: 15 },
-        { name: "Auto (Not Started)", value: 20 },
-        { name: "Auto (Started & Idle)", value: 25 },
-        { name: "Auto (In Production)", value: 25 }
-    ];
-};
+const generateDummyPieDataTotal = () => [
+    { name: "Off", value: 10 },
+    { name: "Error State", value: 5 },
+    { name: "Setup Mode", value: 15 },
+    { name: "Auto (Not Started)", value: 20 },
+    { name: "Auto (Started & Idle)", value: 25 },
+    { name: "Auto (In Production)", value: 25 }
+];
 
-const OperationModePieWidget = ({}) => {
+const TODAY_DATA = generateDummyPieDataToday();
+const TOTAL_DATA = generateDummyPieDataTotal();
+
+const OperationModePieWidget = () => {
     const [view, setView] = useState("total");
 
     const handleViewChange = (event, newView) => {
@@ -41,8 +42,10 @@ const OperationModePieWidget = ({}) => {
         }
     };
 
-    // Choose data based on the selected view.
-    const data = view === 'today' ? generateDummyPieDataToday() : generateDummyPieDataTotal();
+    // Proper memoization
+    const data = useMemo(() => {
+        return view === 'today' ? TODAY_DATA : TOTAL_DATA;
+    }, [view]);
 
     return (
         <Card style={{ width: '100%', height: '100%' }}>
