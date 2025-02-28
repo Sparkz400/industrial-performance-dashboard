@@ -157,6 +157,9 @@ class OpcuaConnectionManager extends EventEmitter {
 
                 // Read a simple value from the server
                 const { session } = this.currentConnection;
+
+                await session.keepAlive();
+
                 const readResult = await session.read({
                     nodeId: "i=2258", // Server status node
                     attributeId: opcuaClient.AttributeIds.Value

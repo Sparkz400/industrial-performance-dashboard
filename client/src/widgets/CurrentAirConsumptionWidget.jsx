@@ -26,7 +26,7 @@ const generateInitialData = () => {
     return data;
 };
 
-const currentAirConsumptionWidget = ({ config }) => {
+const currentAirConsumptionWidget = ({}) => {
     const [data, setData] = useState(generateInitialData());
 
     // Simulate live updates: every minute, remove the oldest point and add a new one.

@@ -32,7 +32,7 @@ async function connectAndSubscribe(endpointUrl) {
             const subscription = opcua.ClientSubscription.create(session, {
                 requestedPublishingInterval: 1000,
                 requestedLifetimeCount: 600,
-                requestedMaxKeepAliveCount: 10,
+                requestedMaxKeepAliveCount: 20,
                 maxNotificationsPerPublish: 10,
                 publishingEnabled: true,
                 priority: 10,

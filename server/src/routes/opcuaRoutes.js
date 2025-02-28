@@ -5,7 +5,7 @@ const logger = require('../utils/logger');
 
 // Get current OPC UA connection status.
 router.get('/status', (req, res) => {
-    const status = opcuaConnectionManager.getConnectionStatus() || { database: "not connected", opcua: "not connected" };
+    const status = opcuaConnectionManager.getConnectionInfo() || { database: "not connected", opcua: "not connected" };
     res.json({
         connected: status.opcua === 'connected',
         config: {

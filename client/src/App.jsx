@@ -1,4 +1,4 @@
-import React, {useEffect, useState, Suspense, useMemo, useCallback, useContext, createContext, useRef} from 'react';
+import React, {useEffect, useState, Suspense, useMemo, useCallback, useRef} from 'react';
 import {
     BrowserRouter as Router,
     Routes,
@@ -19,17 +19,9 @@ import {
     Alert
 } from '@mui/material';
 import ResponsiveSidebar from './components/sidebar/sidebar.jsx';
-import { API_ENDPOINTS, POLLING_INTERVAL_MS } from './config/config';
+import { POLLING_INTERVAL_MS } from './config/config';
 import ErrorBoundary from './components/ErrorBoundary';
-
-// Create a context for system status
-const StatusContext = createContext({
-    status: { database: 'unknown', opcua: 'unknown' },
-    lastChecked: null,
-    refreshStatus: () => {}
-});
-
-export const useSystemStatus = () => useContext(StatusContext);
+import { useSystemStatus } from './contexts/StatusContext.jsx';
 
 // Lazy load pages with better naming
 const DashboardPage = React.lazy(() => import('./pages/dashboardPage.jsx'));
@@ -84,17 +76,14 @@ function App() {
     // Use media query to detect dark mode preference
     const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
     const [themeMode, setThemeMode] = useState(localStorage.getItem('themeMode') || 'dark');
-    const [status, setStatus] = useState({ database: 'unknown', opcua: 'unknown' });
-    const [lastChecked, setLastChecked] = useState(null);
     const [sidebarOpen, setSidebarOpen] = useState(
         localStorage.getItem('sidebarOpen') !== 'false' // Default to true if not set
     );
     const [drawerWidth, setDrawerWidth] = useState(0);
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'info' });
 
-    // Add this for API request handling
-    const isStatusPolling = useRef(false);
-    const statusTimeoutId = useRef(null);
+    // Get status from context
+    const { status, isError } = useSystemStatus();
 
     // Set theme based on user preference or system preference
     useEffect(() => {
@@ -194,100 +183,16 @@ function App() {
         localStorage.setItem('themeMode', newMode);
     }, [themeMode]);
 
-    // Function to fetch the system status
-    const fetchStatus = useCallback(async () => {
-        // Prevent parallel requests
-        if (isStatusPolling.current) {
-            return;
-        }
-
-        isStatusPolling.current = true;
-
-        try {
-            const res = await fetch(API_ENDPOINTS.status);
-
-            if (!res.ok) {
-                if (res.status === 429) {
-                    console.warn('Status API rate limited, will retry later');
-                    // Don't update state on rate limit - keep previous values
-                    return;
-                }
-                throw new Error('Failed to fetch status');
-            }
-
-            const data = await res.json();
-            setStatus(data);
-            setLastChecked(new Date());
-
-            // Check if there was a previous error that's now resolved
-            if (notification.open && notification.severity === 'error' &&
-                (data.overall?.status === 'CONNECTED' ||
-                    (data.database?.status === 'CONNECTED' && data.opcua?.status === 'CONNECTED'))) {
-                setNotification({
-                    open: true,
-                    message: 'System connections restored',
-                    severity: 'success'
-                });
-            }
-
-            // Also check if we've moved from warning to error
-            else if (data.overall?.status === 'ERROR') {
-                const prevStatus = status?.overall?.status;
-                if (prevStatus !== 'ERROR') {
-                    setNotification({
-                        open: true,
-                        message: `System issue detected: ${data.overall.statusText}`,
-                        severity: 'error'
-                    });
-                }
-            }
-        } catch (err) {
-            console.error('Error fetching status:', err);
+    // Check for system errors and show notifications
+    useEffect(() => {
+        if (isError) {
             setNotification({
                 open: true,
-                message: 'Failed to connect to backend services',
+                message: 'System connection issue detected',
                 severity: 'error'
             });
-        } finally {
-            // Set a timeout before allowing another fetch
-            if (statusTimeoutId.current) {
-                clearTimeout(statusTimeoutId.current);
-            }
-
-            statusTimeoutId.current = setTimeout(() => {
-                isStatusPolling.current = false;
-            }, 2000); // 2-second cooldown
         }
-    }, [notification, status]);
-
-    // Setup status polling with a single interval
-    useEffect(() => {
-        // Initial fetch with a delay to avoid conflict with other initializations
-        const initialFetchTimer = setTimeout(() => {
-            fetchStatus();
-        }, 1000);
-
-        // Set up polling
-        const pollingInterval = setInterval(fetchStatus, POLLING_INTERVAL_MS);
-
-        return () => {
-            clearTimeout(initialFetchTimer);
-            clearInterval(pollingInterval);
-            if (statusTimeoutId.current) {
-                clearTimeout(statusTimeoutId.current);
-            }
-        };
-    }, [fetchStatus]);
-
-    // Status context value with memoization
-    const statusContextValue = useMemo(() => ({
-        status,
-        lastChecked,
-        refreshStatus: fetchStatus,
-        isError: status?.overall?.status === 'ERROR',
-        isConnected: status?.overall?.status === 'CONNECTED',
-        statusText: status?.overall?.statusText || 'Unknown'
-    }), [status, lastChecked, fetchStatus]);
+    }, [isError]);
 
     // Toggle sidebar
     const toggleSidebar = useCallback(() => {
@@ -315,52 +220,50 @@ function App() {
 
     return (
         <ThemeProvider theme={theme}>
-            <StatusContext.Provider value={statusContextValue}>
-                <Router>
-                    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-                        <CssBaseline />
+            <Router>
+                <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+                    <CssBaseline />
 
-                        <ResponsiveSidebar
-                            open={sidebarOpen}
-                            onToggle={toggleSidebar}
-                            onWidthChange={setDrawerWidth}
-                            themeMode={themeMode}
-                            onToggleTheme={toggleTheme}
-                            status={status}
-                        />
+                    <ResponsiveSidebar
+                        open={sidebarOpen}
+                        onToggle={toggleSidebar}
+                        onWidthChange={setDrawerWidth}
+                        themeMode={themeMode}
+                        onToggleTheme={toggleTheme}
+                        status={status}
+                    />
 
-                        <Box component="main" sx={contentBoxStyles}>
-                            <ErrorBoundary FallbackComponent={ErrorFallback}>
-                                <Suspense fallback={<PageLoader />}>
-                                    <Routes>
-                                        <Route path="/" element={<DashboardPage />} />
-                                        <Route path="/settings" element={<SettingsPage />} />
-                                        <Route path="/help" element={<HelpPage />} />
-                                        <Route path="*" element={<Navigate to="/" replace />} />
-                                    </Routes>
-                                </Suspense>
-                            </ErrorBoundary>
-                        </Box>
+                    <Box component="main" sx={contentBoxStyles}>
+                        <ErrorBoundary FallbackComponent={ErrorFallback}>
+                            <Suspense fallback={<PageLoader />}>
+                                <Routes>
+                                    <Route path="/" element={<DashboardPage />} />
+                                    <Route path="/settings" element={<SettingsPage />} />
+                                    <Route path="/help" element={<HelpPage />} />
+                                    <Route path="*" element={<Navigate to="/" replace />} />
+                                </Routes>
+                            </Suspense>
+                        </ErrorBoundary>
                     </Box>
-                </Router>
+                </Box>
+            </Router>
 
-                {/* System status notification */}
-                <Snackbar
-                    open={notification.open}
-                    autoHideDuration={notification.severity === 'error' ? null : 6000}
+            {/* System status notification */}
+            <Snackbar
+                open={notification.open}
+                autoHideDuration={notification.severity === 'error' ? null : 6000}
+                onClose={handleCloseNotification}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert
                     onClose={handleCloseNotification}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    severity={notification.severity}
+                    variant="filled"
+                    sx={{ width: '100%' }}
                 >
-                    <Alert
-                        onClose={handleCloseNotification}
-                        severity={notification.severity}
-                        variant="filled"
-                        sx={{ width: '100%' }}
-                    >
-                        {notification.message}
-                    </Alert>
-                </Snackbar>
-            </StatusContext.Provider>
+                    {notification.message}
+                </Alert>
+            </Snackbar>
         </ThemeProvider>
     );
 }

@@ -79,7 +79,7 @@ const OperationModeWidget = () => {
                 console.error("Error fetching historical operation mode data:", error);
             }
         }
-        fetchHistoricalData();
+        void fetchHistoricalData();
     }, []);
 
     // Subscribe to real-time updates via Socket.IO.
