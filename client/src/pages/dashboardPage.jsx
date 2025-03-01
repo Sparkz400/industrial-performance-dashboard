@@ -1,4 +1,3 @@
-// File: src/pages/dashboardPage.jsx
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
     CircularProgress,
@@ -29,6 +28,7 @@ import WidgetPreviewPopup from '../widgets/StandardComponents/WidgetPreviewPopup
 import WidgetContainer from '../widgets/StandardComponents/WidgetContainer';
 import { API_ENDPOINTS } from '../config/config';
 import { WidgetProvider, useWidgets } from '../widgets/StandardComponents/WidgetContext';
+import DashboardTabs from '../components/dashboard/DashboardTabs';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -629,17 +629,7 @@ function DashboardPageInternal() {
     }, [state.initialized, state.dashboards, state.selectedDashboardId, actions]);
 
 
-// Initialize selected dashboard if not set but dashboards are loaded
-    useEffect(() => {
-        if (state.initialized && state.dashboards.length > 0 && !state.selectedDashboardId) {
-            const firstDashboard = state.dashboards[0];
-            dispatch({ type: 'SET_SELECTED_DASHBOARD_ID', payload: firstDashboard.id });
-            actions.setWidgets(firstDashboard.widgets || []);
-            actions.setLayout(firstDashboard.layout || []);
-        }
-    }, [state.initialized, state.dashboards, state.selectedDashboardId, actions]);
-
-// Update local storage when layout changes - with debouncing to prevent excessive saves
+    // Update local storage when layout changes - with debouncing to prevent excessive saves
     useEffect(() => {
         if (!state.initialized || !state.selectedDashboardId) return;
 
@@ -676,7 +666,7 @@ function DashboardPageInternal() {
         return () => clearTimeout(timerId);
     }, [state.initialized, state.selectedDashboardId, widgetState.widgets, widgetState.layout]);
 
-// Auto-sync effect (if enabled) - with proper cleanup
+    // Auto-sync effect (if enabled) - with proper cleanup
     useEffect(() => {
         if (syncTimerId.current) {
             clearInterval(syncTimerId.current);
@@ -696,7 +686,7 @@ function DashboardPageInternal() {
         }
     }, [autoSync, state.initialized, syncWithServer]);
 
-    // Synchronize current widget/layout state into the selected dashboard - FIXED VERSION
+    // Synchronize current widget/layout state into the selected dashboard
     useEffect(() => {
         if (!state.initialized || !state.selectedDashboardId) return;
 
@@ -777,141 +767,68 @@ function DashboardPageInternal() {
                 px: 2,
                 backgroundColor: 'rgba(0,0,0,0.05)'
             }}>
-                <Tabs
-                    value={selectedIndex !== -1 ? selectedIndex : 0}
-                    onChange={handleSelectDashboard}
-                    variant="scrollable"
-                    scrollButtons="auto"
-                    sx={{ flexGrow: 1 }}
-                >
-                    {state.dashboards.map((dashboard, index) => (
-                        <Tab
-                            key={dashboard.id}
-                            label={
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    {state.editingDashboardId === dashboard.id ? (
-                                        <TextField
-                                            value={dashboard.name}
-                                            onChange={(e) => {
-                                                dispatch({
-                                                    type: 'UPDATE_DASHBOARD_NAME',
-                                                    payload: { id: dashboard.id, name: e.target.value }
-                                                });
-                                            }}
-                                            onBlur={() => {
-                                                handleRenameDashboard(dashboard.id, state.dashboards.find(d => d.id === dashboard.id).name);
-                                                dispatch({ type: 'SET_EDITING_DASHBOARD_ID', payload: null });
-                                            }}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    handleRenameDashboard(dashboard.id, state.dashboards.find(d => d.id === dashboard.id).name);
-                                                    dispatch({ type: 'SET_EDITING_DASHBOARD_ID', payload: null });
-                                                }
-                                            }}
-                                            onClick={(e) => e.stopPropagation()}
-                                            autoFocus
-                                            variant="standard"
-                                            size="small"
-                                            sx={{ minWidth: '100px' }}
-                                        />
-                                    ) : (
-                                        <Box
-                                            sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                '&:hover .edit-icon': { opacity: 1 }
-                                            }}
-                                        >
-                                            <Typography
-                                                component="span"
-                                                sx={{
-                                                    color: selectedIndex === index ? 'primary.main' : 'inherit',
-                                                    fontWeight: selectedIndex === index ? 'bold' : 'normal'
-                                                }}
-                                            >
-                                                {dashboard.name}
-                                            </Typography>
-                                            {/* Use span wrapper to separate from Tab's button */}
-                                            <span
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    dispatch({ type: 'SET_EDITING_DASHBOARD_ID', payload: dashboard.id });
-                                                }}
-                                                style={{
-                                                    display: 'inline-flex',
-                                                    marginLeft: '8px',
-                                                    opacity: 0,
-                                                    transition: 'opacity 0.2s ease',
-                                                    cursor: 'pointer'
-                                                }}
-                                                className="edit-icon"
-                                            >
-                                                <EditIcon fontSize="small" />
-                                            </span>
-                                        </Box>
-                                    )}
-                                    {/* Wrap in span to avoid button nesting */}
-                                    <span
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (window.confirm(`Are you sure you want to delete "${dashboard.name}"?`)) {
-                                                void handleDeleteDashboard(dashboard.id);
-                                            }
-                                        }}
-                                        style={{
-                                            display: 'inline-flex',
-                                            marginLeft: '8px',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        <CloseIcon fontSize="small" />
-                                    </span>
-                                </Box>
-                            }
-                        />
-                    ))}
-                </Tabs>
+                <DashboardTabs
+                    dashboards={state.dashboards}
+                    selectedIndex={selectedIndex}
+                    onSelectDashboard={handleSelectDashboard}
+                    onEditName={(id, name) => {
+                        if (name) {
+                            handleRenameDashboard(id, name);
+                            dispatch({ type: 'SET_EDITING_DASHBOARD_ID', payload: null });
+                        } else {
+                            dispatch({ type: 'SET_EDITING_DASHBOARD_ID', payload: id });
+                        }
+                    }}
+                    onDeleteDashboard={(id) => {
+                        if (window.confirm(`Are you sure you want to delete "${state.dashboards.find(d => d.id === id)?.name}"?`)) {
+                            void handleDeleteDashboard(id);
+                        }
+                    }}
+                    editingDashboardId={state.editingDashboardId}
+                    loading={state.loading}
+                />
+
                 <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
                     <Tooltip title="Save Dashboard">
-                        <span>
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                onClick={saveDashboard}
-                                disabled={state.loading}
-                                sx={{ mr: 1 }}
-                                startIcon={state.loading ? <CircularProgress size={20} /> : <SaveIcon />}
-                            >
-                                Save
-                            </Button>
-                        </span>
+            <span>
+                <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={saveDashboard}
+                    disabled={state.loading}
+                    sx={{ mr: 1 }}
+                    startIcon={state.loading ? <CircularProgress size={20} /> : <SaveIcon />}
+                >
+                    Save
+                </Button>
+            </span>
                     </Tooltip>
                     <Tooltip title="Sync with Server">
-                        <span>
-                            <Button
-                                variant="outlined"
-                                color="primary"
-                                onClick={syncWithServer}
-                                disabled={state.loading}
-                                sx={{ mr: 1 }}
-                                startIcon={state.loading ? <CircularProgress size={20} /> : <SyncIcon />}
-                            >
-                                Sync
-                            </Button>
-                        </span>
+            <span>
+                <Button
+                    variant="outlined"
+                    color="primary"
+                    onClick={syncWithServer}
+                    disabled={state.loading}
+                    sx={{ mr: 1 }}
+                    startIcon={state.loading ? <CircularProgress size={20} /> : <SyncIcon />}
+                >
+                    Sync
+                </Button>
+            </span>
                     </Tooltip>
                     <Tooltip title="Add New Dashboard">
-                        <span>
-                            <Button
-                                variant="outlined"
-                                color="secondary"
-                                onClick={handleAddDashboard}
-                                disabled={state.loading}
-                                startIcon={state.loading ? <CircularProgress size={20} /> : <AddIcon />}
-                            >
-                                New
-                            </Button>
-                        </span>
+            <span>
+                <Button
+                    variant="outlined"
+                    color="secondary"
+                    onClick={handleAddDashboard}
+                    disabled={state.loading}
+                    startIcon={state.loading ? <CircularProgress size={20} /> : <AddIcon />}
+                >
+                    New
+                </Button>
+            </span>
                     </Tooltip>
                 </Box>
             </Box>

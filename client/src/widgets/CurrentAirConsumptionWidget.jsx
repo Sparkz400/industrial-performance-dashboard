@@ -10,6 +10,7 @@ import {
     Legend,
     Brush
 } from 'recharts';
+import PropTypes from 'prop-types';
 import { Card, CardContent, Typography } from '@mui/material';
 
 const generateInitialData = () => {
@@ -26,7 +27,7 @@ const generateInitialData = () => {
     return data;
 };
 
-const currentAirConsumptionWidget = ({}) => {
+const CurrentAirConsumptionWidget = ({ config }) => {
     const [data, setData] = useState(generateInitialData());
 
     // Simulate live updates: every minute, remove the oldest point and add a new one.
@@ -91,4 +92,21 @@ const currentAirConsumptionWidget = ({}) => {
     );
 };
 
-export default currentAirConsumptionWidget;
+// Add prop validation
+CurrentAirConsumptionWidget.propTypes = {
+    config: PropTypes.shape({
+        refreshInterval: PropTypes.number,
+        showBrush: PropTypes.bool,
+        dataPoints: PropTypes.number
+    })
+};
+
+CurrentAirConsumptionWidget.defaultProps = {
+    config: {
+        refreshInterval: 60000,
+        showBrush: true,
+        dataPoints: 1440
+    }
+};
+
+export default CurrentAirConsumptionWidget;

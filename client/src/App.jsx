@@ -19,7 +19,6 @@ import {
     Alert
 } from '@mui/material';
 import ResponsiveSidebar from './components/sidebar/sidebar.jsx';
-import { POLLING_INTERVAL_MS } from './config/config';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useSystemStatus } from './contexts/StatusContext.jsx';
 
@@ -80,10 +79,10 @@ function App() {
         localStorage.getItem('sidebarOpen') !== 'false' // Default to true if not set
     );
     const [drawerWidth, setDrawerWidth] = useState(0);
-    const [notification, setNotification] = useState({ open: false, message: '', severity: 'info' });
+    const [notification, setNotification] = useState({open: false, message: '', severity: 'info'});
 
     // Get status from context
-    const { status, isError } = useSystemStatus();
+    const {status, isError} = useSystemStatus();
 
     // Set theme based on user preference or system preference
     useEffect(() => {
@@ -215,55 +214,59 @@ function App() {
 
     // Handle notification close
     const handleCloseNotification = useCallback(() => {
-        setNotification(prev => ({ ...prev, open: false }));
+        setNotification(prev => ({...prev, open: false}));
     }, []);
 
     return (
         <ThemeProvider theme={theme}>
             <Router>
-                <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-                    <CssBaseline />
+                <ErrorBoundary FallbackComponent={ErrorFallback}>
+                    <Box sx={{display: 'flex', minHeight: '100vh'}}>
+                        <CssBaseline/>
 
-                    <ResponsiveSidebar
-                        open={sidebarOpen}
-                        onToggle={toggleSidebar}
-                        onWidthChange={setDrawerWidth}
-                        themeMode={themeMode}
-                        onToggleTheme={toggleTheme}
-                        status={status}
-                    />
-
-                    <Box component="main" sx={contentBoxStyles}>
                         <ErrorBoundary FallbackComponent={ErrorFallback}>
-                            <Suspense fallback={<PageLoader />}>
-                                <Routes>
-                                    <Route path="/" element={<DashboardPage />} />
-                                    <Route path="/settings" element={<SettingsPage />} />
-                                    <Route path="/help" element={<HelpPage />} />
-                                    <Route path="*" element={<Navigate to="/" replace />} />
-                                </Routes>
-                            </Suspense>
+                            <ResponsiveSidebar
+                                open={sidebarOpen}
+                                onToggle={toggleSidebar}
+                                onWidthChange={setDrawerWidth}
+                                themeMode={themeMode}
+                                onToggleTheme={toggleTheme}
+                                status={status}
+                            />
                         </ErrorBoundary>
-                    </Box>
-                </Box>
-            </Router>
 
-            {/* System status notification */}
-            <Snackbar
-                open={notification.open}
-                autoHideDuration={notification.severity === 'error' ? null : 6000}
-                onClose={handleCloseNotification}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            >
-                <Alert
+                        <Box component="main" sx={contentBoxStyles}>
+                            <ErrorBoundary FallbackComponent={ErrorFallback}>
+                                <Suspense fallback={<PageLoader/>}>
+                                    <Routes>
+                                        <Route path="/" element={<DashboardPage/>}/>
+                                        <Route path="/settings" element={<SettingsPage/>}/>
+                                        <Route path="/help" element={<HelpPage/>}/>
+                                        <Route path="*" element={<Navigate to="/" replace/>}/>
+                                    </Routes>
+                                </Suspense>
+                            </ErrorBoundary>
+                        </Box>
+                    </Box>
+                </ErrorBoundary>
+
+                {/* System status notification */}
+                <Snackbar
+                    open={notification.open}
+                    autoHideDuration={notification.severity === 'error' ? null : 6000}
                     onClose={handleCloseNotification}
-                    severity={notification.severity}
-                    variant="filled"
-                    sx={{ width: '100%' }}
+                    anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
                 >
-                    {notification.message}
-                </Alert>
-            </Snackbar>
+                    <Alert
+                        onClose={handleCloseNotification}
+                        severity={notification.severity}
+                        variant="filled"
+                        sx={{width: '100%'}}
+                    >
+                        {notification.message}
+                    </Alert>
+                </Snackbar>
+            </Router>
         </ThemeProvider>
     );
 }

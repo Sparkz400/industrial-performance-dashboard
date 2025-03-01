@@ -27,16 +27,25 @@ class StatusManager extends EventEmitter {
     setServiceStatus(service, newStatus, details = {}) {
         if (this._status[service] !== newStatus) {
             const oldStatus = this._status[service];
-            this._status[service] = newStatus;
-            this._status.lastUpdated = new Date().toISOString();
-            this._details[service] = details;
+            const timestamp = new Date().toISOString();
+
+            this._status = {
+                ...this._status,
+                [service]: newStatus,
+                lastUpdated: timestamp
+            };
+
+            this._details = {
+                ...this._details,
+                [service]: details
+            };
 
             // Emit events for status change
             this.emit('statusChanged', {
                 service,
                 oldStatus,
                 newStatus,
-                timestamp: this._status.lastUpdated,
+                timestamp,
                 details
             });
         }

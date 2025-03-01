@@ -1,41 +1,7 @@
-// Create this as a new file: src/widgets/StandardComponents/WidgetGrid.jsx
-
 import React from 'react';
 import { Box, CircularProgress } from '@mui/material';
-
-// Simple grid component that doesn't use MUI Grid to avoid prop type issues
-const WidgetGrid = ({ widgets, onSelectWidget, isLoading }) => {
-    return (
-        <Box sx={{ p: 1 }}>
-            {isLoading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                    <CircularProgress />
-                </Box>
-            ) : (
-                <Box
-                    sx={{
-                        display: 'grid',
-                        gridTemplateColumns: {
-                            xs: 'repeat(1, 1fr)',
-                            sm: 'repeat(2, 1fr)',
-                            md: 'repeat(3, 1fr)',
-                            lg: 'repeat(4, 1fr)'
-                        },
-                        gap: 3
-                    }}
-                >
-                    {widgets.map((widget) => (
-                        <WidgetCard
-                            key={widget.type}
-                            widget={widget}
-                            onClick={() => onSelectWidget(widget.type)}
-                        />
-                    ))}
-                </Box>
-            )}
-        </Box>
-    );
-};
+import VirtualizedGrid from '../../components/dashboard/VirtualizeGrid';
+import PropTypes from "prop-types";
 
 // Widget card component
 const WidgetCard = React.memo(({ widget, onClick }) => {
@@ -136,6 +102,73 @@ const WidgetCard = React.memo(({ widget, onClick }) => {
         </Box>
     );
 });
+
+const WidgetGrid = ({ widgets, onSelectWidget, isLoading }) => {
+    // Determine if we should use virtualization based on widget count
+    const useVirtualization = widgets.length > 20; // Only virtualize for large lists
+
+    if (isLoading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
+
+    if (useVirtualization) {
+        return (
+            <Box sx={{ height: 'calc(100vh - 200px)', width: '100%' }}>
+                <VirtualizedGrid
+                    items={widgets}
+                    columnCount={4} // Adjust based on screen size
+                    rowHeight={300} // Adjust based on your card size
+                    renderItem={({ item }) => (
+                        <WidgetCard
+                            widget={item}
+                            onClick={() => onSelectWidget(item.type)}
+                        />
+                    )}
+                />
+            </Box>
+        );
+    }
+
+    // Regular grid for smaller lists
+    return (
+        <Box sx={{ p: 1 }}>
+            <Box
+                sx={{
+                    display: 'grid',
+                    gridTemplateColumns: {
+                        xs: 'repeat(1, 1fr)',
+                        sm: 'repeat(2, 1fr)',
+                        md: 'repeat(3, 1fr)',
+                        lg: 'repeat(4, 1fr)'
+                    },
+                    gap: 3
+                }}
+            >
+                {widgets.map((widget) => (
+                    <WidgetCard
+                        key={widget.type}
+                        widget={widget}
+                        onClick={() => onSelectWidget(widget.type)}
+                    />
+                ))}
+            </Box>
+        </Box>
+    );
+};
+
+WidgetGrid.propTypes = {
+    widgets: PropTypes.array.isRequired,
+    onSelectWidget: PropTypes.func.isRequired,
+    isLoading: PropTypes.bool
+};
+
+WidgetGrid.defaultProps = {
+    isLoading: false
+};
 
 export default WidgetGrid;
 export { WidgetCard };

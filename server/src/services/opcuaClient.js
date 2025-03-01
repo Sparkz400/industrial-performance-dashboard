@@ -1,12 +1,10 @@
 const opcua = require('node-opcua');
 const EventEmitter = require('events');
-const status = require('../utils/status');
 const opcuaMapping = require('../config/opcuaMapping');
 const logger = require('../utils/logger');
-// We'll still use our custom error type if needed.
-const { OPCUAError } = require('../utils/errors');
 const StatusConstants = require("../utils/statusConstants");
 const statusManager = require("../utils/status");
+const fs = require('fs');
 
 class OPCUAEmitter extends EventEmitter {}
 const opcuaEmitter = new OPCUAEmitter();
@@ -16,16 +14,26 @@ async function connectAndSubscribe(endpointUrl) {
     let retryCount = 0;
     let lastError = null;
 
+    // Remove or fix the certificate code that's causing problems
     while (retryCount < MAX_RETRIES) {
         try {
+            // Use simpler configuration without certificates for now
             const client = opcua.OPCUAClient.create({
-                endpointMustExist: false,
+                applicationName: "Monitoring Client",
+                connectionStrategy: {
+                    initialDelay: 1000,
+                    maxRetry: 3,
+                    maxDelay: 10 * 1000
+                },
                 securityMode: opcua.MessageSecurityMode.None,
                 securityPolicy: opcua.SecurityPolicy.None,
+                endpointMustExist: false
             });
 
+            logger.info(`Connecting to OPC UA server at ${endpointUrl}`);
             await client.connect(endpointUrl);
             logger.info(`Connected to OPC UA server at ${endpointUrl}`);
+
             const session = await client.createSession();
             logger.info("OPC UA session created");
 

@@ -10,8 +10,8 @@ export const WIDGET_CATEGORIES = {
 
 export const widgetRegistry = {
     systemStatus: {
-        component: React.lazy(() => import('../SystemStatusWidget.jsx')),
-        settingsComponent: React.lazy(() => import('../SystemStatusWidget.jsx').then(module => ({ default: module.SystemStatusSettings }))),
+        component: React.lazy(() => import('../system/SystemStatusWidget')),
+        settingsComponent: React.lazy(() => import('../system/SystemStatusSettings')),
         minW: 4,
         minH: 6,
         title: 'System Status',
@@ -20,7 +20,8 @@ export const widgetRegistry = {
         icon: 'Dashboard',
         defaultConfig: {
             autoRefresh: true,
-            showDetails: true
+            showDetails: true,
+            refreshInterval: 20000
         },
     },
     currentAirConsumptionWidget: {
@@ -35,15 +36,18 @@ export const widgetRegistry = {
         defaultConfig: {}, // Default configuration values
     },
     operationMode: {
-        component: React.lazy(() => import('../OperationModeWidget.jsx')),
-        settingsComponent: null,
+        component: React.lazy(() => import('../operation-mode')),
+        settingsComponent: React.lazy(() => import('../operation-mode/OperationModeWidgetSettings')),
         minW: 4,
         minH: 6,
         title: 'Operation Mode',
         description: 'Tracks system operation mode over time',
         category: WIDGET_CATEGORIES.ANALYTICS,
         icon: 'Timeline',
-        defaultConfig: {},
+        defaultConfig: {
+            maxPoints: 120,
+            showBrush: true
+        },
     },
     operationModePie: {
         component: React.lazy(() => import('../OperationModeWidgetPie.jsx')),
@@ -57,9 +61,9 @@ export const widgetRegistry = {
         defaultConfig: {},
     },
     upTimeRate: {
-        component: React.lazy(() => import('../Uptime/UptimeRatePerDayWidget.jsx')),
+        component: React.lazy(() => import('../UptimeRatePerDayWidget.jsx')),
         settingsComponent: React.lazy(() =>
-            import('../Uptime/UptimeRatePerDaySettings.jsx')
+            import('../UptimeRatePerDaySettings.jsx')
         ),
         minW: 4,
         minH: 10,
