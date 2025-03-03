@@ -2,12 +2,39 @@ const Joi = require('joi');
 
 // Dashboard validation schema
 const dashboardSchema = Joi.object({
-    name: Joi.string().required().trim().min(1).max(100),
-    widgets: Joi.array().required(),
-    layout: Joi.array().required(),
-    serverLastModified: Joi.string().isoDate(),
-    localLastModified: Joi.string().isoDate()
-});
+    id: Joi.string().required().min(3).max(100),
+    name: Joi.string().required().trim().min(1).max(100)
+        .messages({
+            'string.empty': 'Dashboard name cannot be empty',
+            'string.min': 'Dashboard name must be at least 1 character',
+            'string.max': 'Dashboard name must be at most 100 characters',
+            'any.required': 'Dashboard name is required'
+        }),
+    widgets: Joi.alternatives().try(
+        Joi.array().items(Joi.object()).default([]),
+        Joi.string().custom((value, helpers) => {
+            try {
+                const parsed = JSON.parse(value);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return helpers.error('string.jsonParseError');
+            }
+        }).default('[]')
+    ),
+    layout: Joi.alternatives().try(
+        Joi.array().items(Joi.object()).default([]),
+        Joi.string().custom((value, helpers) => {
+            try {
+                const parsed = JSON.parse(value);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return helpers.error('string.jsonParseError');
+            }
+        }).default('[]')
+    ),
+    serverLastModified: Joi.string().isoDate().optional(),
+    localLastModified: Joi.string().isoDate().optional()
+}).unknown(true); // Allow unknown keys for flexibility
 
 // OPC UA connection validation schema
 const opcuaConnectionSchema = Joi.object({

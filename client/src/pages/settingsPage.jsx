@@ -1,5 +1,4 @@
-// File: src/pages/settingsPage.jsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
     Typography,
     Box,
@@ -23,10 +22,10 @@ import {
     Alert,
     Collapse,
     Backdrop,
-    CircularProgress
+    CircularProgress, AccordionDetails, AccordionSummary, Accordion
 } from '@mui/material';
+import { useTheme as useMuiTheme } from '@mui/material/styles';
 import Grid from '@mui/material/Grid2';
-import { useTheme } from '@mui/material/styles';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import LanguageIcon from '@mui/icons-material/Language';
 import StorageIcon from '@mui/icons-material/Storage';
@@ -36,9 +35,6 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import WarningIcon from '@mui/icons-material/Warning';
 import PaletteIcon from '@mui/icons-material/Palette';
-import BrightnessAutoIcon from '@mui/icons-material/BrightnessAuto';
-import LightModeIcon from '@mui/icons-material/LightMode';
-import DarkModeIcon from '@mui/icons-material/DarkMode';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import InfoIcon from '@mui/icons-material/Info';
@@ -50,10 +46,14 @@ import StopCircleIcon from '@mui/icons-material/StopCircle';
 import MemoryIcon from '@mui/icons-material/Memory';
 import { API_ENDPOINTS } from '../config/config';
 import { useSystemStatus } from '../contexts/StatusContext.jsx';
+import ThemePreview from '../components/ThemePreview';
+import { useTheme } from '../contexts/ThemeContext';
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ThemeSelector from '../contexts/ThemeContext';
 
 // Panel to display with each tab
 function TabPanel(props) {
-    const { children, value, index, ...other } = props;
+    const { children, value, index, sx, ...other } = props;
 
     return (
         <div
@@ -61,11 +61,11 @@ function TabPanel(props) {
             hidden={value !== index}
             id={`settings-tabpanel-${index}`}
             aria-labelledby={`settings-tab-${index}`}
-            style={{ width: '100%' }}
+            style={{ width: '100%', padding: '16px' }}
             {...other}
         >
             {value === index && (
-                <Box sx={{ pt: 3 }}>
+                <Box sx={{ ...sx }}>
                     {children}
                 </Box>
             )}
@@ -75,26 +75,28 @@ function TabPanel(props) {
 
 // Status indicator component
 const StatusIndicator = ({ status, label, description, icon, loading = false }) => {
-    const theme = useTheme();
+    // Use MUI theme properly
+    const theme = useMuiTheme();
 
     // Determine color based on status
     const getStatusColor = () => {
-        if (loading) return theme.palette.info.main;
+        if (loading) return theme?.palette?.info?.main || '#2196f3';
 
         switch(status?.toLowerCase()) {
             case 'connected':
             case 'online':
             case 'ok':
-                return theme.palette.success.main;
+                return theme?.palette?.success?.main || '#4caf50';
             case 'warning':
             case 'degraded':
-                return theme.palette.warning.main;
+                return theme?.palette?.warning?.main || '#ff9800';
             case 'error':
             case 'offline':
             case 'disconnected':
-                return theme.palette.error.main;
+                return theme?.palette?.error?.main || '#f44336';
             default:
-                return theme.palette.text.disabled;
+                // Safely provide a fallback if theme is not available
+                return theme?.palette?.text?.disabled || '#757575';
         }
     };
 
@@ -157,9 +159,11 @@ const StatusIndicator = ({ status, label, description, icon, loading = false }) 
                     </Box>
                     <Chip
                         label={loading ? 'Checking...' : status || 'Unknown'}
-                        color={loading ? 'info' : getStatusColor() === theme.palette.success.main ? 'success' :
-                            getStatusColor() === theme.palette.warning.main ? 'warning' :
-                                getStatusColor() === theme.palette.error.main ? 'error' : 'default'}
+                        color={loading ? 'info' :
+                            status?.toLowerCase() === 'connected' || status?.toLowerCase() === 'online' || status?.toLowerCase() === 'ok' ? 'success' :
+                                status?.toLowerCase() === 'warning' || status?.toLowerCase() === 'degraded' ? 'warning' :
+                                    status?.toLowerCase() === 'error' || status?.toLowerCase() === 'offline' || status?.toLowerCase() === 'disconnected' ? 'error' :
+                                        'default'}
                         size="small"
                         variant={loading ? 'outlined' : 'filled'}
                     />
@@ -177,6 +181,10 @@ const SettingsPage = () => {
     const [configChanged, setConfigChanged] = useState(false);
     const [backupInProgress, setBackupInProgress] = useState(false);
     const [alertInfo, setAlertInfo] = useState({ open: false, message: '', severity: 'info' });
+    const [error, setError] = useState(null);
+    const [lastStatsUpdate, setLastStatsUpdate] = useState(null);
+    const [connectionStats, setConnectionStats] = useState(null);
+    const [loadingConnections, setLoadingConnections] = useState(false);
 
     // Form states
     const [ip, setIp] = useState('localhost');
@@ -195,8 +203,7 @@ const SettingsPage = () => {
     const [systemStats, setSystemStats] = useState(null);
 
     // Theme states
-    const [themeMode, setThemeMode] = useState(localStorage.getItem('themeMode') || 'dark');
-    const [useSystemTheme, setUseSystemTheme] = useState(false);
+    const { themeMode, useSystemTheme, setThemeMode, setUseSystemTheme } = useTheme();
 
     // Get system status context
     const { status, refreshStatus, lastChecked } = useSystemStatus();
@@ -477,31 +484,59 @@ const SettingsPage = () => {
     const handleRefreshStatus = async () => {
         setLoading(true);
         await refreshStatus();
-        fetchConnectionStatus();
+        await fetchConnectionStatus();
         setLoading(false);
     };
 
     // Fetch system stats
-    const fetchSystemStats = async () => {
+    const fetchSystemStats = useCallback(async () => {
+        setLoading(true);
         try {
-            // This would be a real endpoint in a production app
-            // For demo, we'll simulate with mock data
-            const stats = {
-                uptime: Math.floor(Math.random() * 1000000), // seconds
-                memoryUsage: {
-                    total: 8192, // MB
-                    used: Math.floor(Math.random() * 4000 + 2000), // MB
-                },
-                cpuUsage: Math.floor(Math.random() * 70 + 10), // percentage
-                activeConnections: Math.floor(Math.random() * 10 + 1),
-                lastRestart: new Date(Date.now() - Math.random() * 86400000 * 10).toISOString()
-            };
+            const response = await fetch(API_ENDPOINTS.system.stats);
 
-            setSystemStats(stats);
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            setSystemStats(data);
+
+            // Update last fetch time
+            setLastStatsUpdate(new Date());
         } catch (err) {
             console.error('Error fetching system stats:', err);
+            setError(`Failed to fetch system statistics: ${err.message}`);
+
+            // Fallback to mock data in case of errors
+            setSystemStats({
+                uptime: Math.floor(Math.random() * 1000000),
+                memoryUsage: {
+                    total: 8192,
+                    used: Math.floor(Math.random() * 4000 + 2000),
+                    percentUsed: Math.floor(Math.random() * 70 + 10)
+                },
+                cpuUsage: Math.floor(Math.random() * 70 + 10),
+                activeConnections: Math.floor(Math.random() * 10 + 1),
+                lastRestart: new Date(Date.now() - Math.random() * 86400000 * 10).toISOString(),
+                isMockData: true
+            });
+        } finally {
+            setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        // Initial fetch
+        void fetchSystemStats();
+
+        // Set up auto-refresh interval (every 30 seconds)
+        const refreshInterval = setInterval(() => {
+            void fetchSystemStats();
+        }, 30000);
+
+        // Clean up
+        return () => clearInterval(refreshInterval);
+    }, [fetchSystemStats]);
 
     // Fetch OPC UA connection status
     const fetchConnectionStatus = async () => {
@@ -530,19 +565,27 @@ const SettingsPage = () => {
 
     // Format uptime for display
     const formatUptime = (seconds) => {
-        if (!seconds) return 'Unknown';
+        if (!seconds && seconds !== 0) return 'Unknown';
 
         const days = Math.floor(seconds / 86400);
         const hours = Math.floor((seconds % 86400) / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
 
-        return `${days}d ${hours}h ${minutes}m`;
+        // Only show non-zero units
+        const parts = [];
+        if (days > 0) parts.push(`${days}d`);
+        if (hours > 0) parts.push(`${hours}h`);
+        if (minutes > 0) parts.push(`${minutes}m`);
+        if (remainingSeconds > 0 || parts.length === 0) parts.push(`${remainingSeconds}s`);
+
+        return parts.join(' ');
     };
 
     // Load data on component mount
     useEffect(() => {
-        fetchConnectionStatus();
-        fetchSystemStats();
+        void fetchConnectionStatus();
+        void fetchSystemStats();
         // Set initial DB status based on system status
         setDbOnline(status?.database?.status === 'CONNECTED' || status?.database === 'connected');
     }, [status]);
@@ -557,19 +600,90 @@ const SettingsPage = () => {
         setConfigChanged(isChanged);
     }, [ip, port, resourcePath, status]);
 
+    // Add a function to fetch connection stats
+    const fetchConnectionStats = useCallback(async () => {
+        setLoadingConnections(true);
+        try {
+            const response = await fetch(API_ENDPOINTS.system.connections);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            setConnectionStats(data);
+        } catch (err) {
+            console.error('Error fetching connection stats:', err);
+            // Fallback to mock data
+            setConnectionStats({
+                activeCount: Math.floor(Math.random() * 10 + 1),
+                activeConnections: Array.from({ length: 3 }, (_, i) => ({
+                    id: `mock-connection-${i}`,
+                    connectedAt: new Date(Date.now() - Math.random() * 3600000).toISOString(),
+                    ip: '127.0.0.1',
+                    userAgent: 'Mock Browser'
+                })),
+                history: Array.from({ length: 10 }, (_, i) => ({
+                    type: i % 3 === 0 ? 'disconnect' : 'connect',
+                    timestamp: new Date(Date.now() - i * 300000).toISOString(),
+                    id: `mock-connection-${i % 5}`,
+                    duration: i % 3 === 0 ? Math.floor(Math.random() * 500000) : null
+                }))
+            });
+        } finally {
+            setLoadingConnections(false);
+        }
+    }, []);
+
+    // Call the function on component mount and set up auto-refresh
+    useEffect(() => {
+        void fetchConnectionStats();
+
+        const interval = setInterval(() => {
+            void fetchConnectionStats();
+        }, 30000); // Refresh every 30 seconds
+
+        return () => clearInterval(interval);
+    }, [fetchConnectionStats]);
+
+    const formatDuration = (ms) => {
+        if (!ms) return 'Unknown';
+
+        const seconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+
+        if (hours > 0) {
+            return `${hours}h ${minutes % 60}m`;
+        } else if (minutes > 0) {
+            return `${minutes}m ${seconds % 60}s`;
+        } else {
+            return `${seconds}s`;
+        }
+    };
+
     return (
-        <Box sx={{ p: 2, maxWidth: 1200, mx: 'auto' }}>
-            <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
+        <Box sx={{
+            p: { xs: 2, md: 3 },
+            maxWidth: 1400,
+            mx: 'auto',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column'
+        }}>
+            <Typography variant="h4" gutterBottom sx={{ mb: 2 }}>
                 Settings
                 <Tooltip title="Refresh Status">
-                    <IconButton
-                        onClick={handleRefreshStatus}
-                        size="small"
-                        sx={{ ml: 2 }}
-                        disabled={loading}
-                    >
-                        {loading ? <CircularProgress size={24} /> : <RefreshIcon />}
-                    </IconButton>
+            <span>
+                <IconButton
+                    onClick={handleRefreshStatus}
+                    size="small"
+                    sx={{ ml: 2 }}
+                    disabled={loading}
+                >
+                    {loading ? <CircularProgress size={24} /> : <RefreshIcon />}
+                </IconButton>
+            </span>
                 </Tooltip>
             </Typography>
 
@@ -584,15 +698,15 @@ const SettingsPage = () => {
                 </Alert>
             </Collapse>
 
-            {/* Status overview cards */}
+            {/* Status overview in a compact, space-efficient layout */}
             <Typography variant="h6" gutterBottom>
                 System Status
-            </Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-                Last updated: {formatDate(lastChecked)}
+                <Typography variant="body2" color="text.secondary" component="span" sx={{ ml: 2 }}>
+                    Last updated: {formatDate(lastChecked)}
+                </Typography>
             </Typography>
 
-            <Grid container spacing={2} sx={{ mb: 4 }}>
+            <Grid container spacing={2} sx={{ mb: 2 }}>
                 <Grid item xs={12} md={6}>
                     <StatusIndicator
                         status={status?.database?.statusText || status?.database || 'Unknown'}
@@ -613,14 +727,15 @@ const SettingsPage = () => {
                 </Grid>
             </Grid>
 
-            {/* Settings tabs */}
-            <Paper sx={{ width: '100%', mb: 2 }}>
+            {/* More compact tabs with better use of space */}
+            <Paper sx={{ width: '100%', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                 <Tabs
                     value={tabValue}
                     onChange={handleTabChange}
                     variant="scrollable"
                     scrollButtons="auto"
                     aria-label="settings tabs"
+                    sx={{ borderBottom: 1, borderColor: 'divider' }}
                 >
                     <Tab label="Connections" id="settings-tab-0" icon={<LanguageIcon />} iconPosition="start" />
                     <Tab label="Appearance" id="settings-tab-1" icon={<PaletteIcon />} iconPosition="start" />
@@ -628,9 +743,8 @@ const SettingsPage = () => {
                     <Tab label="System Info" id="settings-tab-3" icon={<InfoIcon />} iconPosition="start" />
                 </Tabs>
 
-                {/* Connection settings tab */}
-                <TabPanel value={tabValue} index={0}>
-                    <Grid container spacing={3}>
+                <TabPanel value={tabValue} index={0} sx={{ flexGrow: 1 }}>
+                    <Grid container spacing={2}>
                         {/* OPC UA Connection Settings */}
                         <Grid item xs={12} lg={6}>
                             <Card>
@@ -644,19 +758,21 @@ const SettingsPage = () => {
                                             size="small"
                                         />
                                     }
+                                    sx={{ pb: 1 }}
                                 />
                                 <Divider />
-                                <CardContent>
+                                <CardContent sx={{ pt: 2 }}>
+                                    {/* More compact form with less spacing */}
                                     <Grid container spacing={2}>
                                         <Grid item xs={12} sm={6}>
                                             <TextField
                                                 label="IP Address"
                                                 variant="outlined"
                                                 fullWidth
+                                                size="small"
                                                 value={ip}
                                                 onChange={(e) => setIp(e.target.value)}
                                                 disabled={opcuaConnected}
-                                                helperText={opcuaConnected ? "Disconnect first to change" : ""}
                                             />
                                         </Grid>
                                         <Grid item xs={12} sm={6}>
@@ -664,10 +780,10 @@ const SettingsPage = () => {
                                                 label="Port"
                                                 variant="outlined"
                                                 fullWidth
+                                                size="small"
                                                 value={port}
                                                 onChange={(e) => setPort(e.target.value)}
                                                 disabled={opcuaConnected}
-                                                helperText={opcuaConnected ? "Disconnect first to change" : ""}
                                             />
                                         </Grid>
                                         <Grid item xs={12}>
@@ -675,10 +791,10 @@ const SettingsPage = () => {
                                                 label="Resource Path"
                                                 variant="outlined"
                                                 fullWidth
+                                                size="small"
                                                 value={resourcePath}
                                                 onChange={(e) => setResourcePath(e.target.value)}
                                                 disabled={opcuaConnected}
-                                                helperText={opcuaConnected ? "Disconnect first to change" : ""}
                                             />
                                         </Grid>
                                         <Grid item xs={12}>
@@ -691,6 +807,7 @@ const SettingsPage = () => {
                                                         disabled={opcuaConnected || loading}
                                                         startIcon={<PlayCircleOutlineIcon />}
                                                         sx={{ mr: 1 }}
+                                                        size="small"
                                                     >
                                                         Connect
                                                     </Button>
@@ -700,25 +817,11 @@ const SettingsPage = () => {
                                                         onClick={handleDisconnect}
                                                         disabled={!opcuaConnected || loading}
                                                         startIcon={<StopCircleIcon />}
+                                                        size="small"
                                                     >
                                                         Disconnect
                                                     </Button>
                                                 </Box>
-                                                <Tooltip title="Reset to defaults">
-                                                    <span>
-                                                        <Button
-                                                            variant="text"
-                                                            onClick={() => {
-                                                                setIp('localhost');
-                                                                setPort('4840');
-                                                                setResourcePath('/UA/MyLittleServer');
-                                                            }}
-                                                            disabled={opcuaConnected}
-                                                        >
-                                                            Reset
-                                                        </Button>
-                                                    </span>
-                                                </Tooltip>
                                             </Box>
                                         </Grid>
                                     </Grid>
@@ -726,7 +829,7 @@ const SettingsPage = () => {
                             </Card>
                         </Grid>
 
-                        {/* Database Connection Settings */}
+                        {/* Database Connection Settings - more compact */}
                         <Grid item xs={12} lg={6}>
                             <Card>
                                 <CardHeader
@@ -739,19 +842,19 @@ const SettingsPage = () => {
                                             size="small"
                                         />
                                     }
+                                    sx={{ pb: 1 }}
                                 />
                                 <Divider />
-                                <CardContent>
+                                <CardContent sx={{ pt: 2 }}>
                                     <Grid container spacing={2}>
                                         <Grid item xs={12} sm={6}>
                                             <TextField
                                                 label="Host"
                                                 variant="outlined"
                                                 fullWidth
+                                                size="small"
                                                 value={dbHost}
-                                                onChange={(e) => setDbHost(e.target.value)}
-                                                disabled={true}
-                                                helperText="Edit in environment config"
+                                                disabled
                                             />
                                         </Grid>
                                         <Grid item xs={12} sm={6}>
@@ -759,10 +862,9 @@ const SettingsPage = () => {
                                                 label="Port"
                                                 variant="outlined"
                                                 fullWidth
+                                                size="small"
                                                 value={dbPort}
-                                                onChange={(e) => setDbPort(e.target.value)}
-                                                disabled={true}
-                                                helperText="Edit in environment config"
+                                                disabled
                                             />
                                         </Grid>
                                         <Grid item xs={12} sm={6}>
@@ -770,10 +872,9 @@ const SettingsPage = () => {
                                                 label="User"
                                                 variant="outlined"
                                                 fullWidth
+                                                size="small"
                                                 value={dbUser}
-                                                onChange={(e) => setDbUser(e.target.value)}
-                                                disabled={true}
-                                                helperText="Edit in environment config"
+                                                disabled
                                             />
                                         </Grid>
                                         <Grid item xs={12} sm={6}>
@@ -781,10 +882,9 @@ const SettingsPage = () => {
                                                 label="Database"
                                                 variant="outlined"
                                                 fullWidth
+                                                size="small"
                                                 value={dbName}
-                                                onChange={(e) => setDbName(e.target.value)}
-                                                disabled={true}
-                                                helperText="Edit in environment config"
+                                                disabled
                                             />
                                         </Grid>
                                         <Grid item xs={12}>
@@ -794,6 +894,7 @@ const SettingsPage = () => {
                                                 onClick={handleTestDbConnection}
                                                 disabled={loading}
                                                 startIcon={<CachedIcon />}
+                                                size="small"
                                             >
                                                 Test Connection
                                             </Button>
@@ -803,21 +904,23 @@ const SettingsPage = () => {
                             </Card>
                         </Grid>
 
-                        {/* Connection History Log */}
+                        {/* Connection History in a more compact collapsible format */}
                         <Grid item xs={12}>
-                            <Card>
-                                <CardHeader
-                                    title="Connection History"
-                                    avatar={<Avatar><CodeIcon /></Avatar>}
-                                />
-                                <Divider />
-                                <CardContent>
+                            <Accordion>
+                                <AccordionSummary
+                                    expandIcon={<ExpandMoreIcon />}
+                                    aria-controls="connection-history-content"
+                                    id="connection-history-header"
+                                >
+                                    <Typography variant="subtitle1">Connection History</Typography>
+                                </AccordionSummary>
+                                <AccordionDetails>
                                     {connectionHistory.length === 0 ? (
                                         <Typography variant="body2" color="text.secondary" align="center">
                                             No connection history available
                                         </Typography>
                                     ) : (
-                                        <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
+                                        <Box sx={{ maxHeight: 200, overflow: 'auto' }}>
                                             {connectionHistory.map((entry, index) => (
                                                 <Box key={index} sx={{ mb: 1, p: 1, borderBottom: index < connectionHistory.length - 1 ? '1px solid' : 'none', borderColor: 'divider' }}>
                                                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -831,103 +934,64 @@ const SettingsPage = () => {
                                             ))}
                                         </Box>
                                     )}
-                                </CardContent>
-                            </Card>
+                                </AccordionDetails>
+                            </Accordion>
                         </Grid>
                     </Grid>
                 </TabPanel>
 
-                {/* Appearance settings tab */}
-                <TabPanel value={tabValue} index={1}>
-                    <Grid container spacing={3}>
+                {/* Appearance tab with more efficient layout */}
+                <TabPanel value={tabValue} index={1} sx={{ flexGrow: 1 }}>
+                    <Grid container spacing={2}>
                         <Grid item xs={12} md={6}>
                             <Card>
                                 <CardHeader
                                     title="Theme Settings"
                                     avatar={<Avatar><PaletteIcon /></Avatar>}
+                                    subheader={`Current theme: ${useSystemTheme ? 'System' : themeMode}`}
+                                    sx={{ pb: 1 }}
                                 />
                                 <Divider />
-                                <CardContent>
-                                    <Typography variant="subtitle1" gutterBottom>
-                                        Choose Theme
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-                                        <Card
-                                            sx={{
-                                                width: 120,
-                                                height: 80,
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                cursor: 'pointer',
-                                                bgcolor: 'background.paper',
-                                                color: 'text.primary',
-                                                border: themeMode === 'light' ? '2px solid' : '1px solid',
-                                                borderColor: themeMode === 'light' ? 'primary.main' : 'divider',
-                                                '&:hover': { boxShadow: 2 }
-                                            }}
-                                            onClick={() => handleThemeChange('light')}
-                                        >
-                                            <LightModeIcon sx={{ mb: 1 }} />
-                                            <Typography variant="body2">Light</Typography>
-                                        </Card>
+                                <CardContent sx={{ pt: 2 }}>
+                                    {/* Use the ThemeSelector component */}
+                                    <ThemeSelector
+                                        themeMode={themeMode}
+                                        useSystemTheme={useSystemTheme}
+                                        onSelectLight={() => {
+                                            setThemeMode('light');
+                                            setUseSystemTheme(false);
+                                            void showNotification('Light theme applied', 'success');
+                                        }}
+                                        onSelectDark={() => {
+                                            setThemeMode('dark');
+                                            setUseSystemTheme(false);
+                                            void showNotification('Dark theme applied', 'success');
+                                        }}
+                                        onSelectSystem={() => {
+                                            setUseSystemTheme(!useSystemTheme);
+                                            void showNotification(
+                                                useSystemTheme ? 'System theme preference disabled' : 'System theme preference enabled',
+                                                'success'
+                                            );
+                                        }}
+                                    />
 
-                                        <Card
-                                            sx={{
-                                                width: 120,
-                                                height: 80,
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                cursor: 'pointer',
-                                                bgcolor: '#1e1f22',
-                                                color: '#fff',
-                                                border: themeMode === 'dark' ? '2px solid' : '1px solid',
-                                                borderColor: themeMode === 'dark' ? 'primary.main' : 'divider',
-                                                '&:hover': { boxShadow: 2 }
-                                            }}
-                                            onClick={() => handleThemeChange('dark')}
-                                        >
-                                            <DarkModeIcon sx={{ mb: 1 }} />
-                                            <Typography variant="body2">Dark</Typography>
-                                        </Card>
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                checked={useSystemTheme}
+                                                onChange={(e) => setUseSystemTheme(e.target.checked)}
+                                                color="primary"
+                                            />
+                                        }
+                                        label="Use system theme preference"
+                                    />
 
-                                        <Card
-                                            sx={{
-                                                width: 120,
-                                                height: 80,
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                cursor: 'pointer',
-                                                bgcolor: 'background.paper',
-                                                color: 'text.primary',
-                                                border: useSystemTheme ? '2px solid' : '1px solid',
-                                                borderColor: useSystemTheme ? 'primary.main' : 'divider',
-                                                '&:hover': { boxShadow: 2 }
-                                            }}
-                                            onClick={() => setUseSystemTheme(!useSystemTheme)}
-                                        >
-                                            <BrightnessAutoIcon sx={{ mb: 1 }} />
-                                            <Typography variant="body2">System</Typography>
-                                        </Card>
-                                    </Box>
-
-                                    <Box sx={{ mt: 3 }}>
-                                        <FormControlLabel
-                                            control={
-                                                <Switch
-                                                    checked={useSystemTheme}
-                                                    onChange={(e) => setUseSystemTheme(e.target.checked)}
-                                                    color="primary"
-                                                />
-                                            }
-                                            label="Use system theme preference"
-                                        />
-                                    </Box>
+                                    {useSystemTheme && (
+                                        <Alert severity="info" sx={{ mt: 2 }}>
+                                            Current system preference: <strong>{window.matchMedia('(prefers-color-scheme: dark)').matches ? 'Dark' : 'Light'}</strong>
+                                        </Alert>
+                                    )}
                                 </CardContent>
                             </Card>
                         </Grid>
@@ -937,35 +1001,52 @@ const SettingsPage = () => {
                                 <CardHeader
                                     title="Interface Settings"
                                     avatar={<Avatar><BrowserUpdatedIcon /></Avatar>}
+                                    sx={{ pb: 1 }}
                                 />
                                 <Divider />
-                                <CardContent>
-                                    <FormControlLabel
-                                        control={
-                                            <Switch defaultChecked color="primary" />
-                                        }
-                                        label="Show tooltips"
-                                    />
-                                    <FormControlLabel
-                                        control={
-                                            <Switch defaultChecked color="primary" />
-                                        }
-                                        label="Animated transitions"
-                                    />
-                                    <FormControlLabel
-                                        control={
-                                            <Switch defaultChecked color="primary" />
-                                        }
-                                        label="Sidebar auto-collapse"
-                                    />
-                                    <FormControlLabel
-                                        control={
-                                            <Switch color="primary" />
-                                        }
-                                        label="Compact mode"
-                                    />
+                                <CardContent sx={{ pt: 2 }}>
+                                    <Grid container spacing={1}>
+                                        <Grid item xs={12} sm={6}>
+                                            <FormControlLabel
+                                                control={<Switch defaultChecked color="primary" />}
+                                                label="Show tooltips"
+                                            />
+                                        </Grid>
+                                        <Grid item xs={12} sm={6}>
+                                            <FormControlLabel
+                                                control={<Switch defaultChecked color="primary" />}
+                                                label="Animated transitions"
+                                            />
+                                        </Grid>
+                                        <Grid item xs={12} sm={6}>
+                                            <FormControlLabel
+                                                control={<Switch defaultChecked color="primary" />}
+                                                label="Sidebar auto-collapse"
+                                            />
+                                        </Grid>
+                                        <Grid item xs={12} sm={6}>
+                                            <FormControlLabel
+                                                control={<Switch color="primary" />}
+                                                label="Compact mode"
+                                            />
+                                        </Grid>
+                                    </Grid>
                                 </CardContent>
                             </Card>
+
+                            {/* Collapsible theme preview */}
+                            <Accordion sx={{ mt: 2 }}>
+                                <AccordionSummary
+                                    expandIcon={<ExpandMoreIcon />}
+                                    aria-controls="theme-preview-content"
+                                    id="theme-preview-header"
+                                >
+                                    <Typography variant="subtitle1">Theme Preview</Typography>
+                                </AccordionSummary>
+                                <AccordionDetails>
+                                    <ThemePreview mode={themeMode} />
+                                </AccordionDetails>
+                            </Accordion>
                         </Grid>
                     </Grid>
                 </TabPanel>
@@ -1054,6 +1135,7 @@ const SettingsPage = () => {
                         <Divider />
                         <CardContent>
                             <Grid container spacing={3}>
+
                                 <Grid item xs={12} md={6}>
                                     <Typography variant="subtitle1" gutterBottom>
                                         Server Resources
@@ -1067,12 +1149,14 @@ const SettingsPage = () => {
                                             <Box sx={{ flexGrow: 1, mr: 1 }}>
                                                 <LinearProgress
                                                     variant="determinate"
-                                                    value={systemStats ? (systemStats.memoryUsage.used / systemStats.memoryUsage.total) * 100 : 0}
+                                                    value={systemStats?.memoryUsage?.percentUsed || 0}
                                                     sx={{ height: 8, borderRadius: 5 }}
                                                 />
                                             </Box>
                                             <Typography variant="body2" color="text.secondary">
-                                                {systemStats ? `${systemStats.memoryUsage.used} MB / ${systemStats.memoryUsage.total} MB` : 'Unknown'}
+                                                {systemStats?.memoryUsage ?
+                                                    `${systemStats.memoryUsage.used} MB / ${systemStats.memoryUsage.total} MB` :
+                                                    'Unknown'}
                                             </Typography>
                                         </Box>
                                     </Box>
@@ -1085,12 +1169,12 @@ const SettingsPage = () => {
                                             <Box sx={{ flexGrow: 1, mr: 1 }}>
                                                 <LinearProgress
                                                     variant="determinate"
-                                                    value={systemStats ? systemStats.cpuUsage : 0}
+                                                    value={systemStats?.cpuUsage || 0}
                                                     sx={{ height: 8, borderRadius: 5 }}
                                                 />
                                             </Box>
                                             <Typography variant="body2" color="text.secondary">
-                                                {systemStats ? `${systemStats.cpuUsage}%` : 'Unknown'}
+                                                {systemStats?.cpuUsage ? `${systemStats.cpuUsage}%` : 'Unknown'}
                                             </Typography>
                                         </Box>
                                     </Box>
@@ -1099,24 +1183,61 @@ const SettingsPage = () => {
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                             <Typography variant="body2">Uptime</Typography>
                                             <Typography variant="body2" color="text.secondary">
-                                                {systemStats ? formatUptime(systemStats.uptime) : 'Unknown'}
+                                                {systemStats?.uptime !== undefined ? formatUptime(systemStats.uptime) : 'Unknown'}
                                             </Typography>
                                         </Box>
                                         <Divider />
+
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <Typography variant="body2">CPU Cores</Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {systemStats?.cpuInfo?.cores || 'Unknown'}
+                                            </Typography>
+                                        </Box>
+                                        <Divider />
+
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                             <Typography variant="body2">Active Connections</Typography>
                                             <Typography variant="body2" color="text.secondary">
-                                                {systemStats ? systemStats.activeConnections : 'Unknown'}
+                                                {systemStats?.activeConnections !== undefined ? systemStats.activeConnections : 'Unknown'}
                                             </Typography>
                                         </Box>
                                         <Divider />
+
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                             <Typography variant="body2">Last Restart</Typography>
                                             <Typography variant="body2" color="text.secondary">
-                                                {systemStats ? formatDate(systemStats.lastRestart) : 'Unknown'}
+                                                {systemStats?.lastRestart ? new Date(systemStats.lastRestart).toLocaleString() : 'Unknown'}
                                             </Typography>
                                         </Box>
                                     </Stack>
+
+                                    {error && (
+                                        <Alert severity="warning" sx={{ mt: 2 }}>
+                                            {error}
+                                        </Alert>
+                                    )}
+
+                                    {lastStatsUpdate && (
+                                        <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+                                            {systemStats?.isMockData ?
+                                                'Using mock data (server unavailable)' :
+                                                `Last updated: ${lastStatsUpdate.toLocaleString()}`}
+                                        </Typography>
+                                    )}
+
+                                    <Box sx={{ mt: 2 }}>
+                                        <Button
+                                            variant="outlined"
+                                            color="primary"
+                                            startIcon={loading ? <CircularProgress size={20} /> : <RefreshIcon />}
+                                            onClick={fetchSystemStats}
+                                            disabled={loading}
+                                            fullWidth
+                                        >
+                                            Refresh System Info
+                                        </Button>
+                                    </Box>
                                 </Grid>
 
                                 <Grid item xs={12} md={6}>
@@ -1134,7 +1255,7 @@ const SettingsPage = () => {
                                                     Node.js Version
                                                 </Typography>
                                                 <Typography variant="body1">
-                                                    v16.14.2
+                                                    {systemStats?.platform?.release || 'v16.14.2'}
                                                 </Typography>
                                             </Box>
                                         </Card>
@@ -1145,10 +1266,10 @@ const SettingsPage = () => {
                                             </Avatar>
                                             <Box>
                                                 <Typography variant="body2" color="text.secondary">
-                                                    Application Version
+                                                    Platform
                                                 </Typography>
                                                 <Typography variant="body1">
-                                                    v1.5.0
+                                                    {systemStats?.platform ? `${systemStats.platform.type} (${systemStats.platform.platform})` : 'Unknown'}
                                                 </Typography>
                                             </Box>
                                         </Card>
@@ -1159,24 +1280,113 @@ const SettingsPage = () => {
                                             </Avatar>
                                             <Box>
                                                 <Typography variant="body2" color="text.secondary">
-                                                    OPC UA Library
+                                                    Process Memory
                                                 </Typography>
                                                 <Typography variant="body1">
-                                                    node-opcua v2.58.3
+                                                    {systemStats?.processMemory ?
+                                                        `Heap: ${systemStats.processMemory.heapUsed} MB / ${systemStats.processMemory.heapTotal} MB` :
+                                                        'Unknown'}
                                                 </Typography>
                                             </Box>
                                         </Card>
                                     </Box>
+                                </Grid>
 
-                                    <Button
-                                        variant="outlined"
-                                        color="primary"
-                                        startIcon={<RefreshIcon />}
-                                        onClick={fetchSystemStats}
-                                        fullWidth
-                                    >
-                                        Refresh System Info
-                                    </Button>
+                                <Grid item xs={12}>
+                                    <Card>
+                                        <CardHeader
+                                            title="Connection Statistics"
+                                            subheader={`${connectionStats?.activeCount || 0} active connections`}
+                                            action={
+                                                <Tooltip title="Refresh Connection Stats">
+                    <span>
+                        <IconButton
+                            onClick={fetchConnectionStats}
+                            disabled={loadingConnections}
+                        >
+                            {loadingConnections ? <CircularProgress size={20} /> : <RefreshIcon />}
+                        </IconButton>
+                    </span>
+                                                </Tooltip>
+                                            }
+                                        />
+                                        <Divider />
+                                        <CardContent>
+                                            <Typography variant="subtitle1" gutterBottom>
+                                                Active Connections
+                                            </Typography>
+
+                                            {connectionStats?.activeConnections?.length > 0 ? (
+                                                <Box sx={{ mt: 2, maxHeight: 200, overflow: 'auto' }}>
+                                                    {connectionStats.activeConnections.map(client => (
+                                                        <Box
+                                                            key={client.id}
+                                                            sx={{
+                                                                p: 1,
+                                                                mb: 1,
+                                                                borderRadius: 1,
+                                                                bgcolor: 'background.paper',
+                                                                boxShadow: 1
+                                                            }}
+                                                        >
+                                                            <Typography variant="body2" component="div">
+                                                                <strong>ID:</strong> {client.id.substring(0, 8)}...
+                                                            </Typography>
+                                                            <Typography variant="body2" color="text.secondary">
+                                                                <strong>Connected:</strong> {new Date(client.connectedAt).toLocaleString()}
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                {client.ip} | {client.userAgent?.substring(0, 50)}...
+                                                            </Typography>
+                                                        </Box>
+                                                    ))}
+                                                </Box>
+                                            ) : (
+                                                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                                                    No active connections
+                                                </Typography>
+                                            )}
+
+                                            <Divider sx={{ my: 3 }} />
+
+                                            <Typography variant="subtitle1" gutterBottom>
+                                                Connection History
+                                            </Typography>
+
+                                            {connectionStats?.history?.length > 0 ? (
+                                                <Box sx={{ mt: 2, maxHeight: 300, overflow: 'auto' }}>
+                                                    {connectionStats.history.map((entry, index) => (
+                                                        <Box
+                                                            key={index}
+                                                            sx={{
+                                                                p: 1,
+                                                                mb: 1,
+                                                                borderRadius: 1,
+                                                                bgcolor: entry.type === 'connect' ? 'success.main' : 'error.main',
+                                                                color: 'white',
+                                                                opacity: 0.8
+                                                            }}
+                                                        >
+                                                            <Typography variant="body2" component="div">
+                                                                <strong>{entry.type === 'connect' ? 'Connected' : 'Disconnected'}</strong>
+                                                            </Typography>
+                                                            <Typography variant="body2">
+                                                                {new Date(entry.timestamp).toLocaleString()}
+                                                            </Typography>
+                                                            <Typography variant="caption">
+                                                                ID: {entry.id.substring(0, 8)}...
+                                                                {entry.duration && ` | Duration: ${formatDuration(entry.duration)}`}
+                                                            </Typography>
+                                                        </Box>
+                                                    ))}
+                                                </Box>
+                                            ) : (
+                                                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                                                    No connection history
+                                                </Typography>
+                                            )}
+                                        </CardContent>
+                                    </Card>
                                 </Grid>
                             </Grid>
                         </CardContent>

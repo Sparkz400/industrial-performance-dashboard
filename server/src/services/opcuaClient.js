@@ -4,7 +4,6 @@ const opcuaMapping = require('../config/opcuaMapping');
 const logger = require('../utils/logger');
 const StatusConstants = require("../utils/statusConstants");
 const statusManager = require("../utils/status");
-const fs = require('fs');
 
 class OPCUAEmitter extends EventEmitter {}
 const opcuaEmitter = new OPCUAEmitter();

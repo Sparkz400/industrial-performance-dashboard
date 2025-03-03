@@ -29,8 +29,8 @@
 
 .BtnAddWidgetText {
     position: absolute;
-    right: 0%;
-    width: 0%;
+    right: 0;
+    width: 0;
     opacity: 0;
     color: white;
     font-size: 0.9em;

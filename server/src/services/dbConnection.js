@@ -2,7 +2,6 @@ const { Pool } = require('pg');
 const statusManager = require('../utils/status');
 const StatusConstants = require('../utils/statusConstants');
 const logger = require('../utils/logger');
-const { DatabaseError } = require("../utils/errors");
 
 /**
  * Class for managing database connections with integrated health monitoring
@@ -34,7 +33,7 @@ class DatabaseManager {
             logger.error('Unexpected error on idle PostgreSQL client:', err);
             statusManager.setDatabaseStatus(StatusConstants.ERROR, {
                 message: 'Unexpected pool error',
-                error: err.message
+                error: err
             });
 
             // Try to recover the connection if possible
@@ -42,13 +41,13 @@ class DatabaseManager {
         });
 
         // Set up initial connection
-        this.connect();
+        void this.connect();
     }
 
     /**
      * Attempt to connect to the database
      */
-    async connect() {
+    async connect(options) {
         if (this.isConnecting) return;
 
         this.isConnecting = true;
@@ -60,7 +59,7 @@ class DatabaseManager {
         });
 
         try {
-            const client = await this.pool.connect();
+            const client = await this.pool.connect(options);
             logger.info('Connected to PostgreSQL');
 
             statusManager.setDatabaseStatus(StatusConstants.CONNECTED, {
@@ -165,8 +164,7 @@ class DatabaseManager {
         while (retries <= options.maxRetries) {
             try {
                 // Execute the query
-                const result = await this.pool.query(text, params);
-                return result;
+                return await this.pool.query(text, params);
             } catch (error) {
                 retries++;
 

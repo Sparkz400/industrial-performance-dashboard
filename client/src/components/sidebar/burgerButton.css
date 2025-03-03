@@ -1,7 +1,7 @@
 .burger {
     position: relative;
     width: 30px;
-    height: 22.5px;
+    height: 23px;
     background: transparent;
     cursor: pointer;
     display: block;
@@ -25,7 +25,7 @@
 }
 
 .burger span:nth-of-type(1) {
-    top: 0px;
+    top: 0;
     transform-origin: left center;
 }
 
@@ -43,12 +43,12 @@
 
 .burger input:checked ~ span:nth-of-type(1) {
     transform: rotate(45deg);
-    top: 0px;
+    top: 0;
     left: 5px;
 }
 
 .burger input:checked ~ span:nth-of-type(2) {
-    width: 0%;
+    width: 0;
     opacity: 0;
 }
 

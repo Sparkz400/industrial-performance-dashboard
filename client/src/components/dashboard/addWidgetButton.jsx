@@ -1,6 +1,5 @@
-// File: src/components/dashboard/addWidgetButton.jsx
 import React from 'react';
-import './addWidgetButton.css'; // Fixed import path to match actual file name
+import './addWidgetButton.css';
 
 const AddWidgetButton = ({ onClick }) => {
     return (

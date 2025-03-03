@@ -3,7 +3,6 @@ const router = express.Router();
 const statusManager = require('../utils/status');
 const StatusConstants = require('../utils/statusConstants');
 const opcuaManager = require('../services/opcuaConnectionManager');
-const logger = require('../utils/logger');
 const { rateLimiter } = require('../middleware/security');
 
 /**

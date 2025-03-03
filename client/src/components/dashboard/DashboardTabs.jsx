@@ -4,6 +4,14 @@ import { Tabs, Tab, Box, TextField, CircularProgress, Typography } from '@mui/ma
 import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
 
+// Isolated loading indicator to prevent prop leakage
+const LoadingIndicator = () => (
+    <CircularProgress
+        size={16}
+        sx={{ ml: 2, color: 'primary.main' }}
+    />
+);
+
 // Tab label component
 const DashboardTabLabel = ({
                                dashboard,
@@ -12,12 +20,52 @@ const DashboardTabLabel = ({
                                onEditName,
                                onDelete
                            }) => {
+    // Add local state to track the input value while editing
+    const [editValue, setEditValue] = React.useState(dashboard.name);
+
+    // Reset edit value when dashboard or isEditing changes
+    React.useEffect(() => {
+        if (isEditing) {
+            setEditValue(dashboard.name);
+        }
+    }, [dashboard.name, isEditing]);
+
+    // Handle saving the edit
+    const handleSaveEdit = () => {
+        // Only save if the value actually changed and isn't empty
+        if (editValue && editValue.trim() !== '' && editValue !== dashboard.name) {
+            onEditName(dashboard.id, editValue);
+        } else {
+            // Just exit edit mode if value is empty or unchanged
+            onEditName(dashboard.id, null);
+        }
+    };
+
+    // Handle cancel edit (e.g., when Escape is pressed)
+    const handleCancelEdit = () => {
+        // Reset to original value and exit edit mode
+        setEditValue(dashboard.name);
+        onEditName(dashboard.id, null);
+    };
+
     if (isEditing) {
         return (
             <TextField
-                value={dashboard.name}
-                onChange={(e) => onEditName(dashboard.id, e.target.value)}
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
+                // Save on blur (clicking away)
+                onBlur={handleSaveEdit}
+                // Handle keyboard events
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        // Save on Enter
+                        handleSaveEdit();
+                    } else if (e.key === 'Escape') {
+                        // Cancel on Escape
+                        handleCancelEdit();
+                    }
+                }}
                 autoFocus
                 variant="standard"
                 size="small"
@@ -40,6 +88,11 @@ const DashboardTabLabel = ({
                     color: isSelected ? 'primary.main' : 'inherit',
                     fontWeight: isSelected ? 'bold' : 'normal'
                 }}
+                onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    console.log('Double click on dashboard name');
+                    onEditName(dashboard.id);
+                }}
             >
                 {dashboard.name}
             </Typography>
@@ -48,6 +101,7 @@ const DashboardTabLabel = ({
             <span
                 onClick={(e) => {
                     e.stopPropagation();
+                    console.log('Edit icon clicked');
                     onEditName(dashboard.id);
                 }}
                 style={{
@@ -80,7 +134,7 @@ const DashboardTabLabel = ({
     );
 };
 
-// Main dashboard tabs component
+// Main dashboard tabs component - completely rewritten to avoid prop inheritance issues
 const DashboardTabs = ({
                            dashboards,
                            selectedIndex,
@@ -90,38 +144,40 @@ const DashboardTabs = ({
                            editingDashboardId,
                            loading
                        }) => {
-    return (
-        <Tabs
-            value={selectedIndex !== -1 ? selectedIndex : 0}
-            onChange={onSelectDashboard}
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{ flexGrow: 1 }}
-        >
-            {dashboards.map((dashboard, index) => (
-                <Tab
-                    key={dashboard.id}
-                    label={
-                        <DashboardTabLabel
-                            dashboard={dashboard}
-                            isEditing={editingDashboardId === dashboard.id}
-                            isSelected={selectedIndex === index}
-                            onEditName={onEditName}
-                            onDelete={onDeleteDashboard}
-                        />
-                    }
-                    disabled={loading}
+    // Create tab elements
+    const tabElements = dashboards.map((dashboard, index) => (
+        <Tab
+            key={dashboard.id}
+            label={
+                <DashboardTabLabel
+                    dashboard={dashboard}
+                    isEditing={editingDashboardId === dashboard.id}
+                    isSelected={selectedIndex === index}
+                    onEditName={onEditName}
+                    onDelete={onDeleteDashboard}
                 />
-            ))}
+            }
+            disabled={loading}
+        />
+    ));
 
-            {/* Loading indicator */}
+    return (
+        <Box sx={{ width: '100%', flexGrow: 1 }}>
+            <Tabs
+                value={selectedIndex !== -1 ? selectedIndex : 0}
+                onChange={onSelectDashboard}
+                variant="scrollable"
+                scrollButtons="auto"
+                aria-label="dashboard tabs"
+            >
+                {tabElements}
+            </Tabs>
             {loading && (
-                <CircularProgress
-                    size={16}
-                    sx={{ ml: 2, color: 'primary.main' }}
-                />
+                <Box sx={{ display: 'inline-flex', ml: 2 }}>
+                    <LoadingIndicator />
+                </Box>
             )}
-        </Tabs>
+        </Box>
     );
 };
 

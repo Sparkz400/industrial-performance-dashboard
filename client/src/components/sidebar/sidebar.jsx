@@ -1,5 +1,3 @@
-// This is a completely refactored version of the status-related parts of the sidebar
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -17,7 +15,7 @@ import {
     Collapse,
     alpha,
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import { useTheme as useMuiTheme } from '@mui/material/styles';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
@@ -30,6 +28,8 @@ import NetworkCheckIcon from '@mui/icons-material/NetworkCheck';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import BurgerButton from './burgerButton.jsx';
+import { useTheme as useAppTheme } from '../../contexts/ThemeContext.jsx';
+import PropTypes from "prop-types";
 
 // Simple debounce function
 function debounce(func, delay) {
@@ -40,54 +40,6 @@ function debounce(func, delay) {
             func(...args);
         }, delay);
     };
-}
-
-// Safe status text extraction
-function getStatusText(status) {
-    // Handle object format
-    if (status && typeof status === 'object') {
-        if (status.statusText) return status.statusText;
-        if (status.status) {
-            return typeof status.status === 'string'
-                ? status.status.charAt(0).toUpperCase() + status.status.slice(1).toLowerCase()
-                : 'Unknown';
-        }
-    }
-
-    // Handle string format
-    if (typeof status === 'string') {
-        return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
-    }
-
-    return 'Unknown';
-}
-
-// Safe color extraction
-function getStatusColor(status) {
-    // Handle object format
-    if (status && typeof status === 'object') {
-        if (status.statusColor) return status.statusColor;
-        if (status.status) {
-            return getColorForStatus(status.status);
-        }
-    }
-
-    // Handle string format
-    if (typeof status === 'string') {
-        return getColorForStatus(status);
-    }
-
-    return 'default';
-}
-
-// Get color based on status string
-function getColorForStatus(statusStr) {
-    const status = typeof statusStr === 'string' ? statusStr.toLowerCase() : '';
-
-    if (status === 'connected' || status === 'ok') return 'success';
-    if (status === 'warning') return 'warning';
-    if (status === 'error' || status === 'disconnected') return 'error';
-    return 'default';
 }
 
 // Get icon based on status
@@ -113,33 +65,15 @@ function getIconForStatus(statusStr) {
     return <WarningIcon />;
 }
 
-// Status indicator component
-const StatusIndicator = ({ status }) => {
-    const color = getStatusColor(status);
-    const label = getStatusText(status);
-    const icon = getStatusIcon(status);
-
-    return (
-        <Chip
-            icon={icon}
-            label={label}
-            color={color}
-            variant="outlined"
-            size="small"
-            sx={{ fontWeight: 'bold' }}
-        />
-    );
-};
-
 const ResponsiveSidebar = ({
                                open,
                                onToggle,
                                onWidthChange,
-                               themeMode,
-                               onToggleTheme,
                                status
                            }) => {
-    const theme = useTheme();
+
+    const { themeMode, toggleTheme } = useAppTheme();
+    const theme = useMuiTheme();
     const location = useLocation();
     const contentRef = useRef(null);
     const [statusExpanded, setStatusExpanded] = useState(false);
@@ -448,7 +382,7 @@ const ResponsiveSidebar = ({
                     <ListItem disablePadding>
                         <Tooltip title={`Switch to ${themeMode === 'dark' ? 'light' : 'dark'} mode`} placement="right">
                             <ListItemButton
-                                onClick={onToggleTheme}
+                                onClick={toggleTheme}
                                 sx={{
                                     py: 1.5,
                                     justifyContent: open ? 'flex-start' : 'center',
@@ -465,6 +399,13 @@ const ResponsiveSidebar = ({
             </Box>
         </Drawer>
     );
+};
+
+ResponsiveSidebar.propTypes = {
+    open: PropTypes.bool,
+    onToggle: PropTypes.func,
+    onWidthChange: PropTypes.func,
+    status: PropTypes.object
 };
 
 export default ResponsiveSidebar;

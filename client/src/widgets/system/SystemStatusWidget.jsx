@@ -1,4 +1,3 @@
-// File: src/widgets/system/SystemStatusWidget.jsx
 import React, { memo } from 'react';
 import PropTypes from 'prop-types';
 import {

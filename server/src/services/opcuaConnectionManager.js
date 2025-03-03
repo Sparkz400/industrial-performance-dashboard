@@ -124,7 +124,7 @@ class OpcuaConnectionManager extends EventEmitter {
             logger.info(`Scheduling OPC UA reconnection in ${delay}ms`);
 
             this.reconnectTimer = setTimeout(() => {
-                this.startConnection();
+                void this.startConnection();
             }, delay);
         } else {
             logger.error(`Failed to connect after ${this.maxConnectionAttempts} attempts. Manual reconnection required.`);

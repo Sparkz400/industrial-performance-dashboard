@@ -10,13 +10,15 @@ const helmet = require('helmet');
 const { rateLimiter } = require('./src/middleware/security');
 const logger = require('./src/utils/logger');
 const { AsyncQueue } = require('./src/utils/queue');
+const compression = require('compression');
+const connectionTracker = require('./src/utils/connectionTracker');
 
 const app = express();
-const compression = require('compression');
-
 app.use(cors({
     origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    credentials: true
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(helmet());
@@ -111,6 +113,9 @@ opcuaEmitter.on('nodeChanged', (data) => {
 });
 
 // --- REST Routes ---
+const systemRoutes = require('./src/routes/systemRoutes');
+app.use('/api/system', systemRoutes);
+
 const dashboardRoutes = require('./src/routes/dashboardRoutes');
 app.use('/api/dashboards', dashboardRoutes);
 
@@ -149,9 +154,23 @@ app.get('/api/operation-mode-data', async (req, res, next) => {
 
 // --- WebSocket Connection ---
 io.on('connection', (socket) => {
-    logger.info('A client connected via WebSocket');
+    // Get connection info
+    const clientIp = socket.handshake.address;
+    const clientInfo = {
+        ip: clientIp,
+        userAgent: socket.handshake.headers['user-agent'],
+        query: socket.handshake.query
+    };
+
+    // Track the new connection
+    connectionTracker.addConnection(socket.id, clientInfo);
+
+    logger.info(`Client connected via WebSocket: ${socket.id} from ${clientIp}`);
+
+    // Track disconnection
     socket.on('disconnect', () => {
-        logger.info('Client disconnected');
+        connectionTracker.removeConnection(socket.id);
+        logger.info(`Client disconnected: ${socket.id}`);
     });
 });
 

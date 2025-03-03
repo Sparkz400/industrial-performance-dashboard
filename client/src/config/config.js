@@ -14,6 +14,10 @@ export const API_ENDPOINTS = {
     },
     operationModeData: `${API_BASE_URL}/operation-mode-data`,
     dbTest: `${API_BASE_URL}/db/test`,
+    system: {
+        stats: `${API_BASE_URL}/system/stats`,
+        connections: `${API_BASE_URL}/system/connections`
+    },
 };
 
 // Other constants
