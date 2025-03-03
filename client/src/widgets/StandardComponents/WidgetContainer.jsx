@@ -1,4 +1,3 @@
-// File: src/widgets/StandardComponents/WidgetContainer.jsx
 import React, {useState, memo, Suspense, useCallback, useEffect, useRef, useLayoutEffect, useMemo} from 'react';
 import {
     Paper,
@@ -159,22 +158,36 @@ const WidgetContainer = memo(({ widget, onDelete, layoutItem, commonData }) => {
 
     // Use layout effect to ensure container size is properly calculated
     useLayoutEffect(() => {
-        // Only run this effect if layoutItem dimensions are valid numbers
-        if (containerRef.current &&
-            typeof layoutItem?.w === 'number' &&
-            typeof layoutItem?.h === 'number') {
-
-            containerRef.current.style.opacity = '0';
-
-            // Use a ref to track if component is still mounted
-            const timeoutId = setTimeout(() => {
-                if (containerRef.current) {
-                    containerRef.current.style.opacity = '1';
-                }
-            }, 50);
-
-            return () => clearTimeout(timeoutId);
+        // Check if we have valid layout and container
+        if (!containerRef.current ||
+            typeof layoutItem?.w !== 'number' ||
+            typeof layoutItem?.h !== 'number') {
+            return; // Early return if conditions not met
         }
+
+        // Set initial opacity to 0
+        containerRef.current.style.opacity = '0';
+
+        // Safely store the current ref value in case it changes
+        const currentRef = containerRef.current;
+
+        // Use timeout to allow layout to complete before showing
+        const timeoutId = setTimeout(() => {
+            // Check if the ref still exists and hasn't changed
+            if (currentRef && currentRef === containerRef.current) {
+                currentRef.style.opacity = '1';
+            }
+        }, 50);
+
+        // Proper cleanup function
+        return () => {
+            clearTimeout(timeoutId);
+
+            // Ensure we don't leave elements with opacity 0
+            if (currentRef && currentRef === containerRef.current) {
+                currentRef.style.opacity = '1';
+            }
+        };
     }, [layoutItem?.w, layoutItem?.h]);
 
     const handleOpenSettings = useCallback(() => {

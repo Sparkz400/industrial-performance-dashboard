@@ -41,22 +41,41 @@ export const ThemeProvider = ({ children }) => {
 
     // Update theme mode based on system preference when useSystemTheme is enabled
     useEffect(() => {
+        // If not using system theme, we don't need to do anything
         if (!useSystemTheme) return;
 
-        const handleChange = (e) => {
+        // Create the event handler and reference it consistently
+        const handlePreferenceChange = (e) => {
             setThemeModeState(e.matches ? 'dark' : 'light');
         };
 
-        // Set initial value
-        handleChange(prefersDarkMode);
+        // Store the media query in a local variable to ensure
+        // we're adding and removing listeners on the same object
+        const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
-        // Listen for changes
-        prefersDarkMode.addEventListener('change', handleChange);
+        // Set initial value based on current preference
+        handlePreferenceChange(darkModeQuery);
 
-        // Cleanup
-        return () => {
-            prefersDarkMode.removeEventListener('change', handleChange);
-        };
+        // Check if the browser supports addEventListener on MediaQueryList
+        // (older browsers use a different API)
+        if (darkModeQuery.addEventListener) {
+            darkModeQuery.addEventListener('change', handlePreferenceChange);
+
+            // Return cleanup function that uses the same handler reference
+            return () => {
+                darkModeQuery.removeEventListener('change', handlePreferenceChange);
+            };
+        } else if (darkModeQuery.addListener) {
+            // Legacy method for older browsers
+            darkModeQuery.addListener(handlePreferenceChange);
+
+            return () => {
+                darkModeQuery.removeListener(handlePreferenceChange);
+            };
+        }
+
+        // No cleanup needed if browser doesn't support either method
+        return undefined;
     }, [useSystemTheme]);
 
     // Persist theme mode to localStorage

@@ -9,6 +9,19 @@ export const WIDGET_CATEGORIES = {
 };
 
 export const widgetRegistry = {
+    alarmDashboard: {
+        component: React.lazy(() => import('../alarm-dashboard')),
+        settingsComponent: React.lazy(() => import('../alarm-dashboard/AlarmDashboardWidgetSettings')),
+        minW: 6,
+        minH: 6,
+        title: 'Alarm Dashboard',
+        description: 'Displays system alarms with filtering capabilities',
+        category: WIDGET_CATEGORIES.MONITORING,
+        icon: 'Notifications',
+        defaultConfig: {
+            rowsPerPage: 5
+        },
+    },
     systemStatus: {
         component: React.lazy(() => import('../system/SystemStatusWidget')),
         settingsComponent: React.lazy(() => import('../system/SystemStatusSettings')),

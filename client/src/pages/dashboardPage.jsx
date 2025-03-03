@@ -117,7 +117,7 @@ function DashboardPageInternal() {
         });
     }, [state.notification]);
 
-    // Save to local storage with timestamp - memoized to prevent recreating on each render
+    // Save to local storage with timestamp
     const saveToLocalStorage = useCallback((dashboardsToSave) => {
         if (!dashboardsToSave || dashboardsToSave.length === 0) return;
         try {
@@ -200,7 +200,7 @@ function DashboardPageInternal() {
         }
     }, []);
 
-    // Persist dashboard state with improved feedback
+    // Persist dashboard state
     const persistDashboardState = useCallback(async (dashboard) => {
         dispatch({ type: 'SET_LOADING', payload: true });
 
@@ -223,7 +223,7 @@ function DashboardPageInternal() {
         }
     }, [state.dashboards, saveDashboardToDB, saveToLocalStorage, showNotification]);
 
-    // Add a new dashboard - simplified with cleaner state management
+    // Add a new dashboard
     const handleAddDashboard = useCallback(async () => {
         dispatch({ type: 'SET_LOADING', payload: true });
 
@@ -256,7 +256,7 @@ function DashboardPageInternal() {
         }
     }, [state.dashboards, actions, persistDashboardState, saveToLocalStorage, showNotification]);
 
-    // Delete a dashboard - with proper cleanup
+    // Delete a dashboard
     const handleDeleteDashboard = useCallback(async (dashboardId) => {
         dispatch({ type: 'SET_LOADING', payload: true });
 
@@ -286,7 +286,7 @@ function DashboardPageInternal() {
         }
     }, [state.dashboards, state.selectedDashboardId, actions, handleAddDashboard, saveToLocalStorage, showNotification]);
 
-    // Select a dashboard and save the current one first - optimized to prevent unnecessary operations
+    // Select a dashboard and save the current one first
     const handleSelectDashboard = useCallback((event, newIndex) => {
         if (newIndex < 0 || newIndex >= state.dashboards.length) return;
 
@@ -374,7 +374,7 @@ function DashboardPageInternal() {
         }
     }, [state.dashboards, state.selectedDashboardId, widgetState.widgets, widgetState.layout, persistDashboardState, saveToLocalStorage, showNotification, dispatch]);
 
-    // Add widget to the current dashboard - with error handling
+    // Add widget to the current dashboard
     const handleAddWidget = useCallback((widgetType) => {
         dispatch({ type: 'SET_LOADING', payload: true });
 
@@ -411,7 +411,7 @@ function DashboardPageInternal() {
         }
     }, [actions, state.dashboards, state.selectedDashboardId, widgetState.widgets, widgetState.layout, saveToLocalStorage, showNotification]);
 
-    // Remove widget from dashboard - with proper cleanup
+    // Remove widget from dashboard
     const handleRemoveWidget = useCallback((widgetId) => {
         dispatch({ type: 'SET_LOADING', payload: true });
 
@@ -437,7 +437,7 @@ function DashboardPageInternal() {
         }
     }, [actions, state.dashboards, state.selectedDashboardId, widgetState.widgets, widgetState.layout, saveToLocalStorage, showNotification]);
 
-    // Manual save dashboard - with optimized state handling
+    // Manual save dashboard
     const saveDashboard = useCallback(() => {
         const currentDashboard = state.dashboards.find(d => d.id === state.selectedDashboardId);
         if (!currentDashboard) {
@@ -465,7 +465,7 @@ function DashboardPageInternal() {
             .finally(() => dispatch({ type: 'SET_LOADING', payload: false }));
     }, [state.dashboards, state.selectedDashboardId, widgetState.widgets, widgetState.layout, persistDashboardState, saveToLocalStorage, showNotification]);
 
-    // Manual sync with server - optimized to prevent redundant operations
+    // Manual sync with server
     const syncWithServer = useCallback(async () => {
         dispatch({ type: 'SET_LOADING', payload: true });
 
@@ -492,93 +492,87 @@ function DashboardPageInternal() {
         }
     }, [state.dashboards, state.selectedDashboardId, widgetState.widgets, widgetState.layout, saveDashboardToDB, showNotification]);
 
-    // Load dashboards on init - with proper error handling and cleanup
-    useEffect(() => {
-        let isMounted = true; // For avoiding state updates after unmount
+    // Create a default dashboard
+    const createDefaultDashboardInternal = useCallback(() => {
+        const timestamp = new Date().toISOString();
+        const defaultDashboard = {
+            id: 'dashboard-' + Date.now(),
+            name: 'My Dashboard',
+            widgets: [],
+            layout: [],
+            localLastModified: timestamp
+        };
 
-        // Move createDefaultDashboard inside useEffect to break circular dependency
-        const createDefaultDashboardInternal = () => {
-            if (!isMounted) return;
+        dispatch({ type: 'SET_DASHBOARDS', payload: [defaultDashboard] });
+        dispatch({ type: 'SET_SELECTED_DASHBOARD_ID', payload: defaultDashboard.id });
 
-            const timestamp = new Date().toISOString();
-            const defaultDashboard = {
-                id: 'dashboard-' + Date.now(),
-                name: 'My Dashboard',
-                widgets: [],
-                layout: [],
-                localLastModified: timestamp
+        actions.setWidgets([]);
+        actions.setLayout([]);
+
+        try {
+            // Inline the saveToLocalStorage logic
+            const localData = {
+                dashboards: [defaultDashboard],
+                lastSaved: timestamp
             };
+            localStorage.setItem('dashboardData', JSON.stringify(localData));
+            hasLocalChanges.current = true;
 
-            dispatch({ type: 'SET_DASHBOARDS', payload: [defaultDashboard] });
-            dispatch({ type: 'SET_SELECTED_DASHBOARD_ID', payload: defaultDashboard.id });
+            // Save to server in background
+            (async () => {
+                try {
+                    const response = await fetch(`${API_ENDPOINTS.dashboards}/${defaultDashboard.id}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(defaultDashboard)
+                    });
 
-            actions.setWidgets([]);
-            actions.setLayout([]);
-
-            try {
-                // Inline the saveToLocalStorage logic
-                const localData = {
-                    dashboards: [defaultDashboard],
-                    lastSaved: timestamp
-                };
-                localStorage.setItem('dashboardData', JSON.stringify(localData));
-                hasLocalChanges.current = true;
-
-                // No need to call persistDashboardState here - we'll save to server in background
-                (async () => {
-                    try {
-                        if (!isMounted) return;
-                        const response = await fetch(`${API_ENDPOINTS.dashboards}/${defaultDashboard.id}`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(defaultDashboard)
-                        });
-
-                        if (!isMounted) return;
-                        if (response.ok) {
-                            dispatch({
-                                type: 'SET_NOTIFICATION',
-                                payload: {
-                                    open: true,
-                                    message: 'Dashboard created successfully',
-                                    severity: 'success'
-                                }
-                            });
-                        }
-                    } catch (error) {
-                        if (!isMounted) return;
-                        console.error("Error saving new dashboard to server:", error);
+                    if (response.ok) {
                         dispatch({
                             type: 'SET_NOTIFICATION',
                             payload: {
                                 open: true,
-                                message: 'Dashboard created and saved locally',
-                                severity: 'info'
+                                message: 'Dashboard created successfully',
+                                severity: 'success'
                             }
                         });
                     }
-                })();
-            } catch (error) {
-                console.error('Failed to initialize dashboard:', error);
-                if (isMounted) {
+                } catch (error) {
+                    console.error("Error saving new dashboard to server:", error);
                     dispatch({
                         type: 'SET_NOTIFICATION',
                         payload: {
                             open: true,
-                            message: 'Error creating dashboard',
-                            severity: 'error'
+                            message: 'Dashboard created and saved locally',
+                            severity: 'info'
                         }
                     });
                 }
-            }
-        };
+            })();
+        } catch (error) {
+            console.error('Failed to initialize dashboard:', error);
+            dispatch({
+                type: 'SET_NOTIFICATION',
+                payload: {
+                    open: true,
+                    message: 'Error creating dashboard',
+                    severity: 'error'
+                }
+            });
+        }
+    }, [dispatch, actions, API_ENDPOINTS]);
 
+    // Load dashboards on init
+    useEffect(() => {
+        // Flag to prevent state updates after unmount
+        let isMounted = true;
 
         async function loadDashboards() {
             if (isLoading.current) return;
             isLoading.current = true;
+
             if (isMounted) {
-                dispatch({ type: 'SET_LOADING', payload: true });
+                dispatch({ type: "SET_LOADING", payload: true });
             }
 
             let localDashboards = [];
@@ -593,8 +587,8 @@ function DashboardPageInternal() {
                         const firstDashboard = localDashboards[0];
 
                         // Update state with loaded dashboards
-                        dispatch({ type: 'SET_DASHBOARDS', payload: localDashboards });
-                        dispatch({ type: 'SET_SELECTED_DASHBOARD_ID', payload: firstDashboard.id });
+                        dispatch({ type: "SET_DASHBOARDS", payload: localDashboards });
+                        dispatch({ type: "SET_SELECTED_DASHBOARD_ID", payload: firstDashboard.id });
 
                         // Update widget state
                         actions.setWidgets(firstDashboard.widgets || []);
@@ -614,15 +608,19 @@ function DashboardPageInternal() {
                 }
             } finally {
                 if (isMounted) {
-                    dispatch({ type: 'SET_LOADING', payload: false });
+                    dispatch({ type: "SET_LOADING", payload: false });
                 }
                 isLoading.current = false;
             }
         }
 
         async function fetchFromServerOrCreateDefault() {
+            if (!isMounted) return;
+
             try {
                 const res = await fetch(API_ENDPOINTS.dashboards);
+
+                if (!isMounted) return;
 
                 if (!res.ok) {
                     throw new Error(`Server responded with status: ${res.status}`);
@@ -630,10 +628,12 @@ function DashboardPageInternal() {
 
                 const serverDashboards = await res.json();
 
-                if (serverDashboards && serverDashboards.length > 0 && isMounted) {
-                    dispatch({ type: 'SET_DASHBOARDS', payload: serverDashboards });
+                if (!isMounted) return;
+
+                if (serverDashboards && serverDashboards.length > 0) {
+                    dispatch({ type: "SET_DASHBOARDS", payload: serverDashboards });
                     const firstDashboard = serverDashboards[0];
-                    dispatch({ type: 'SET_SELECTED_DASHBOARD_ID', payload: firstDashboard.id });
+                    dispatch({ type: "SET_SELECTED_DASHBOARD_ID", payload: firstDashboard.id });
                     actions.setWidgets(firstDashboard.widgets || []);
                     actions.setLayout(firstDashboard.layout || []);
                 } else {
@@ -649,13 +649,14 @@ function DashboardPageInternal() {
             }
         }
 
+        // Start loading dashboards
         void loadDashboards();
 
         // Cleanup function
         return () => {
-            isMounted = false; // Prevent state updates if component unmounts during loading
+            isMounted = false;
         };
-    }, [dispatch, actions]); // Only depend on stable dispatch and actions
+    }, [dispatch, actions, createDefaultDashboardInternal, API_ENDPOINTS]);
 
     // Initialize selected dashboard if not set but dashboards are loaded
     useEffect(() => {
@@ -706,32 +707,49 @@ function DashboardPageInternal() {
 
     // Auto-sync effect (if enabled) - with proper cleanup
     useEffect(() => {
-        if (syncTimerId.current) {
-            clearInterval(syncTimerId.current);
-            syncTimerId.current = null;
-        }
+        // Only set up timer if needed
+        if (!autoSync || !state.initialized) return;
 
-        if (autoSync && state.initialized) {
-            syncTimerId.current = setInterval(() => {
-                if (hasLocalChanges.current && !isSaving.current && !isLoading.current) {
-                    void syncWithServer();
-                }
-            }, 300000); // 5 minutes
+        // Use a local variable to track state for the closure
+        let isActive = true;
 
-            return () => {
-                if (syncTimerId.current) clearInterval(syncTimerId.current);
-            };
-        }
+        const timerFn = () => {
+            // Check if component is still mounted and conditions are met
+            if (isActive && hasLocalChanges.current && !isSaving.current && !isLoading.current) {
+                syncWithServer().catch(err => {
+                    console.error("Auto-sync error:", err);
+                });
+            }
+        };
+
+        // Set up the interval
+        syncTimerId.current = setInterval(timerFn, 300000); // 5 minutes
+
+        // Proper cleanup
+        return () => {
+            isActive = false;
+            if (syncTimerId.current) {
+                clearInterval(syncTimerId.current);
+                syncTimerId.current = null;
+            }
+        };
     }, [autoSync, state.initialized, syncWithServer]);
 
     // Synchronize current widget/layout state into the selected dashboard
     useEffect(() => {
+        // Early return if not initialized or no dashboard selected
         if (!state.initialized || !state.selectedDashboardId) return;
 
-        // Only run if widgets or layout changed since last render
-        const currentWidgetsStr = JSON.stringify(widgetState.widgets);
+        // Store values at time of effect creation to avoid stale closure issues
+        const currentWidgets = widgetState.widgets;
+        const currentLayout = widgetState.layout;
+        const selectedDashboardId = state.selectedDashboardId;
+        const dashboards = state.dashboards;
+
+        // Prevent stringifying on every render - only when effect runs
+        const currentWidgetsStr = JSON.stringify(currentWidgets);
         const prevWidgetsStr = JSON.stringify(prevWidgetsRef.current);
-        const currentLayoutStr = JSON.stringify(widgetState.layout);
+        const currentLayoutStr = JSON.stringify(currentLayout);
         const prevLayoutStr = JSON.stringify(prevLayoutRef.current);
 
         // Skip if nothing changed to prevent infinite loops
@@ -740,28 +758,37 @@ function DashboardPageInternal() {
         }
 
         // Update refs with current values for next comparison
-        prevWidgetsRef.current = widgetState.widgets;
-        prevLayoutRef.current = widgetState.layout;
+        prevWidgetsRef.current = currentWidgets;
+        prevLayoutRef.current = currentLayout;
 
-        // Use a debounce timer to batch updates and break potential loops
+        // Use a debounce timer to batch updates
         const timeoutId = setTimeout(() => {
             // Find the dashboard we need to update
-            const dashboardToUpdate = state.dashboards.find(d => d.id === state.selectedDashboardId);
+            const dashboardToUpdate = dashboards.find(d => d.id === selectedDashboardId);
             if (!dashboardToUpdate) return;
 
             // Check if actual content changed to avoid unnecessary updates
-            if (JSON.stringify(dashboardToUpdate.widgets) !== currentWidgetsStr ||
-                JSON.stringify(dashboardToUpdate.layout) !== currentLayoutStr) {
+            const dashboardWidgetsStr = JSON.stringify(dashboardToUpdate.widgets);
+            const dashboardLayoutStr = JSON.stringify(dashboardToUpdate.layout);
 
+            if (dashboardWidgetsStr !== currentWidgetsStr || dashboardLayoutStr !== currentLayoutStr) {
                 // Create new dashboards array with updated dashboard
-                const updatedDashboards = state.dashboards.map(d =>
-                    d.id === state.selectedDashboardId
-                        ? { ...d, widgets: widgetState.widgets, layout: widgetState.layout }
+                const updatedDashboards = dashboards.map(d =>
+                    d.id === selectedDashboardId
+                        ? {
+                            ...d,
+                            widgets: currentWidgets,
+                            layout: currentLayout,
+                            localLastModified: new Date().toISOString()
+                        }
                         : d
                 );
 
                 // Only dispatch if dashboards array actually changed
-                if (JSON.stringify(updatedDashboards) !== JSON.stringify(prevDashboardsRef.current)) {
+                const prevDashboardsStr = JSON.stringify(prevDashboardsRef.current);
+                const updatedDashboardsStr = JSON.stringify(updatedDashboards);
+
+                if (updatedDashboardsStr !== prevDashboardsStr) {
                     prevDashboardsRef.current = updatedDashboards;
                     dispatch({ type: 'SET_DASHBOARDS', payload: updatedDashboards });
                 }
@@ -769,7 +796,14 @@ function DashboardPageInternal() {
         }, 300); // 300ms debounce
 
         return () => clearTimeout(timeoutId);
-    }, [state.initialized, state.selectedDashboardId, state.dashboards, widgetState.widgets, widgetState.layout]);
+    }, [
+        state.initialized,
+        state.selectedDashboardId,
+        state.dashboards,
+        widgetState.widgets,
+        widgetState.layout,
+        dispatch
+    ]);
 
     // Loading state fallback
     if (!state.initialized) {
@@ -791,7 +825,6 @@ function DashboardPageInternal() {
         );
     }
 
-    // Calculate selected index for tabs
     const selectedIndex = state.dashboards.findIndex(d => d.id === state.selectedDashboardId);
 
     return (
@@ -975,7 +1008,6 @@ function DashboardPageInternal() {
     );
 }
 
-// Wrapper component that provides the widget context
 function DashboardPage() {
     return (
         <WidgetProvider>

@@ -22,7 +22,6 @@ export function useOperationModeData(options = {}) {
     const addDataPoint = useCallback((newPoint) => {
         setData(prevData => {
             const updated = [...prevData, newPoint];
-            console.log("Adding data point, new length:", updated.length);
             return updated.length > maxPoints ?
                 updated.slice(updated.length - maxPoints) :
                 updated;
@@ -33,7 +32,6 @@ export function useOperationModeData(options = {}) {
     // Fetch historical data
     const fetchHistoricalData = useCallback(async () => {
         try {
-            console.log("Fetching operation mode data...");
             setLoading(true);
             const response = await fetch(API_ENDPOINTS.operationModeData);
 
@@ -42,14 +40,8 @@ export function useOperationModeData(options = {}) {
             }
 
             const historicalData = await response.json();
-            console.log("Received data:", historicalData.length, "data points");
 
-            // Fall back to mock data if the API returns empty
-            if (historicalData.length === 0) {
-                console.log("No data from API, using mock data");
-                const mockData = generateMockData();
-                setData(mockData);
-            } else {
+            if (historicalData.length !== 0) {
                 setData(historicalData);
             }
 
@@ -58,48 +50,25 @@ export function useOperationModeData(options = {}) {
         } catch (err) {
             console.error("Error fetching operation mode data:", err);
             setError(err.message);
-
-            // Fall back to mock data on error
-            console.log("Error fetching data, using mock data");
-            const mockData = generateMockData();
-            setData(mockData);
         } finally {
             setLoading(false);
         }
     }, []);
 
-    // Generate mock data for testing
-    const generateMockData = () => {
-        console.log("Generating mock data");
-        const mockData = [];
-        const now = new Date();
-
-        for (let i = 60; i >= 0; i--) {
-            const time = new Date(now.getTime() - i * 60000);
-            mockData.push({
-                time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                mode: Math.floor(Math.random() * 6) // 0-5 for all operation modes
-            });
-        }
-
-        return mockData;
-    };
 
     // Setup socket connection for real-time updates
     useEffect(() => {
         // Fetch initial historical data
-        fetchHistoricalData();
+        void fetchHistoricalData();
 
         // Setup socket connection
         if (!socketRef.current && !isSocketConnected.current) {
-            console.log("Setting up socket connection");
             try {
                 socketRef.current = io(WEBSOCKET_ADDR);
                 isSocketConnected.current = true;
 
                 const handleOpcuaUpdate = (nodeData) => {
                     if (nodeData.key === "OperationMode" || nodeData.key === "operationMode") {
-                        console.log("Received OPCUA update:", nodeData);
                         const now = new Date();
                         const newPoint = {
                             time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -110,7 +79,6 @@ export function useOperationModeData(options = {}) {
                 };
 
                 socketRef.current.on("opcuaUpdate", handleOpcuaUpdate);
-                console.log("Socket event listener added");
             } catch (err) {
                 console.error("Error setting up socket:", err);
             }
@@ -118,7 +86,6 @@ export function useOperationModeData(options = {}) {
 
         // Cleanup function
         return () => {
-            console.log("Cleaning up socket connection");
             if (socketRef.current) {
                 socketRef.current.off("opcuaUpdate");
                 socketRef.current.disconnect();

@@ -144,20 +144,48 @@ const ResponsiveSidebar = ({
     }, [open]);
 
     useEffect(() => {
-        // Measure and update sidebar width when open changes
-        requestAnimationFrame(() => {
-            const width = measureWidth();
-            onWidthChange(width);
-        });
+        // Flag to track if component is mounted
+        let isMounted = true;
 
-        // Debounced resize handler
-        const handleResize = () => {
+        // Measure and update sidebar width when open changes
+        // Use a safer approach than requestAnimationFrame
+        const updateWidth = () => {
+            if (!isMounted) return;
+
             const width = measureWidth();
             onWidthChange(width);
         };
+
+        // Schedule the initial update
+        const initialUpdateTimeout = setTimeout(updateWidth, 10);
+
+        // Create a proper debounced resize handler that checks mount state
+        const handleResize = () => {
+            if (!isMounted) return;
+
+            const width = measureWidth();
+            onWidthChange(width);
+        };
+
+        // Create the debounced version
         const debouncedHandleResize = debounce(handleResize, 200);
+
+        // Add event listener
         window.addEventListener('resize', debouncedHandleResize);
-        return () => window.removeEventListener('resize', debouncedHandleResize);
+
+        // Comprehensive cleanup
+        return () => {
+            isMounted = false;
+            clearTimeout(initialUpdateTimeout);
+
+            // Remove event listener
+            window.removeEventListener('resize', debouncedHandleResize);
+
+            // Cancel any pending debounced calls
+            if (debouncedHandleResize.cancel) {
+                debouncedHandleResize.cancel();
+            }
+        };
     }, [open, measureWidth, onWidthChange]);
 
     // Toggle status section
