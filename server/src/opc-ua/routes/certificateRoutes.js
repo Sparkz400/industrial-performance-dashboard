@@ -3,9 +3,9 @@ const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 const { promisify } = require('util');
-const logger = require('../utils/logger');
-const certificateManager = require('../services/opc-ua/certificateManager');
-const opcuaConnectionManager = require('../services/opc-ua/opcuaConnectionManager');
+const logger = require('../../utils/logger');
+const certificateManager = require('../services/certificateManager');
+const opcuaConnectionManager = require('../services/opcuaConnectionManager');
 
 // Middleware to ensure certificates are initialized
 const ensureCertificatesInitialized = async (req, res, next) => {

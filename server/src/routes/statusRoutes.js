@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const statusManager = require('../utils/status');
 const StatusConstants = require('../utils/statusConstants');
-const opcuaManager = require('../services/opcuaConnectionManager');
+const opcuaManager = require('../opc-ua/services/opcuaConnectionManager');
 const { rateLimiter } = require('../middleware/security');
 
 /**

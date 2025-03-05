@@ -4,8 +4,8 @@ const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const socketIo = require('socket.io');
-const dbClient = require('./src/services/dbConnection');
-const opcuaConnectionManager = require('./src/services/opcuaConnectionManager');
+const dbClient = require('./src/database/dbConnection');
+const opcuaConnectionManager = require('./src/opc-ua/services/opcuaConnectionManager');
 const helmet = require('helmet');
 const { rateLimiter } = require('./src/middleware/security');
 const logger = require('./src/utils/logger');
@@ -17,8 +17,7 @@ const app = express();
 app.use(cors({
     origin: process.env.CLIENT_URL || 'http://localhost:5173',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization']
+    credentials: true
 }));
 app.use(express.json());
 app.use(helmet());
@@ -98,7 +97,7 @@ const processQueue = async (options = { delay: 500, maxRetries: 3 }) => {
 void processQueue();
 
 // --- Listen for OPC UA Data ---
-const { opcuaEmitter } = require('./src/services/opcuaClient');
+const { opcuaEmitter } = require('./src/opc-ua/opcuaClient');
 const StatusConstants = require('./src/utils/statusConstants');
 
 opcuaEmitter.on('nodeChanged', (data) => {
@@ -119,11 +118,14 @@ app.use('/api/system', systemRoutes);
 const dashboardRoutes = require('./src/routes/dashboardRoutes');
 app.use('/api/dashboards', dashboardRoutes);
 
-const opcuaRoutes = require('./src/routes/opcuaRoutes');
+const opcuaRoutes = require('./src/opc-ua/routes/opcuaRoutes');
 app.use('/api/opcua', opcuaRoutes);
 
-const dbRoutes = require('./src/routes/dbRoutes');
+const dbRoutes = require('./src/database/routes/dbRoutes');
 app.use('/api/db', dbRoutes);
+
+const certificateRoutes = require('./src/opc-ua/routes/certificateRoutes');
+app.use('/api/certificates', certificateRoutes);
 
 const statusRoutes = require('./src/routes/statusRoutes');
 const statusManager = require("./src/utils/status");
@@ -166,6 +168,42 @@ io.on('connection', (socket) => {
     connectionTracker.addConnection(socket.id, clientInfo);
 
     logger.info(`Client connected via WebSocket: ${socket.id} from ${clientIp}`);
+
+    // Set up certificate event handlers
+    // Forward untrusted certificate events to clients
+    opcuaConnectionManager.on('untrustedCertificate', (certInfo) => {
+        logger.info(`Sending untrustedCertificate event to clients: ${certInfo.filename}`);
+        socket.emit('untrustedCertificate', certInfo);
+    });
+
+    // Handle certificate acceptance requests from clients
+    socket.on('acceptCertificate', async (filename) => {
+        logger.info(`Received acceptCertificate request for: ${filename}`);
+        try {
+            const result = await opcuaConnectionManager.acceptCertificate(filename);
+            socket.emit('certificateAccepted', {
+                success: result,
+                filename,
+                timestamp: new Date().toISOString()
+            });
+
+            // Try to reconnect if needed
+            if (result && statusManager.getServiceStatus(StatusConstants.OPCUA) !== StatusConstants.CONNECTED) {
+                setTimeout(() => {
+                    opcuaConnectionManager.startConnection().catch(err => {
+                        logger.error("Error reconnecting after certificate acceptance:", err);
+                    });
+                }, 2000);
+            }
+        } catch (error) {
+            logger.error(`Error accepting certificate ${filename}:`, error);
+            socket.emit('certificateAccepted', {
+                success: false,
+                filename,
+                error: error.message
+            });
+        }
+    });
 
     // Track disconnection
     socket.on('disconnect', () => {

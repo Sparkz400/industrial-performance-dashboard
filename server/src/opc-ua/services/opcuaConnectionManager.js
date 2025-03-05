@@ -1,8 +1,9 @@
-const opcuaClient = require('./opcuaClient');
+const opcuaClient = require('../opcuaClient');
 const statusManager = require('../../utils/status');
 const StatusConstants = require('../../utils/statusConstants');
 const logger = require('../../utils/logger');
 const EventEmitter = require('events');
+const { opcua } = require('node-opcua');
 
 /**
  * Manager for OPC UA connections with resilient reconnection and certificate support
@@ -33,8 +34,21 @@ class OpcuaConnectionManager extends EventEmitter {
 
         // Set up event handler for untrusted certificates
         opcuaClient.opcuaEmitter.on('untrustedCertificate', (certInfo) => {
+            logger.info(`Forwarding untrusted certificate event for ${certInfo.serverUri}`);
             // Emit event for potential UI handling
             this.emit('untrustedCertificate', certInfo);
+        });
+
+        // Set up event handler for certificate acceptance
+        opcuaClient.opcuaEmitter.on('certificateAccepted', (certInfo) => {
+            logger.info(`Certificate accepted for ${certInfo.serverUri}`);
+            this.emit('certificateAccepted', certInfo);
+        });
+
+        // Set up event handler for certificate errors
+        opcuaClient.opcuaEmitter.on('certificateError', (errorInfo) => {
+            logger.error(`Certificate error: ${errorInfo.error}`);
+            this.emit('certificateError', errorInfo);
         });
     }
 
@@ -88,8 +102,13 @@ class OpcuaConnectionManager extends EventEmitter {
         });
 
         try {
-            // Try to connect
-            this.currentConnection = await opcuaClient.connectAndSubscribe(endpointUrl, securityOptions);
+            // Try to connect with timeout
+            const connectionPromise = opcuaClient.connectAndSubscribe(endpointUrl, securityOptions);
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error("Connection timeout")), 30000);
+            });
+
+            this.currentConnection = await Promise.race([connectionPromise, timeoutPromise]);
 
             if (this.currentConnection) {
                 logger.info("OPC UA connection and subscription successful");
@@ -129,6 +148,46 @@ class OpcuaConnectionManager extends EventEmitter {
             }
         } catch (error) {
             logger.error("Error during OPC UA connection:", error.message);
+
+            // Determine if this is a security-related error
+            const isSecurityError = error.message && (
+                error.message.includes("certificate") ||
+                error.message.includes("security") ||
+                error.message.includes("untrusted") ||
+                error.message.includes("trust") ||
+                error.message.includes("rejected")
+            );
+
+            if (isSecurityError && this.currentConfig.securityMode !== 'None') {
+                // Try to fall back to None if this was a security error
+                logger.warn('Security-related error, will try again with No security');
+
+                // Update status to reflect the fallback
+                statusManager.setOpcuaStatus(StatusConstants.WARNING, {
+                    message: 'Security error, will try again with No security',
+                    error: error.message,
+                    endpoint: endpointUrl
+                });
+
+                // Store original security settings for reference
+                const originalSecurity = {
+                    securityMode: this.currentConfig.securityMode,
+                    securityPolicy: this.currentConfig.securityPolicy
+                };
+
+                // Update config to use None
+                this.currentConfig.securityMode = 'None';
+                this.currentConfig.securityPolicy = 'None';
+
+                // Try connecting again with No security (after brief delay)
+                setTimeout(() => {
+                    logger.info(`Retrying connection with No security (original was ${originalSecurity.securityMode}/${originalSecurity.securityPolicy})`);
+                    this.isConnecting = false;
+                    this.startConnection();
+                }, 2000);
+
+                return;
+            }
 
             // Update status to error
             statusManager.setOpcuaStatus(StatusConstants.ERROR, {
@@ -195,9 +254,9 @@ class OpcuaConnectionManager extends EventEmitter {
 
                 await session.keepAlive();
 
-                // Try to read the server status node
+                // Try to read the server status node (standard node in all OPC UA servers)
                 const readResult = await session.read({
-                    nodeId: "i=2258", // Server status node
+                    nodeId: "i=2258", // Server Status node
                     attributeId: opcuaClient.opcua?.AttributeIds?.Value || 13
                 });
 
@@ -395,11 +454,45 @@ class OpcuaConnectionManager extends EventEmitter {
      */
     async acceptCertificate(filename) {
         try {
-            await opcuaClient.certificateManager.acceptRejectedCertificate(filename);
+            const result = await opcuaClient.certificateManager.acceptRejectedCertificate(filename);
+
+            // Emit certificate accepted event
+            this.emit('certificateAccepted', {
+                success: true,
+                filename,
+                timestamp: new Date().toISOString()
+            });
+
             return true;
         } catch (error) {
             logger.error('Failed to accept certificate:', error);
+
+            // Emit error event
+            this.emit('certificateError', {
+                error: error.message,
+                filename
+            });
+
             return false;
+        }
+    }
+
+    /**
+     * Test connection to a server without affecting current connection
+     * Used by the test-connection endpoint
+     * @param {string} endpointUrl - The server endpoint URL
+     * @param {Object} securityOptions - Security options
+     * @returns {Promise<Object>} - Connection details or null on failure
+     */
+    async getConnectionPromise(endpointUrl, securityOptions) {
+        try {
+            logger.info(`Testing connection to: ${endpointUrl} with SecurityMode=${securityOptions.securityMode}, SecurityPolicy=${securityOptions.securityPolicy}`);
+
+            // This uses the core connect function but doesn't store the connection
+            return await opcuaClient.connectAndSubscribe(endpointUrl, securityOptions);
+        } catch (error) {
+            logger.error(`Test connection failed: ${error.message}`);
+            throw error;
         }
     }
 }

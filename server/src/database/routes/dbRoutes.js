@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const dbPool = require('../services/dbConnection');
-const logger = require('../utils/logger');
+const dbPool = require('../dbConnection');
+const logger = require('../../utils/logger');
 
 // A simple test endpoint to verify DB connectivity.
 router.get('/test', async (req, res, next) => {

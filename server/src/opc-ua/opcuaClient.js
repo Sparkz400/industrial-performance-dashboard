@@ -1,11 +1,11 @@
-// server/src/services/opcuaClient.js
 const opcua = require('node-opcua');
 const EventEmitter = require('events');
-const opcuaMapping = require('../../config/opcuaMapping');
-const logger = require('../../utils/logger');
-const StatusConstants = require("../../utils/statusConstants");
-const statusManager = require("../../utils/status");
-const certificateManager = require('./certificateManager');
+const opcuaMapping = require('./config/opcuaMapping');
+const logger = require('../utils/logger');
+const StatusConstants = require("../utils/statusConstants");
+const statusManager = require("../utils/status");
+const certificateManager = require('./services/certificateManager');
+const os = require('os');
 
 class OPCUAEmitter extends EventEmitter {}
 const opcuaEmitter = new OPCUAEmitter();
@@ -16,22 +16,45 @@ const opcuaEmitter = new OPCUAEmitter();
  */
 opcuaEmitter.on('serverCertificate', async (certificate, serverUri) => {
     try {
+        logger.info(`Received server certificate from ${serverUri || 'unknown server'}`);
+
+        // Create hash of certificate for logging/display purposes
+        const crypto = require('crypto');
+        const certificateHash = crypto.createHash('sha256').update(certificate).digest('hex');
+
         if (process.env.AUTO_ACCEPT_CERTIFICATES === 'true') {
             // Auto-accept unknown certificates
             const serverName = serverUri || 'unknown_server';
             await certificateManager.trustCertificate(certificate, serverName);
-            logger.info(`Auto-accepted certificate from ${serverName}`);
-        } else {
-            logger.warn('Untrusted server certificate received, manual acceptance required');
+            logger.info(`Auto-accepted certificate from ${serverName} (hash: ${certificateHash.substring(0, 16)}...)`);
 
-            // Emit event for potential UI handling
+            // Emit event that certificate was accepted
+            opcuaEmitter.emit('certificateAccepted', {
+                success: true,
+                serverUri,
+                certificateHash,
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            logger.warn(`Untrusted server certificate received from ${serverUri || 'unknown server'}, waiting for manual acceptance`);
+
+            // Emit event for UI handling with certificate details
             opcuaEmitter.emit('untrustedCertificate', {
-                certificate,
-                serverUri: serverUri || 'unknown_server'
+                certificate: certificate.toString('base64'),
+                serverUri: serverUri || 'unknown_server',
+                certificateHash: certificateHash,
+                timestamp: new Date().toISOString(),
+                filename: `${serverUri?.replace(/[^a-z0-9]/gi, '_') || 'unknown'}_${Date.now()}.pem`
             });
         }
     } catch (error) {
         logger.error('Error handling server certificate:', error);
+
+        // Emit error event
+        opcuaEmitter.emit('certificateError', {
+            error: error.message,
+            serverUri
+        });
     }
 });
 
@@ -71,178 +94,134 @@ async function connectAndSubscribe(endpointUrl, securityOptions = {}) {
 
     while (retryCount < MAX_RETRIES) {
         try {
-            // Get client options from certificate manager
-            let clientOptions;
-            try {
-                clientOptions = await certificateManager.getClientOptions(securityMode, securityPolicy);
-
-                // Log security configuration
-                logger.info(`Using security mode: ${securityMode}, policy: ${securityPolicy}`);
-            } catch (error) {
-                logger.error('Failed to get secure client options, falling back to None:', error);
-
-                // Fall back to no security if there's an issue with certificates
-                clientOptions = {
-                    applicationName: "Monitoring Client",
-                    connectionStrategy: {
-                        initialDelay: 1000,
-                        maxRetry: 3,
-                        maxDelay: 10 * 1000
-                    },
-                    securityMode: opcua.MessageSecurityMode.None,
-                    securityPolicy: opcua.SecurityPolicy.None,
-                    endpointMustExist: false
-                };
-            }
-
-            // Add certificate rejection handler
-            clientOptions.serverCertificateManager = {
-                ...clientOptions.serverCertificateManager,
-                validationCallback: (err, certificate) => {
-                    if (err) {
-                        logger.warn('Certificate validation error:', err.message);
-
-                        // Emit certificate for potential handling
-                        opcuaEmitter.emit('serverCertificate', certificate, null);
-
-                        // Auto-accept untrusted certificates based on environment setting
-                        if (process.env.AUTO_ACCEPT_CERTIFICATES === 'true') {
-                            return true;
-                        }
-                    }
-                    return err === null;
-                }
+            // Try a different approach to create the client
+            // Explicitly create client with minimal options to avoid the assertion error
+            const clientOptions = {
+                applicationName: "NodeOPCUA-Client",
+                connectionStrategy: {
+                    initialDelay: 1000,
+                    maxRetry: 2,
+                    maxDelay: 5000
+                },
+                securityMode: opcua.MessageSecurityMode.None,
+                securityPolicy: opcua.SecurityPolicy.None,
+                endpointMustExist: false,
+                keepSessionAlive: true,
+                requestedSessionTimeout: 60000
             };
 
-            // Create and connect client
+            logger.info(`Using simplified connection options for debug mode`);
+
+            // Create client with debug logging
             const client = opcua.OPCUAClient.create(clientOptions);
 
-            // Log connection attempt
-            logger.info(`Connecting to OPC UA server at ${endpointUrl} (SecurityMode=${securityMode}, SecurityPolicy=${securityPolicy})`);
+            logger.info(`Connecting to OPC UA server at ${endpointUrl}`);
 
-            // Add event handlers for security issues
-            client.on('backoff', (retry, delay) => {
-                logger.warn(`Connection attempt ${retry} failed, retrying in ${delay}ms`);
+            // Add timeout for connect operation to avoid hanging
+            const connectPromise = client.connect(endpointUrl);
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000);
             });
 
-            await client.connect(endpointUrl);
+            await Promise.race([connectPromise, timeoutPromise]);
             logger.info(`Connected to OPC UA server at ${endpointUrl}`);
 
-            // Try to get endpoints to confirm connection
-            const endpoints = await client.getEndpoints();
-            logger.info(`Server has ${endpoints.length} endpoint(s) available`);
+            // Create session
+            const sessionOptions = {
+                requestedSessionTimeout: 60000,
+                maxTransactionQueueLength: 100
+            };
 
-            // Log available endpoints (debug level)
-            endpoints.forEach((endpoint, index) => {
-                logger.debug(`Endpoint ${index + 1}: ${endpoint.endpointUrl}, SecurityMode=${endpoint.securityMode}, SecurityPolicy=${endpoint.securityPolicyUri}`);
-            });
+            const session = await client.createSession(sessionOptions);
+            logger.info("OPC UA session created successfully");
 
-            const session = await client.createSession();
-            logger.info("OPC UA session created");
-
+            // Create subscription with longer lifetimes and timeouts
             const subscription = opcua.ClientSubscription.create(session, {
                 requestedPublishingInterval: 1000,
-                requestedLifetimeCount: 600,
-                requestedMaxKeepAliveCount: 20,
-                maxNotificationsPerPublish: 10,
+                requestedLifetimeCount: 1000,       // Increased lifetime
+                requestedMaxKeepAliveCount: 30,     // Increased keep alive
+                maxNotificationsPerPublish: 1000,   // Increased notifications
                 publishingEnabled: true,
-                priority: 10,
+                priority: 10
             });
 
             subscription.on("started", () => {
                 logger.info(`Subscription started - ID: ${subscription.subscriptionId}`);
             });
 
-            subscription.on("keepalive", () => {
-                // Optional: log or handle keepalive events.
-            });
-
             subscription.on("terminated", () => {
                 logger.info("Subscription terminated");
-                statusManager.setOpcuaStatus(StatusConstants.ERROR, { message: "Connection error" });
+                statusManager.setOpcuaStatus(StatusConstants.ERROR, { message: "Subscription terminated" });
             });
 
-            // Subscribe to all nodes defined in the mapping.
+            // Use more basic monitoring approach for nodes
             for (const [key, nodeConfig] of Object.entries(opcuaMapping)) {
-                const monitoredItem = opcua.ClientMonitoredItem.create(
-                    subscription,
-                    {
-                        nodeId: nodeConfig.nodeId,
-                        attributeId: opcua.AttributeIds.Value,
-                    },
-                    { samplingInterval: 1000, discardOldest: true, queueSize: 10 },
-                    opcua.TimestampsToReturn.Both
-                );
+                try {
+                    logger.info(`Monitoring node: ${nodeConfig.nodeId} (${key})`);
 
-                monitoredItem.on("changed", (dataValue) => {
-                    const value = dataValue.value.value;
-                    const eventPayload = {
-                        key,
-                        label: nodeConfig.label,
-                        timestamp: Date.now(),
-                        value,
-                    };
-                    opcuaEmitter.emit('nodeChanged', eventPayload);
-                });
+                    // Use simpler monitoring parameters
+                    const monitoredItem = opcua.ClientMonitoredItem.create(
+                        subscription,
+                        {
+                            nodeId: nodeConfig.nodeId,
+                            attributeId: opcua.AttributeIds.Value
+                        },
+                        {
+                            samplingInterval: 1000,
+                            discardOldest: true,
+                            queueSize: 10
+                        },
+                        opcua.TimestampsToReturn.Both
+                    );
+
+                    monitoredItem.on("changed", (dataValue) => {
+                        // Extract and emit value
+                        const value = dataValue.value.value;
+                        opcuaEmitter.emit('nodeChanged', {
+                            key,
+                            label: nodeConfig.label,
+                            timestamp: Date.now(),
+                            value,
+                        });
+                    });
+                } catch (err) {
+                    logger.error(`Failed to create monitored item for ${key}: ${err.message}`);
+                }
             }
 
-            // If successful, return the connection details
             return {
                 client,
                 session,
                 subscription,
-                securityMode,
-                securityPolicy
+                securityMode: 'None', // Force to None for now
+                securityPolicy: 'None'
             };
+
         } catch (error) {
             lastError = error;
             retryCount++;
 
-            // Check if the error is related to security
-            const isSecurityError = error.message && (
-                error.message.includes("certificate") ||
-                error.message.includes("security") ||
-                error.message.includes("untrusted") ||
-                error.message.includes("trust") ||
-                error.message.includes("rejected")
-            );
+            // Log the full error for diagnosis
+            logger.error(`Connection attempt ${retryCount} failed with error: ${error.message}`);
+            logger.error(`Error stack: ${error.stack}`);
 
-            if (isSecurityError) {
-                logger.error(`Security error connecting to OPC UA server: ${error.message}`);
-
-                // If using security and it fails, try without security
-                if (securityMode !== 'None' || securityPolicy !== 'None') {
-                    logger.warn('Falling back to no security mode due to security error');
-
-                    // Update status to warning
-                    statusManager.setOpcuaStatus(StatusConstants.WARNING, {
-                        message: "Security configuration issue, falling back to insecure connection",
-                        error: error.message
-                    });
-
-                    // Try again with no security if this was our first attempt
-                    if (retryCount === 1) {
-                        securityOptions.securityMode = 'None';
-                        securityOptions.securityPolicy = 'None';
-                        retryCount--; // Don't count this as a retry
-                        continue;
-                    }
-                }
-            }
-
-            const delay = Math.pow(2, retryCount) * 1000;
-            logger.warn(
-                `Connection attempt ${retryCount} failed. Retrying in ${delay}ms. Error: ${error.message}`
-            );
+            // Try a different approach on next attempt
+            const delay = 2000 * retryCount;
+            logger.warn(`Retrying in ${delay}ms with different options`);
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
 
     // After exhausting retries, log error, update status, and return null.
     logger.error(
-        `Failed to connect after ${MAX_RETRIES} attempts. Last error: ${lastError.message}. Waiting for manual retry.`
+        `Failed to connect after ${MAX_RETRIES} attempts. Last error: ${lastError?.message || 'Unknown error'}. Waiting for manual retry.`
     );
-    statusManager.setOpcuaStatus(StatusConstants.ERROR, { message: "Connection error" });
+
+    statusManager.setOpcuaStatus(StatusConstants.ERROR, {
+        message: "Connection failed after multiple attempts",
+        error: lastError?.message || 'Unknown error'
+    });
+
     return null;
 }
 

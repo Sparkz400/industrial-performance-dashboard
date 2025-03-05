@@ -6,7 +6,6 @@ const excludedFiles = new Set(["codeToTxt.js"]);
 const outputFile = "all_code.txt";
 
 function walkDir(directory, processFile) {
-    // Parameter validation
     if (!directory || typeof directory !== 'string') {
         throw new Error('Directory path must be a non-empty string');
     }

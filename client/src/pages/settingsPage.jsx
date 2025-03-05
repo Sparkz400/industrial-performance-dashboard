@@ -1,4 +1,5 @@
-import React, {useState, useEffect, useCallback} from 'react';
+// client/src/pages/settingsPage.jsx
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Typography,
     Box,
@@ -22,7 +23,10 @@ import {
     Alert,
     Collapse,
     Backdrop,
-    CircularProgress, AccordionDetails, AccordionSummary, Accordion
+    CircularProgress,
+    AccordionDetails,
+    AccordionSummary,
+    Accordion, MenuItem
 } from '@mui/material';
 import { useTheme as useMuiTheme } from '@mui/material/styles';
 import Grid from '@mui/material/Grid2';
@@ -44,12 +48,14 @@ import CachedIcon from '@mui/icons-material/Cached';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import StopCircleIcon from '@mui/icons-material/StopCircle';
 import MemoryIcon from '@mui/icons-material/Memory';
+import SecurityIcon from '@mui/icons-material/Security';
 import { API_ENDPOINTS } from '../config/config';
 import { useSystemStatus } from '../contexts/StatusContext.jsx';
 import ThemePreview from '../components/ThemePreview';
 import { useTheme } from '../contexts/ThemeContext';
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ThemeSelector from '../contexts/ThemeContext';
+import CertificateManagement from '../components/settings/CertificateManagement';
 
 // Panel to display with each tab
 function TabPanel(props) {
@@ -202,6 +208,14 @@ const SettingsPage = () => {
     const [connectedAddress, setConnectedAddress] = useState('');
     const [systemStats, setSystemStats] = useState(null);
 
+    // Security states
+    const [securityMode, setSecurityMode] = useState('None');
+    const [securityPolicy, setSecurityPolicy] = useState('None');
+    const [securityOptions, setSecurityOptions] = useState({
+        modes: ['None'],
+        policies: ['None']
+    });
+
     // Theme states
     const { themeMode, useSystemTheme, setThemeMode, setUseSystemTheme } = useTheme();
 
@@ -225,6 +239,24 @@ const SettingsPage = () => {
         return new Date(date).toLocaleString();
     };
 
+    // Load security options
+    const loadSecurityOptions = useCallback(async () => {
+        try {
+            const response = await fetch(`${API_ENDPOINTS.opcua.status.replace('/status', '')}/security-options`);
+
+            if (response.ok) {
+                const options = await response.json();
+
+                setSecurityOptions({
+                    modes: options.securityModes || ['None'],
+                    policies: options.securityPolicies || ['None']
+                });
+            }
+        } catch (error) {
+            console.error('Error loading security options:', error);
+        }
+    }, []);
+
     // Handle OPC UA connection
     const handleConnect = async () => {
         setLoading(true);
@@ -233,7 +265,13 @@ const SettingsPage = () => {
             const res = await fetch(API_ENDPOINTS.opcua.connect, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ip, port: sanitizedPort, resourcePath })
+                body: JSON.stringify({
+                    ip,
+                    port: sanitizedPort,
+                    resourcePath,
+                    securityMode,
+                    securityPolicy
+                })
             });
 
             const data = await res.json();
@@ -244,7 +282,7 @@ const SettingsPage = () => {
                 setConnectionHistory(prev => [{
                     event: 'Connected',
                     timestamp: new Date().toISOString(),
-                    details: `Connected to ${ip}:${sanitizedPort}`
+                    details: `Connected to ${ip}:${sanitizedPort} with ${securityMode}/${securityPolicy}`
                 }, ...prev.slice(0, 9)]);
                 setAlertInfo({
                     open: true,
@@ -552,6 +590,15 @@ const SettingsPage = () => {
                     setPort(data.config.port.toString());
                     setResourcePath(data.config.resourcePath);
                     setConnectedAddress(`${data.config.ip}:${data.config.port}`);
+
+                    // Update security settings
+                    if (data.config.securityMode) {
+                        setSecurityMode(data.config.securityMode);
+                    }
+
+                    if (data.config.securityPolicy) {
+                        setSecurityPolicy(data.config.securityPolicy);
+                    }
                 } else {
                     setConnectedAddress('');
                 }
@@ -586,19 +633,22 @@ const SettingsPage = () => {
     useEffect(() => {
         void fetchConnectionStatus();
         void fetchSystemStats();
+        void loadSecurityOptions();
         // Set initial DB status based on system status
         setDbOnline(status?.database?.status === 'CONNECTED' || status?.database === 'connected');
-    }, [status]);
+    }, [status, loadSecurityOptions]);
 
     // Handle form changes
     useEffect(() => {
         // Set config changed flag when form values change
         const isChanged = ip !== (status?.opcua?.details?.config?.ip || 'localhost') ||
             port !== (status?.opcua?.details?.config?.port?.toString() || '4840') ||
-            resourcePath !== (status?.opcua?.details?.config?.resourcePath || '/UA/MyLittleServer');
+            resourcePath !== (status?.opcua?.details?.config?.resourcePath || '/UA/MyLittleServer') ||
+            securityMode !== (status?.opcua?.details?.config?.securityMode || 'None') ||
+            securityPolicy !== (status?.opcua?.details?.config?.securityPolicy || 'None');
 
         setConfigChanged(isChanged);
-    }, [ip, port, resourcePath, status]);
+    }, [ip, port, resourcePath, securityMode, securityPolicy, status]);
 
     // Add a function to fetch connection stats
     const fetchConnectionStats = useCallback(async () => {
@@ -720,7 +770,9 @@ const SettingsPage = () => {
                     <StatusIndicator
                         status={status?.opcua?.statusText || status?.opcua || 'Unknown'}
                         label="OPC UA Connection"
-                        description={opcuaConnected ? `Connected to ${connectedAddress}` : 'Not connected'}
+                        description={opcuaConnected ?
+                            `Connected to ${connectedAddress} (${securityMode}/${securityPolicy})` :
+                            'Not connected'}
                         icon={<DnsIcon />}
                         loading={loading}
                     />
@@ -739,8 +791,9 @@ const SettingsPage = () => {
                 >
                     <Tab label="Connections" id="settings-tab-0" icon={<LanguageIcon />} iconPosition="start" />
                     <Tab label="Appearance" id="settings-tab-1" icon={<PaletteIcon />} iconPosition="start" />
-                    <Tab label="Backup & Restore" id="settings-tab-2" icon={<SettingsBackupRestoreIcon />} iconPosition="start" />
-                    <Tab label="System Info" id="settings-tab-3" icon={<InfoIcon />} iconPosition="start" />
+                    <Tab label="Certificates" id="settings-tab-2" icon={<SecurityIcon />} iconPosition="start" />
+                    <Tab label="Backup & Restore" id="settings-tab-3" icon={<SettingsBackupRestoreIcon />} iconPosition="start" />
+                    <Tab label="System Info" id="settings-tab-4" icon={<InfoIcon />} iconPosition="start" />
                 </Tabs>
 
                 <TabPanel value={tabValue} index={0} sx={{ flexGrow: 1 }}>
@@ -797,6 +850,56 @@ const SettingsPage = () => {
                                                 disabled={opcuaConnected}
                                             />
                                         </Grid>
+
+                                        {/* Security settings - fixed */}
+                                        <Grid item xs={12} sm={6}>
+                                            <TextField
+                                                label="Security Mode"
+                                                variant="outlined"
+                                                fullWidth
+                                                size="small"
+                                                select
+                                                value={securityMode}
+                                                onChange={(e) => setSecurityMode(e.target.value)}
+                                                disabled={opcuaConnected}
+                                            >
+                                                {/* Using MenuItem instead of option */}
+                                                {securityOptions.modes.map((mode) => (
+                                                    <MenuItem key={mode} value={mode}>
+                                                        {mode}
+                                                    </MenuItem>
+                                                ))}
+                                                {/* Fallback if no options are available */}
+                                                {securityOptions.modes.length === 0 && (
+                                                    <MenuItem value="None">None</MenuItem>
+                                                )}
+                                            </TextField>
+                                        </Grid>
+
+                                        <Grid item xs={12} sm={6}>
+                                            <TextField
+                                                label="Security Policy"
+                                                variant="outlined"
+                                                fullWidth
+                                                size="small"
+                                                select
+                                                value={securityPolicy}
+                                                onChange={(e) => setSecurityPolicy(e.target.value)}
+                                                disabled={opcuaConnected}
+                                            >
+                                                {/* Using MenuItem instead of option */}
+                                                {securityOptions.policies.map((policy) => (
+                                                    <MenuItem key={policy} value={policy}>
+                                                        {policy}
+                                                    </MenuItem>
+                                                ))}
+                                                {/* Fallback if no options are available */}
+                                                {securityOptions.policies.length === 0 && (
+                                                    <MenuItem value="None">None</MenuItem>
+                                                )}
+                                            </TextField>
+                                        </Grid>
+
                                         <Grid item xs={12}>
                                             <Box display="flex" justifyContent="space-between">
                                                 <Box>
@@ -1051,8 +1154,13 @@ const SettingsPage = () => {
                     </Grid>
                 </TabPanel>
 
+                {/* Certificate Management Tab */}
+                <TabPanel value={tabValue} index={2} sx={{ flexGrow: 1 }}>
+                    <CertificateManagement />
+                </TabPanel>
+
                 {/* Backup & Restore tab */}
-                <TabPanel value={tabValue} index={2}>
+                <TabPanel value={tabValue} index={3}>
                     <Card>
                         <CardHeader
                             title="Dashboard Backup & Restore"
@@ -1125,7 +1233,7 @@ const SettingsPage = () => {
                 </TabPanel>
 
                 {/* System Info tab */}
-                <TabPanel value={tabValue} index={3}>
+                <TabPanel value={tabValue} index={4}>
                     <Card>
                         <CardHeader
                             title="System Information"

@@ -4,30 +4,35 @@ const { promisify } = require('util');
 const { OPCUACertificateManager } = require('node-opcua-certificate-manager');
 const { SecurityPolicy } = require('node-opcua');
 const logger = require('../../utils/logger');
+const os = require('os');
+const crypto = require('crypto');
 
 // Promisify fs functions
 const mkdir = promisify(fs.mkdir);
 const exists = promisify(fs.exists);
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
+const readdir = promisify(fs.readdir);
+const unlink = promisify(fs.unlink);
 
 /**
  * Certificate Manager class to handle OPC UA certificate operations
  */
 class CertificateManager {
     constructor() {
-        // Configure certificate paths
+        // Use proper path.join for platform compatibility
         this.pkiDir = process.env.OPCUA_PKI_DIR || path.join(process.cwd(), 'certificates');
-        this.certificatesDir = path.join(this.pkiDir, 'own');
-        this.trustedDir = path.join(this.pkiDir, 'trusted');
-        this.rejectedDir = path.join(this.pkiDir, 'rejected');
-        this.issuerDir = path.join(this.pkiDir, 'issuer');
+        this.certificatesDir = path.join(this.pkiDir, 'own', 'certs');
+        this.privateKeyDir = path.join(this.pkiDir, 'own', 'private');
+        this.trustedDir = path.join(this.pkiDir, 'trusted', 'certs');
+        this.rejectedDir = path.join(this.pkiDir, 'rejected', 'certs');
+        this.issuerDir = path.join(this.pkiDir, 'issuer', 'certs');
 
         // Certificate details
         this.applicationName = process.env.OPCUA_APPLICATION_NAME || 'Monitoring Dashboard Client';
-        this.applicationUri = process.env.OPCUA_APPLICATION_URI || 'urn:monitoring-dashboard-client';
+        this.applicationUri = null; // Will be set during initialization
         this.certificateFile = path.join(this.certificatesDir, 'client_certificate.pem');
-        this.privateKeyFile = path.join(this.certificatesDir, 'client_private_key.pem');
+        this.privateKeyFile = path.join(this.privateKeyDir, 'client_private_key.pem');
 
         // Certificate manager instance
         this.certManager = null;
@@ -39,9 +44,55 @@ class CertificateManager {
      */
     async initialize() {
         try {
+            // Get the operating system info for properly formatted application URI
+            const hostname = os.hostname();
+
+            // Set application URI based on hostname
+            this.applicationUri = `urn:${hostname}:NodeOPCUA-Client`;
+
+            logger.info(`Using application URI: ${this.applicationUri}`);
+
+            // Check if node-opcua default certificate directory exists (platform-independent path)
+            let defaultCertDir;
+
+            if (process.platform === 'win32') {
+                // Windows path
+                defaultCertDir = path.join(os.homedir(), 'AppData', 'Roaming', 'node-opcua-default-nodejs', 'Config', 'PKI');
+            } else if (process.platform === 'darwin') {
+                // macOS path
+                defaultCertDir = path.join(os.homedir(), 'Library', 'Application Support', 'node-opcua-default-nodejs', 'Config', 'PKI');
+            } else {
+                // Linux/Unix path
+                defaultCertDir = path.join(os.homedir(), '.node-opcua-default-nodejs', 'Config', 'PKI');
+            }
+
+            // Check if the default directory exists
+            const defaultDirExists = await exists(defaultCertDir);
+
+            if (defaultDirExists) {
+                logger.info(`Found default node-opcua certificate directory: ${defaultCertDir}`);
+
+                // Use the default directory for certificates with platform-independent path joining
+                this.pkiDir = defaultCertDir;
+                this.certificatesDir = path.join(defaultCertDir, 'own', 'certs');
+                this.privateKeyDir = path.join(defaultCertDir, 'own', 'private');
+                this.trustedDir = path.join(defaultCertDir, 'trusted', 'certs');
+                this.rejectedDir = path.join(defaultCertDir, 'rejected', 'certs');
+                this.issuerDir = path.join(defaultCertDir, 'issuer', 'certs');
+
+                // Update certificate paths
+                this.certificateFile = path.join(this.certificatesDir, 'client_certificate.pem');
+                this.privateKeyFile = path.join(this.privateKeyDir, 'private_key.pem');
+
+                logger.info(`Using existing certificate directory: ${this.pkiDir}`);
+            } else {
+                logger.info(`Default node-opcua certificate directory not found. Creating our own at: ${this.pkiDir}`);
+            }
+
             // Create necessary directories
             await this.ensureDirectoryExists(this.pkiDir);
             await this.ensureDirectoryExists(this.certificatesDir);
+            await this.ensureDirectoryExists(this.privateKeyDir);
             await this.ensureDirectoryExists(this.trustedDir);
             await this.ensureDirectoryExists(this.rejectedDir);
             await this.ensureDirectoryExists(this.issuerDir);
@@ -51,12 +102,18 @@ class CertificateManager {
                 rootFolder: this.pkiDir
             });
 
-            // Create client certificate if it doesn't exist
-            if (!await exists(this.certificateFile) || !await exists(this.privateKeyFile)) {
-                await this.createClientCertificate();
-            }
-
             logger.info(`Certificate Manager initialized: ${this.pkiDir}`);
+
+            // Check if certificate exists, create if it doesn't
+            const certExists = await exists(this.certificateFile);
+            const keyExists = await exists(this.privateKeyFile);
+
+            if (!certExists || !keyExists) {
+                logger.info("Client certificate or private key missing, creating new ones");
+                await this.createClientCertificate();
+            } else {
+                logger.info(`Using existing client certificate: ${this.certificateFile}`);
+            }
         } catch (error) {
             logger.error('Failed to initialize Certificate Manager:', error);
             throw error;
@@ -81,33 +138,134 @@ class CertificateManager {
      */
     async createClientCertificate() {
         try {
-            logger.info('Creating new client certificate');
+            logger.info('Creating new client certificate with proper subjectAltName');
 
-            // Create certificate options
-            const options = {
-                applicationUri: this.applicationUri,
-                dns: [
-                    'localhost',
-                    process.env.HOSTNAME || 'monitoring-dashboard'
-                ],
-                ip: [
-                    '127.0.0.1'
-                ],
-                subject: this.applicationName,
-                startDate: new Date(),
-                validity: 365 * 5 // 5 years
-            };
+            // Get hostname and IP addresses for certificate
+            const hostname = os.hostname();
+            const networkInterfaces = os.networkInterfaces();
 
-            // Create certificate using node-opcua
-            const { cert, privateKey } = await this.certManager.createSelfSignedCertificate('client_certificate', options);
+            // Collect all IP addresses
+            const ipAddresses = [];
+            Object.values(networkInterfaces).forEach(interfaces => {
+                interfaces.forEach(iface => {
+                    // Skip loopback and non-IPv4 addresses for now
+                    if (!iface.internal && iface.family === 'IPv4') {
+                        ipAddresses.push(iface.address);
+                    }
+                });
+            });
 
-            // Save certificate and private key
-            await writeFile(this.certificateFile, cert);
+            // Always add localhost
+            ipAddresses.push('127.0.0.1');
+
+            // Create application URI that matches the standard format
+            const applicationName = "NodeOPCUA-Client";
+            const applicationUri = `urn:${hostname}:${applicationName}`;
+
+            logger.info(`Using hostname: ${hostname}`);
+            logger.info(`Using applicationUri: ${applicationUri}`);
+            logger.info(`Using IP addresses: ${ipAddresses.join(', ')}`);
+
+            // Make sure certManager is initialized
+            if (!this.certManager) {
+                await this.initialize();
+            }
+
+            // Ensure output directories exist
+            await this.ensureDirectoryExists(path.dirname(this.certificateFile));
+            await this.ensureDirectoryExists(path.dirname(this.privateKeyFile));
+
+            // Create certificate using direct node-opcua API to bypass issues
+            // with the OPCUACertificateManager.createSelfSignedCertificate method
+            const crypto = require("crypto");
+            const { generateKeyPairSync } = require('crypto');
+            const { pki, md } = require('node-forge');
+
+            // Generate keypair using Node.js crypto
+            const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+                modulusLength: 2048,
+                publicKeyEncoding: {
+                    type: 'spki',
+                    format: 'pem'
+                },
+                privateKeyEncoding: {
+                    type: 'pkcs8',
+                    format: 'pem'
+                }
+            });
+
+            // Create certificate using node-forge
+            const cert = pki.createCertificate();
+            cert.publicKey = pki.publicKeyFromPem(publicKey);
+
+            // Set certificate attributes
+            cert.serialNumber = crypto.randomBytes(16).toString('hex');
+            cert.validity.notBefore = new Date();
+            cert.validity.notAfter = new Date();
+            cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 5);
+
+            const attrs = [
+                { name: 'commonName', value: applicationName },
+                { name: 'organizationName', value: 'OpenSource' },
+                { name: 'organizationalUnitName', value: 'Development' },
+                { name: 'countryName', value: 'US' }
+            ];
+
+            cert.setSubject(attrs);
+            cert.setIssuer(attrs); // Self-signed
+
+            // Set extensions for OPC UA compliance
+            cert.setExtensions([
+                {
+                    name: 'keyUsage',
+                    digitalSignature: true,
+                    nonRepudiation: true,
+                    keyEncipherment: true,
+                    dataEncipherment: true
+                },
+                {
+                    name: 'extKeyUsage',
+                    serverAuth: true,
+                    clientAuth: true
+                },
+                {
+                    name: 'subjectAltName',
+                    altNames: [
+                        { type: 6, value: this.applicationUri },
+                        { type: 2, value: 'localhost' },
+                        { type: 2, value: hostname },
+                        { type: 7, ip: '127.0.0.1' }
+                    ]
+                },
+                {
+                    name: 'subjectKeyIdentifier'
+                }
+            ]);
+
+            // Sign the certificate
+            cert.sign(pki.privateKeyFromPem(privateKey), md.sha256.create());
+
+            // Convert to PEM format
+            const certPem = pki.certificateToPem(cert);
+
+            // Write certificate and private key to files
+            await writeFile(this.certificateFile, certPem);
             await writeFile(this.privateKeyFile, privateKey);
 
-            logger.info(`Client certificate created at: ${this.certificateFile}`);
+            logger.info(`Client certificate created successfully at: ${this.certificateFile}`);
+            logger.info(`Private key saved to: ${this.privateKeyFile}`);
+
+            // Update our applicationUri to match the one used in the certificate
+            this.applicationUri = applicationUri;
+
+            return {
+                certificateFile: this.certificateFile,
+                privateKeyFile: this.privateKeyFile,
+                applicationUri: applicationUri
+            };
         } catch (error) {
-            logger.error('Failed to create client certificate:', error);
+            logger.error(`Failed to create client certificate: ${error.message}`);
+            logger.error(`Stack trace: ${error.stack}`);
             throw error;
         }
     }
@@ -142,7 +300,12 @@ class CertificateManager {
      */
     async trustCertificate(certificate, name) {
         try {
-            const filename = `${name.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.pem`;
+            // Create a sanitized filename from the name
+            const sanitizedName = name.replace(/[^a-z0-9]/gi, '_');
+            const timestamp = Date.now();
+            const randomPart = crypto.randomBytes(4).toString('hex');
+            const filename = `${sanitizedName}_${timestamp}_${randomPart}.pem`;
+
             const filepath = path.join(this.trustedDir, filename);
 
             await writeFile(filepath, certificate);
@@ -162,7 +325,7 @@ class CertificateManager {
     async getTrustedCertificates() {
         try {
             const trustedCerts = [];
-            const files = await promisify(fs.readdir)(this.trustedDir);
+            const files = await readdir(this.trustedDir);
 
             for (const file of files) {
                 if (file.endsWith('.pem')) {
@@ -191,7 +354,7 @@ class CertificateManager {
     async getRejectedCertificates() {
         try {
             const rejectedCerts = [];
-            const files = await promisify(fs.readdir)(this.rejectedDir);
+            const files = await readdir(this.rejectedDir);
 
             for (const file of files) {
                 if (file.endsWith('.pem')) {
@@ -235,7 +398,7 @@ class CertificateManager {
             await writeFile(trustedPath, certificate);
 
             // Delete from rejected directory
-            await promisify(fs.unlink)(rejectedPath);
+            await unlink(rejectedPath);
 
             logger.info(`Moved certificate from rejected to trusted: ${filename}`);
 
@@ -254,10 +417,21 @@ class CertificateManager {
      */
     async getClientOptions(securityMode = 'None', securityPolicy = 'None') {
         try {
+            // Get hostname for consistent applicationUri
+            const hostname = os.hostname();
+
+            // Ensure application URI is set
+            if (!this.applicationUri) {
+                this.applicationUri = `urn:${hostname}:NodeOPCUA-Client`;
+            }
+
+            logger.info(`Using applicationUri in client options: ${this.applicationUri}`);
+
             // Check if security is None
             if (securityMode === 'None' && securityPolicy === 'None') {
                 return {
-                    applicationName: this.applicationName,
+                    applicationName: "NodeOPCUA-Client",
+                    applicationUri: this.applicationUri,
                     connectionStrategy: {
                         initialDelay: 1000,
                         maxRetry: 3,
@@ -269,8 +443,10 @@ class CertificateManager {
                 };
             }
 
-            // Load certificates
-            const { certificate, privateKey } = await this.loadCertificates();
+            // Ensure certificate and private key exist
+            if (!await exists(this.certificateFile) || !await exists(this.privateKeyFile)) {
+                await this.createClientCertificate();
+            }
 
             // Map security mode string to enum
             const messageSecurityMode = require('node-opcua').MessageSecurityMode[securityMode];
@@ -284,9 +460,10 @@ class CertificateManager {
                 throw new Error(`Invalid security policy: ${securityPolicy}`);
             }
 
-            // Return client options
+            // Return client options with the appropriate paths
             return {
-                applicationName: this.applicationName,
+                applicationName: "NodeOPCUA-Client",
+                applicationUri: this.applicationUri,
                 connectionStrategy: {
                     initialDelay: 1000,
                     maxRetry: 3,
@@ -315,7 +492,7 @@ class CertificateManager {
      */
     getAvailableSecurityPolicies() {
         return Object.keys(SecurityPolicy)
-            .filter(policy => typeof SecurityPolicy[policy] === 'function');
+            .filter(policy => typeof SecurityPolicy[policy] === 'string');
     }
 
     /**

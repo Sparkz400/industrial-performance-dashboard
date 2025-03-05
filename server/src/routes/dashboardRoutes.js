@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const dbClient = require('../services/dbConnection');
+const dbClient = require('../database/dbConnection');
 const logger = require('../utils/logger');
 const { schemas, validateBody, validateParams } = require('../middleware/validation');
 const Joi = require('joi');

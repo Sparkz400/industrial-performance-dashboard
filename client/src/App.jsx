@@ -22,6 +22,7 @@ import ResponsiveSidebar from './components/sidebar/sidebar.jsx';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useSystemStatus } from './contexts/StatusContext.jsx';
 import { useTheme } from './contexts/ThemeContext.jsx';
+import CertificateNotification from './components/notifications/CertificateNotification';
 
 // Lazy load pages with better naming
 const DashboardPage = React.lazy(() => import('./pages/dashboardPage.jsx'));
@@ -169,6 +170,9 @@ function App() {
                     {notification.message}
                 </Alert>
             </Snackbar>
+
+            {/* Certificate Notifications */}
+            <CertificateNotification />
         </Router>
     );
 }
