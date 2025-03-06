@@ -209,6 +209,7 @@ class OpcuaConnectionManager extends EventEmitter {
     scheduleReconnect() {
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
         }
 
         if (this.connectionAttempts < this.maxConnectionAttempts) {
@@ -218,6 +219,7 @@ class OpcuaConnectionManager extends EventEmitter {
             logger.info(`Scheduling OPC UA reconnection in ${delay}ms`);
 
             this.reconnectTimer = setTimeout(() => {
+                this.reconnectTimer = null;
                 void this.startConnection();
             }, delay);
         } else {

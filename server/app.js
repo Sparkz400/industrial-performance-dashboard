@@ -94,7 +94,11 @@ const processQueue = async (options = { delay: 500, maxRetries: 3 }) => {
         }
     }
 };
-void processQueue();
+
+processQueue().catch(err => {
+    logger.error('Fatal error in queue processing:', err);
+    process.exit(1);
+});
 
 // --- Listen for OPC UA Data ---
 const { opcuaEmitter } = require('./src/opc-ua/opcuaClient');

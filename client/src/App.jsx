@@ -1,4 +1,4 @@
-import React, {useEffect, useState, Suspense, useMemo, useCallback, useRef, useContext} from 'react';
+import React, {useEffect, useState, Suspense, useMemo, useCallback} from 'react';
 import {
     BrowserRouter as Router,
     Routes,
@@ -8,26 +8,22 @@ import {
 import {
     Box,
     CssBaseline,
-    createTheme,
-    ThemeProvider,
     CircularProgress,
     Typography,
     Button,
-    alpha,
-    useMediaQuery,
     Snackbar,
     Alert
 } from '@mui/material';
-import ResponsiveSidebar from './components/sidebar/sidebar.jsx';
-import ErrorBoundary from './components/ErrorBoundary';
-import { useSystemStatus } from './contexts/StatusContext.jsx';
-import { useTheme } from './contexts/ThemeContext.jsx';
-import CertificateNotification from './components/notifications/CertificateNotification';
+import ResponsiveSidebar from './features/layout/components/sidebar.jsx';
+import ErrorBoundary from './features/system/components/ErrorBoundary.jsx';
+import { useSystemStatus } from './features/system/index.jsx';
+import { useTheme } from './features/system/index.jsx';
+import CertificateNotification from './features/settings/components/CertificateNotification.jsx';
 
 // Lazy load pages with better naming
-const DashboardPage = React.lazy(() => import('./pages/dashboardPage.jsx'));
-const SettingsPage = React.lazy(() => import('./pages/settingsPage'));
-const HelpPage = React.lazy(() => import('./pages/helpPage'));
+const DashboardPage = React.lazy(() => import('./features/dashboard/pages/dashboardPage.jsx'));
+const SettingsPage = React.lazy(() => import('./features/settings/pages/settingsPage'));
+const HelpPage = React.lazy(() => import('./features/help/pages/helpPage.jsx'));
 
 // Loading component for Suspense fallback
 const PageLoader = () => (

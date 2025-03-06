@@ -1,7 +1,6 @@
 node_modules/
 server/node_modules/
 client/node_modules/
-shared/
 server/error.log
 server/src/opc-ua/services/logs
 server/logs
