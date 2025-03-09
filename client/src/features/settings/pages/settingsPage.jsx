@@ -24,6 +24,12 @@ import TabPanel from '../ui/TabPanel';
 import StatusIndicator from '../ui/StatusIndicator';
 import AlertNotification from '../components/AlertNotification';
 import LoadingBackdrop from '../components/LoadingBackdrop';
+import {
+    LoadingOverlay,
+    InlineLoader,
+    ButtonLoader,
+    useLoadingState
+} from '../../../shared/components/loading';
 
 // Import tab components
 import ConnectionsTab from '../tabs/ConnectionTab';
@@ -41,7 +47,15 @@ import { useDatabaseConnection } from '../hooks/useDatabaseConnection';
 const SettingsPage = () => {
     // Tab state
     const [tabValue, setTabValue] = useState(0);
-    const [loading, setLoading] = useState(false);
+    const {
+        loading,
+        setLoading,
+        error,
+        setError,
+        success,
+        setSuccess,
+        executeWithLoading
+    } = useLoadingState();
     const [alertInfo, setAlertInfo] = useState({ open: false, message: '', severity: 'info' });
 
     // Get system status context
@@ -64,10 +78,10 @@ const SettingsPage = () => {
 
     // Handle refresh status
     const handleRefreshStatus = async () => {
-        setLoading(true);
-        await refreshStatus();
-        await fetchConnectionStatus();
-        setLoading(false);
+        await executeWithLoading(async () => {
+            await refreshStatus();
+            await fetchConnectionStatus();
+        }, "Failed to refresh status");
     };
 
     return (
@@ -89,7 +103,7 @@ const SettingsPage = () => {
                             sx={{ ml: 2 }}
                             disabled={loading}
                         >
-                            {loading ? <CircularProgress size={24} /> : <RefreshIcon />}
+                            {loading ? <InlineLoader size={24} /> : <RefreshIcon />}
                         </IconButton>
                     </span>
                 </Tooltip>
@@ -168,7 +182,11 @@ const SettingsPage = () => {
             </Paper>
 
             {/* Loading overlay */}
-            <LoadingBackdrop open={loading && tabValue !== 0} />
+            <LoadingOverlay
+                open={loading && tabValue !== 0}
+                message="Loading settings..."
+                fullPage={true}
+            />
         </Box>
     );
 };

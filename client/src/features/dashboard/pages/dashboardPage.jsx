@@ -15,6 +15,7 @@ import SyncIcon from '@mui/icons-material/Sync';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
+import { LoadingOverlay, FullPageLoader, ButtonLoader } from '../../../shared/components/loading';
 
 
 import { API_ENDPOINTS } from '../../../config/config.js';
@@ -77,7 +78,6 @@ function dashboardReducer(state, action) {
             return state;
     }
 }
-
 
 function DashboardPageInternal() {
     // Use reducer for complex state management
@@ -830,22 +830,7 @@ function DashboardPageInternal() {
 
     // Loading state fallback
     if (!state.initialized) {
-        return (
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100vh'
-                }}
-            >
-                <CircularProgress color="secondary" sx={{ mb: 3 }} />
-                <Typography variant="h6" color="textSecondary">
-                    Loading Dashboards...
-                </Typography>
-            </Box>
-        );
+        return <FullPageLoader message="Loading Dashboards..." />;
     }
 
     const selectedIndex = state.dashboards.findIndex(d => d.id === state.selectedDashboardId);
@@ -889,45 +874,53 @@ function DashboardPageInternal() {
 
                 <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
                     <Tooltip title="Save Dashboard">
-            <span>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={saveDashboard}
-                    disabled={state.loading}
-                    sx={{ mr: 1 }}
-                    startIcon={state.loading ? <CircularProgress size={20} /> : <SaveIcon />}
-                >
-                    Save
-                </Button>
-            </span>
+                        <span>
+                            <ButtonLoader
+                                variant="contained"
+                                color="primary"
+                                onClick={saveDashboard}
+                                disabled={state.loading}
+                                sx={{ mr: 1 }}
+                                startIcon={<SaveIcon />}
+                                loading={state.loading}
+                                loadingText="Saving..."
+                        >
+                            Save
+                            </ButtonLoader>
+                        </span>
                     </Tooltip>
+
                     <Tooltip title="Sync with Server">
-            <span>
-                <Button
-                    variant="outlined"
-                    color="primary"
-                    onClick={syncWithServer}
-                    disabled={state.loading}
-                    sx={{ mr: 1 }}
-                    startIcon={state.loading ? <CircularProgress size={20} /> : <SyncIcon />}
-                >
-                    Sync
-                </Button>
-            </span>
+    <span>
+        <ButtonLoader
+            variant="outlined"
+            color="primary"
+            onClick={syncWithServer}
+            disabled={state.loading}
+            sx={{ mr: 1 }}
+            startIcon={<SyncIcon />}
+            loading={state.loading}
+            loadingText="Syncing..."
+        >
+            Sync
+        </ButtonLoader>
+    </span>
                     </Tooltip>
+
                     <Tooltip title="Add New Dashboard">
-            <span>
-                <Button
-                    variant="outlined"
-                    color="secondary"
-                    onClick={handleAddDashboard}
-                    disabled={state.loading}
-                    startIcon={state.loading ? <CircularProgress size={20} /> : <AddIcon />}
-                >
-                    New
-                </Button>
-            </span>
+    <span>
+        <ButtonLoader
+            variant="outlined"
+            color="secondary"
+            onClick={handleAddDashboard}
+            disabled={state.loading}
+            startIcon={<AddIcon />}
+            loading={state.loading}
+            loadingText="Creating..."
+        >
+            New
+        </ButtonLoader>
+    </span>
                     </Tooltip>
                 </Box>
             </Box>
@@ -973,12 +966,11 @@ function DashboardPageInternal() {
             />
 
             {/* Loading Backdrop */}
-            <Backdrop
-                sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+            <LoadingOverlay
                 open={state.loading}
-            >
-                <CircularProgress color="inherit" />
-            </Backdrop>
+                message="Processing dashboard changes..."
+                fullPage={true}
+            />
 
             {/* Notifications */}
             <Snackbar

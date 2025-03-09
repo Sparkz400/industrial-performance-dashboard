@@ -8,7 +8,6 @@ import {
 import {
     Box,
     CssBaseline,
-    CircularProgress,
     Typography,
     Button,
     Snackbar,
@@ -19,6 +18,8 @@ import ErrorBoundary from './features/system/components/ErrorBoundary.jsx';
 import { useSystemStatus } from './features/system/index.jsx';
 import { useTheme } from './features/system/index.jsx';
 import CertificateNotification from './features/settings/components/CertificateNotification.jsx';
+import { FullPageLoader } from './shared/components/loading';
+import { ButtonLoader } from './shared/components/loading';
 
 // Lazy load pages with better naming
 const DashboardPage = React.lazy(() => import('./features/dashboard/pages/dashboardPage.jsx'));
@@ -26,20 +27,7 @@ const SettingsPage = React.lazy(() => import('./features/settings/pages/settings
 const HelpPage = React.lazy(() => import('./features/help/pages/helpPage.jsx'));
 
 // Loading component for Suspense fallback
-const PageLoader = () => (
-    <Box sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh'
-    }}>
-        <CircularProgress size={40} sx={{ mb: 3 }} />
-        <Typography variant="h6" color="textSecondary">
-            Loading...
-        </Typography>
-    </Box>
-);
+const PageLoader = () => <FullPageLoader message="Loading page..." />;
 
 // Error fallback component
 const ErrorFallback = ({ error, resetErrorBoundary }) => (
@@ -59,13 +47,13 @@ const ErrorFallback = ({ error, resetErrorBoundary }) => (
         <Typography variant="body1" paragraph align="center" sx={{ maxWidth: 500, mb: 3 }}>
             {error.message || "An unexpected error occurred. Please try refreshing the page."}
         </Typography>
-        <Button
+        <ButtonLoader
             variant="contained"
             color="primary"
             onClick={resetErrorBoundary}
         >
             Try Again
-        </Button>
+        </ButtonLoader>
     </Box>
 );
 
