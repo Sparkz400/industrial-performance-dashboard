@@ -39,7 +39,7 @@ const DatabaseConnectionCard = ({
             <Divider />
             <CardContent sx={{ pt: 2 }}>
                 <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                             label="Host"
                             variant="outlined"
@@ -49,7 +49,7 @@ const DatabaseConnectionCard = ({
                             disabled
                         />
                     </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                             label="Port"
                             variant="outlined"
@@ -59,7 +59,7 @@ const DatabaseConnectionCard = ({
                             disabled
                         />
                     </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                             label="User"
                             variant="outlined"
@@ -69,7 +69,7 @@ const DatabaseConnectionCard = ({
                             disabled
                         />
                     </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                             label="Database"
                             variant="outlined"
@@ -79,7 +79,7 @@ const DatabaseConnectionCard = ({
                             disabled
                         />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <Button
                             variant="contained"
                             color="primary"

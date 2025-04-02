@@ -17,6 +17,7 @@ import SecurityIcon from '@mui/icons-material/Security';
 import GppBadIcon from '@mui/icons-material/GppBad';
 import io from 'socket.io-client';
 import { WEBSOCKET_ADDR } from '../../../config/config.js';
+import { useSnackbar } from 'notistack';
 
 /**
  * Component that listens for certificate events and shows notifications
@@ -26,10 +27,7 @@ const CertificateNotification = () => {
     const [notification, setNotification] = useState(null);
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [success, setSuccess] = useState(null);
-
-    // Socket connection state
+    const { enqueueSnackbar } = useSnackbar();
     const [socket, setSocket] = useState(null);
 
     // Create socket connection on mount
@@ -51,7 +49,7 @@ const CertificateNotification = () => {
         // Listen for acceptance events
         socketConnection.on('certificateAccepted', (data) => {
             if (data.success) {
-                setSuccess(`Certificate ${data.filename} accepted successfully`);
+                enqueueSnackbar(`Certificate ${data.filename} accepted successfully`, { variant: 'success' });
 
                 // Close dialog after a short delay
                 setTimeout(() => {
@@ -59,13 +57,13 @@ const CertificateNotification = () => {
                     setNotification(null);
                 }, 2000);
             } else {
-                setError(`Failed to accept certificate ${data.filename}`);
+                enqueueSnackbar(`Failed to accept certificate ${data.filename}: ${data.error || 'Unknown error'}`, { variant: 'error' });
             }
         });
 
         // Listen for certificate errors
         socketConnection.on('certificateError', (data) => {
-            setError(data.error);
+            enqueueSnackbar(`Certificate error: ${data.error || 'Unknown error'}`, { variant: 'error' });
         });
 
         // Clean up on unmount
@@ -80,17 +78,15 @@ const CertificateNotification = () => {
     // Handle accepting the certificate
     const handleAccept = useCallback(() => {
         if (!socket || !notification || !notification.filename) {
-            setError('Cannot accept certificate: missing information');
+            enqueueSnackbar('Cannot accept certificate: missing information', { variant: 'error' });
             return;
         }
 
         setLoading(true);
-        setError(null);
-        setSuccess(null);
 
         // Emit acceptance event
         socket.emit('acceptCertificate', notification.filename);
-    }, [socket, notification]);
+    }, [socket, notification, enqueueSnackbar]);
 
     // Handle dialog close
     const handleClose = useCallback(() => {
@@ -99,21 +95,8 @@ const CertificateNotification = () => {
         // Clear notification after a short delay to allow for exit animations
         setTimeout(() => {
             setNotification(null);
-            setError(null);
-            setSuccess(null);
         }, 300);
     }, []);
-
-    // Clear success message after 5 seconds
-    useEffect(() => {
-        if (success) {
-            const timer = setTimeout(() => {
-                setSuccess(null);
-            }, 5000);
-
-            return () => clearTimeout(timer);
-        }
-    }, [success]);
 
     return (
         <Dialog
@@ -132,18 +115,6 @@ const CertificateNotification = () => {
                 Untrusted Certificate Detected
             </DialogTitle>
             <DialogContent>
-                {error && (
-                    <Alert severity="error" sx={{ mt: 2, mb: 2 }}>
-                        {error}
-                    </Alert>
-                )}
-
-                {success && (
-                    <Alert severity="success" sx={{ mt: 2, mb: 2 }}>
-                        {success}
-                    </Alert>
-                )}
-
                 {notification && (
                     <Box sx={{ mt: 2 }}>
                         <Typography variant="body1" paragraph>

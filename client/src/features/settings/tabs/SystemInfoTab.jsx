@@ -43,7 +43,7 @@ const SystemInfoTab = () => {
         <Card>
             <CardContent>
                 <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <SystemStatsCard
                             systemStats={systemStats}
                             lastStatsUpdate={lastStatsUpdate}
@@ -54,7 +54,7 @@ const SystemInfoTab = () => {
                         />
                     </Grid>
 
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <Typography variant="subtitle1" gutterBottom>
                             Application Information
                         </Typography>
@@ -106,7 +106,7 @@ const SystemInfoTab = () => {
                         </Box>
                     </Grid>
 
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <Card>
                             <CardHeader
                                 title="Connection Statistics"

@@ -22,7 +22,6 @@ import StorageIcon from '@mui/icons-material/Storage';
 // Import custom components
 import TabPanel from '../ui/TabPanel';
 import StatusIndicator from '../ui/StatusIndicator';
-import AlertNotification from '../components/AlertNotification';
 import LoadingBackdrop from '../components/LoadingBackdrop';
 
 // Import tab components
@@ -36,18 +35,16 @@ import SystemInfoTab from '../tabs/SystemInfoTab';
 import { useSystemStatus } from '../../system/index';
 import { useOpcUaConnection } from '../hooks/useOpcUaConnection';
 import { useDatabaseConnection } from '../hooks/useDatabaseConnection';
+import { useSnackbar } from 'notistack';
 
 // Main settings page component
 const SettingsPage = () => {
     // Tab state
     const [tabValue, setTabValue] = useState(0);
     const [loading, setLoading] = useState(false);
-    const [alertInfo, setAlertInfo] = useState({ open: false, message: '', severity: 'info' });
+    const { enqueueSnackbar } = useSnackbar();
 
-    // Get system status context
     const { status, refreshStatus, lastChecked } = useSystemStatus();
-
-    // Get connection hooks for the status overview
     const { opcuaConnected, connectedAddress, securityMode, securityPolicy, fetchConnectionStatus } = useOpcUaConnection();
     const { dbOnline, dbHost, dbPort } = useDatabaseConnection();
 
@@ -65,9 +62,18 @@ const SettingsPage = () => {
     // Handle refresh status
     const handleRefreshStatus = async () => {
         setLoading(true);
-        await refreshStatus();
-        await fetchConnectionStatus();
-        setLoading(false);
+        try {
+            await refreshStatus();
+            await fetchConnectionStatus();
+            // Add success notification
+            enqueueSnackbar('System status refreshed', { variant: 'info', autoHideDuration: 2000 });
+        } catch (error) {
+            console.error("Error refreshing status:", error);
+            // Add error notification
+            enqueueSnackbar(`Failed to refresh status: ${error.message}`, { variant: 'error' });
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -95,9 +101,6 @@ const SettingsPage = () => {
                 </Tooltip>
             </Typography>
 
-            {/* Alert for notifications */}
-            <AlertNotification alertInfo={alertInfo} setAlertInfo={setAlertInfo} />
-
             {/* Status overview */}
             <Typography variant="h6" gutterBottom>
                 System Status
@@ -107,7 +110,7 @@ const SettingsPage = () => {
             </Typography>
 
             <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                     <StatusIndicator
                         status={status?.database?.statusText || status?.database || 'Unknown'}
                         label="Database Connection"
@@ -116,7 +119,7 @@ const SettingsPage = () => {
                         loading={loading}
                     />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                     <StatusIndicator
                         status={status?.opcua?.statusText || status?.opcua || 'Unknown'}
                         label="OPC UA Connection"
@@ -147,11 +150,11 @@ const SettingsPage = () => {
                 </Tabs>
 
                 <TabPanel value={tabValue} index={0} sx={{ flexGrow: 1 }}>
-                    <ConnectionsTab setGlobalAlertInfo={setAlertInfo} />
+                    <ConnectionsTab />
                 </TabPanel>
 
                 <TabPanel value={tabValue} index={1} sx={{ flexGrow: 1 }}>
-                    <AppearanceTab setGlobalAlertInfo={setAlertInfo} />
+                    <AppearanceTab />
                 </TabPanel>
 
                 <TabPanel value={tabValue} index={2} sx={{ flexGrow: 1 }}>
@@ -159,7 +162,7 @@ const SettingsPage = () => {
                 </TabPanel>
 
                 <TabPanel value={tabValue} index={3}>
-                    <BackupRestoreTab setGlobalAlertInfo={setAlertInfo} />
+                    <BackupRestoreTab />
                 </TabPanel>
 
                 <TabPanel value={tabValue} index={4}>

@@ -10,15 +10,14 @@ import {
     CssBaseline,
     CircularProgress,
     Typography,
-    Button,
-    Snackbar,
-    Alert
+    Button
 } from '@mui/material';
 import ResponsiveSidebar from './features/layout/components/sidebar.jsx';
 import ErrorBoundary from './features/system/components/ErrorBoundary.jsx';
 import { useSystemStatus } from './features/system/index.jsx';
-import { useTheme } from './features/system/index.jsx';
 import CertificateNotification from './features/settings/components/CertificateNotification.jsx';
+import CsrfErrorHandler from './shared/components/CsrfErrorHandler.jsx';
+import { useSnackbar } from 'notistack';
 
 // Lazy load pages with better naming
 const DashboardPage = React.lazy(() => import('./features/dashboard/pages/dashboardPage.jsx'));
@@ -70,15 +69,14 @@ const ErrorFallback = ({ error, resetErrorBoundary }) => (
 );
 
 function App() {
-    const { themeMode } = useTheme();
     const [sidebarOpen, setSidebarOpen] = useState(
         localStorage.getItem('sidebarOpen') !== 'false'
     );
     const [drawerWidth, setDrawerWidth] = useState(0);
-    const [notification, setNotification] = useState({open: false, message: '', severity: 'info'});
 
     // Get status from context
-    const {status, isError} = useSystemStatus();
+    const { status, isError } = useSystemStatus();
+    const { enqueueSnackbar } = useSnackbar();
 
     // Persist sidebar state to localStorage
     useEffect(() => {
@@ -88,13 +86,14 @@ function App() {
     // Check for system errors and show notifications
     useEffect(() => {
         if (isError) {
-            setNotification({
-                open: true,
-                message: 'System connection issue detected',
-                severity: 'error'
+            // Use enqueueSnackbar instead of setNotification
+            enqueueSnackbar('System connection issue detected', {
+                variant: 'error',
+                persist: true, // Keep critical errors visible until dismissed
+                key: 'system-connection-error' // Prevent duplicate system errors
             });
         }
-    }, [isError]);
+    }, [isError, enqueueSnackbar]);
 
     // Toggle sidebar
     const toggleSidebar = useCallback(() => {
@@ -114,11 +113,6 @@ function App() {
         }),
         [drawerWidth]
     );
-
-    // Handle notification close
-    const handleCloseNotification = useCallback(() => {
-        setNotification(prev => ({...prev, open: false}));
-    }, []);
 
     return (
         <Router>
@@ -150,25 +144,11 @@ function App() {
                 </Box>
             </ErrorBoundary>
 
-            {/* System status notification */}
-            <Snackbar
-                open={notification.open}
-                autoHideDuration={notification.severity === 'error' ? null : 6000}
-                onClose={handleCloseNotification}
-                anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
-            >
-                <Alert
-                    onClose={handleCloseNotification}
-                    severity={notification.severity}
-                    variant="filled"
-                    sx={{width: '100%'}}
-                >
-                    {notification.message}
-                </Alert>
-            </Snackbar>
-
             {/* Certificate Notifications */}
             <CertificateNotification />
+
+            {/* CSRF Error Handler */}
+            <CsrfErrorHandler />
         </Router>
     );
 }

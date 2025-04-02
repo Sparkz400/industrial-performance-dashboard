@@ -18,6 +18,7 @@ export const API_ENDPOINTS = {
         stats: `${API_BASE_URL}/system/stats`,
         connections: `${API_BASE_URL}/system/connections`
     },
+    csrfToken: `${API_BASE_URL}/csrf-token`,
 };
 
 // Other constants

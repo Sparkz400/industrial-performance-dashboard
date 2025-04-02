@@ -3,7 +3,7 @@ const statusManager = require('../../utils/status');
 const StatusConstants = require('../../utils/statusConstants');
 const logger = require('../../utils/logger');
 const EventEmitter = require('events');
-const { opcua } = require('node-opcua');
+const { opcua } = require('node-opcua'); // Ensure opcua is imported if needed for AttributeIds
 
 /**
  * Manager for OPC UA connections with resilient reconnection and certificate support
@@ -27,6 +27,14 @@ class OpcuaConnectionManager extends EventEmitter {
             securityPolicy: process.env.OPCUA_SECURITY_POLICY || "None"
         };
 
+        // Check if security fallback is enabled via environment variable
+        this.securityFallbackEnabled = process.env.OPCUA_SECURITY_FALLBACK_ENABLED === 'true';
+        if (this.securityFallbackEnabled) {
+            logger.info('OPC UA security fallback to "None" is ENABLED.');
+        } else {
+            logger.info('OPC UA security fallback to "None" is DISABLED.');
+        }
+
         this.currentConnection = null;
 
         // Initialize certificates
@@ -35,7 +43,6 @@ class OpcuaConnectionManager extends EventEmitter {
         // Set up event handler for untrusted certificates
         opcuaClient.opcuaEmitter.on('untrustedCertificate', (certInfo) => {
             logger.info(`Forwarding untrusted certificate event for ${certInfo.serverUri}`);
-            // Emit event for potential UI handling
             this.emit('untrustedCertificate', certInfo);
         });
 
@@ -93,7 +100,6 @@ class OpcuaConnectionManager extends EventEmitter {
 
         logger.info(`Attempting OPC UA connection to: ${endpointUrl} with SecurityMode=${securityOptions.securityMode}, SecurityPolicy=${securityOptions.securityPolicy} (Attempt ${this.connectionAttempts})`);
 
-        // Update status to connecting
         statusManager.setOpcuaStatus(StatusConstants.CONNECTING, {
             endpoint: endpointUrl,
             securityMode: securityOptions.securityMode,
@@ -102,10 +108,9 @@ class OpcuaConnectionManager extends EventEmitter {
         });
 
         try {
-            // Try to connect with timeout
             const connectionPromise = opcuaClient.connectAndSubscribe(endpointUrl, securityOptions);
             const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error("Connection timeout")), 30000);
+                setTimeout(() => reject(new Error("Connection timeout after 30 seconds")), 30000); // Increased timeout
             });
 
             this.currentConnection = await Promise.race([connectionPromise, timeoutPromise]);
@@ -113,7 +118,6 @@ class OpcuaConnectionManager extends EventEmitter {
             if (this.currentConnection) {
                 logger.info("OPC UA connection and subscription successful");
 
-                // Update status on success
                 statusManager.setOpcuaStatus(StatusConstants.CONNECTED, {
                     endpoint: endpointUrl,
                     connected: true,
@@ -123,83 +127,95 @@ class OpcuaConnectionManager extends EventEmitter {
                     timestamp: new Date().toISOString()
                 });
 
-                // Reset connection tracking
                 this.connectionAttempts = 0;
                 this.retryDelay = 5000;
 
-                // Clear any pending reconnection
                 if (this.reconnectTimer) {
                     clearTimeout(this.reconnectTimer);
                     this.reconnectTimer = null;
                 }
 
-                // Start health check
                 this.startHealthCheck();
-
-                // Emit connection event
                 this.emit('connected', {
                     config: this.currentConfig,
                     securityMode: this.currentConnection.securityMode,
                     securityPolicy: this.currentConnection.securityPolicy
                 });
             } else {
-                // Connection was null, schedule reconnect
-                throw new Error("Failed to create OPC UA connection");
+                // Should not happen if connectAndSubscribe throws on failure, but handle defensively
+                throw new Error("Failed to establish OPC UA connection (connectAndSubscribe returned null)");
             }
         } catch (error) {
-            logger.error("Error during OPC UA connection:", error.message);
+            // --- Enhanced Error Logging ---
+            logger.error("Error during OPC UA connection attempt:", {
+                message: error.message,
+                // Include specific OPC UA status codes if available
+                statusCode: error.statusCode ? error.statusCode.toString() : 'N/A',
+                // Include stack trace for better debugging
+                stack: error.stack,
+                endpoint: endpointUrl,
+                securityMode: securityOptions.securityMode,
+                securityPolicy: securityOptions.securityPolicy,
+                attempt: this.connectionAttempts
+            });
+            // --- End Enhanced Error Logging ---
 
-            // Determine if this is a security-related error
             const isSecurityError = error.message && (
                 error.message.includes("certificate") ||
                 error.message.includes("security") ||
                 error.message.includes("untrusted") ||
                 error.message.includes("trust") ||
-                error.message.includes("rejected")
+                error.message.includes("rejected") ||
+                (error.statusCode && error.statusCode.name.startsWith("BadSecurity")) // Check for OPC UA security status codes
             );
 
-            if (isSecurityError && this.currentConfig.securityMode !== 'None') {
-                // Try to fall back to None if this was a security error
-                logger.warn('Security-related error, will try again with No security');
+            // --- Configurable Security Fallback ---
+            if (this.securityFallbackEnabled && isSecurityError && this.currentConfig.securityMode !== 'None') {
+                logger.warn('Security-related error detected and fallback is enabled. Attempting connection with SecurityMode=None.');
 
-                // Update status to reflect the fallback
                 statusManager.setOpcuaStatus(StatusConstants.WARNING, {
-                    message: 'Security error, will try again with No security',
+                    message: 'Security error, falling back to No security',
                     error: error.message,
                     endpoint: endpointUrl
                 });
 
-                // Store original security settings for reference
                 const originalSecurity = {
                     securityMode: this.currentConfig.securityMode,
                     securityPolicy: this.currentConfig.securityPolicy
                 };
 
-                // Update config to use None
                 this.currentConfig.securityMode = 'None';
                 this.currentConfig.securityPolicy = 'None';
 
-                // Try connecting again with No security (after brief delay)
+                // Reset attempts for the fallback try
+                this.connectionAttempts = 0;
+
                 setTimeout(() => {
                     logger.info(`Retrying connection with No security (original was ${originalSecurity.securityMode}/${originalSecurity.securityPolicy})`);
-                    this.isConnecting = false;
-                    this.startConnection();
-                }, 2000);
+                    this.isConnecting = false; // Allow the new attempt
+                    void this.startConnection(); // Use void for fire-and-forget
+                }, 2000); // Short delay before fallback attempt
 
+                // Important: Return here to prevent scheduling another reconnect immediately
+                this.isConnecting = false; // Ensure isConnecting is reset before returning
                 return;
             }
+            // --- End Configurable Security Fallback ---
 
-            // Update status to error
+            // If fallback is disabled, not a security error, or already tried None
             statusManager.setOpcuaStatus(StatusConstants.ERROR, {
-                message: error.message,
+                message: `Connection failed: ${error.message}`,
+                error: error.message, // Keep original error message
                 endpoint: endpointUrl,
                 timestamp: new Date().toISOString()
             });
 
-            // Schedule reconnection
             this.scheduleReconnect();
         } finally {
-            this.isConnecting = false;
+            // Ensure isConnecting is always reset, unless a fallback attempt is scheduled
+            if (!this.reconnectTimer && !(this.securityFallbackEnabled && isSecurityError && this.currentConfig.securityMode !== 'None')) {
+                this.isConnecting = false;
+            }
         }
     }
 
@@ -208,27 +224,29 @@ class OpcuaConnectionManager extends EventEmitter {
      */
     scheduleReconnect() {
         if (this.reconnectTimer) {
-            clearTimeout(this.reconnectTimer);
-            this.reconnectTimer = null;
+            // Don't schedule multiple reconnects
+            return;
         }
 
         if (this.connectionAttempts < this.maxConnectionAttempts) {
             // Use exponential backoff with a cap
             const delay = Math.min(this.retryDelay * Math.pow(1.5, this.connectionAttempts - 1), 300000); // Max 5 minutes
 
-            logger.info(`Scheduling OPC UA reconnection in ${delay}ms`);
+            logger.info(`Scheduling OPC UA reconnection in ${delay / 1000} seconds (Attempt ${this.connectionAttempts + 1}/${this.maxConnectionAttempts})`);
 
             this.reconnectTimer = setTimeout(() => {
                 this.reconnectTimer = null;
-                void this.startConnection();
+                this.isConnecting = false; // Allow the reconnect attempt
+                void this.startConnection(); // Use void for fire-and-forget
             }, delay);
         } else {
-            logger.error(`Failed to connect after ${this.maxConnectionAttempts} attempts. Manual reconnection required.`);
-
+            logger.error(`Failed to connect after ${this.maxConnectionAttempts} attempts. Stopping automatic retries. Manual intervention required.`);
             statusManager.setOpcuaStatus(StatusConstants.ERROR, {
-                message: `Max connection attempts (${this.maxConnectionAttempts}) reached`,
+                message: `Max connection attempts (${this.maxConnectionAttempts}) reached. Auto-reconnect stopped.`,
                 endpoint: this.getEndpointUrl()
             });
+            // Reset attempts so manual trigger can work later
+            this.connectionAttempts = 0;
         }
     }
 
@@ -236,34 +254,37 @@ class OpcuaConnectionManager extends EventEmitter {
      * Start OPC UA health check
      */
     startHealthCheck() {
-        // Clear any existing interval
         if (this.healthCheckInterval) {
             clearInterval(this.healthCheckInterval);
         }
 
-        // Set up new interval - default 30 seconds
         const healthCheckIntervalMs = Number(process.env.OPCUA_HEALTH_CHECK_INTERVAL) || 30000;
 
         this.healthCheckInterval = setInterval(async () => {
-            try {
-                // If we don't have a connection, no health check needed
-                if (!this.currentConnection || !this.currentConnection.session) {
-                    throw new Error("No active session for health check");
+            if (!this.currentConnection || !this.currentConnection.session || !this.currentConnection.session.isOpen) {
+                logger.warn("Health check skipped: No active or open session.");
+                // If session is closed unexpectedly, trigger reconnect logic
+                if (statusManager.getServiceStatus(StatusConstants.OPCUA) === StatusConstants.CONNECTED) {
+                    logger.error("OPC UA session found closed unexpectedly during health check.");
+                    statusManager.setOpcuaStatus(StatusConstants.ERROR, { message: 'Session closed unexpectedly' });
+                    await this.disconnectConnection(); // Clean up potentially broken state
+                    this.scheduleReconnect();
                 }
+                return;
+            }
 
-                // Read a simple value from the server
+            try {
                 const { session } = this.currentConnection;
 
-                await session.keepAlive();
+                // More robust check: Read ServerStatus CurrentTime
+                const nodeToRead = {
+                    nodeId: opcua.resolveNodeId("Server_ServerStatus_CurrentTime"), // Standard node i=2258
+                    attributeId: opcua.AttributeIds.Value
+                };
+                const dataValue = await session.read(nodeToRead);
 
-                // Try to read the server status node (standard node in all OPC UA servers)
-                const readResult = await session.read({
-                    nodeId: "i=2258", // Server Status node
-                    attributeId: opcuaClient.opcua?.AttributeIds?.Value || 13
-                });
-
-                if (readResult && readResult.statusCode && readResult.statusCode.isGood && readResult.statusCode.isGood()) {
-                    // Update status only if not already connected
+                if (dataValue.statusCode.isGood()) {
+                    // logger.debug('OPC UA health check passed.'); // Optional: debug log
                     if (statusManager.getServiceStatus(StatusConstants.OPCUA) !== StatusConstants.CONNECTED) {
                         statusManager.setOpcuaStatus(StatusConstants.CONNECTED, {
                             message: 'Health check passed',
@@ -271,30 +292,26 @@ class OpcuaConnectionManager extends EventEmitter {
                         });
                     }
                 } else {
-                    throw new Error(`Health check read failed: ${readResult?.statusCode?.toString() || 'Unknown'}`);
+                    throw new Error(`Health check read failed with status: ${dataValue.statusCode.toString()}`);
                 }
             } catch (error) {
-                logger.error('OPC UA health check failed:', error.message);
+                logger.error('OPC UA health check failed:', { message: error.message, statusCode: error.statusCode ? error.statusCode.toString() : 'N/A' });
 
-                // Determine if this is a critical error
                 const isCritical =
-                    error.message.includes('The connection has been closed') ||
-                    error.message.includes('No active session') ||
+                    error.message.includes('BadSessionIdInvalid') ||
+                    error.message.includes('BadSessionClosed') ||
+                    error.message.includes('BadConnectionClosed') ||
+                    error.message.includes('Socket is closed') ||
                     error.message.includes('Connection reset');
 
                 if (isCritical) {
                     statusManager.setOpcuaStatus(StatusConstants.ERROR, {
-                        message: 'Health check failed: connection lost',
+                        message: 'Health check failed: Connection lost',
                         error: error.message
                     });
-
-                    // Try to disconnect cleanly
                     await this.disconnectConnection();
-
-                    // Schedule reconnection
                     this.scheduleReconnect();
                 } else {
-                    // Non-critical warning
                     statusManager.setOpcuaStatus(StatusConstants.WARNING, {
                         message: 'Health check warning',
                         error: error.message
@@ -303,7 +320,7 @@ class OpcuaConnectionManager extends EventEmitter {
             }
         }, healthCheckIntervalMs);
 
-        logger.info(`OPC UA health check scheduled every ${healthCheckIntervalMs}ms`);
+        logger.info(`OPC UA health check scheduled every ${healthCheckIntervalMs / 1000} seconds`);
     }
 
     /**
@@ -311,79 +328,81 @@ class OpcuaConnectionManager extends EventEmitter {
      * @return {Promise<void>}
      */
     async disconnectConnection() {
-        // Clear any health check
+        logger.info("Attempting to disconnect OPC UA connection...");
         if (this.healthCheckInterval) {
             clearInterval(this.healthCheckInterval);
             this.healthCheckInterval = null;
+            logger.debug("Cleared health check interval.");
         }
-
-        // Clear any reconnect timer
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
+            logger.debug("Cleared reconnect timer.");
         }
+
+        // Prevent new connection attempts while disconnecting
+        this.isConnecting = true;
 
         if (this.currentConnection) {
             const { subscription, session, client } = this.currentConnection;
-            const disconnectPromises = [];
+            this.currentConnection = null; // Clear immediately to prevent race conditions
 
-            // Terminate subscription if it exists
-            if (subscription) {
-                disconnectPromises.push(
-                    subscription.terminate().catch(err => {
-                        logger.error("Error terminating subscription:", err.message);
-                    })
-                );
-            }
-
-            // Close session if it exists
-            if (session) {
-                disconnectPromises.push(
-                    session.close().catch(err => {
-                        logger.error("Error closing session:", err.message);
-                    })
-                );
-            }
-
-            // Disconnect client if it exists
-            if (client) {
-                disconnectPromises.push(
-                    client.disconnect().catch(err => {
-                        logger.error("Error disconnecting client:", err.message);
-                    })
-                );
+            try {
+                if (subscription) {
+                    logger.debug("Terminating subscription...");
+                    await subscription.terminate();
+                    logger.debug("Subscription terminated.");
+                }
+            } catch (err) {
+                logger.error("Error terminating subscription:", err.message);
             }
 
             try {
-                await Promise.all(disconnectPromises);
-                logger.info("OPC UA connection fully disconnected");
-
-                statusManager.setOpcuaStatus(StatusConstants.DISCONNECTED, {
-                    message: 'Connection closed',
-                    timestamp: new Date().toISOString()
-                });
-
-                this.currentConnection = null;
-                this.emit('disconnected');
-            } catch (error) {
-                logger.error("Error during OPC UA disconnection:", error);
-
-                statusManager.setOpcuaStatus(StatusConstants.ERROR, {
-                    message: 'Error during disconnection',
-                    error: error.message
-                });
-
-                // Force reset of the connection
-                this.currentConnection = null;
+                if (session && session.isOpen) { // Check if session is open before closing
+                    logger.debug("Closing session...");
+                    await session.close(); // Pass true to delete subscriptions
+                    logger.debug("Session closed.");
+                } else if (session) {
+                    logger.debug("Session already closed or not open.");
+                }
+            } catch (err) {
+                logger.error("Error closing session:", err.message);
             }
-        } else {
-            logger.info("No OPC UA connection to disconnect");
 
+            try {
+                if (client) {
+                    logger.debug("Disconnecting client...");
+                    await client.disconnect();
+                    logger.debug("Client disconnected.");
+                }
+            } catch (err) {
+                logger.error("Error disconnecting client:", err.message);
+            }
+
+            logger.info("OPC UA connection resources released.");
             statusManager.setOpcuaStatus(StatusConstants.DISCONNECTED, {
-                message: 'No connection to close'
+                message: 'Connection intentionally closed',
+                timestamp: new Date().toISOString()
             });
+            this.emit('disconnected');
+
+        } else {
+            logger.info("No active OPC UA connection to disconnect.");
+            // Ensure status reflects disconnected state even if connection was already null
+            if (statusManager.getServiceStatus(StatusConstants.OPCUA) !== StatusConstants.DISCONNECTED) {
+                statusManager.setOpcuaStatus(StatusConstants.DISCONNECTED, {
+                    message: 'No connection was active'
+                });
+            }
         }
+        // Allow new connections after disconnect attempt is complete
+        this.isConnecting = false;
+        // Reset connection attempts after a disconnect
+        this.connectionAttempts = 0;
     }
+
+    // --- Other methods remain largely the same ---
+    // updateConnection, getConnectionInfo, getSecurityOptions, acceptCertificate, getConnectionPromise
 
     /**
      * Update connection configuration and reconnect
@@ -391,31 +410,20 @@ class OpcuaConnectionManager extends EventEmitter {
      * @returns {Promise<Object>} - Updated configuration
      */
     async updateConnection(newConfig) {
-        // Update security parameters only if provided
-        if (newConfig.securityMode) {
-            this.currentConfig.securityMode = newConfig.securityMode;
-        }
-
-        if (newConfig.securityPolicy) {
-            this.currentConfig.securityPolicy = newConfig.securityPolicy;
-        }
-
-        // Update the rest of the config
+        logger.info("Updating OPC UA connection configuration:", newConfig);
+        // Merge new config with current, ensuring security settings are updated if provided
         this.currentConfig = {
             ...this.currentConfig,
-            ...newConfig
+            ...newConfig,
+            securityMode: newConfig.securityMode !== undefined ? newConfig.securityMode : this.currentConfig.securityMode,
+            securityPolicy: newConfig.securityPolicy !== undefined ? newConfig.securityPolicy : this.currentConfig.securityPolicy,
         };
 
-        // Disconnect first
-        await this.disconnectConnection();
-
-        // Reset connection attempts for fresh start
-        this.connectionAttempts = 0;
-
-        // Start new connection
-        await this.startConnection();
-
-        return this.currentConfig;
+        await this.disconnectConnection(); // Disconnect existing connection cleanly
+        this.connectionAttempts = 0;       // Reset attempts for the new config
+        this.retryDelay = 5000;            // Reset retry delay
+        await this.startConnection();      // Start connection with new config
+        return this.getConnectionInfo().config; // Return the effective config
     }
 
     /**
@@ -430,76 +438,102 @@ class OpcuaConnectionManager extends EventEmitter {
             connected: status === StatusConstants.CONNECTED,
             status,
             statusText: StatusConstants.getStatusLabel(status),
-            config: { ...this.currentConfig },
+            config: { ...this.currentConfig }, // Return a copy
+            // Report the actual security used by the connection if available, else the config
             securityMode: this.currentConnection?.securityMode || this.currentConfig.securityMode,
             securityPolicy: this.currentConnection?.securityPolicy || this.currentConfig.securityPolicy,
-            details,
-            lastUpdated: details.timestamp || new Date().toISOString()
+            details: details || {}, // Ensure details is always an object
+            lastUpdated: details?.timestamp || statusManager.getFullStatus().lastUpdated // Use service specific or overall
         };
     }
 
     /**
-     * Get available security modes and policies
+     * Get available security modes and policies from the certificate manager
      * @returns {Object} Available security options
      */
     getSecurityOptions() {
-        return {
-            securityModes: opcuaClient.certificateManager.getAvailableSecurityModes(),
-            securityPolicies: opcuaClient.certificateManager.getAvailableSecurityPolicies()
-        };
+        try {
+            return {
+                securityModes: opcuaClient.certificateManager.getAvailableSecurityModes(),
+                securityPolicies: opcuaClient.certificateManager.getAvailableSecurityPolicies()
+            };
+        } catch (error) {
+            logger.error("Failed to get security options from certificate manager:", error);
+            // Provide safe defaults if manager fails
+            return {
+                securityModes: ['None', 'Sign', 'SignAndEncrypt'],
+                securityPolicies: ['None', 'Basic256Sha256', 'Aes128_Sha256_RsaOaep'] // Common policies
+            };
+        }
     }
 
     /**
-     * Accept a previously rejected certificate
+     * Accept a previously rejected certificate using the certificate manager
      * @param {string} filename - The certificate filename
      * @returns {Promise<boolean>} - Success status
      */
     async acceptCertificate(filename) {
         try {
-            const result = await opcuaClient.certificateManager.acceptRejectedCertificate(filename);
-
-            // Emit certificate accepted event
+            await opcuaClient.certificateManager.acceptRejectedCertificate(filename);
+            logger.info(`Successfully accepted rejected certificate: ${filename}`);
             this.emit('certificateAccepted', {
                 success: true,
                 filename,
                 timestamp: new Date().toISOString()
             });
-
             return true;
         } catch (error) {
-            logger.error('Failed to accept certificate:', error);
-
-            // Emit error event
+            logger.error(`Failed to accept rejected certificate ${filename}:`, error);
             this.emit('certificateError', {
                 error: error.message,
                 filename
             });
-
             return false;
         }
     }
 
     /**
      * Test connection to a server without affecting current connection
-     * Used by the test-connection endpoint
      * @param {string} endpointUrl - The server endpoint URL
      * @param {Object} securityOptions - Security options
-     * @returns {Promise<Object>} - Connection details or null on failure
+     * @returns {Promise<Object>} - Connection details or throws on failure
      */
     async getConnectionPromise(endpointUrl, securityOptions) {
+        let testConnection = null;
         try {
             logger.info(`Testing connection to: ${endpointUrl} with SecurityMode=${securityOptions.securityMode}, SecurityPolicy=${securityOptions.securityPolicy}`);
 
-            // This uses the core connect function but doesn't store the connection
-            return await opcuaClient.connectAndSubscribe(endpointUrl, securityOptions);
+            // Use the core connect function but don't store the connection state locally
+            testConnection = await opcuaClient.connectAndSubscribe(endpointUrl, securityOptions);
+
+            if (!testConnection) {
+                throw new Error("Test connection failed: connectAndSubscribe returned null");
+            }
+
+            logger.info(`Test connection to ${endpointUrl} successful.`);
+            // Return relevant details from the test connection
+            return {
+                success: true,
+                securityMode: testConnection.securityMode,
+                securityPolicy: testConnection.securityPolicy
+            };
         } catch (error) {
-            logger.error(`Test connection failed: ${error.message}`);
-            throw error;
+            logger.error(`Test connection to ${endpointUrl} failed: ${error.message}`);
+            throw error; // Re-throw the error to be handled by the route
+        } finally {
+            // Ensure the test connection is always cleaned up
+            if (testConnection) {
+                try {
+                    if (testConnection.session) await testConnection.session.close();
+                    if (testConnection.client) await testConnection.client.disconnect();
+                    logger.debug(`Test connection to ${endpointUrl} cleaned up.`);
+                } catch (cleanupError) {
+                    logger.error(`Error cleaning up test connection to ${endpointUrl}:`, cleanupError);
+                }
+            }
         }
     }
 }
 
-// Create singleton instance
 const opcuaManager = new OpcuaConnectionManager();
-
 module.exports = opcuaManager;

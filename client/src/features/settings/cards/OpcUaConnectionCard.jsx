@@ -45,7 +45,7 @@ const OpcUaConnectionCard = ({
             <Divider />
             <CardContent sx={{ pt: 2 }}>
                 <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                             label="IP Address"
                             variant="outlined"
@@ -56,7 +56,7 @@ const OpcUaConnectionCard = ({
                             disabled={opcuaConnected}
                         />
                     </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                             label="Port"
                             variant="outlined"
@@ -67,7 +67,7 @@ const OpcUaConnectionCard = ({
                             disabled={opcuaConnected}
                         />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <TextField
                             label="Resource Path"
                             variant="outlined"
@@ -79,7 +79,7 @@ const OpcUaConnectionCard = ({
                         />
                     </Grid>
 
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                             label="Security Mode"
                             variant="outlined"
@@ -101,7 +101,7 @@ const OpcUaConnectionCard = ({
                         </TextField>
                     </Grid>
 
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                             label="Security Policy"
                             variant="outlined"
@@ -123,7 +123,7 @@ const OpcUaConnectionCard = ({
                         </TextField>
                     </Grid>
 
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <Box display="flex" justifyContent="space-between">
                             <Box>
                                 <Button

@@ -1,4 +1,5 @@
-import React from 'react';
+// ===== ..\client\src\features\settings\tabs\BackupRestoreTab.jsx =====
+import React from 'react'; // Import React
 import {
     Typography,
     Card,
@@ -15,23 +16,14 @@ import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { useBackupRestore } from '../hooks/useBackupRestore';
 
-const BackupRestoreTab = ({ setGlobalAlertInfo }) => {
+const BackupRestoreTab = () => {
     const {
         backupInProgress,
-        alertInfo,
-        setAlertInfo,
         fileInputRef,
         handleExportDashboards,
         handleFileSelected,
         handleImportClick
     } = useBackupRestore();
-
-    // Forward alerts to the parent component
-    React.useEffect(() => {
-        if (alertInfo.open) {
-            setGlobalAlertInfo(alertInfo);
-        }
-    }, [alertInfo, setGlobalAlertInfo]);
 
     return (
         <Card>
@@ -43,37 +35,30 @@ const BackupRestoreTab = ({ setGlobalAlertInfo }) => {
             <Divider />
             <CardContent>
                 <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <Card variant="outlined">
                             <CardContent>
-                                <Typography variant="h6" gutterBottom>
-                                    Export Dashboards
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary" paragraph>
-                                    Download a backup file containing all your dashboards, widgets, and layouts
-                                </Typography>
-                                <Button
-                                    variant="contained"
-                                    color="primary"
-                                    startIcon={<CloudDownloadIcon />}
-                                    onClick={handleExportDashboards}
-                                    disabled={backupInProgress}
-                                >
+                                <Typography variant="h6" gutterBottom> Export Dashboards </Typography>
+                                    <Typography variant="body2" color="text.secondary" paragraph>
+                                        Download a backup file containing all your dashboards, widgets, and layouts
+                                    </Typography>
+                                <Button variant="contained"
+                                        color="primary"
+                                        startIcon={<CloudDownloadIcon />}
+                                        onClick={handleExportDashboards}
+                                        disabled={backupInProgress} >
                                     {backupInProgress ? 'Exporting...' : 'Export'}
                                 </Button>
                             </CardContent>
                         </Card>
                     </Grid>
-
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <Card variant="outlined">
                             <CardContent>
-                                <Typography variant="h6" gutterBottom>
-                                    Import Dashboards
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary" paragraph>
-                                    Restore dashboards from a previously exported backup file
-                                </Typography>
+                                <Typography variant="h6" gutterBottom> Import Dashboards </Typography>
+                                    <Typography variant="body2" color="text.secondary" paragraph>
+                                        Restore dashboards from a previously exported backup file
+                                    </Typography>
                                 <input
                                     type="file"
                                     accept=".json"
@@ -93,8 +78,7 @@ const BackupRestoreTab = ({ setGlobalAlertInfo }) => {
                             </CardContent>
                         </Card>
                     </Grid>
-
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <Alert severity="info">
                             Note: Importing dashboards will override your current dashboard configuration.
                             Make sure to export a backup of your current setup first if needed.

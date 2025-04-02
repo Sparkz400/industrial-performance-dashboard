@@ -54,16 +54,18 @@ const dbTestSchema = Joi.object({
 // Middleware function to validate request body
 const validateBody = (schema) => {
     return (req, res, next) => {
-        const { error, value } = schema.validate(req.body);
-
+        const { error, value } = schema.validate(req.body, {
+            abortEarly: false, // Report all errors
+            stripUnknown: true // Remove properties not in schema (optional, depends on needs)
+        });
         if (error) {
+            const errorMessage = error.details.map(detail => detail.message).join(', ');
             return res.status(400).json({
-                error: `Validation Error: ${error.details[0].message}`
+                status: 'error',
+                error: `Validation Error: ${errorMessage}`
             });
         }
-
-        // Replace the request body with the validated value
-        req.body = value;
+        req.body = value; // Use validated (and potentially coerced/defaulted) value
         next();
     };
 };
@@ -71,16 +73,35 @@ const validateBody = (schema) => {
 // Middleware function to validate request params
 const validateParams = (schema) => {
     return (req, res, next) => {
-        const { error, value } = schema.validate(req.params);
-
+        const { error, value } = schema.validate(req.params, { abortEarly: false });
         if (error) {
+            const errorMessage = error.details.map(detail => detail.message).join(', ');
             return res.status(400).json({
-                error: `Validation Error: ${error.details[0].message}`
+                status: 'error',
+                error: `Validation Error: ${errorMessage}`
             });
         }
-
-        // Replace the request params with the validated value
         req.params = value;
+        next();
+    };
+};
+
+// --- Validate request query parameters ---
+const validateQuery = (schema) => {
+    return (req, res, next) => {
+        const { error, value } = schema.validate(req.query, {
+            abortEarly: false,
+            // Allow unknown query parameters by default, unless you want to strip them
+            // stripUnknown: true
+        });
+        if (error) {
+            const errorMessage = error.details.map(detail => detail.message).join(', ');
+            return res.status(400).json({
+                status: 'error',
+                error: `Validation Error: ${errorMessage}`
+            });
+        }
+        req.query = value; // Replace query with validated/coerced values
         next();
     };
 };
@@ -92,5 +113,6 @@ module.exports = {
         dbTestSchema
     },
     validateBody,
-    validateParams
+    validateParams,
+    validateQuery
 };

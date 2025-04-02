@@ -68,7 +68,7 @@ const HelpPage = () => {
                     <Grid>
                         <HelpOutlineIcon sx={{ fontSize: 50, color: '#b3b3b3' }} />
                     </Grid>
-                    <Grid xs>
+                    <Grid>
                         <Typography variant="h4" gutterBottom>
                             Application Help & Documentation
                         </Typography>

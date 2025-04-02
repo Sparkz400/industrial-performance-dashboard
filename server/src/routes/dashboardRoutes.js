@@ -92,10 +92,6 @@ router.get('/', async (req, res, next) => {
 });
 
 // POST /api/dashboards/:id
-// Replace the POST endpoint in server/src/routes/dashboardRoutes.js with this debug version
-
-// POST /api/dashboards/:id
-// Debug version with extensive error trapping
 router.post('/:id', async (req, res) => {
     let client = null;
 
@@ -191,7 +187,7 @@ router.post('/:id', async (req, res) => {
                 await client.query(historyQuery, [
                     id,
                     'UPDATE',
-                    'system'
+                    null
                 ]);
             } catch (historyErr) {
                 // Non-critical error, just log it

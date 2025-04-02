@@ -6,9 +6,9 @@ import {
     CardContent,
     Divider,
     Avatar,
+    Alert,
     Switch,
     FormControlLabel,
-    Alert,
     Accordion,
     AccordionSummary,
     AccordionDetails
@@ -20,21 +20,15 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useTheme } from '../../system/index.jsx';
 import ThemePreview from '../../system/components/ThemePreview';
 import { ThemeProvider as ThemeSelector } from '../../system/contexts/ThemeContext';
+import { useSnackbar } from 'notistack';
 
-const AppearanceTab = ({ setGlobalAlertInfo }) => {
+const AppearanceTab = ({}) => {
     const { themeMode, useSystemTheme, setThemeMode, setUseSystemTheme } = useTheme();
-
-    const showNotification = (message, severity) => {
-        setGlobalAlertInfo({
-            open: true,
-            message,
-            severity
-        });
-    };
+    const { enqueueSnackbar } = useSnackbar();
 
     return (
         <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
                 <Card>
                     <CardHeader
                         title="Theme Settings"
@@ -51,18 +45,18 @@ const AppearanceTab = ({ setGlobalAlertInfo }) => {
                             onSelectLight={() => {
                                 setThemeMode('light');
                                 setUseSystemTheme(false);
-                                showNotification('Light theme applied', 'success');
+                                enqueueSnackbar('Light theme applied', { variant: 'success' });
                             }}
                             onSelectDark={() => {
                                 setThemeMode('dark');
                                 setUseSystemTheme(false);
-                                showNotification('Dark theme applied', 'success');
+                                enqueueSnackbar('Dark theme applied', { variant: 'success' });
                             }}
                             onSelectSystem={() => {
                                 setUseSystemTheme(!useSystemTheme);
-                                showNotification(
-                                    useSystemTheme ? 'System theme preference disabled' : 'System theme preference enabled',
-                                    'success'
+                                enqueueSnackbar(
+                                    nextUseSystemTheme ? 'System theme preference enabled' : 'System theme preference disabled',
+                                    { variant: 'success' }
                                 );
                             }}
                         />
@@ -87,7 +81,7 @@ const AppearanceTab = ({ setGlobalAlertInfo }) => {
                 </Card>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
                 <Card>
                     <CardHeader
                         title="Interface Settings"
@@ -97,25 +91,25 @@ const AppearanceTab = ({ setGlobalAlertInfo }) => {
                     <Divider />
                     <CardContent sx={{ pt: 2 }}>
                         <Grid container spacing={1}>
-                            <Grid item xs={12} sm={6}>
+                            <Grid size={{ xs: 12, sm: 6 }}>
                                 <FormControlLabel
                                     control={<Switch defaultChecked color="primary" />}
                                     label="Show tooltips"
                                 />
                             </Grid>
-                            <Grid item xs={12} sm={6}>
+                            <Grid size={{ xs: 12, sm: 6 }}>
                                 <FormControlLabel
                                     control={<Switch defaultChecked color="primary" />}
                                     label="Animated transitions"
                                 />
                             </Grid>
-                            <Grid item xs={12} sm={6}>
+                            <Grid size={{ xs: 12, sm: 6 }}>
                                 <FormControlLabel
                                     control={<Switch defaultChecked color="primary" />}
                                     label="Sidebar auto-collapse"
                                 />
                             </Grid>
-                            <Grid item xs={12} sm={6}>
+                            <Grid size={{ xs: 12, sm: 6 }}>
                                 <FormControlLabel
                                     control={<Switch color="primary" />}
                                     label="Compact mode"

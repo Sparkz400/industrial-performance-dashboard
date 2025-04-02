@@ -1,6 +1,8 @@
+// ===== ..\client\src\features\settings\hooks\useOpcUaConnection.js =====
 import { useState, useCallback, useEffect } from 'react';
 import { API_ENDPOINTS } from '../../../config/config.js';
 import { useSystemStatus } from '../../system/index.jsx';
+import { useSnackbar } from 'notistack'; // Import useSnackbar
 
 export const useOpcUaConnection = () => {
     const [loading, setLoading] = useState(false);
@@ -8,7 +10,8 @@ export const useOpcUaConnection = () => {
     const [connectedAddress, setConnectedAddress] = useState('');
     const [connectionHistory, setConnectionHistory] = useState([]);
     const [configChanged, setConfigChanged] = useState(false);
-    const [alertInfo, setAlertInfo] = useState({ open: false, message: '', severity: 'info' });
+    // Removed alertInfo state
+    const { enqueueSnackbar } = useSnackbar(); // Use the hook
 
     // Form states
     const [ip, setIp] = useState('localhost');
@@ -25,27 +28,33 @@ export const useOpcUaConnection = () => {
 
     // Sanitize port input
     const sanitizePort = (value) => {
-        const port = parseInt(value, 10);
-        return (port > 0 && port <= 65535) ? port : 4840;
+        const portNum = parseInt(value, 10);
+        // Return default if NaN, less than 1, or greater than 65535
+        return (isNaN(portNum) || portNum < 1 || portNum > 65535) ? 4840 : portNum;
     };
+
 
     // Load security options
     const loadSecurityOptions = useCallback(async () => {
         try {
             const response = await fetch(`${API_ENDPOINTS.opcua.status.replace('/status', '')}/security-options`);
-
             if (response.ok) {
                 const options = await response.json();
-
                 setSecurityOptions({
                     modes: options.securityModes || ['None'],
                     policies: options.securityPolicies || ['None']
                 });
+            } else {
+                // Add notification for failure
+                const errorData = await response.text(); // Get text in case it's not JSON
+                enqueueSnackbar(`Failed to load security options: ${response.status} ${errorData || 'Server Error'}`, { variant: 'warning' });
             }
         } catch (error) {
             console.error('Error loading security options:', error);
+            // Add notification for failure
+            enqueueSnackbar(`Error loading security options: ${error.message}`, { variant: 'error' });
         }
-    }, []);
+    }, [enqueueSnackbar]); // Add enqueueSnackbar dependency
 
     // Handle OPC UA connection
     const handleConnect = async () => {
@@ -74,18 +83,12 @@ export const useOpcUaConnection = () => {
                     timestamp: new Date().toISOString(),
                     details: `Connected to ${ip}:${sanitizedPort} with ${securityMode}/${securityPolicy}`
                 }, ...prev.slice(0, 9)]);
-                setAlertInfo({
-                    open: true,
-                    message: 'Successfully connected to OPC UA server',
-                    severity: 'success'
-                });
-                refreshStatus();
+                // Replace setAlertInfo
+                enqueueSnackbar('Successfully connected to OPC UA server', { variant: 'success' });
+                refreshStatus(); // Refresh overall system status
             } else {
-                setAlertInfo({
-                    open: true,
-                    message: `Failed to connect: ${data.error || 'Unknown error'}`,
-                    severity: 'error'
-                });
+                // Replace setAlertInfo
+                enqueueSnackbar(`Failed to connect: ${data.error || 'Unknown error'}`, { variant: 'error' });
                 setConnectionHistory(prev => [{
                     event: 'Connection Failed',
                     timestamp: new Date().toISOString(),
@@ -94,11 +97,8 @@ export const useOpcUaConnection = () => {
             }
         } catch (err) {
             console.error('Error connecting to OPC UA:', err);
-            setAlertInfo({
-                open: true,
-                message: `Error connecting: ${err.message}`,
-                severity: 'error'
-            });
+            // Replace setAlertInfo
+            enqueueSnackbar(`Error connecting: ${err.message}`, { variant: 'error' });
             setConnectionHistory(prev => [{
                 event: 'Connection Error',
                 timestamp: new Date().toISOString(),
@@ -128,73 +128,67 @@ export const useOpcUaConnection = () => {
                     timestamp: new Date().toISOString(),
                     details: 'Manually disconnected'
                 }, ...prev.slice(0, 9)]);
-                setAlertInfo({
-                    open: true,
-                    message: 'Successfully disconnected from OPC UA server',
-                    severity: 'info'
-                });
-                refreshStatus();
+                // Replace setAlertInfo
+                enqueueSnackbar('Successfully disconnected from OPC UA server', { variant: 'info' });
+                refreshStatus(); // Refresh overall system status
             } else {
-                setAlertInfo({
-                    open: true,
-                    message: `Failed to disconnect: ${data.error || 'Unknown error'}`,
-                    severity: 'error'
-                });
+                // Replace setAlertInfo
+                enqueueSnackbar(`Failed to disconnect: ${data.error || 'Unknown error'}`, { variant: 'error' });
             }
         } catch (err) {
             console.error('Error disconnecting from OPC UA:', err);
-            setAlertInfo({
-                open: true,
-                message: `Error disconnecting: ${err.message}`,
-                severity: 'error'
-            });
+            // Replace setAlertInfo
+            enqueueSnackbar(`Error disconnecting: ${err.message}`, { variant: 'error' });
         } finally {
             setLoading(false);
         }
     };
 
     // Fetch OPC UA connection status
-    const fetchConnectionStatus = async () => {
+    const fetchConnectionStatus = useCallback(async () => { // Make it useCallback
         try {
             const res = await fetch(API_ENDPOINTS.opcua.status);
             const data = await res.json();
 
             if (res.ok) {
                 setOpcuaConnected(data.connected);
-
                 if (data.connected && data.config) {
-                    setIp(data.config.ip);
-                    setPort(data.config.port.toString());
-                    setResourcePath(data.config.resourcePath);
+                    setIp(data.config.ip || 'localhost'); // Add defaults
+                    setPort(data.config.port?.toString() || '4840');
+                    setResourcePath(data.config.resourcePath || '/UA/MyLittleServer');
                     setConnectedAddress(`${data.config.ip}:${data.config.port}`);
-
-                    // Update security settings
-                    if (data.config.securityMode) {
-                        setSecurityMode(data.config.securityMode);
-                    }
-
-                    if (data.config.securityPolicy) {
-                        setSecurityPolicy(data.config.securityPolicy);
-                    }
+                    setSecurityMode(data.config.securityMode || 'None');
+                    setSecurityPolicy(data.config.securityPolicy || 'None');
                 } else {
                     setConnectedAddress('');
+                    // Optionally reset form fields if not connected
+                    // setIp('localhost');
+                    // setPort('4840');
+                    // setResourcePath('/UA/MyLittleServer');
+                    // setSecurityMode('None');
+                    // setSecurityPolicy('None');
                 }
             } else {
                 console.error('Error fetching status:', data.error);
+                // Add notification for failure
+                enqueueSnackbar(`Failed to fetch OPC UA status: ${data.error || 'Unknown'}`, { variant: 'warning' });
             }
         } catch (err) {
             console.error('Error fetching connection status:', err);
+            // Add notification for failure
+            enqueueSnackbar(`Error fetching OPC UA status: ${err.message}`, { variant: 'error' });
         }
-    };
+    }, [enqueueSnackbar]); // Add dependencies
 
     // Check for config changes
     useEffect(() => {
-        // Set config changed flag when form values change
-        const isChanged = ip !== (status?.opcua?.details?.config?.ip || 'localhost') ||
-            port !== (status?.opcua?.details?.config?.port?.toString() || '4840') ||
-            resourcePath !== (status?.opcua?.details?.config?.resourcePath || '/UA/MyLittleServer') ||
-            securityMode !== (status?.opcua?.details?.config?.securityMode || 'None') ||
-            securityPolicy !== (status?.opcua?.details?.config?.securityPolicy || 'None');
+        // Ensure status and details exist before accessing nested properties
+        const currentOpcuaStatus = status?.opcua?.details?.config;
+        const isChanged = ip !== (currentOpcuaStatus?.ip || 'localhost') ||
+            port !== (currentOpcuaStatus?.port?.toString() || '4840') ||
+            resourcePath !== (currentOpcuaStatus?.resourcePath || '/UA/MyLittleServer') ||
+            securityMode !== (currentOpcuaStatus?.securityMode || 'None') ||
+            securityPolicy !== (currentOpcuaStatus?.securityPolicy || 'None');
 
         setConfigChanged(isChanged);
     }, [ip, port, resourcePath, securityMode, securityPolicy, status]);
@@ -203,8 +197,9 @@ export const useOpcUaConnection = () => {
     useEffect(() => {
         void fetchConnectionStatus();
         void loadSecurityOptions();
-    }, [loadSecurityOptions]);
+    }, [loadSecurityOptions, fetchConnectionStatus]); // Add fetchConnectionStatus here
 
+    // Removed alertInfo and setAlertInfo from return
     return {
         loading,
         setLoading,
@@ -212,8 +207,6 @@ export const useOpcUaConnection = () => {
         connectedAddress,
         connectionHistory,
         configChanged,
-        alertInfo,
-        setAlertInfo,
         ip,
         setIp,
         port,

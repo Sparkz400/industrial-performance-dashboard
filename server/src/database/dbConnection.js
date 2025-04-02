@@ -19,213 +19,206 @@ class DatabaseManager {
             host: process.env.DB_HOST || 'localhost',
             port: process.env.DB_PORT || 5432,
             user: process.env.DB_USER || 'postgres',
-            password: process.env.DB_PASSWORD || 'root',
+            password: process.env.DB_PASSWORD || 'root', // Ensure this is securely managed!
             database: process.env.DB_NAME || 'postgres',
-            max: process.env.DB_MAX_POOL || 10,
-            // Add connection timeout
-            connectionTimeoutMillis: 10000,
-            // Add idle timeout
-            idleTimeoutMillis: 30000
+            max: parseInt(process.env.DB_MAX_POOL || '10', 10), // Ensure number
+            connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '10000', 10),
+            idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000', 10)
         });
 
-        // Listen for unexpected errors on the pool
         this.pool.on('error', (err) => {
             logger.error('Unexpected error on idle PostgreSQL client:', err);
             statusManager.setDatabaseStatus(StatusConstants.ERROR, {
                 message: 'Unexpected pool error',
-                error: err
+                error: err.message // Log only message for status
             });
-
-            // Try to recover the connection if possible
             this.scheduleReconnect();
         });
 
-        // Set up initial connection
-        void this.connect();
+        void this.connect(); // Use void for fire-and-forget async call
     }
 
-    /**
-     * Attempt to connect to the database
-     */
-    async connect(options) {
+    async connect() {
         if (this.isConnecting) return;
 
         this.isConnecting = true;
         this.connectionAttempts++;
 
         statusManager.setDatabaseStatus(StatusConstants.CONNECTING, {
-            message: 'Attempting to connect',
+            message: `Attempting connection (Attempt ${this.connectionAttempts}/${this.maxConnectionAttempts})`,
             attempt: this.connectionAttempts
         });
+        logger.info(`Attempting database connection (Attempt ${this.connectionAttempts}/${this.maxConnectionAttempts})...`);
 
         try {
-            const client = await this.pool.connect(options);
-            logger.info('Connected to PostgreSQL');
+            const client = await this.pool.connect();
+            logger.info(`Connected to PostgreSQL database: ${process.env.DB_NAME || 'postgres'} on ${process.env.DB_HOST || 'localhost'}`);
 
             statusManager.setDatabaseStatus(StatusConstants.CONNECTED, {
-                message: 'Connected',
+                message: 'Connection successful',
                 timestamp: new Date().toISOString()
             });
 
             client.release();
-
-            // Reset connection attempts on success
             this.connectionAttempts = 0;
             this.retryDelay = 5000;
-
-            // Start health check after successful connection
             this.startHealthCheck();
         } catch (err) {
-            logger.error('PostgreSQL connection error:', err.message);
-
+            logger.error('PostgreSQL connection error:', { message: err.message, code: err.code });
             statusManager.setDatabaseStatus(StatusConstants.ERROR, {
                 message: 'Connection failed',
                 error: err.message
             });
-
-            // Handle reconnection
             this.scheduleReconnect();
         } finally {
             this.isConnecting = false;
         }
     }
 
-    /**
-     * Schedule a reconnection attempt with exponential backoff
-     */
     scheduleReconnect() {
+        if (this.healthCheckInterval) {
+            clearInterval(this.healthCheckInterval); // Stop health checks during reconnect attempts
+            this.healthCheckInterval = null;
+        }
         if (this.connectionAttempts < this.maxConnectionAttempts) {
-            // Use exponential backoff with a cap
-            this.retryDelay = Math.min(this.retryDelay * 1.5, 60000); // Max 60 seconds
+            const delay = Math.min(this.retryDelay * 1.5, 60000); // Exponential backoff capped at 60s
+            this.retryDelay = delay; // Update delay for next potential failure
 
-            logger.info(`Scheduling database reconnection in ${this.retryDelay}ms`);
-            setTimeout(() => this.connect(), this.retryDelay);
+            logger.info(`Scheduling database reconnection attempt in ${delay / 1000} seconds...`);
+            setTimeout(() => this.connect(), delay);
         } else {
-            logger.error(`Failed to connect after ${this.maxConnectionAttempts} attempts. Manual intervention required.`);
-
+            logger.error(`Database connection failed after ${this.maxConnectionAttempts} attempts. Stopping automatic retries. Manual intervention required.`);
             statusManager.setDatabaseStatus(StatusConstants.ERROR, {
-                message: 'Max connection attempts reached',
+                message: `Max connection attempts (${this.maxConnectionAttempts}) reached. Auto-reconnect stopped.`,
                 attempts: this.connectionAttempts
             });
+            // Consider resetting attempts here if manual retry should be possible later
+            // this.connectionAttempts = 0;
         }
     }
 
-    /**
-     * Start regular health check
-     */
     startHealthCheck() {
-        // Clear any existing interval
         if (this.healthCheckInterval) {
             clearInterval(this.healthCheckInterval);
         }
 
-        // Set up new interval
-        const healthCheckIntervalMs = Number(process.env.DB_HEALTH_CHECK_INTERVAL) || 60000;
+        const healthCheckIntervalMs = parseInt(process.env.DB_HEALTH_CHECK_INTERVAL || '60000', 10);
+        if (healthCheckIntervalMs <= 0) {
+            logger.warn("Database health check is disabled (interval <= 0).");
+            return;
+        }
 
         this.healthCheckInterval = setInterval(async () => {
             try {
-                const res = await this.pool.query('SELECT 1');
+                // --- Pool Monitoring ---
+                const poolStats = {
+                    totalCount: this.pool.totalCount,
+                    idleCount: this.pool.idleCount,
+                    waitingCount: this.pool.waitingCount,
+                };
+                // Log pool stats periodically (e.g., every few health checks or based on level)
+                // For now, log every time for demonstration. Adjust frequency as needed.
+                logger.debug('Database pool stats:', poolStats);
+                // --- End Pool Monitoring ---
 
+                const res = await this.pool.query('SELECT 1');
                 if (res.rowCount > 0) {
-                    // Update status only if it's not already CONNECTED
                     if (statusManager.getServiceStatus(StatusConstants.DATABASE) !== StatusConstants.CONNECTED) {
+                        logger.info("Database health check passed, restoring status to CONNECTED.");
                         statusManager.setDatabaseStatus(StatusConstants.CONNECTED, {
                             message: 'Health check passed',
                             timestamp: new Date().toISOString()
                         });
+                    } else {
+                        // logger.debug("Database health check passed."); // Optional debug log
                     }
+                } else {
+                    // Should not happen with SELECT 1, but handle defensively
+                    throw new Error("Health check query returned no rows.");
                 }
             } catch (error) {
-                logger.error('Database health check failed:', error.message);
-
+                logger.error('Database health check failed:', { message: error.message, code: error.code });
                 statusManager.setDatabaseStatus(StatusConstants.ERROR, {
                     message: 'Health check failed',
                     error: error.message
                 });
-
-                // Try to reconnect on health check failure
+                // Stop health check and attempt reconnect on failure
+                if (this.healthCheckInterval) clearInterval(this.healthCheckInterval);
+                this.healthCheckInterval = null;
                 this.scheduleReconnect();
             }
         }, healthCheckIntervalMs);
 
-        // Log health check setup
-        logger.info(`Database health check scheduled every ${healthCheckIntervalMs}ms`);
+        logger.info(`Database health check scheduled every ${healthCheckIntervalMs / 1000} seconds`);
     }
 
-    /**
-     * Perform a database query with error handling and retries
-     * @param {string} text - SQL query
-     * @param {Array} params - Query parameters
-     * @param {Object} options - Query options including maxRetries
-     */
     async query(text, params = [], options = { maxRetries: 2 }) {
         let retries = 0;
+        const maxRetries = options.maxRetries; // Use provided maxRetries
 
-        while (retries <= options.maxRetries) {
+        while (retries <= maxRetries) {
             try {
-                // Execute the query
+                // logger.debug(`Executing query (attempt ${retries + 1}): ${text}`, params); // Optional debug log
                 return await this.pool.query(text, params);
             } catch (error) {
+                logger.error(`Database query error (attempt ${retries + 1}/${maxRetries + 1}):`, {
+                    message: error.message,
+                    code: error.code,
+                    query: text.substring(0, 100) + (text.length > 100 ? '...' : '') // Log truncated query
+                });
+
                 retries++;
-
-                // Determine if the error is retryable
                 const isRetryable =
-                    error.code === 'ECONNRESET' ||
-                    error.code === '08006' ||   // Connection failure
-                    error.code === '08001' ||   // Unable to establish connection
-                    error.code === '57P01';     // Server closed the connection unexpectedly
+                    error.code === 'ECONNRESET' || // Connection reset
+                    error.code === 'ETIMEDOUT' ||  // Connection timeout
+                    error.code === '57P01' ||      // Admin shutdown
+                    error.code === '57P03' ||      // Cannot connect now (failover?)
+                    error.code === '08003' ||      // Connection does not exist
+                    error.code === '08006';        // Connection failure
 
-                if (retries > options.maxRetries || !isRetryable) {
-                    logger.error(`Query failed after ${retries} attempts:`, error);
-
-                    // Update status based on error severity
-                    if (isRetryable) {
-                        statusManager.setDatabaseStatus(StatusConstants.WARNING, {
-                            message: 'Temporary connection issue',
+                if (retries > maxRetries || !isRetryable) {
+                    logger.error(`Query failed permanently after ${retries} attempts.`);
+                    // Update status only if it's a connection-related issue, not a syntax error etc.
+                    if (isRetryable || error.message.includes('connection')) {
+                        statusManager.setDatabaseStatus(StatusConstants.ERROR, {
+                            message: 'Persistent connection issue during query',
                             error: error.message
                         });
-
-                        // Try to reconnect
-                        this.scheduleReconnect();
+                        this.scheduleReconnect(); // Attempt to recover connection
                     }
-
-                    throw error;
+                    throw error; // Re-throw the error
                 }
 
-                // Log retry attempt
-                logger.warn(`Retrying query (attempt ${retries}/${options.maxRetries}):`, error.message);
-
-                // Wait before retrying
-                await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+                const delay = 1000 * retries; // Simple linear backoff for query retry
+                logger.warn(`Retrying query in ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
+        // Should not be reached if loop logic is correct, but throw just in case
+        throw new Error("Query retry logic failed unexpectedly.");
     }
 
-    /**
-     * Gracefully end the pool
-     */
     async end() {
+        logger.info('Closing database pool...');
         if (this.healthCheckInterval) {
             clearInterval(this.healthCheckInterval);
+            this.healthCheckInterval = null;
         }
-
         try {
             await this.pool.end();
-            logger.info('Database pool closed');
+            logger.info('Database pool closed successfully.');
             statusManager.setDatabaseStatus(StatusConstants.DISCONNECTED, {
-                message: 'Connection closed'
+                message: 'Connection pool closed'
             });
         } catch (error) {
             logger.error('Error closing database pool:', error);
             statusManager.setDatabaseStatus(StatusConstants.ERROR, {
-                message: 'Error during shutdown',
+                message: 'Error closing pool',
                 error: error.message
             });
         }
     }
 }
 
-// Create singleton instance
 const dbManager = new DatabaseManager();
-
-module.exports = dbManager;
+module.exports = dbManager; // Export the singleton instance

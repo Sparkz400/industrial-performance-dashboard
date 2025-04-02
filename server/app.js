@@ -4,6 +4,8 @@ const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const socketIo = require('socket.io');
+const cookieParser = require('cookie-parser');
+const csrf = require('csurf');
 const dbClient = require('./src/database/dbConnection');
 const opcuaConnectionManager = require('./src/opc-ua/services/opcuaConnectionManager');
 const helmet = require('helmet');
@@ -12,143 +14,251 @@ const logger = require('./src/utils/logger');
 const { AsyncQueue } = require('./src/utils/queue');
 const compression = require('compression');
 const connectionTracker = require('./src/utils/connectionTracker');
+const statusManager = require("./src/utils/status");
+const StatusConstants = require('./src/utils/statusConstants');
 
 const app = express();
+
 app.use(cors({
     origin: process.env.CLIENT_URL || 'http://localhost:5173',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
 }));
 app.use(express.json());
-app.use(helmet());
+app.use(cookieParser());
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+            "script-src": ["'self'", "'unsafe-inline'"], // Example: Adjust based on client needs
+            "connect-src": ["'self'", process.env.CLIENT_URL || 'http://localhost:5173', "ws://localhost:3000", "http://localhost:3000"], // Allow self, client origin, and WebSocket/API
+            // Add other directives like style-src, img-src as needed
+        },
+    },
+    crossOriginEmbedderPolicy: false, // Keep false unless specifically needed and tested
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }, // Example, adjust as needed
+    crossOriginResourcePolicy: { policy: "same-origin" }, // Example, adjust as needed
+}));
 app.use(rateLimiter);
 app.use(compression());
 app.set('etag', 'strong');
 app.disable('x-powered-by');
 
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-            "script-src": ["'self'", "'unsafe-inline'"], // Adjust based on needs
-        },
-    },
-    crossOriginEmbeddedPolicy: false,
-}));
-
-const server = http.createServer(app);
-const io = socketIo(server, {
-    cors: {
-        origin: process.env.CLIENT_URL || 'http://localhost:5173',
-        methods: ["GET", "POST"],
-        credentials: true
+const csrfProtection = csrf({
+    cookie: {
+        httpOnly: true, // Cannot be accessed by client-side scripts
+        secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
+        sameSite: 'strict' // Helps mitigate CSRF attacks
     }
+});
+
+app.use(csrfProtection);
+
+app.get('/api/csrf-token', (req, res) => {
+    res.json({ csrfToken: req.csrfToken() });
 });
 
 // --- OPC UA Data Queue and Worker ---
 const opcuaDataQueue = new AsyncQueue();
+const BATCH_SIZE = parseInt(process.env.OPCUA_BATCH_SIZE || '100', 10);
+const QUEUE_PROCESS_DELAY = parseInt(process.env.OPCUA_QUEUE_DELAY || '500', 10);
+const MAX_QUEUE_LOG_THRESHOLD = parseInt(process.env.OPCUA_QUEUE_WARN_THRESHOLD || '10000', 10);
+
+// --- Queue Monitoring ---
+setInterval(() => {
+    const currentSize = opcuaDataQueue.size();
+    if (currentSize > 0) {
+        logger.info(`OPC UA Data Queue Size: ${currentSize}`);
+        if (currentSize > MAX_QUEUE_LOG_THRESHOLD) {
+            logger.warn(`OPC UA Data Queue size (${currentSize}) exceeds threshold (${MAX_QUEUE_LOG_THRESHOLD}). Processing might be falling behind.`);
+        }
+    }
+}, 60000); // Log queue size every minute if not empty
+// --- End Queue Monitoring ---
 
 const persistOpcuaData = (data) => {
-    opcuaDataQueue.enqueue(data);
-};
-
-const processOpcuaDataQueue = async () => {
-    const batch = opcuaDataQueue.drain(100); // Process in batches of 100
-    if (batch.length === 0) return false;
     try {
-        await dbClient.query(`
-            INSERT INTO opcua_data(node_key, node_label, timestamp, value)
-            SELECT * FROM UNNEST($1::text[], $2::text[], $3::timestamptz[], $4::float[])
-        `, [
-            batch.map(d => d.key),
-            batch.map(d => d.label),
-            batch.map(d => new Date(d.timestamp)),
-            batch.map(d => d.value)
-        ]
-        );
-        return true;
+        opcuaDataQueue.enqueue(data);
     } catch (error) {
-        logger.error('Batch insert error:', error);
-        opcuaDataQueue.prepend(batch);
-        return false;
-    }
-};
-
-const processQueue = async (options = { delay: 500, maxRetries: 3 }) => {
-    let isRunning = true;
-
-    // Graceful shutdown handler
-    process.on('SIGTERM', () => {
-        isRunning = false;
-    });
-
-    while (isRunning) {
-        try {
-            const processed = await processOpcuaDataQueue();
-            if (!processed) {
-                await new Promise(resolve => setTimeout(resolve, options.delay));
-            }
-        } catch (error) {
-            logger.error('Queue processing error:', error);
-            await new Promise(resolve => setTimeout(resolve, options.delay));
+        // Handle queue overflow specifically
+        if (error.message === 'Queue overflow') {
+            logger.error('OPC UA Data Queue Overflow! Data loss is occurring. Check database insert performance or increase queue size/batch size.', { maxQueueSize: opcuaDataQueue.MAX_QUEUE_SIZE });
+            // Optional: Implement strategy for overflow (e.g., drop oldest, notify admin)
+        } else {
+            logger.error('Error enqueuing OPC UA data:', error);
         }
     }
 };
 
+const processOpcuaDataQueue = async () => {
+    const batch = opcuaDataQueue.drain(BATCH_SIZE); // Process in batches
+    if (batch.length === 0) return false; // Nothing to process
+
+    try {
+        // Use dbClient.query for built-in retry logic
+        await dbClient.query(`
+            INSERT INTO opcua_data(node_key, node_label, timestamp, value)
+            SELECT * FROM UNNEST($1::text[], $2::text[], $3::timestamptz[], $4::float[])
+            ON CONFLICT DO NOTHING; -- Optional: Decide how to handle conflicts (e.g., duplicate timestamps/keys)
+        `, [
+            batch.map(d => d.key),
+            batch.map(d => d.label),
+            batch.map(d => new Date(d.timestamp)),
+            batch.map(d => typeof d.value === 'number' ? d.value : null) // Ensure value is number or null
+        ]);
+        logger.debug(`Successfully inserted batch of ${batch.length} OPC UA data points.`);
+        return true; // Batch processed
+    } catch (error) {
+        // --- Log and Drop Failed Batch ---
+        logger.error(`Failed to insert OPC UA data batch after retries. Dropping batch. Error: ${error.message}`, {
+            batchSize: batch.length,
+            // Log first few items for diagnosis, avoid logging huge batches
+            sampleBatch: batch.slice(0, 5).map(d => ({ key: d.key, ts: d.timestamp, val: d.value })),
+            dbErrorCode: error.code
+        });
+        // DO NOT prepend the batch back to the queue: opcuaDataQueue.prepend(batch);
+        // Consider sending failed batches to a separate log file or dead-letter queue system
+        // --- End Log and Drop ---
+        return false; // Indicate processing failed for this cycle
+    }
+};
+
+// Improved queue processing loop
+const processQueue = async () => {
+    let isRunning = true;
+    let consecutiveErrors = 0;
+    const maxConsecutiveErrors = 5; // Stop hammering DB if it's consistently failing
+
+    const stopProcessing = () => {
+        logger.info("Stopping queue processing loop.");
+        isRunning = false;
+    };
+
+    process.on('SIGTERM', stopProcessing);
+    process.on('SIGINT', stopProcessing);
+
+    logger.info(`Starting OPC UA data queue processor with batch size ${BATCH_SIZE} and delay ${QUEUE_PROCESS_DELAY}ms.`);
+
+    while (isRunning) {
+        try {
+            const processed = await processOpcuaDataQueue();
+            if (processed) {
+                consecutiveErrors = 0; // Reset errors on success
+                // If processed successfully and queue still has items, process immediately again
+                if (!opcuaDataQueue.isEmpty()) {
+                    continue; // Skip delay if more data exists
+                }
+            }
+            // Wait only if nothing was processed or queue is empty
+            await new Promise(resolve => setTimeout(resolve, QUEUE_PROCESS_DELAY));
+
+        } catch (error) { // Catch errors from processOpcuaDataQueue itself (should be rare now)
+            logger.error('Unexpected error in queue processing loop:', error);
+            consecutiveErrors++;
+            if (consecutiveErrors > maxConsecutiveErrors) {
+                logger.error(`Queue processor encountered ${consecutiveErrors} consecutive errors. Pausing for 60 seconds.`);
+                await new Promise(resolve => setTimeout(resolve, 60000));
+                consecutiveErrors = 0; // Reset after pause
+            } else {
+                // Wait before retrying the loop on error
+                await new Promise(resolve => setTimeout(resolve, QUEUE_PROCESS_DELAY * consecutiveErrors));
+            }
+        }
+    }
+    logger.info("Queue processing loop finished.");
+};
+
+// Start the queue processor
 processQueue().catch(err => {
-    logger.error('Fatal error in queue processing:', err);
-    process.exit(1);
+    logger.error('Fatal error: Queue processing loop exited unexpectedly.', err);
+    process.exit(1); // Exit if the loop itself crashes
 });
 
 // --- Listen for OPC UA Data ---
 const { opcuaEmitter } = require('./src/opc-ua/opcuaClient');
-const StatusConstants = require('./src/utils/statusConstants');
 
 opcuaEmitter.on('nodeChanged', (data) => {
-    io.emit('opcuaUpdate', data);
-    persistOpcuaData(data);
+    // Basic validation
+    if (data && data.key && data.timestamp && data.value !== undefined) {
+        io.emit('opcuaUpdate', data); // Emit to clients
+        persistOpcuaData(data);      // Add to persistence queue
 
-    // Update status timestamp to show activity
-    statusManager.setOpcuaStatus(StatusConstants.CONNECTED, {
-        message: 'Data received',
-        lastDataTimestamp: data.timestamp
-    });
+        // Update status timestamp to show activity, only if connected
+        if (statusManager.getServiceStatus(StatusConstants.OPCUA) === StatusConstants.CONNECTED) {
+            statusManager.setOpcuaStatus(StatusConstants.CONNECTED, {
+                // Keep existing details, just update timestamp
+                ...statusManager.getServiceDetails(StatusConstants.OPCUA),
+                message: 'Data received',
+                lastDataTimestamp: data.timestamp
+            });
+        }
+    } else {
+        logger.warn("Received invalid nodeChanged data:", data);
+    }
 });
+
 
 // --- REST Routes ---
 const systemRoutes = require('./src/routes/systemRoutes');
 app.use('/api/system', systemRoutes);
 
 const dashboardRoutes = require('./src/routes/dashboardRoutes');
-app.use('/api/dashboards', dashboardRoutes);
+app.use('/api/dashboards', dashboardRoutes); // Apply csrfProtection here if needed for POST/PUT/DELETE
 
 const opcuaRoutes = require('./src/opc-ua/routes/opcuaRoutes');
-app.use('/api/opcua', opcuaRoutes);
+app.use('/api/opcua', opcuaRoutes); // Apply csrfProtection here if needed
 
 const dbRoutes = require('./src/database/routes/dbRoutes');
 app.use('/api/db', dbRoutes);
 
 const certificateRoutes = require('./src/opc-ua/routes/certificateRoutes');
-app.use('/api/certificates', certificateRoutes);
+app.use('/api/certificates', certificateRoutes); // Apply csrfProtection here if needed
 
 const statusRoutes = require('./src/routes/statusRoutes');
-const statusManager = require("./src/utils/status");
 app.use('/api/status', statusRoutes);
 
-app.get('/api/operation-mode-data', async (req, res, next) => {
+// --- Input Validation Example (Query Params) ---
+const Joi = require('joi'); // Ensure Joi is required if not already
+const { validateQuery } = require('./src/middleware/validation'); // Assuming you add this
+
+const operationModeSchema = Joi.object({
+    limit: Joi.number().integer().min(1).max(5000).default(1000),
+    offset: Joi.number().integer().min(0).default(0),
+    startDate: Joi.date().iso().optional(),
+    endDate: Joi.date().iso().optional()
+});
+
+// Example: Fetch operation mode data route (keep as is or enhance)
+app.get('/api/operation-mode-data', validateQuery(operationModeSchema), async (req, res, next) => {
     try {
-        const limit = parseInt(req.query.limit) || 100;
-        const offset = parseInt(req.query.offset) || 0;
-        const queryText = `
-      SELECT timestamp, value
-      FROM opcua_data
-      WHERE node_key = 'OperationMode'
-      ORDER BY timestamp
-      LIMIT $1 OFFSET $2
-    `;
-        const result = await dbClient.query(queryText, [limit, offset]);
+        // Access validated query parameters from req.query
+        const { limit, offset, startDate, endDate } = req.query;
+
+        let queryText = `
+            SELECT timestamp, value
+            FROM opcua_data
+            WHERE node_key = 'OperationMode' `;
+        const queryParams = [];
+
+        if (startDate) { // Already validated as Date objects or undefined
+            queryParams.push(startDate);
+            queryText += `AND timestamp >= $${queryParams.length} `;
+        }
+        if (endDate) {
+            queryParams.push(endDate);
+            queryText += `AND timestamp <= $${queryParams.length} `;
+        }
+
+        queryText += `ORDER BY timestamp ASC `;
+        queryParams.push(limit);
+        queryText += `LIMIT $${queryParams.length} `;
+        queryParams.push(offset);
+        queryText += `OFFSET $${queryParams.length}`;
+
+        const result = await dbClient.query(queryText, queryParams);
         const data = result.rows.map(row => ({
-            time: new Date(row.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            timestamp: row.timestamp.toISOString(),
+            time: new Date(row.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
             mode: row.value,
         }));
         res.json(data);
@@ -159,101 +269,179 @@ app.get('/api/operation-mode-data', async (req, res, next) => {
 });
 
 // --- WebSocket Connection ---
+const server = http.createServer(app);
+
+const io = socketIo(server, {
+    cors: {
+        origin: process.env.CLIENT_URL || 'http://localhost:5173',
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    // Optional: Add ping timeout/interval for connection health
+    // pingInterval: 10000,
+    // pingTimeout: 5000,
+});
+
 io.on('connection', (socket) => {
-    // Get connection info
-    const clientIp = socket.handshake.address;
+    const clientIp = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address; // Handle proxies
     const clientInfo = {
         ip: clientIp,
         userAgent: socket.handshake.headers['user-agent'],
-        query: socket.handshake.query
+        query: socket.handshake.query, // e.g., { role: 'admin' }
+        connectedAt: new Date()
     };
 
-    // Track the new connection
     connectionTracker.addConnection(socket.id, clientInfo);
-
     logger.info(`Client connected via WebSocket: ${socket.id} from ${clientIp}`);
 
-    // Set up certificate event handlers
-    // Forward untrusted certificate events to clients
-    opcuaConnectionManager.on('untrustedCertificate', (certInfo) => {
-        logger.info(`Sending untrustedCertificate event to clients: ${certInfo.filename}`);
-        socket.emit('untrustedCertificate', certInfo);
-    });
+    const isAdmin = clientInfo.query?.role === 'admin';
+    if (isAdmin) {
+        logger.info(`Admin client ${socket.id} connected, enabling certificate management.`);
 
-    // Handle certificate acceptance requests from clients
-    socket.on('acceptCertificate', async (filename) => {
-        logger.info(`Received acceptCertificate request for: ${filename}`);
-        try {
-            const result = await opcuaConnectionManager.acceptCertificate(filename);
-            socket.emit('certificateAccepted', {
-                success: result,
-                filename,
-                timestamp: new Date().toISOString()
-            });
-
-            // Try to reconnect if needed
-            if (result && statusManager.getServiceStatus(StatusConstants.OPCUA) !== StatusConstants.CONNECTED) {
-                setTimeout(() => {
-                    opcuaConnectionManager.startConnection().catch(err => {
-                        logger.error("Error reconnecting after certificate acceptance:", err);
-                    });
-                }, 2000);
+        const untrustedHandler = (certInfo) => {
+            try { // <-- Wrap emit in try/catch
+                logger.debug(`Sending untrustedCertificate event to admin client: ${socket.id}`);
+                socket.emit('untrustedCertificate', certInfo);
+            } catch (emitError) {
+                logger.error(`Failed to emit untrustedCertificate to ${socket.id}:`, emitError);
             }
-        } catch (error) {
-            logger.error(`Error accepting certificate ${filename}:`, error);
-            socket.emit('certificateAccepted', {
-                success: false,
-                filename,
-                error: error.message
-            });
-        }
-    });
+        };
+        opcuaConnectionManager.on('untrustedCertificate', untrustedHandler);
 
-    // Track disconnection
-    socket.on('disconnect', () => {
-        connectionTracker.removeConnection(socket.id);
-        logger.info(`Client disconnected: ${socket.id}`);
-    });
+        socket.on('acceptCertificate', async (filename) => {
+            // ... (accept logic as before) ...
+            try {
+                const result = await opcuaConnectionManager.acceptCertificate(filename);
+                try { // <-- Wrap emit in try/catch
+                    socket.emit('certificateAccepted', { success: result, filename, timestamp: new Date().toISOString() });
+                } catch (emitError) {
+                    logger.error(`Failed to emit certificateAccepted to ${socket.id}:`, emitError);
+                }
+                // ... (reconnect logic) ...
+            } catch (error) {
+                logger.error(`Error processing acceptCertificate request from ${socket.id} for ${filename}:`, error);
+                try { // <-- Wrap emit in try/catch
+                    socket.emit('certificateAccepted', { success: false, filename, error: error.message });
+                } catch (emitError) {
+                    logger.error(`Failed to emit certificateAccepted (failure) to ${socket.id}:`, emitError);
+                }
+            }
+        });
+
+        socket.on('disconnect', () => {
+            opcuaConnectionManager.off('untrustedCertificate', untrustedHandler);
+            logger.info(`Admin client ${socket.id} disconnected, certificate listeners removed.`);
+        });
+    } else {
+        logger.info(`Non-admin client ${socket.id} connected.`);
+    }
+
+    socket.on('disconnect', (reason) => { /* ... */ });
+    socket.on('error', (error) => { /* ... */ });
 });
 
 // --- Start OPC UA Connection ---
-void opcuaConnectionManager.startConnection();
+logger.info("Initiating initial OPC UA connection...");
+opcuaConnectionManager.startConnection().catch(err => {
+    logger.error("Initial OPC UA connection failed:", err);
+    // Status will be set to ERROR by the connection manager
+});
 
 // --- Global Error Handling Middleware ---
 app.use((err, req, res, next) => {
-    logger.error(err.stack);
+    // --- Handle CSRF Errors Specifically ---
+    if (err.code === 'EBADCSRFTOKEN') {
+        logger.warn('Invalid CSRF token detected:', { url: req.originalUrl, method: req.method, ip: req.ip });
+        res.status(403).json({
+            status: 'error',
+            error: 'Invalid CSRF token. Please refresh and try again.',
+            code: 'INVALID_CSRF_TOKEN' // Provide a code for the client
+        });
+        return; // Stop further processing
+    }
+    // --- End CSRF Error Handling ---
+
+
+    // Log the full error stack for debugging
+    logger.error("Unhandled error:", { /* ... logging details ... */ });
+
+    // Set default status code and message
     const statusCode = err.statusCode || 500;
-    const message = err.isOperational ? err.message : 'Internal Server Error';
-    res.status(statusCode).json({ error: message });
+    let message = err.isOperational ? err.message : 'Internal Server Error';
+    if (process.env.NODE_ENV === 'production' && !err.isOperational) {
+        message = 'An unexpected error occurred.';
+    }
+
+    res.status(statusCode).json({ status: 'error', error: message });
 });
 
+
+
 // --- Graceful Shutdown ---
-const shutdown = async () => {
-    logger.info("Shutting down server...");
-    try {
-        statusManager.setOpcuaStatus(StatusConstants.DISCONNECTED, {
-            message: "Server shutting down"
-        });
-        statusManager.setDatabaseStatus(StatusConstants.DISCONNECTED, {
-            message: "Server shutting down"
+const shutdown = async (signal) => {
+    logger.warn(`Received ${signal}. Starting graceful shutdown...`);
+    statusManager.setOpcuaStatus(StatusConstants.DISCONNECTED, { message: "Server shutting down" });
+    statusManager.setDatabaseStatus(StatusConstants.DISCONNECTED, { message: "Server shutting down" });
+
+    // 1. Stop accepting new connections
+    server.close(async (err) => {
+        if (err) {
+            logger.error("Error closing HTTP server:", err);
+            process.exit(1); // Exit immediately if server can't close
+        }
+        logger.info("HTTP server closed. No longer accepting connections.");
+
+        // 2. Close WebSocket connections gracefully (optional, Socket.IO handles some of this)
+        io.close(() => {
+            logger.info("All WebSocket connections closed.");
         });
 
-        await opcuaConnectionManager.disconnectConnection();
-        await dbClient.end();
-        server.close(() => {
-            logger.info("HTTP server closed.");
-            process.exit(0);
-        });
-    } catch (error) {
-        console.error("Error during shutdown:", error);
+        // 3. Disconnect OPC UA
+        try {
+            await opcuaConnectionManager.disconnectConnection();
+            logger.info("OPC UA connection closed.");
+        } catch (opcErr) {
+            logger.error("Error during OPC UA disconnection:", opcErr);
+        }
+
+        // 4. Close Database Pool
+        try {
+            await dbClient.end(); // Use the end method from DatabaseManager
+            logger.info("Database pool closed.");
+        } catch (dbErr) {
+            logger.error("Error closing database pool:", dbErr);
+        }
+
+        // 5. Add delay for any pending queue processing (optional)
+        logger.info("Waiting briefly for queue processing...");
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+
+        logger.info("Graceful shutdown complete.");
+        process.exit(0); // Exit successfully
+    });
+
+    // Force shutdown after a timeout if graceful shutdown hangs
+    setTimeout(() => {
+        logger.error("Graceful shutdown timed out. Forcing exit.");
         process.exit(1);
-    }
+    }, 15000); // 15 second timeout
 };
 
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     logger.info(`Server is running on http://localhost:${PORT}`);
+    // Set initial database status after server starts listening
+    if (statusManager.getServiceStatus(StatusConstants.DATABASE) === StatusConstants.UNKNOWN) {
+        // If connect() hasn't finished yet, keep it as connecting or let connect() update it.
+        // If connect() failed, it would be ERROR. If successful, CONNECTED.
+        // This avoids overwriting an active status set by connect().
+        logger.info("Server listening. Database status managed by connection attempts.");
+    }
+    // Set initial OPC UA status similarly
+    if (statusManager.getServiceStatus(StatusConstants.OPCUA) === StatusConstants.UNKNOWN) {
+        logger.info("Server listening. OPC UA status managed by connection attempts.");
+    }
 });
