@@ -8,10 +8,9 @@ import {
     Typography,
     Button,
     DialogActions,
-    CircularProgress,
     Tooltip,
     Fade,
-    Zoom
+    Zoom, Box
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -19,11 +18,12 @@ import ErrorIcon from '@mui/icons-material/Error';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useWidgets } from '../contexts/WidgetContext.jsx';
 import { widgetRegistry } from '../registry/WidgetRegistry.js';
+import { ContentLoader, ButtonLoader } from '../../../shared/components/loading';
 
 // Separate error fallback component
 const ErrorFallback = memo(({ error, resetErrorBoundary }) => (
-    <div style={{
-        padding: '20px',
+    <Box sx={{
+        p: 3,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -31,32 +31,26 @@ const ErrorFallback = memo(({ error, resetErrorBoundary }) => (
         height: '100%',
         textAlign: 'center'
     }}>
-        <ErrorIcon color="error" style={{ fontSize: 48, marginBottom: 16 }} />
+        <ErrorIcon color="error" sx={{ fontSize: 48, mb: 2 }} />
         <Typography variant="h6" color="error" gutterBottom>Widget Error</Typography>
-        <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
             {error.message || "An error occurred while loading this widget"}
         </Typography>
-        <Button
+        <ButtonLoader
             variant="contained"
+            color="primary"
             startIcon={<RefreshIcon />}
             onClick={resetErrorBoundary}
             size="small"
         >
             Retry
-        </Button>
-    </div>
+        </ButtonLoader>
+    </Box>
 ));
 
 // Separate loader component
 const WidgetLoader = memo(() => (
-    <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100%'
-    }}>
-        <CircularProgress size={24} />
-    </div>
+    <ContentLoader size={24} />
 ));
 
 // Custom error boundary for widget content
@@ -113,7 +107,7 @@ const SettingsDialog = memo(({ open, onClose, widget, onConfigChange }) => {
             </DialogTitle>
             <DialogContent dividers>
                 {CustomSettingsComponent ? (
-                    <Suspense fallback={<WidgetLoader />}>
+                    <Suspense fallback={<ContentLoader message="Loading settings..." />}>
                         <CustomSettingsComponent
                             config={widget.config || {}}
                             onConfigChange={onConfigChange}

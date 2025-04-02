@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { API_ENDPOINTS } from '../../../../../config/config.js';
+import {useCallback, useEffect, useRef, useState} from 'react';
+import {API_ENDPOINTS} from '../../../../../config/config.js';
+import {useLoadingState} from '../../../../../shared/components/loading';
 
 /**
  * Custom hook for fetching and managing system status data with reliable auto-refresh
@@ -9,8 +10,15 @@ export function useSystemStatusData({
                                         refreshInterval = 20000,
                                         onError = () => {}
                                     }) {
+    const {
+        loading,
+        setLoading,
+        error,
+        setError,
+        executeWithLoading
+    } = useLoadingState();
+
     const [status, setStatus] = useState({ database: 'unknown', opcua: 'unknown' });
-    const [loading, setLoading] = useState(false);
     const [lastUpdated, setLastUpdated] = useState(null);
     const [overallStatus, setOverallStatus] = useState('unknown');
     const isPolling = useRef(false);
@@ -30,51 +38,43 @@ export function useSystemStatusData({
         // Prevent concurrent requests
         if (isPolling.current || !mountedRef.current) return;
 
-        try {
-            isPolling.current = true;
-            setLoading(true);
+        isPolling.current = true;
 
+        const result = await executeWithLoading(async () => {
             const response = await fetch(API_ENDPOINTS.status);
 
-            if (!mountedRef.current) return;
+            if (!mountedRef.current) return null;
 
             if (!response.ok) {
                 throw new Error(`Status request failed: ${response.status} ${response.statusText}`);
             }
 
-            const data = await response.json();
+            return await response.json();
+        }, 'Failed to fetch system status');
 
+        if (result) {
             // Process and update state with data
             setStatus({
-                database: typeof data.database === 'string' ? data.database :
-                    (data.database?.status || 'unknown'),
-                opcua: typeof data.opcua === 'string' ? data.opcua :
-                    (data.opcua?.status || 'unknown'),
-                rawData: data
+                database: typeof result.database === 'string' ? result.database :
+                    (result.database?.status || 'unknown'),
+                opcua: typeof result.opcua === 'string' ? result.opcua :
+                    (result.opcua?.status || 'unknown'),
+                rawData: result
             });
 
             setLastUpdated(new Date());
 
             // Update overall status
-            const newOverallStatus = calculateOverallStatus(data);
+            const newOverallStatus = calculateOverallStatus(result);
             setOverallStatus(newOverallStatus);
-
-        } catch (error) {
-            console.error('Error fetching system status:', error);
-            if (mountedRef.current) {
-                onError(error);
-            }
-        } finally {
-            if (mountedRef.current) {
-                setLoading(false);
-
-                // Set a small delay before allowing another fetch
-                setTimeout(() => {
-                    isPolling.current = false;
-                }, 1000);
-            }
         }
-    }, [onError]);
+
+        // Set a small delay before allowing another fetch
+        setTimeout(() => {
+            isPolling.current = false;
+        }, 1000);
+
+    }, [executeWithLoading]);
 
     // Calculate overall status helper
     const calculateOverallStatus = (data) => {
@@ -159,6 +159,7 @@ export function useSystemStatusData({
     return {
         status,
         loading,
+        error,
         lastUpdated,
         overallStatus,
         fetchStatus,
