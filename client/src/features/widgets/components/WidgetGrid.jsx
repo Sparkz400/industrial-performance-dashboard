@@ -1,17 +1,17 @@
 import React from 'react';
-import { Box, CircularProgress } from '@mui/material';
+import {Box, Chip, CircularProgress, Divider, Typography} from '@mui/material';
 import VirtualizedGrid from '../../../shared/components/VirtualizeGrid.jsx';
 import PropTypes from "prop-types";
 
 // Widget card component
 const WidgetCard = React.memo(({ widget, onClick }) => {
-    const WidgetComponent = widget.component;
     const previewHeight = widget.minH ? widget.minH * 35 : 150; // Using standard row height
 
     return (
         <Box
             sx={{
                 height: '100%',
+                m: 1, // Add margin around each card
                 backgroundColor: 'background.paper',
                 borderRadius: 1,
                 boxShadow: 3,
@@ -25,34 +25,28 @@ const WidgetCard = React.memo(({ widget, onClick }) => {
             }}
             onClick={onClick}
         >
-            <Box sx={{ p: 2 }}>
+            <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box component="h3" sx={{ m: 0, fontSize: '1rem', fontWeight: 'bold', maxWidth: '80%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <Typography component="h3" sx={{ m: 0, fontSize: '1rem', fontWeight: 'bold', maxWidth: '80%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {widget.title || widget.type}
-                    </Box>
-                    <Box
-                        sx={{
-                            fontSize: '0.7rem',
-                            fontWeight: 'medium',
-                            bgcolor: 'primary.main',
-                            color: 'primary.contrastText',
-                            borderRadius: '12px',
-                            px: 1,
-                            py: 0.5,
-                        }}
-                    >
-                        {widget.category || 'Misc'}
-                    </Box>
+                    </Typography>
+                    <Chip
+                        label={widget.category || 'Misc'}
+                        size="small"
+                        color="primary" // Or choose color based on category
+                        sx={{ flexShrink: 0 }} // Prevent chip from shrinking too much
+                    />
                 </Box>
 
                 {widget.description && (
-                    <Box
+                    <Typography
                         component="p"
                         sx={{
-                            mb: 2,
+                            mb: 1, // Reduced margin
                             color: 'text.secondary',
                             fontSize: '0.875rem',
-                            height: '2.5em',
+                            height: '2.5em', // Approx 2 lines
+                            lineHeight: 1.25,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             display: '-webkit-box',
@@ -62,33 +56,37 @@ const WidgetCard = React.memo(({ widget, onClick }) => {
                         }}
                     >
                         {widget.description}
-                    </Box>
+                    </Typography>
                 )}
 
-                <Box
-                    sx={{
-                        borderTop: 1,
-                        borderColor: 'divider',
-                        pt: 2,
-                        mt: 2
-                    }}
-                />
+                {/* Add divider if description exists */}
+                {widget.description && <Divider sx={{ my: 1 }} />}
 
-                <Box sx={{ height: previewHeight, position: 'relative' }}>
-                    <React.Suspense fallback={
-                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                            <CircularProgress size={24} />
-                        </Box>
-                    }>
-                        <WidgetComponent config={widget.defaultConfig || {}} />
-                    </React.Suspense>
+                {/* Preview Area */}
+                <Box sx={{ height: previewHeight, position: 'relative', flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                    {/* Handle cases where component might not load */}
+                    {widget.component ? (
+                        <React.Suspense fallback={
+                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                                <CircularProgress size={24} />
+                            </Box>
+                        }>
+                            {/* Scale down the preview slightly if needed */}
+                            <Box sx={{ transform: 'scale(0.9)', transformOrigin: 'center center', width: '100%', height: '100%' }}>
+                                <widget.component config={widget.defaultConfig || {}} />
+                            </Box>
+                        </React.Suspense>
+                    ) : (
+                        <Typography variant="caption" color="error">Preview unavailable</Typography>
+                    )}
                 </Box>
 
                 {widget.minW && widget.minH && (
-                    <Box
+                    <Typography
                         component="p"
                         sx={{
-                            mt: 1,
+                            mt: 'auto', // Push to bottom
+                            pt: 1, // Add padding top
                             textAlign: 'right',
                             fontSize: '0.75rem',
                             color: 'text.secondary',
@@ -96,16 +94,17 @@ const WidgetCard = React.memo(({ widget, onClick }) => {
                         }}
                     >
                         {`Min size: ${widget.minW} x ${widget.minH}`}
-                    </Box>
+                    </Typography>
                 )}
             </Box>
         </Box>
     );
 });
+WidgetCard.displayName = "WidgetCard"; // Add display name
 
-const WidgetGrid = ({ widgets, onSelectWidget, isLoading }) => {
-    // Determine if we should use virtualization based on widget count
-    const useVirtualization = widgets.length > 20; // Only virtualize for large lists
+
+// Accept useVirtualization as a prop
+const WidgetGrid = ({ widgets, onSelectWidget, isLoading, useVirtualization }) => {
 
     if (isLoading) {
         return (
@@ -116,17 +115,22 @@ const WidgetGrid = ({ widgets, onSelectWidget, isLoading }) => {
     }
 
     if (useVirtualization) {
+        // Estimate row height based on card content + margins
+        const estimatedRowHeight = 320; // Adjust this based on your WidgetCard's actual rendered height
         return (
-            <Box sx={{ height: 'calc(100vh - 200px)', width: '100%' }}>
+            // Ensure the container has explicit height for AutoSizer
+            <Box sx={{ height: '100%', width: '100%', p: 1 }}>
                 <VirtualizedGrid
                     items={widgets}
-                    columnCount={4}
-                    rowHeight={300}
-                    renderItem={({ item }) => (
-                        <WidgetCard
-                            widget={item}
-                            onClick={() => onSelectWidget(item.type)}
-                        />
+                    columnCount={4} // Adjust based on desired layout
+                    rowHeight={estimatedRowHeight}
+                    renderItem={({ item, style }) => ( // Pass style to the card wrapper
+                        <Box style={style}> {/* Apply style here */}
+                            <WidgetCard
+                                widget={item}
+                                onClick={() => onSelectWidget(item.type)}
+                            />
+                        </Box>
                     )}
                 />
             </Box>
@@ -135,17 +139,17 @@ const WidgetGrid = ({ widgets, onSelectWidget, isLoading }) => {
 
     // Regular grid for smaller lists
     return (
-        <Box sx={{ p: 1 }}>
+        <Box sx={{ p: 2 }}> {/* Add padding around the grid */}
             <Box
                 sx={{
                     display: 'grid',
                     gridTemplateColumns: {
-                        xs: 'repeat(1, 1fr)',
-                        sm: 'repeat(2, 1fr)',
-                        md: 'repeat(3, 1fr)',
-                        lg: 'repeat(4, 1fr)'
+                        xs: 'repeat(auto-fill, minmax(250px, 1fr))', // Responsive columns
+                        // sm: 'repeat(2, 1fr)',
+                        // md: 'repeat(3, 1fr)',
+                        // lg: 'repeat(4, 1fr)'
                     },
-                    gap: 3
+                    gap: 2 // Use theme spacing unit
                 }}
             >
                 {widgets.map((widget) => (
@@ -163,7 +167,8 @@ const WidgetGrid = ({ widgets, onSelectWidget, isLoading }) => {
 WidgetGrid.propTypes = {
     widgets: PropTypes.array.isRequired,
     onSelectWidget: PropTypes.func.isRequired,
-    isLoading: PropTypes.bool
+    isLoading: PropTypes.bool,
+    useVirtualization: PropTypes.bool.isRequired, // Make it required
 };
 
 WidgetGrid.defaultProps = {
@@ -171,4 +176,3 @@ WidgetGrid.defaultProps = {
 };
 
 export default WidgetGrid;
-export { WidgetCard };

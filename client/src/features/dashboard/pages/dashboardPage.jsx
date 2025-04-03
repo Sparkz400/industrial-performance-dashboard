@@ -197,35 +197,18 @@ function DashboardPageInternal() {
         editingDashboardId: null,
         initialized: false,
         previewOpen: false,
-        isLoading: false, // General loading (e.g., initial load)
-        isSaving: false,  // Specific saving/syncing state
-        hasLocalChanges: false, // Track unsaved changes relative to server state
-        serverSyncStatus: 'idle', // idle, syncing, success, error
+        isLoading: false,
+        isSaving: false,
+        hasLocalChanges: false,
+        serverSyncStatus: 'idle',
     });
 
-    const [autoSync, setAutoSync] = useState(false); // Keep this local to the component for the toggle maybe? Or add to reducer if needed globally.
+    const [autoSync, setAutoSync] = useState(false);
     const { state: widgetState, actions: widgetActions } = useWidgets();
     const { enqueueSnackbar } = useSnackbar();
 
-    // Refs for things that don't trigger re-renders
     const syncTimerId = useRef(null);
-    const isComponentMounted = useRef(true); // Track mount status
-
-    // --- Lifecycle ---
-    useEffect(() => {
-        isComponentMounted.current = true;
-        // Initial data load
-        loadInitialDashboards();
-
-        // Cleanup on unmount
-        return () => {
-            isComponentMounted.current = false;
-            if (syncTimerId.current) {
-                clearInterval(syncTimerId.current);
-            }
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Run only on mount
+    const isComponentMounted = useRef(true);
 
     // --- Callbacks ---
 
@@ -382,7 +365,6 @@ function DashboardPageInternal() {
             }
         }
     }, [widgetActions, saveAllToLocalStorage, saveDashboardToServer, enqueueSnackbar]);
-
 
     // Add a new dashboard
     const handleAddDashboard = useCallback(async () => {
@@ -572,7 +554,7 @@ function DashboardPageInternal() {
     // Remove widget from dashboard
     const handleRemoveWidget = useCallback((widgetId) => {
         if (!state.selectedDashboardId) return;
-        dispatch({ type: ActionTypes.START_LOADING }); // Use general loading
+        //dispatch({ type: ActionTypes.START_LOADING }); // Use general loading
 
         try {
             widgetActions.removeWidget(widgetId);
@@ -582,9 +564,9 @@ function DashboardPageInternal() {
             console.error('Error removing widget:', error);
             enqueueSnackbar(`Failed to remove widget: ${error.message}`, { variant: 'error' });
         } finally {
-            if (isComponentMounted.current) {
-                dispatch({ type: ActionTypes.STOP_LOADING });
-            }
+            //if (isComponentMounted.current) {
+                //dispatch({ type: ActionTypes.STOP_LOADING });
+            //}
         }
     }, [state.selectedDashboardId, widgetActions, enqueueSnackbar]);
 
@@ -615,6 +597,20 @@ function DashboardPageInternal() {
     }, [state.dashboards, state.selectedDashboardId, widgetState.widgets, widgetState.layout, saveDashboardToServer, enqueueSnackbar]);
 
     // --- Effects ---
+    useEffect(() => {
+        isComponentMounted.current = true;
+        // Initial data load
+        loadInitialDashboards();
+
+        // Cleanup on unmount
+        return () => {
+            isComponentMounted.current = false;
+            if (syncTimerId.current) {
+                clearInterval(syncTimerId.current);
+            }
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Effect to sync WidgetContext state back to the main dashboard state (debounced)
     const debouncedWidgetState = useDebounce(widgetState, 300); // Debounce changes from context
@@ -655,8 +651,6 @@ function DashboardPageInternal() {
         }
     }, [debouncedDashboards, state.initialized, saveAllToLocalStorage]);
 
-
-    // Effect for auto-sync (if enabled)
     useEffect(() => {
         if (autoSync && state.hasLocalChanges && !state.isSaving && state.serverSyncStatus !== 'syncing') {
             console.log("Auto-sync triggered");
@@ -698,8 +692,21 @@ function DashboardPageInternal() {
         // Depend on the relevant state values
     }, [autoSync, state.hasLocalChanges, state.isSaving, state.serverSyncStatus, syncWithServer]);
 
+    const layoutMap = useMemo(() => {
+        const map = new Map();
+        if (Array.isArray(widgetState.layout)) {
+            widgetState.layout.forEach(item => map.set(item.i, item));
+        }
+        return map;
+    }, [widgetState.layout]);
 
-    // --- Rendering ---
+    const commonWidgetData = useMemo(() => ({
+        dashboardId: state.selectedDashboardId
+    }), [state.selectedDashboardId]);
+
+    const selectedIndex = useMemo(() => {
+        return state.dashboards.findIndex(d => d.id === state.selectedDashboardId);
+    }, [state.dashboards, state.selectedDashboardId]);
 
     // Loading state fallback for initialization
     if (!state.initialized && state.isLoading) {
@@ -710,8 +717,6 @@ function DashboardPageInternal() {
             </Box>
         );
     }
-
-    const selectedIndex = state.dashboards.findIndex(d => d.id === state.selectedDashboardId);
 
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -765,28 +770,30 @@ function DashboardPageInternal() {
                     <ResponsiveGridLayout
                         draggableCancel=".MuiIconButton-root, .no-drag"
                         className="layout"
+                        // Pass layout directly, react-grid-layout handles memoization internally if layouts identity doesn't change
                         layouts={{ lg: widgetState.layout, md: widgetState.layout, sm: widgetState.layout, xs: widgetState.layout, xxs: widgetState.layout }}
                         breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
                         cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
                         rowHeight={35}
                         onLayoutChange={(currentLayout) => {
-                            // Update context directly, the effect will sync it back to reducer state
                             widgetActions.updateLayout(currentLayout);
-                            // Manually set hasLocalChanges here because layout updates bypass normal flow
                             dispatch({ type: ActionTypes.SET_HAS_LOCAL_CHANGES, payload: true });
                         }}
                         margin={[16, 16]}
                         containerPadding={[0, 0]}
                     >
-                        {widgetState.widgets.map(widget => {
-                            const layoutItem = widgetState.layout.find(item => item.i === widget.id);
+                        {/* Ensure widgets is an array */}
+                        {(widgetState.widgets || []).map(widget => {
+                            // --- Optimization: Use the layout map ---
+                            const layoutItem = layoutMap.get(widget.id);
+                            // --- End Optimization ---
                             return (
                                 <div key={widget.id}>
                                     <WidgetContainer
                                         widget={widget}
-                                        onDelete={() => handleRemoveWidget(widget.id)}
+                                        onDelete={handleRemoveWidget}
                                         layoutItem={layoutItem}
-                                        commonData={{ dashboardId: state.selectedDashboardId }}
+                                        commonData={commonWidgetData}
                                     />
                                 </div>
                             );

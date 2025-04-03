@@ -21,11 +21,9 @@ const app = express();
 
 app.use(cors({
     origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true
 }));
-app.use(express.json());
-app.use(cookieParser());
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -41,6 +39,9 @@ app.use(helmet({
 }));
 app.use(rateLimiter);
 app.use(compression());
+app.use(express.json());
+app.use(cookieParser());
+
 app.set('etag', 'strong');
 app.disable('x-powered-by');
 
@@ -55,7 +56,9 @@ const csrfProtection = csrf({
 app.use(csrfProtection);
 
 app.get('/api/csrf-token', (req, res) => {
-    res.json({ csrfToken: req.csrfToken() });
+    const token = req.csrfToken();
+    logger.info(`[CSRF] Sending token: ${token}, Cookie: ${req.cookies['_csrf'] || 'Not Set Yet'}`);
+    res.json({ csrfToken: token });
 });
 
 // --- OPC UA Data Queue and Worker ---
@@ -64,17 +67,15 @@ const BATCH_SIZE = parseInt(process.env.OPCUA_BATCH_SIZE || '100', 10);
 const QUEUE_PROCESS_DELAY = parseInt(process.env.OPCUA_QUEUE_DELAY || '500', 10);
 const MAX_QUEUE_LOG_THRESHOLD = parseInt(process.env.OPCUA_QUEUE_WARN_THRESHOLD || '10000', 10);
 
-// --- Queue Monitoring ---
 setInterval(() => {
     const currentSize = opcuaDataQueue.size();
     if (currentSize > 0) {
         logger.info(`OPC UA Data Queue Size: ${currentSize}`);
-        if (currentSize > MAX_QUEUE_LOG_THRESHOLD) {
+       if (currentSize > MAX_QUEUE_LOG_THRESHOLD) {
             logger.warn(`OPC UA Data Queue size (${currentSize}) exceeds threshold (${MAX_QUEUE_LOG_THRESHOLD}). Processing might be falling behind.`);
         }
     }
-}, 60000); // Log queue size every minute if not empty
-// --- End Queue Monitoring ---
+}, 60000);
 
 const persistOpcuaData = (data) => {
     try {
@@ -82,7 +83,8 @@ const persistOpcuaData = (data) => {
     } catch (error) {
         // Handle queue overflow specifically
         if (error.message === 'Queue overflow') {
-            logger.error('OPC UA Data Queue Overflow! Data loss is occurring. Check database insert performance or increase queue size/batch size.', { maxQueueSize: opcuaDataQueue.MAX_QUEUE_SIZE });
+            logger.error('OPC UA Data Queue Overflow! Data loss is occurring. Check database insert performance or increase queue size/batch size.',
+                { maxQueueSize: opcuaDataQueue.MAX_QUEUE_SIZE });
             // Optional: Implement strategy for overflow (e.g., drop oldest, notify admin)
         } else {
             logger.error('Error enqueuing OPC UA data:', error);
@@ -123,7 +125,6 @@ const processOpcuaDataQueue = async () => {
     }
 };
 
-// Improved queue processing loop
 const processQueue = async () => {
     let isRunning = true;
     let consecutiveErrors = 0;
@@ -168,13 +169,11 @@ const processQueue = async () => {
     logger.info("Queue processing loop finished.");
 };
 
-// Start the queue processor
 processQueue().catch(err => {
     logger.error('Fatal error: Queue processing loop exited unexpectedly.', err);
     process.exit(1); // Exit if the loop itself crashes
 });
 
-// --- Listen for OPC UA Data ---
 const { opcuaEmitter } = require('./src/opc-ua/opcuaClient');
 
 opcuaEmitter.on('nodeChanged', (data) => {
@@ -228,7 +227,6 @@ const operationModeSchema = Joi.object({
     endDate: Joi.date().iso().optional()
 });
 
-// Example: Fetch operation mode data route (keep as is or enhance)
 app.get('/api/operation-mode-data', validateQuery(operationModeSchema), async (req, res, next) => {
     try {
         // Access validated query parameters from req.query
@@ -282,17 +280,31 @@ const io = socketIo(server, {
     // pingTimeout: 5000,
 });
 
+// --- Listen for Status Manager Updates and Broadcast ---
+statusManager.on('broadcastUpdate', (fullStatus) => {
+    logger.info('[WebSocket] Broadcasting status update to clients.');
+    io.emit('statusUpdate', fullStatus);
+});
+
 io.on('connection', (socket) => {
     const clientIp = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address; // Handle proxies
     const clientInfo = {
         ip: clientIp,
         userAgent: socket.handshake.headers['user-agent'],
-        query: socket.handshake.query, // e.g., { role: 'admin' }
+        query: socket.handshake.query,
         connectedAt: new Date()
     };
 
     connectionTracker.addConnection(socket.id, clientInfo);
     logger.info(`Client connected via WebSocket: ${socket.id} from ${clientIp}`);
+
+    try {
+        const currentFullStatus = statusManager.getFullStatus();
+        logger.info(`[WebSocket] Sending current status to newly connected client ${socket.id}`);
+        socket.emit('statusUpdate', currentFullStatus);
+    } catch (error) {
+        logger.error(`[WebSocket] Failed to send initial status to ${socket.id}:`, error);
+    }
 
     const isAdmin = clientInfo.query?.role === 'admin';
     if (isAdmin) {
@@ -351,11 +363,19 @@ opcuaConnectionManager.startConnection().catch(err => {
 app.use((err, req, res, next) => {
     // --- Handle CSRF Errors Specifically ---
     if (err.code === 'EBADCSRFTOKEN') {
-        logger.warn('Invalid CSRF token detected:', { url: req.originalUrl, method: req.method, ip: req.ip });
+        logger.error('[CSRF Error] Invalid token detected:', {
+            url: req.originalUrl,
+            method: req.method,
+            ip: req.ip,
+            receivedTokenHeader: req.headers['x-csrf-token'] || 'MISSING', // Check specific header
+            receivedCookies: req.cookies, // Log parsed cookies
+            expectedSecret: req.session?.csrfSecret || 'N/A (Session Missing/Unused)', // If using session storage for secret
+            cookieSecret: req.secret || 'N/A (No req.secret)' // If using cookie signing secret
+        });
         res.status(403).json({
             status: 'error',
-            error: 'Invalid CSRF token. Please refresh and try again.',
-            code: 'INVALID_CSRF_TOKEN' // Provide a code for the client
+            error: 'Invalid CSRF token. Please refresh the page or token and try again.',
+            code: 'INVALID_CSRF_TOKEN'
         });
         return; // Stop further processing
     }

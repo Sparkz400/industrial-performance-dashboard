@@ -116,8 +116,8 @@ const OperationModeWidgetView = ({
                     sx={{
                         flexGrow: 1,
                         width: '100%',
-                        minHeight: '250px',
-                        height: 'calc(100% - 60px)', // Fixed height calculation
+                        minHeight: '200px',
+                        height: '100%',
                         position: 'relative'
                     }}
                 >
@@ -125,7 +125,7 @@ const OperationModeWidgetView = ({
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart
                                 data={data}
-                                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                                margin={{ top: 20, right: 30, left: 20, bottom: showBrush ? 40 : 5 }}
                             >
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="time" minTickGap={20} />
@@ -156,6 +156,9 @@ const OperationModeWidgetView = ({
                                         className="no-drag"
                                         height={30}
                                         stroke="#82ca9d"
+                                        y={undefined}
+                                        startIndex={Math.max(0, data.length - 50)}
+                                        endIndex={data.length - 1}
                                     />
                                 )}
                             </LineChart>

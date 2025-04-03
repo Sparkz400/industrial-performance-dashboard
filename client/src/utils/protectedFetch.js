@@ -43,63 +43,57 @@ export const protectedFetch = async (url, options = {}, retry = false) => {
     // Set default method
     options.method = options.method || 'GET';
 
-    const isStateChangingMethod =
-        options.method === 'POST' ||
-        options.method === 'PUT' ||
-        options.method === 'DELETE' ||
-        options.method === 'PATCH';
-
-    // Always include credentials to send cookies
+    const isStateChangingMethod = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method);
     options.credentials = 'include';
+
+    let currentToken = null;
 
     // Only add CSRF tokens for state-changing requests
     if (isStateChangingMethod) {
         try {
-            // Get a token (either from storage or fetch a new one)
-            const token = await getCsrfToken(API_ENDPOINTS.csrfToken);
-
-            // Initialize headers if they don't exist
+            currentToken = await getCsrfToken(API_ENDPOINTS.csrfToken); // Store the token used
+            console.log(`[protectedFetch] Using CSRF Token for ${options.method} ${url}:`, currentToken);
             const headers = options.headers || {};
-
-            // Add the CSRF token header
-            options.headers = addCsrfHeader(headers, token);
+            options.headers = addCsrfHeader(headers, currentToken);
+            console.log(`[protectedFetch] Headers for ${options.method} ${url}:`, options.headers);
         } catch (error) {
-            console.error('Error adding CSRF token:', error);
-            // Continue with the request even if token fails
+            console.error(`[protectedFetch] Failed to get/add CSRF token for ${options.method} ${url}:`, error);
+            // Decide if you want to proceed without a token or throw an error
+            // For now, let it proceed, the server will reject if needed
         }
+    } else {
+        console.log(`[protectedFetch] Skipping CSRF token for ${options.method} ${url}`);
     }
 
-    // Make the request
+    console.log(`[protectedFetch] Making fetch call to ${url} with options:`, JSON.stringify(options));
+
     try {
         const response = await fetch(url, options);
+        console.log(`[protectedFetch] Response Status for ${url}: ${response.status}`);
 
-        // Check if the response is ok
-        if (!response.ok) {
-            // If this might be a CSRF error and not already a retry attempt
-            if (!retry && await isCsrfError(response)) {
-                console.warn('CSRF token validation failed, refreshing token and retrying request');
-
+        // Check if CSRF error occurred
+        if (!response.ok && await isCsrfError(response)) {
+            console.warn(`[protectedFetch] CSRF error detected for ${url} (Status: ${response.status}). Token used: ${currentToken}`);
+            if (!retry) {
+                console.warn('[protectedFetch] Attempting token refresh and retry...');
                 try {
-                    // Get a fresh token
                     const newToken = await refreshTokenSingleton();
-
-                    // Update token in headers
-                    options.headers = addCsrfHeader(options.headers || {}, newToken);
-
-                    // Retry the request once with the new token
-                    return protectedFetch(url, options, true);
+                    console.log('[protectedFetch] Refreshed token:', newToken);
+                    options.headers = addCsrfHeader(options.headers || {}, newToken); // Use refreshed token
+                    console.log('[protectedFetch] Retrying fetch with new token header:', options.headers['X-CSRF-Token']);
+                    return protectedFetch(url, options, true); // Retry the request
                 } catch (refreshError) {
-                    console.error('Failed to refresh CSRF token:', refreshError);
-                    // Return the original error response
+                    console.error('[protectedFetch] Failed to refresh CSRF token during retry:', refreshError);
+                    // Return the original error response if refresh fails
                     return response;
                 }
+            } else {
+                console.error(`[protectedFetch] CSRF error on retry for ${url}. Giving up.`);
             }
         }
-
-        return response;
+        return response; // Return original response if not CSRF error or if retry failed
     } catch (error) {
-        // Network or other fetch error
-        console.error('Fetch error:', error);
+        console.error(`[protectedFetch] Network or fetch error for ${url}:`, error);
         throw error;
     }
 };

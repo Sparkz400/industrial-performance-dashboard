@@ -1,4 +1,3 @@
-// File: src/widgets/StandardComponents/WidgetPreviewPopup.jsx
 import React, { useState, useMemo } from 'react';
 import {
     Dialog,
@@ -10,7 +9,8 @@ import {
     Tabs,
     Box,
     InputAdornment,
-    Chip
+    Chip,
+    IconButton
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
@@ -21,6 +21,9 @@ import WidgetGrid from './WidgetGrid.jsx';
 const dialogStyles = {
     maxWidth: '90vw',
     maxHeight: '85vh',
+    width: 'calc(100% - 64px)',
+    height: 'calc(100% - 64px)',
+    m: '32px',
 };
 
 const WidgetPreviewPopup = ({ open, onClose, onSelect }) => {
@@ -30,39 +33,27 @@ const WidgetPreviewPopup = ({ open, onClose, onSelect }) => {
     // Organize widgets by category
     const categorizedWidgets = useMemo(() => {
         const categories = getWidgetsByCategory();
-
-        // Add "All" category which includes all widgets
-        const allWidgets = Object.entries(widgetRegistry).map(([key, widget]) => ({
-            type: key,
-            ...widget
-        }));
-
-        return {
-            All: allWidgets,
-            ...categories
-        };
+        const allWidgets = Object.entries(widgetRegistry).map(([key, widget]) => ({ type: key, ...widget }));
+        return { All: allWidgets, ...categories };
     }, []);
 
-    // Get tab names from categorized widgets
     const tabNames = useMemo(() => Object.keys(categorizedWidgets), [categorizedWidgets]);
 
     // Filter widgets based on search query
     const filteredWidgets = useMemo(() => {
-        if (!searchQuery.trim()) {
-            return categorizedWidgets;
-        }
+        const query = searchQuery.toLowerCase().trim();
+        if (!query) return categorizedWidgets;
 
-        const query = searchQuery.toLowerCase();
         const filtered = {};
 
         Object.entries(categorizedWidgets).forEach(([category, widgets]) => {
             filtered[category] = widgets.filter(widget =>
                 widget.title?.toLowerCase().includes(query) ||
                 widget.description?.toLowerCase().includes(query) ||
-                widget.type.toLowerCase().includes(query)
+                widget.type.toLowerCase().includes(query) ||
+                widget.category?.toLowerCase().includes(query) // Also search category
             );
         });
-
         return filtered;
     }, [categorizedWidgets, searchQuery]);
 
@@ -76,15 +67,19 @@ const WidgetPreviewPopup = ({ open, onClose, onSelect }) => {
         setSearchQuery('');
     };
 
+    const currentCategoryWidgets = filteredWidgets[tabNames[currentTab]] || [];
+    const useVirtualization = currentCategoryWidgets.length > 50;
+
     return (
         <Dialog
             open={open}
             onClose={onClose}
             fullWidth
-            maxWidth="lg"
-            PaperProps={{ style: dialogStyles }}
+            maxWidth={false} // Allow PaperProps to control size
+            PaperProps={{ sx: dialogStyles }} // Use sx prop for styles
+            aria-labelledby="widget-preview-dialog-title"
         >
-            <DialogTitle>
+            <DialogTitle id="widget-preview-dialog-title">
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                     <Typography variant="h5">Add Widget to Dashboard</Typography>
                     <TextField
@@ -95,24 +90,12 @@ const WidgetPreviewPopup = ({ open, onClose, onSelect }) => {
                         size="small"
                         sx={{ width: '300px' }}
                         InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIcon />
-                                </InputAdornment>
-                            ),
+                            startAdornment: ( <InputAdornment position="start"> <SearchIcon /> </InputAdornment> ),
                             endAdornment: searchQuery ? (
                                 <InputAdornment position="end">
-                                    <Box
-                                        component="span"
-                                        sx={{
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center'
-                                        }}
-                                        onClick={handleClearSearch}
-                                    >
+                                    <IconButton size="small" onClick={handleClearSearch} edge="end" aria-label="clear search">
                                         <CloseIcon fontSize="small" />
-                                    </Box>
+                                    </IconButton>
                                 </InputAdornment>
                             ) : null
                         }}
@@ -124,6 +107,7 @@ const WidgetPreviewPopup = ({ open, onClose, onSelect }) => {
                     onChange={handleTabChange}
                     variant="scrollable"
                     scrollButtons="auto"
+                    aria-label="widget categories"
                     sx={{ borderBottom: 1, borderColor: 'divider' }}
                 >
                     {tabNames.map((tab, index) => (
@@ -146,25 +130,30 @@ const WidgetPreviewPopup = ({ open, onClose, onSelect }) => {
                 </Tabs>
             </DialogTitle>
 
-            <DialogContent dividers style={{ overflowY: 'auto', overflowX: 'hidden' }}>
+            <DialogContent dividers sx={{ overflowY: 'auto', overflowX: 'hidden', p: 0 }}> {/* Remove padding */}
                 <Box
                     role="tabpanel"
+                    hidden={currentTab !== tabNames.indexOf(tabNames[currentTab])} // Ensure hidden logic is correct
                     id={`widget-tabpanel-${currentTab}`}
                     aria-labelledby={`widget-tab-${currentTab}`}
+                    sx={{ height: '100%' }} // Ensure Box takes full height
                 >
-                    {filteredWidgets[tabNames[currentTab]]?.length === 0 ? (
+                    {currentCategoryWidgets.length === 0 ? (
                         <Box sx={{ p: 3, textAlign: 'center' }}>
                             <Typography color="textSecondary">
-                                No widgets found matching "{searchQuery}"
+                                {searchQuery ? `No widgets found matching "${searchQuery}"` : 'No widgets in this category.'}
                             </Typography>
                         </Box>
                     ) : (
                         <WidgetGrid
-                            widgets={filteredWidgets[tabNames[currentTab]] || []}
+                            // Pass the widgets for the currently selected tab
+                            widgets={currentCategoryWidgets}
                             onSelectWidget={(widgetType) => {
                                 onSelect(widgetType);
                                 onClose();
                             }}
+                            // Pass the virtualization flag
+                            useVirtualization={useVirtualization}
                         />
                     )}
                 </Box>

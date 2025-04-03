@@ -13,7 +13,7 @@ import {
     Typography,
     Badge,
     Collapse,
-    alpha,
+    alpha, CircularProgress,
 } from '@mui/material';
 import { useTheme as useMuiTheme } from '@mui/material/styles';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -30,6 +30,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import BurgerButton from './burgerButton.jsx';
 import { useTheme as useAppTheme } from '../../system/contexts/ThemeContext.jsx';
 import PropTypes from "prop-types";
+import { useSystemStatus } from '../../system/index.jsx';
 
 // Simple debounce function
 function debounce(func, delay) {
@@ -43,33 +44,20 @@ function debounce(func, delay) {
 }
 
 // Get icon based on status
-function getStatusIcon(status) {
-    // Handle object format
-    if (status && typeof status === 'object') {
-        if (status.status) {
-            return getIconForStatus(status.status);
-        }
-    }
+function getStatusIcon(statusItem) {
+    const statusStr = statusItem?.status?.toLowerCase() || 'unknown'; // Access the 'status' property
 
-    // Handle string format
-    return getIconForStatus(status);
-}
-
-// Get icon based on status string
-function getIconForStatus(statusStr) {
-    const status = typeof statusStr === 'string' ? statusStr.toLowerCase() : '';
-
-    if (status === 'connected' || status === 'ok') return <CheckCircleIcon />;
-    if (status === 'warning') return <WarningIcon />;
-    if (status === 'error' || status === 'disconnected') return <ErrorIcon />;
-    return <WarningIcon />;
+    if (statusStr === 'connected' || statusStr === 'ok') return <CheckCircleIcon color="success"/>; // Use MUI color prop
+    if (statusStr === 'warning') return <WarningIcon color="warning"/>;
+    if (statusStr === 'error' || statusStr === 'disconnected') return <ErrorIcon color="error"/>;
+    if (statusStr === 'connecting') return <CircularProgress size={18} color="info" />; // Add connecting icon
+    return <HelpOutlineIcon color="disabled"/>; // Default/Unknown icon
 }
 
 const ResponsiveSidebar = ({
                                open,
                                onToggle,
-                               onWidthChange,
-                               status
+                               onWidthChange
                            }) => {
 
     const { themeMode, toggleTheme } = useAppTheme();
@@ -77,62 +65,18 @@ const ResponsiveSidebar = ({
     const location = useLocation();
     const contentRef = useRef(null);
     const [statusExpanded, setStatusExpanded] = useState(false);
+    const { status, socketConnected } = useSystemStatus();
 
-    // Get overall status - safely handle different formats
-    const getOverallStatus = () => {
-        if (!status) return 'unknown';
-
-        // Handle new object format with overall property
-        if (status.overall) {
-            if (typeof status.overall === 'object') {
-                return status.overall.status || 'unknown';
-            }
-            return status.overall;
-        }
-
-        // Handle old format with separate properties
-        const dbStatus = getStatusValue(status.database);
-        const opcStatus = getStatusValue(status.opcua);
-
-        if (dbStatus === 'error' || opcStatus === 'error') {
-            return 'error';
-        } else if (dbStatus === 'warning' || opcStatus === 'warning') {
-            return 'warning';
-        } else if (dbStatus === 'connected' && opcStatus === 'connected') {
-            return 'connected';
-        } else {
-            return 'unknown';
-        }
-    };
-
-    // Extract status value safely
-    const getStatusValue = (statusItem) => {
-        if (!statusItem) return 'unknown';
-
-        // Handle object format
-        if (typeof statusItem === 'object') {
-            return statusItem.status?.toLowerCase() || 'unknown';
-        }
-
-        // Handle string format
-        return statusItem.toLowerCase();
-    };
-
-    const overallStatus = getOverallStatus();
+    const overallStatus = status?.overall?.status || 'UNKNOWN';
 
     // Get badge color for overall status
     const getOverallBadgeColor = () => {
         switch(overallStatus.toLowerCase()) {
-            case 'connected':
-            case 'ok':
-                return 'success';
-            case 'warning':
-                return 'warning';
-            case 'error':
-            case 'disconnected':
-                return 'error';
-            default:
-                return 'default';
+            case 'connected': case 'ok': return 'success';
+            case 'warning': return 'warning';
+            case 'error': case 'disconnected': return 'error';
+            case 'connecting': return 'info';
+            default: return 'default';
         }
     };
 
@@ -188,36 +132,11 @@ const ResponsiveSidebar = ({
         };
     }, [open, measureWidth, onWidthChange]);
 
-    // Toggle status section
-    const toggleStatus = useCallback(() => {
-        setStatusExpanded((prev) => !prev);
-    }, []);
+    const toggleStatus = useCallback(() => { setStatusExpanded((prev) => !prev); }, []);
 
-    // Function to get database status text - safely handle different formats
-    const getDatabaseStatusText = () => {
-        if (!status || !status.database) return 'Unknown';
-
-        // Handle object format
-        if (typeof status.database === 'object') {
-            return status.database.statusText || 'Unknown';
-        }
-
-        // Handle string format
-        return status.database.charAt(0).toUpperCase() + status.database.slice(1).toLowerCase();
-    };
-
-    // Function to get OPCUA status text - safely handle different formats
-    const getOpcuaStatusText = () => {
-        if (!status || !status.opcua) return 'Unknown';
-
-        // Handle object format
-        if (typeof status.opcua === 'object') {
-            return status.opcua.statusText || 'Unknown';
-        }
-
-        // Handle string format
-        return status.opcua.charAt(0).toUpperCase() + status.opcua.slice(1).toLowerCase();
-    };
+    // Get status text directly from the standardized object
+    const getDatabaseStatusText = () => status?.database?.statusText || 'Unknown';
+    const getOpcuaStatusText = () => status?.opcua?.statusText || 'Unknown';
 
     return (
         <Drawer
@@ -299,10 +218,7 @@ const ResponsiveSidebar = ({
                     <ListItem disablePadding>
                         <ListItemButton
                             onClick={toggleStatus}
-                            sx={{
-                                py: 1.5,
-                                justifyContent: open ? 'flex-start' : 'center',
-                            }}
+                            sx={{ py: 1.5, justifyContent: open ? 'flex-start' : 'center' }}
                         >
                             <ListItemIcon sx={{ minWidth: open ? 40 : 'auto' }}>
                                 <Badge
@@ -314,12 +230,12 @@ const ResponsiveSidebar = ({
                                         horizontal: 'right',
                                     }}
                                 >
-                                    <NetworkCheckIcon color="action" />
+                                    <NetworkCheckIcon color={socketConnected ? "success" : "action"} />
                                 </Badge>
                             </ListItemIcon>
                             {open && (
                                 <>
-                                    <ListItemText primary="System Status" />
+                                    <ListItemText primary="System Status" secondary={socketConnected ? null : "Polling"}/>
                                     {statusExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                                 </>
                             )}
@@ -331,29 +247,27 @@ const ResponsiveSidebar = ({
                         <Collapse in={statusExpanded} timeout="auto" unmountOnExit>
                             <List component="div" disablePadding>
                                 <ListItem sx={{ py: 0.5, pl: 4 }}>
-                                    <ListItemIcon sx={{ minWidth: 40, color: getStatusIcon(status?.database).props.color || theme.palette.text.disabled }}>
+                                    {/* Pass the whole status.database object */}
+                                    <ListItemIcon sx={{ minWidth: 40, color: status?.database?.statusColor || theme.palette.text.disabled }}>
                                         {getStatusIcon(status?.database)}
                                     </ListItemIcon>
                                     <ListItemText
                                         primary="Database"
-                                        secondary={getDatabaseStatusText()}
-                                        slotProps={{
-                                            primary: { fontSize: '0.875rem' },
-                                            secondary: { fontSize: '0.75rem' }
-                                        }}
+                                        secondary={getDatabaseStatusText()} // Use helper
+                                        primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                        secondaryTypographyProps={{ fontSize: '0.75rem' }}
                                     />
                                 </ListItem>
                                 <ListItem sx={{ py: 0.5, pl: 4 }}>
-                                    <ListItemIcon sx={{ minWidth: 40, color: getStatusIcon(status?.opcua).props.color || theme.palette.text.disabled }}>
+                                    {/* Pass the whole status.opcua object */}
+                                    <ListItemIcon sx={{ minWidth: 40, color: status?.opcua?.statusColor || theme.palette.text.disabled }}>
                                         {getStatusIcon(status?.opcua)}
                                     </ListItemIcon>
                                     <ListItemText
                                         primary="OPC UA"
-                                        secondary={getOpcuaStatusText()}
-                                        slotProps={{
-                                            primary: { fontSize: '0.875rem' },
-                                            secondary: { fontSize: '0.75rem' }
-                                        }}
+                                        secondary={getOpcuaStatusText()} // Use helper
+                                        primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                        secondaryTypographyProps={{ fontSize: '0.75rem' }}
                                     />
                                 </ListItem>
                             </List>
@@ -437,7 +351,6 @@ ResponsiveSidebar.propTypes = {
     open: PropTypes.bool,
     onToggle: PropTypes.func,
     onWidthChange: PropTypes.func,
-    status: PropTypes.object
 };
 
 export default ResponsiveSidebar;

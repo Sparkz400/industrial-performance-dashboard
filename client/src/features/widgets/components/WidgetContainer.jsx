@@ -10,7 +10,8 @@ import {
     DialogActions,
     Tooltip,
     Fade,
-    Zoom, Box
+    Zoom,
+    Box, CircularProgress
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -22,36 +23,48 @@ import { ContentLoader, ButtonLoader } from '../../../shared/components/loading'
 
 // Separate error fallback component
 const ErrorFallback = memo(({ error, resetErrorBoundary }) => (
-    <Box sx={{
-        p: 3,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        textAlign: 'center'
-    }}>
-        <ErrorIcon color="error" sx={{ fontSize: 48, mb: 2 }} />
+    <Box
+        sx={{
+            padding: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            textAlign: 'center'
+        }}
+    >
+        <ErrorIcon color="error" sx={{ fontSize: 48, mb: 2 }} /> {/* Use sx prop */}
         <Typography variant="h6" color="error" gutterBottom>Widget Error</Typography>
-        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-            {error.message || "An error occurred while loading this widget"}
+        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}> {/* Use sx prop */}
+            {error?.message || "An error occurred while loading this widget"} {/* Optional chaining */}
         </Typography>
-        <ButtonLoader
+        <Button
             variant="contained"
-            color="primary"
             startIcon={<RefreshIcon />}
             onClick={resetErrorBoundary}
             size="small"
         >
             Retry
-        </ButtonLoader>
+        </Button>
     </Box>
 ));
+ErrorFallback.displayName = 'ErrorFallback';
 
 // Separate loader component
 const WidgetLoader = memo(() => (
-    <ContentLoader size={24} />
+    <Box
+        sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100%'
+        }}
+    >
+        <CircularProgress size={24} />
+    </Box>
 ));
+WidgetLoader.displayName = 'WidgetLoader';
 
 // Custom error boundary for widget content
 class WidgetErrorBoundary extends React.Component {
@@ -66,8 +79,6 @@ class WidgetErrorBoundary extends React.Component {
 
     componentDidCatch(error, info) {
         console.error(`Error in widget ${this.props.widgetId}:`, error, info);
-
-        // Call onError callback if provided
         if (typeof this.props.onError === 'function') {
             this.props.onError(error);
         }
@@ -79,12 +90,8 @@ class WidgetErrorBoundary extends React.Component {
 
     render() {
         if (this.state.hasError) {
-            return <ErrorFallback
-                error={this.state.error}
-                resetErrorBoundary={this.reset}
-            />;
+            return <ErrorFallback error={this.state.error} resetErrorBoundary={this.reset} />;
         }
-
         return this.props.children;
     }
 }
@@ -95,36 +102,24 @@ const SettingsDialog = memo(({ open, onClose, widget, onConfigChange }) => {
     const CustomSettingsComponent = widgetMeta.settingsComponent;
 
     return (
-        <Dialog
-            open={open}
-            onClose={onClose}
-            fullWidth
-            maxWidth="sm"
-            className="no-drag"
-        >
-            <DialogTitle>
-                {widgetMeta.title || widget.type} Settings
-            </DialogTitle>
+        <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" className="no-drag" >
+            <DialogTitle> {widgetMeta.title || widget.type} Settings </DialogTitle>
             <DialogContent dividers>
                 {CustomSettingsComponent ? (
-                    <Suspense fallback={<ContentLoader message="Loading settings..." />}>
-                        <CustomSettingsComponent
-                            config={widget.config || {}}
-                            onConfigChange={onConfigChange}
-                        />
+                    <Suspense fallback={<WidgetLoader />}>
+                        <CustomSettingsComponent config={widget.config || {}} onConfigChange={onConfigChange} />
                     </Suspense>
                 ) : (
                     <Typography variant="body1">No custom settings available for this widget.</Typography>
                 )}
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose} variant="contained" color="primary">
-                    Close
-                </Button>
+                <Button onClick={onClose} variant="contained" color="primary"> Close </Button>
             </DialogActions>
         </Dialog>
     );
 });
+SettingsDialog.displayName = 'SettingsDialog';
 
 // Main Widget Container component with performance optimizations
 const WidgetContainer = memo(({ widget, onDelete, layoutItem, commonData }) => {
@@ -135,20 +130,11 @@ const WidgetContainer = memo(({ widget, onDelete, layoutItem, commonData }) => {
     const [mounted, setMounted] = useState(false);
     const containerRef = useRef(null);
 
-    // Memoize these values to prevent unnecessary re-renders
     const widgetMeta = useMemo(() => widgetRegistry[widget.type] || {}, [widget.type]);
     const WidgetComponent = widgetMeta.component;
 
-    // Reset error state when widget type or ID changes
-    useEffect(() => {
-        setError(null);
-    }, [widget.type, widget.id]);
-
-    // Add a mounted effect to ensure the component is fully rendered
-    useEffect(() => {
-        setMounted(true);
-        return () => setMounted(false);
-    }, []);
+    useEffect(() => { setError(null); }, [widget.type, widget.id]);
+    useEffect(() => { setMounted(true); return () => setMounted(false); }, []);
 
     // Use layout effect to ensure container size is properly calculated
     useLayoutEffect(() => {
@@ -184,68 +170,51 @@ const WidgetContainer = memo(({ widget, onDelete, layoutItem, commonData }) => {
         };
     }, [layoutItem?.w, layoutItem?.h]);
 
-    const handleOpenSettings = useCallback(() => {
-        setOpenSettings(true);
-    }, []);
-
-    const handleCloseSettings = useCallback(() => {
-        setOpenSettings(false);
-    }, []);
+    const handleOpenSettings = useCallback(() => { setOpenSettings(true); }, []);
+    const handleCloseSettings = useCallback(() => { setOpenSettings(false); }, []);
 
     const handleConfigChange = useCallback((newConfig) => {
         if (!widget.id) return;
         actions.updateWidgetConfig(widget.id, newConfig);
     }, [actions, widget.id]);
 
-    const handleRetry = useCallback(() => {
-        setError(null);
-    }, []);
 
+    const handleRetry = useCallback(() => { setError(null); }, []);
     const handleError = useCallback((err) => {
         console.error(`Error in widget ${widget.type}:`, err);
         setError(err);
     }, [widget.type]);
 
+    const handleDeleteClick = useCallback(() => {
+        onDelete(widget.id); // Call the passed onDelete prop with the widget's ID
+    }, [onDelete, widget.id]);
+
     // Memoize the widget component rendering
     const widgetContent = useMemo(() => {
-        // Ensure widgetComponent exists before rendering
         const hasWidgetComponent = Boolean(WidgetComponent);
-
-        if (error) {
-            return <ErrorFallback error={error} resetErrorBoundary={handleRetry} />;
-        }
-
-        if (!mounted) {
-            return <WidgetLoader />;
-        }
-
-        if (!hasWidgetComponent) {
-            return (
-                <div style={{ padding: '20px' }}>
-                    <Typography>Widget type '{widget.type}' not found</Typography>
-                </div>
-            );
-        }
-
+        if (error) return <ErrorFallback error={error} resetErrorBoundary={handleRetry} />;
+        if (!mounted) return <WidgetLoader />;
+        if (!hasWidgetComponent) return (
+            <Box sx={{ padding: '20px' }}> {/* Use Box */}
+                <Typography>Widget type '{widget.type}' not found</Typography>
+            </Box>
+        );
         return (
             <Suspense fallback={<WidgetLoader />}>
                 <WidgetErrorBoundary onError={handleError} widgetId={widget.id}>
-                    <div style={{ flexGrow: 1, width: '100%', minHeight: '200px', position: 'relative' }}>
-                        <WidgetComponent
-                            config={widget.config || {}}
-                            commonData={commonData}
-                            onError={handleError}
-                        />
-                    </div>
+                    {/* Use Box for consistent layout */}
+                    <Box sx={{ flexGrow: 1, width: '100%', minHeight: '200px', position: 'relative', p: 1 }}>
+                        <WidgetComponent config={widget.config || {}} commonData={commonData} onError={handleError} />
+                    </Box>
                 </WidgetErrorBoundary>
             </Suspense>
         );
     }, [WidgetComponent, error, mounted, widget.type, widget.id, widget.config, commonData, handleRetry, handleError]);
 
-    // Memoize the controls
+
     const controls = useMemo(() => (
         <Fade in={isHovered || error} timeout={300}>
-            <div style={{
+            <Box sx={{ // Use Box for positioning and styling
                 position: 'absolute',
                 top: 4,
                 right: 4,
@@ -255,46 +224,24 @@ const WidgetContainer = memo(({ widget, onDelete, layoutItem, commonData }) => {
                 transition: 'opacity 0.3s ease'
             }}>
                 <Tooltip title="Widget Settings">
-                    <IconButton
-                        onClick={handleOpenSettings}
-                        aria-label="settings"
-                        sx={{
-                            background: 'rgba(131,131,131,0.8)',
-                            '&:hover': {
-                                background: 'rgba(100,100,100,0.9)',
-                            }
-                        }}
-                        size="small"
-                    >
+                    <IconButton onClick={handleOpenSettings} aria-label="settings" sx={{ background: 'rgba(131,131,131,0.8)', '&:hover': { background: 'rgba(100,100,100,0.9)' } }} size="small" >
                         <SettingsIcon fontSize="small"/>
                     </IconButton>
                 </Tooltip>
                 <Tooltip title="Remove Widget">
-                    <IconButton
-                        onClick={onDelete}
-                        aria-label="delete"
-                        sx={{
-                            background: 'rgba(131,131,131,0.8)',
-                            '&:hover': {
-                                background: 'rgba(200,0,0,0.7)',
-                            }
-                        }}
-                        size="small"
-                    >
+                    <IconButton onClick={handleDeleteClick} aria-label="delete" sx={{ background: 'rgba(131,131,131,0.8)', '&:hover': { background: 'rgba(200,0,0,0.7)' } }} size="small" >
                         <DeleteIcon fontSize="small"/>
                     </IconButton>
                 </Tooltip>
-            </div>
+            </Box>
         </Fade>
-    ), [isHovered, error, handleOpenSettings, onDelete]);
+    ), [isHovered, error, handleOpenSettings, handleDeleteClick]); // Use handleDeleteClick dependency
 
-    // Memoize the size indicator
     const sizeIndicator = useMemo(() => {
         if (!layoutItem || error) return null;
-
         return (
             <Fade in={isHovered} timeout={300}>
-                <div style={{
+                <Box sx={{ // Use Box
                     position: 'absolute',
                     bottom: '2px',
                     left: '2px',
@@ -306,14 +253,14 @@ const WidgetContainer = memo(({ widget, onDelete, layoutItem, commonData }) => {
                     zIndex: 10,
                 }}>
                     {`w: ${layoutItem.w}, h: ${layoutItem.h}`}
-                </div>
+                </Box>
             </Fade>
         );
     }, [layoutItem, isHovered, error]);
 
     return (
-        <div
-            style={{position: 'relative', height: '100%'}}
+        <Box // Use Box for outer container
+            sx={{position: 'relative', height: '100%'}}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             ref={containerRef}
@@ -321,12 +268,12 @@ const WidgetContainer = memo(({ widget, onDelete, layoutItem, commonData }) => {
             <Zoom in={true} style={{ transitionDelay: '50ms' }}>
                 <Paper
                     elevation={3}
-                    style={{
+                    sx={{ // Use sx prop
                         height: '100%',
                         position: 'relative',
                         overflow: 'hidden',
                         transition: 'box-shadow 0.3s ease',
-                        boxShadow: isHovered ? '0px 5px 15px rgba(0,0,0,0.3)' : undefined,
+                        boxShadow: isHovered ? 6 : 3, // Use theme shadow levels
                         display: 'flex',
                         flexDirection: 'column'
                     }}
@@ -338,14 +285,10 @@ const WidgetContainer = memo(({ widget, onDelete, layoutItem, commonData }) => {
             </Zoom>
 
             {/* Settings dialog */}
-            <SettingsDialog
-                open={openSettings}
-                onClose={handleCloseSettings}
-                widget={widget}
-                onConfigChange={handleConfigChange}
-            />
-        </div>
+            <SettingsDialog open={openSettings} onClose={handleCloseSettings} widget={widget} onConfigChange={handleConfigChange} />
+        </Box>
     );
 });
+WidgetContainer.displayName = 'WidgetContainer';
 
 export default WidgetContainer;

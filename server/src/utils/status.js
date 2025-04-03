@@ -4,9 +4,9 @@ const EventEmitter = require('events');
 /**
  * Status manager with event emitter for real-time updates
  */
-class StatusManager extends EventEmitter {
+class StatusManager extends EventEmitter { // Inherit from EventEmitter
     constructor() {
-        super();
+        super(); // Call EventEmitter constructor
         this._status = {
             [StatusConstants.DATABASE]: StatusConstants.UNKNOWN,
             [StatusConstants.OPCUA]: StatusConstants.UNKNOWN,
@@ -25,8 +25,12 @@ class StatusManager extends EventEmitter {
      * @param {Object} details - Optional details about the status
      */
     setServiceStatus(service, newStatus, details = {}) {
-        if (this._status[service] !== newStatus) {
-            const oldStatus = this._status[service];
+        // Only update and emit if the status or details actually changed
+        const oldStatus = this._status[service];
+        const oldDetailsString = JSON.stringify(this._details[service]);
+        const newDetailsString = JSON.stringify(details);
+
+        if (oldStatus !== newStatus || oldDetailsString !== newDetailsString) {
             const timestamp = new Date().toISOString();
 
             this._status = {
@@ -40,14 +44,18 @@ class StatusManager extends EventEmitter {
                 [service]: details
             };
 
-            // Emit events for status change
-            this.emit('statusChanged', {
+            const fullStatus = this.getFullStatus(); // Get the complete current status
+
+            // Emit events for status change AFTER state is updated
+            this.emit('statusChanged', { // Keep this for potential internal listeners
                 service,
                 oldStatus,
                 newStatus,
                 timestamp,
                 details
             });
+            // Emit a dedicated event for broadcasting the full status via WebSocket
+            this.emit('broadcastUpdate', fullStatus);
         }
     }
 
@@ -104,12 +112,27 @@ class StatusManager extends EventEmitter {
      * Get complete status object for API response
      * @returns {Object} - Complete status information
      */
+    /** Get complete status object */
     getFullStatus() {
+        const overall = this.getOverallStatus();
         return {
-            status: { ...this._status },
-            details: { ...this._details },
-            overall: this.getOverallStatus(),
-            overallLabel: StatusConstants.getStatusLabel(this.getOverallStatus()),
+            database: { // <-- Standardize structure here
+                status: this.getServiceStatus(StatusConstants.DATABASE),
+                statusText: StatusConstants.getStatusLabel(this.getServiceStatus(StatusConstants.DATABASE)),
+                statusColor: StatusConstants.getStatusColor(this.getServiceStatus(StatusConstants.DATABASE)),
+                details: this.getServiceDetails(StatusConstants.DATABASE) || {}
+            },
+            opcua: { // <-- Standardize structure here
+                status: this.getServiceStatus(StatusConstants.OPCUA),
+                statusText: StatusConstants.getStatusLabel(this.getServiceStatus(StatusConstants.OPCUA)),
+                statusColor: StatusConstants.getStatusColor(this.getServiceStatus(StatusConstants.OPCUA)),
+                details: this.getServiceDetails(StatusConstants.OPCUA) || {}
+            },
+            overall: { // <-- Standardize structure here
+                status: overall,
+                statusText: StatusConstants.getStatusLabel(overall),
+                statusColor: StatusConstants.getStatusColor(overall)
+            },
             lastUpdated: this._status.lastUpdated
         };
     }
@@ -130,19 +153,6 @@ class StatusManager extends EventEmitter {
      */
     setOpcuaStatus(newStatus, details = {}) {
         this.setServiceStatus(StatusConstants.OPCUA, newStatus, details);
-    }
-
-    /**
-     * Simplified status object for lightweight responses
-     * @returns {Object} - Simplified status info
-     */
-    getStatus() {
-        return {
-            database: this._status[StatusConstants.DATABASE],
-            opcua: this._status[StatusConstants.OPCUA],
-            overall: this.getOverallStatus(),
-            lastUpdated: this._status.lastUpdated
-        };
     }
 }
 
