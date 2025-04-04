@@ -23,6 +23,7 @@
     "joi": "^17.13.3",
     "node-opcua": "^2.148.0",
     "node-opcua-certificate-manager": "^2.143.0",
+    "node-opcua-crypto": "^4.16.0",
     "pg": "^8.13.3",
     "socket.io": "^4.8.1",
     "winston": "^3.17.0"

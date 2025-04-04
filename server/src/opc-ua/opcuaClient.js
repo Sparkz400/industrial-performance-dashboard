@@ -5,7 +5,7 @@ const logger = require('../utils/logger');
 const StatusConstants = require("../utils/statusConstants");
 const statusManager = require("../utils/status");
 const certificateManager = require('./services/certificateManager');
-const os = require('os');
+const config = require('../config/config');
 
 class OPCUAEmitter extends EventEmitter {}
 const opcuaEmitter = new OPCUAEmitter();
@@ -22,7 +22,7 @@ opcuaEmitter.on('serverCertificate', async (certificate, serverUri) => {
         const crypto = require('crypto');
         const certificateHash = crypto.createHash('sha256').update(certificate).digest('hex');
 
-        if (process.env.AUTO_ACCEPT_CERTIFICATES === 'true') {
+        if (config.AUTO_ACCEPT_CERTIFICATES) {
             // Auto-accept unknown certificates
             const serverName = serverUri || 'unknown_server';
             await certificateManager.trustCertificate(certificate, serverName);
@@ -64,7 +64,8 @@ opcuaEmitter.on('serverCertificate', async (certificate, serverUri) => {
  */
 async function initializeCertificates() {
     try {
-        await certificateManager.initialize();
+        // *** CORRECTION HERE ***
+        await certificateManager.ensureInitialized();
     } catch (error) {
         logger.error('Failed to initialize certificates:', error);
         statusManager.setOpcuaStatus(StatusConstants.WARNING, {
@@ -89,8 +90,8 @@ async function connectAndSubscribe(endpointUrl, securityOptions = {}) {
     await initializeCertificates();
 
     // Get security mode and policy from options or environment
-    const securityMode = securityOptions.securityMode || process.env.OPCUA_SECURITY_MODE || 'None';
-    const securityPolicy = securityOptions.securityPolicy || process.env.OPCUA_SECURITY_POLICY || 'None';
+    const securityMode = securityOptions.securityMode || config.OPCUA_SECURITY_MODE;
+    const securityPolicy = securityOptions.securityPolicy || config.OPCUA_SECURITY_POLICY;
 
     while (retryCount < MAX_RETRIES) {
         try {
@@ -229,5 +230,5 @@ module.exports = {
     connectAndSubscribe,
     opcuaEmitter,
     certificateManager,
-    initializeCertificates
+    initializeCertificates // Keep exporting this function name
 };

@@ -33,6 +33,7 @@ const envVarsSchema = Joi.object({
     OPCUA_CERT_COUNTRY: Joi.string().length(2).default('US').description('Country code (2 letters) for self-signed cert'),
     OPCUA_CERT_LOCALITY: Joi.string().default('Somewhere').description('Locality for self-signed cert'),
     OPCUA_CERT_STATE: Joi.string().default('State').description('State/Province for self-signed cert'),
+    COOKIE_SECRET: Joi.string().required().description('Secret used for signing cookies'),
     AUTO_ACCEPT_CERTIFICATES: Joi.boolean().default(false).description('Automatically trust unknown server certificates'),
     OPCUA_HEALTH_CHECK_INTERVAL: Joi.number().integer().min(0).default(30000).description('OPC UA health check interval (ms, 0 to disable)'),
 
@@ -64,6 +65,8 @@ if (error) {
 const nonSecrets = { ...envVars };
 delete nonSecrets.DB_PASSWORD;
 delete nonSecrets.ADMIN_API_KEY;
+delete nonSecrets.COOKIE_SECRET;
+
 // Delete other secrets like JWT_SECRET if added
 console.log("🔧 Loaded configuration (excluding secrets):", nonSecrets);
 console.warn("🔑 Ensure sensitive variables (DB_PASSWORD, ADMIN_API_KEY, etc.) are set securely via environment variables or a secrets manager, NOT hardcoded or in committed .env files.");

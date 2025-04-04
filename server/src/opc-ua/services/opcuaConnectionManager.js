@@ -4,7 +4,7 @@ const StatusConstants = require('../../utils/statusConstants');
 const logger = require('../../utils/logger');
 const EventEmitter = require('events');
 const { opcua } = require('node-opcua'); // Ensure opcua is imported if needed for AttributeIds
-
+const config = require('../../config/config');
 /**
  * Manager for OPC UA connections with resilient reconnection and certificate support
  */
@@ -20,15 +20,15 @@ class OpcuaConnectionManager extends EventEmitter {
 
         // Default connection configuration
         this.currentConfig = {
-            ip: process.env.OPCUA_IP || "localhost",
-            port: process.env.OPCUA_PORT || 4840,
-            resourcePath: process.env.OPCUA_RESOURCE_PATH || "/UA/MyLittleServer",
-            securityMode: process.env.OPCUA_SECURITY_MODE || "None",
-            securityPolicy: process.env.OPCUA_SECURITY_POLICY || "None"
+            ip: config.OPCUA_IP,
+            port: config.OPCUA_PORT,
+            resourcePath: config.OPCUA_RESOURCE_PATH,
+            securityMode: config.OPCUA_SECURITY_MODE,
+            securityPolicy: config.OPCUA_SECURITY_POLICY
         };
 
         // Check if security fallback is enabled via environment variable
-        this.securityFallbackEnabled = process.env.OPCUA_SECURITY_FALLBACK_ENABLED === 'true';
+        this.securityFallbackEnabled = config.OPCUA_SECURITY_FALLBACK_ENABLED;
         if (this.securityFallbackEnabled) {
             logger.info('OPC UA security fallback to "None" is ENABLED.');
         } else {
@@ -64,6 +64,8 @@ class OpcuaConnectionManager extends EventEmitter {
      */
     async initializeCertificates() {
         try {
+            // *** CORRECTION HERE ***
+            // Call the function exported from opcuaClient.js
             await opcuaClient.initializeCertificates();
         } catch (error) {
             logger.error('Error initializing certificates:', error);
@@ -258,7 +260,7 @@ class OpcuaConnectionManager extends EventEmitter {
             clearInterval(this.healthCheckInterval);
         }
 
-        const healthCheckIntervalMs = Number(process.env.OPCUA_HEALTH_CHECK_INTERVAL) || 30000;
+        const healthCheckIntervalMs = config.OPCUA_HEALTH_CHECK_INTERVAL;
 
         this.healthCheckInterval = setInterval(async () => {
             if (!this.currentConnection || !this.currentConnection.session || !this.currentConnection.session.isOpen) {

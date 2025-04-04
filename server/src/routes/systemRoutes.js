@@ -3,6 +3,7 @@ const os = require('os');
 const router = express.Router();
 const logger = require('../utils/logger');
 const connectionTracker = require('../utils/connectionTracker');
+const config = require('../config/config');
 
 // Get server start time (when the process was started)
 const serverStartTime = new Date();

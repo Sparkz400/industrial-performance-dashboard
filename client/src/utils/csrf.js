@@ -3,7 +3,7 @@
  */
 
 // Constants
-const CSRF_HEADER_NAME = 'X-CSRF-Token';
+const CSRF_HEADER_NAME = 'x-csrf-token';
 const CSRF_TOKEN_KEY = 'csrf_token';
 const CSRF_TOKEN_TIMESTAMP_KEY = 'csrf_token_timestamp';
 const TOKEN_MAX_AGE = 60 * 60 * 1000; // 1 hour in milliseconds

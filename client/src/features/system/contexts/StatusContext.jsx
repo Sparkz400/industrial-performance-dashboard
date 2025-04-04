@@ -1,7 +1,7 @@
-// ===== ..\client\src\features\system\contexts\StatusContext.jsx =====
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import io from 'socket.io-client'; // Import socket.io-client
 import { API_ENDPOINTS, WEBSOCKET_ADDR } from '../../../config/config.js';
+import { getStoredCsrfToken } from '../../../utils/csrf.js'; // Import CSRF token utility
 
 // Create a context for system status
 export const StatusContext = createContext({
@@ -12,6 +12,7 @@ export const StatusContext = createContext({
     },
     lastChecked: null,
     socketConnected: false, // Add WebSocket connection status
+    socket: null, // Add socket instance
     refreshStatus: () => {}
 });
 
@@ -56,10 +57,15 @@ export function StatusProvider({ children }) {
         if (socketRef.current) return;
 
         console.log('[StatusProvider] Attempting WebSocket connection to:', WEBSOCKET_ADDR);
+        const token = getStoredCsrfToken(); // Get CSRF token for handshake
+        if (!token) {
+            console.warn('[StatusProvider] No CSRF token found for WebSocket handshake. Authentication might fail.');
+        }
         const socketInstance = io(WEBSOCKET_ADDR, {
             reconnectionAttempts: 5,
             reconnectionDelay: 3000,
             transports: ['websocket'], // Prefer websocket
+            auth: { token: token || undefined } // Send CSRF token in auth object
             // Add query params if needed, e.g., for roles: query: { role: 'dashboard-viewer' }
         });
         socketRef.current = socketInstance;
@@ -75,7 +81,7 @@ export function StatusProvider({ children }) {
         socketInstance.on('disconnect', (reason) => {
             console.warn('[StatusProvider] WebSocket disconnected:', reason);
             setSocketConnected(false);
-            // If disconnected unexpectedly, fallback to polling more frequently?
+            // If disconnected unexpectedly, fallback to polling
             // Or trigger a single poll attempt.
             refreshStatus();
         });
@@ -83,7 +89,7 @@ export function StatusProvider({ children }) {
         socketInstance.on('connect_error', (error) => {
             console.error('[StatusProvider] WebSocket connection error:', error);
             setSocketConnected(false);
-            // Fallback to polling if WS connection fails initially
+            // Fallback to polling if WS connection fails
             refreshStatus();
         });
 
@@ -111,7 +117,7 @@ export function StatusProvider({ children }) {
             }
             setSocketConnected(false);
         };
-    }, [refreshStatus]); // Include refreshStatus dependency
+    }, [refreshStatus]); // refreshStatus is stable due to useCallback
 
     // Polling interval as a fallback
     useEffect(() => {
@@ -123,7 +129,7 @@ export function StatusProvider({ children }) {
         }, interval);
 
         return () => clearInterval(pollId);
-    }, [socketConnected, refreshStatus]); // Re-run if socket connection status or refresh function changes
+    }, [socketConnected, refreshStatus]);
 
     return (
         <StatusContext.Provider
@@ -131,6 +137,7 @@ export function StatusProvider({ children }) {
                 status,
                 lastChecked,
                 socketConnected, // Expose socket connection status
+                socket: socketRef.current, // Expose the socket instance itself
                 refreshStatus,
                 // Simplified derived states based on the overall status string
                 isError: status?.overall?.status === 'ERROR',

@@ -8,6 +8,7 @@ const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
 const dbClient = require('./src/database/dbConnection');
 const opcuaConnectionManager = require('./src/opc-ua/services/opcuaConnectionManager');
+const { opcuaEmitter } = require('./src/opc-ua/opcuaClient');
 const helmet = require('helmet');
 const { rateLimiter } = require('./src/middleware/security');
 const logger = require('./src/utils/logger');
@@ -16,11 +17,13 @@ const compression = require('compression');
 const connectionTracker = require('./src/utils/connectionTracker');
 const statusManager = require("./src/utils/status");
 const StatusConstants = require('./src/utils/statusConstants');
+const { CSRF_HEADER_NAME } = require('./src/utils/csrf'); // Import CSRF header name
+const config = require('./src/config/config');
 
 const app = express();
 
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: config.CLIENT_URL,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true
 }));
@@ -29,7 +32,7 @@ app.use(helmet({
         directives: {
             ...helmet.contentSecurityPolicy.getDefaultDirectives(),
             "script-src": ["'self'", "'unsafe-inline'"], // Example: Adjust based on client needs
-            "connect-src": ["'self'", process.env.CLIENT_URL || 'http://localhost:5173', "ws://localhost:3000", "http://localhost:3000"], // Allow self, client origin, and WebSocket/API
+            "connect-src": ["'self'", config.CLIENT_URL, `ws://${new URL(config.CLIENT_URL).hostname}:3000`, `http://${new URL(config.CLIENT_URL).hostname}:3000`],
             // Add other directives like style-src, img-src as needed
         },
     },
@@ -40,16 +43,23 @@ app.use(helmet({
 app.use(rateLimiter);
 app.use(compression());
 app.use(express.json());
-app.use(cookieParser());
 
 app.set('etag', 'strong');
 app.disable('x-powered-by');
+
+if (!config.COOKIE_SECRET) {
+    logger.error('FATAL ERROR: COOKIE_SECRET environment variable is not set.');
+    process.exit(1);
+}
+// Initialize cookie-parser with the secret
+app.use(cookieParser(config.COOKIE_SECRET));
 
 const csrfProtection = csrf({
     cookie: {
         httpOnly: true, // Cannot be accessed by client-side scripts
         secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
-        sameSite: 'strict' // Helps mitigate CSRF attacks
+        sameSite: 'lax', // strict Helps mitigate CSRF attacks
+        signed: true,
     }
 });
 
@@ -57,21 +67,21 @@ app.use(csrfProtection);
 
 app.get('/api/csrf-token', (req, res) => {
     const token = req.csrfToken();
-    logger.info(`[CSRF] Sending token: ${token}, Cookie: ${req.cookies['_csrf'] || 'Not Set Yet'}`);
+    logger.info(`[CSRF] Sending token: ${token}, Signed Cookie: ${req.signedCookies ? req.signedCookies['_csrf'] : 'Not Signed/Available'}`);
     res.json({ csrfToken: token });
 });
 
 // --- OPC UA Data Queue and Worker ---
 const opcuaDataQueue = new AsyncQueue();
-const BATCH_SIZE = parseInt(process.env.OPCUA_BATCH_SIZE || '100', 10);
-const QUEUE_PROCESS_DELAY = parseInt(process.env.OPCUA_QUEUE_DELAY || '500', 10);
-const MAX_QUEUE_LOG_THRESHOLD = parseInt(process.env.OPCUA_QUEUE_WARN_THRESHOLD || '10000', 10);
+const BATCH_SIZE = config.OPCUA_BATCH_SIZE;
+const QUEUE_PROCESS_DELAY = config.OPCUA_QUEUE_DELAY;
+const MAX_QUEUE_LOG_THRESHOLD = config.OPCUA_QUEUE_WARN_THRESHOLD;
 
 setInterval(() => {
     const currentSize = opcuaDataQueue.size();
     if (currentSize > 0) {
         logger.info(`OPC UA Data Queue Size: ${currentSize}`);
-       if (currentSize > MAX_QUEUE_LOG_THRESHOLD) {
+        if (currentSize > MAX_QUEUE_LOG_THRESHOLD) {
             logger.warn(`OPC UA Data Queue size (${currentSize}) exceeds threshold (${MAX_QUEUE_LOG_THRESHOLD}). Processing might be falling behind.`);
         }
     }
@@ -174,12 +184,12 @@ processQueue().catch(err => {
     process.exit(1); // Exit if the loop itself crashes
 });
 
-const { opcuaEmitter } = require('./src/opc-ua/opcuaClient');
-
 opcuaEmitter.on('nodeChanged', (data) => {
     // Basic validation
     if (data && data.key && data.timestamp && data.value !== undefined) {
-        io.emit('opcuaUpdate', data); // Emit to clients
+        const roomName = `opcua-${data.key}`;
+        // Broadcast only to clients interested in this specific node key
+        io.to(roomName).emit('opcuaUpdate', data);
         persistOpcuaData(data);      // Add to persistence queue
 
         // Update status timestamp to show activity, only if connected
@@ -271,13 +281,10 @@ const server = http.createServer(app);
 
 const io = socketIo(server, {
     cors: {
-        origin: process.env.CLIENT_URL || 'http://localhost:5173',
+        origin:config.CLIENT_URL,
         methods: ["GET", "POST"],
         credentials: true
-    },
-    // Optional: Add ping timeout/interval for connection health
-    // pingInterval: 10000,
-    // pingTimeout: 5000,
+    }
 });
 
 // --- Listen for Status Manager Updates and Broadcast ---
@@ -285,6 +292,23 @@ statusManager.on('broadcastUpdate', (fullStatus) => {
     logger.info('[WebSocket] Broadcasting status update to clients.');
     io.emit('statusUpdate', fullStatus);
 });
+
+// --- Socket.IO Authentication Middleware ---
+io.use((socket, next) => {
+    const req = socket.request;
+    // Manually invoke cookie parser middleware for the handshake request
+    cookieParser(config.COOKIE_SECRET)(req, {}, (err) => {
+        if (err) {
+            logger.error('Socket.IO Cookie parsing error:', err);
+            return next(new Error('Authentication error: Invalid cookies'));
+        }
+
+        logger.info(`Socket.IO connection request received for ${socket.id}. Further authentication may apply.`);
+        socket.user = { authenticated: true }; // Mark socket as authenticated
+        next();
+    });
+});
+// --- End Socket.IO Authentication Middleware ---
 
 io.on('connection', (socket) => {
     const clientIp = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address; // Handle proxies
@@ -296,6 +320,13 @@ io.on('connection', (socket) => {
     };
 
     connectionTracker.addConnection(socket.id, clientInfo);
+
+    // Double-check authentication status set by middleware
+    if (!socket.user?.authenticated) {
+        logger.warn(`Unauthenticated socket ${socket.id} connected despite middleware. Disconnecting.`);
+        return socket.disconnect(true);
+    }
+
     logger.info(`Client connected via WebSocket: ${socket.id} from ${clientIp}`);
 
     try {
@@ -305,6 +336,25 @@ io.on('connection', (socket) => {
     } catch (error) {
         logger.error(`[WebSocket] Failed to send initial status to ${socket.id}:`, error);
     }
+
+    // --- Room Management ---
+    socket.on('joinRoom', (roomName) => {
+        if (typeof roomName === 'string' && roomName.startsWith('opcua-')) {
+            socket.join(roomName);
+            logger.info(`Socket ${socket.id} joined room: ${roomName}`);
+        } else {
+            logger.warn(`Socket ${socket.id} attempted to join invalid room: ${roomName}`);
+        }
+    });
+
+    socket.on('leaveRoom', (roomName) => {
+        if (typeof roomName === 'string' && roomName.startsWith('opcua-')) {
+            socket.leave(roomName);
+            logger.info(`Socket ${socket.id} left room: ${roomName}`);
+        } else {
+            logger.warn(`Socket ${socket.id} attempted to leave invalid room: ${roomName}`);
+        }
+    });
 
     const isAdmin = clientInfo.query?.role === 'admin';
     if (isAdmin) {
@@ -348,8 +398,14 @@ io.on('connection', (socket) => {
         logger.info(`Non-admin client ${socket.id} connected.`);
     }
 
-    socket.on('disconnect', (reason) => { /* ... */ });
-    socket.on('error', (error) => { /* ... */ });
+    socket.on('disconnect', (reason) => {
+        logger.info(`Client disconnected: ${socket.id}, Reason: ${reason}`);
+        connectionTracker.removeConnection(socket.id);
+    });
+    socket.on('error', (error) => {
+        logger.error(`Socket error for ${socket.id}:`, error);
+        // Consider disconnecting on certain errors: socket.disconnect(true);
+    });
 });
 
 // --- Start OPC UA Connection ---
@@ -365,7 +421,7 @@ app.use((err, req, res, next) => {
     if (err.code === 'EBADCSRFTOKEN') {
         logger.error('[CSRF Error] Invalid token detected:', {
             url: req.originalUrl,
-            method: req.method,
+            method: req.method, // CSRF token from header
             ip: req.ip,
             receivedTokenHeader: req.headers['x-csrf-token'] || 'MISSING', // Check specific header
             receivedCookies: req.cookies, // Log parsed cookies
@@ -383,7 +439,11 @@ app.use((err, req, res, next) => {
 
 
     // Log the full error stack for debugging
-    logger.error("Unhandled error:", { /* ... logging details ... */ });
+    logger.error("Unhandled error:", {
+        message: err.message,
+        stack: err.stack,
+        statusCode: err.statusCode || 500
+    });
 
     // Set default status code and message
     const statusCode = err.statusCode || 500;
@@ -450,7 +510,7 @@ const shutdown = async (signal) => {
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-const PORT = process.env.PORT || 3000;
+const PORT = config.PORT;
 server.listen(PORT, () => {
     logger.info(`Server is running on http://localhost:${PORT}`);
     // Set initial database status after server starts listening

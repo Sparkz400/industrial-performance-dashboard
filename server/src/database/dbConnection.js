@@ -2,6 +2,7 @@ const { Pool } = require('pg');
 const statusManager = require('../utils/status');
 const StatusConstants = require('../utils/statusConstants');
 const logger = require('../utils/logger');
+const config = require('../config/config');
 
 /**
  * Class for managing database connections with integrated health monitoring
@@ -16,14 +17,14 @@ class DatabaseManager {
 
         // Create the database pool with environment configurations
         this.pool = new Pool({
-            host: process.env.DB_HOST || 'localhost',
-            port: process.env.DB_PORT || 5432,
-            user: process.env.DB_USER || 'postgres',
-            password: process.env.DB_PASSWORD || 'root', // Ensure this is securely managed!
-            database: process.env.DB_NAME || 'postgres',
-            max: parseInt(process.env.DB_MAX_POOL || '10', 10), // Ensure number
-            connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '10000', 10),
-            idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000', 10)
+            host: config.DB_HOST,
+            port: config.DB_PORT,
+            user: config.DB_USER,
+            password: config.DB_PASSWORD,
+            database: config.DB_NAME,
+            max: config.DB_MAX_POOL,
+            connectionTimeoutMillis: config.DB_CONNECTION_TIMEOUT,
+            idleTimeoutMillis: config.DB_IDLE_TIMEOUT
         });
 
         this.pool.on('error', (err) => {
@@ -52,7 +53,7 @@ class DatabaseManager {
 
         try {
             const client = await this.pool.connect();
-            logger.info(`Connected to PostgreSQL database: ${process.env.DB_NAME || 'postgres'} on ${process.env.DB_HOST || 'localhost'}`);
+            logger.info(`Connected to PostgreSQL database: ${config.DB_NAME} on ${config.DB_HOST}`);
 
             statusManager.setDatabaseStatus(StatusConstants.CONNECTED, {
                 message: 'Connection successful',
@@ -102,8 +103,10 @@ class DatabaseManager {
             clearInterval(this.healthCheckInterval);
         }
 
-        const healthCheckIntervalMs = parseInt(process.env.DB_HEALTH_CHECK_INTERVAL || '60000', 10);
-        if (healthCheckIntervalMs <= 0) {
+        // Use the config value directly
+        const intervalMs = config.DB_HEALTH_CHECK_INTERVAL; // Get interval from config
+
+        if (intervalMs <= 0) { // Use the fetched value for the check
             logger.warn("Database health check is disabled (interval <= 0).");
             return;
         }
@@ -147,9 +150,9 @@ class DatabaseManager {
                 this.healthCheckInterval = null;
                 this.scheduleReconnect();
             }
-        }, healthCheckIntervalMs);
+        }, intervalMs);
 
-        logger.info(`Database health check scheduled every ${healthCheckIntervalMs / 1000} seconds`);
+        logger.info(`Database health check scheduled every ${intervalMs / 1000} seconds`);
     }
 
     async query(text, params = [], options = { maxRetries: 2 }) {

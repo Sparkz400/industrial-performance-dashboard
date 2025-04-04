@@ -115,17 +115,19 @@ class StatusManager extends EventEmitter { // Inherit from EventEmitter
     /** Get complete status object */
     getFullStatus() {
         const overall = this.getOverallStatus();
+        const dbStatus = this.getServiceStatus(StatusConstants.DATABASE);
+        const opcuaStatus = this.getServiceStatus(StatusConstants.OPCUA);
         return {
-            database: { // <-- Standardize structure here
-                status: this.getServiceStatus(StatusConstants.DATABASE),
-                statusText: StatusConstants.getStatusLabel(this.getServiceStatus(StatusConstants.DATABASE)),
-                statusColor: StatusConstants.getStatusColor(this.getServiceStatus(StatusConstants.DATABASE)),
+            database: {
+                status: dbStatus,
+                statusText: StatusConstants.getStatusLabel(dbStatus),
+                statusColor: StatusConstants.getStatusColor(dbStatus),
                 details: this.getServiceDetails(StatusConstants.DATABASE) || {}
             },
-            opcua: { // <-- Standardize structure here
-                status: this.getServiceStatus(StatusConstants.OPCUA),
-                statusText: StatusConstants.getStatusLabel(this.getServiceStatus(StatusConstants.OPCUA)),
-                statusColor: StatusConstants.getStatusColor(this.getServiceStatus(StatusConstants.OPCUA)),
+            opcua: {
+                status: opcuaStatus,
+                statusText: StatusConstants.getStatusLabel(opcuaStatus),
+                statusColor: StatusConstants.getStatusColor(opcuaStatus),
                 details: this.getServiceDetails(StatusConstants.OPCUA) || {}
             },
             overall: { // <-- Standardize structure here

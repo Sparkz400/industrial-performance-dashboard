@@ -10,7 +10,7 @@ const opcuaConnectionManager = require('../services/opcuaConnectionManager');
 // Middleware to ensure certificates are initialized
 const ensureCertificatesInitialized = async (req, res, next) => {
     try {
-        await certificateManager.initialize();
+        await certificateManager.ensureInitialized();
         next();
     } catch (error) {
         logger.error('Error initializing certificates:', error);

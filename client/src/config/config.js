@@ -1,7 +1,7 @@
 // The base URL for the API; this can be overridden by an environment variable.
 export const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
-export const WEBSOCKET_ADDR = "http://localhost:3000";
+export const WEBSOCKET_ADDR = import.meta.env.VITE_WEBSOCKET_ADDR || "http://localhost:3000";
 
 // Centralized API endpoints.
 export const API_ENDPOINTS = {

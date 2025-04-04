@@ -1,4 +1,5 @@
-const MAX_QUEUE_SIZE = 100000;
+const config = require('../config/config');
+const MAX_QUEUE_SIZE = config.MAX_QUEUE_SIZE;
 
 class AsyncQueue {
     constructor() {

@@ -6,9 +6,9 @@ const { SecurityPolicy, MessageSecurityMode } = require('node-opcua'); // Import
 const logger = require('../../utils/logger');
 const os = require('os');
 const crypto = require('crypto');
+const config = require('../../config/config');
 
 // Promisify fs functions
-const mkdir = promisify(fs.mkdir);
 const exists = promisify(fs.exists);
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
@@ -20,53 +20,108 @@ const unlink = promisify(fs.unlink);
  */
 class CertificateManager {
     constructor() {
-        // --- Path Configuration ---
-        // Allow overriding the base PKI directory via environment variable
-        const customPkiDir = process.env.OPCUA_PKI_DIR;
-        let basePkiDir = customPkiDir || this.getDefaultPkiDir();
-
-        // Check if the custom or default directory exists
-        this.initializeBaseDir(basePkiDir, customPkiDir).then(resolvedPkiDir => {
-            this.pkiDir = resolvedPkiDir;
-            this.certificatesDir = path.join(this.pkiDir, 'own', 'certs');
-            this.privateKeyDir = path.join(this.pkiDir, 'own', 'private');
-            this.trustedDir = path.join(this.pkiDir, 'trusted', 'certs');
-            this.rejectedDir = path.join(this.pkiDir, 'rejected', 'certs');
-            this.issuerDir = path.join(this.pkiDir, 'issuer', 'certs');
-
-            // Update certificate paths based on the resolved PKI directory
-            this.certificateFile = path.join(this.certificatesDir, 'client_certificate.pem');
-            // Standard practice is often private_key.pem for the private key
-            this.privateKeyFile = path.join(this.privateKeyDir, 'private_key.pem');
-
-            logger.info(`Using PKI directory: ${this.pkiDir}`);
-
-            // Initialize the manager and ensure certs exist after paths are set
-            this.initialize().catch(err => {
-                logger.error("Delayed initialization failed:", err);
-            });
-
-        }).catch(err => {
-            logger.error("Failed to resolve PKI base directory:", err);
-            // Fallback to a local directory in case of error during async init
-            this.pkiDir = path.join(process.cwd(), 'certificates_fallback');
-            // Set other paths based on fallback... (similar logic as above)
-            logger.warn(`Falling back to local PKI directory: ${this.pkiDir}`);
-            this.initialize().catch(initErr => logger.error("Fallback initialization failed:", initErr));
-        });
-        // --- End Path Configuration ---
-
-
         // --- Certificate Subject Configuration ---
-        this.applicationName = process.env.OPCUA_APPLICATION_NAME || 'NodeOPCUA-Client';
-        this.organizationName = process.env.OPCUA_CERT_ORG_NAME || 'OpenSource';
-        this.countryName = process.env.OPCUA_CERT_COUNTRY || 'US';
-        this.localityName = process.env.OPCUA_CERT_LOCALITY || 'Somewhere';
-        this.stateName = process.env.OPCUA_CERT_STATE || 'State';
+        this.applicationName = config.OPCUA_APPLICATION_NAME;
+        this.organizationName = config.OPCUA_CERT_ORG_NAME;
+        this.countryName = config.OPCUA_CERT_COUNTRY;
+        this.localityName = config.OPCUA_CERT_LOCALITY;
+        this.stateName = config.OPCUA_CERT_STATE;
         // --- End Certificate Subject Configuration ---
 
-        this.applicationUri = null; // Will be set during initialization
-        this.certManager = null; // Initialize later
+        // Initialize properties to null/defaults
+        this.pkiDir = null;
+        this.certificatesDir = null;
+        this.privateKeyDir = null;
+        this.trustedDir = null;
+        this.rejectedDir = null;
+        this.issuerDir = null;
+        this.certificateFile = null;
+        this.privateKeyFile = null;
+        this.applicationUri = null;
+        this.certManager = null;
+        this.isInitialized = false;
+        this._initializePromise = null;
+    }
+
+    /**
+     * Ensures the manager is initialized. Call this before using other methods.
+     * Handles concurrent calls safely.
+     * @returns {Promise<void>}
+     */
+    ensureInitialized() {
+        if (this.isInitialized) {
+            return Promise.resolve();
+        }
+        if (this._initializePromise) {
+            return this._initializePromise; // Return existing promise if init is in progress
+        }
+
+        // Start initialization
+        this._initializePromise = (async () => {
+            try {
+                logger.info("Initializing Certificate Manager...");
+
+                // --- Determine and Set Paths ---
+                const customPkiDir = config.OPCUA_PKI_DIR;
+                const defaultPkiDir = this.getDefaultPkiDir();
+                this.pkiDir = await this.resolveBaseDir(defaultPkiDir, customPkiDir);
+
+                this.certificatesDir = path.join(this.pkiDir, 'own', 'certs');
+                this.privateKeyDir = path.join(this.pkiDir, 'own', 'private');
+                this.trustedDir = path.join(this.pkiDir, 'trusted', 'certs');
+                this.rejectedDir = path.join(this.pkiDir, 'rejected', 'certs');
+                this.issuerDir = path.join(this.pkiDir, 'issuer', 'certs');
+                this.certificateFile = path.join(this.certificatesDir, 'client_certificate.pem');
+                this.privateKeyFile = path.join(this.privateKeyDir, 'private_key.pem'); // Standard name
+
+                const hostname = os.hostname();
+                this.applicationUri = `urn:${hostname}:${this.applicationName}`;
+                logger.info(`Using ApplicationURI: ${this.applicationUri}`);
+                logger.info(`Using PKI directory: ${this.pkiDir}`);
+
+                // --- Ensure Directories Exist ---
+                await this.ensureDirectoryExists(this.pkiDir);
+                await this.ensureDirectoryExists(this.certificatesDir);
+                await this.ensureDirectoryExists(this.privateKeyDir);
+                await this.ensureDirectoryExists(this.trustedDir);
+                await this.ensureDirectoryExists(this.rejectedDir);
+                await this.ensureDirectoryExists(this.issuerDir);
+
+                // --- Initialize node-opcua Manager ---
+                this.certManager = new OPCUACertificateManager({
+                    rootFolder: this.pkiDir,
+                    automaticallyAcceptUnknownCertificate: config.AUTO_ACCEPT_CERTIFICATES
+                });
+                await this.certManager.initialize();
+                logger.info(`OPCUACertificateManager initialized.`);
+
+                // --- Check/Create Client Certificate ---
+                const certExists = await exists(this.certificateFile);
+                const keyExists = await exists(this.privateKeyFile);
+
+                if (!certExists || !keyExists) {
+                    logger.info("Client certificate or private key missing, creating new ones...");
+                    await this.createClientCertificate();
+                } else {
+                    logger.info(`Client certificate found: ${this.certificateFile}`);
+                    logger.info(`Client private key found: ${this.privateKeyFile}`);
+                }
+
+                this.isInitialized = true;
+                logger.info("Certificate Manager initialization complete.");
+
+            } catch (error) {
+                logger.error('Failed to initialize Certificate Manager:', error);
+                this.isInitialized = false; // Ensure flag is false on error
+                this.certManager = null;
+                this._initializePromise = null; // Reset promise on error
+                throw error; // Re-throw to indicate failure
+            } finally {
+                // No need to reset promise here if successful, keep it resolved
+            }
+        })();
+
+        return this._initializePromise;
     }
 
     /**
@@ -74,12 +129,13 @@ class CertificateManager {
      * @returns {string} The default PKI path.
      */
     getDefaultPkiDir() {
+        // ... (remains the same)
         if (process.platform === 'win32') {
             return path.join(os.homedir(), 'AppData', 'Roaming', 'node-opcua-default-nodejs', 'Config', 'PKI');
         } else if (process.platform === 'darwin') {
             return path.join(os.homedir(), 'Library', 'Application Support', 'node-opcua-default-nodejs', 'Config', 'PKI');
         } else {
-            return path.join(os.homedir(), '.config', 'node-opcua-default-nodejs', 'Config', 'PKI'); // More standard Linux path
+            return path.join(os.homedir(), '.config', 'node-opcua-default-nodejs', 'Config', 'PKI');
         }
     }
 
@@ -89,79 +145,26 @@ class CertificateManager {
      * @param {string|null} customPkiDir - The path from the environment variable.
      * @returns {Promise<string>} The resolved PKI directory path.
      */
-    async initializeBaseDir(defaultPkiDir, customPkiDir) {
+    async resolveBaseDir(defaultPkiDir, customPkiDir) {
         if (customPkiDir) {
             logger.info(`Custom PKI directory specified: ${customPkiDir}`);
-            return customPkiDir; // Use custom path if provided
+            return customPkiDir;
         }
-
         try {
             const defaultDirExists = await exists(defaultPkiDir);
             if (defaultDirExists) {
                 logger.info(`Using default node-opcua PKI directory: ${defaultPkiDir}`);
                 return defaultPkiDir;
             } else {
-                logger.info(`Default PKI directory not found. Using local path: ${path.join(process.cwd(), 'certificates')}`);
-                return path.join(process.cwd(), 'certificates'); // Fallback to local project dir
+                const localPath = path.join(process.cwd(), 'certificates');
+                logger.info(`Default PKI directory not found. Using local path: ${localPath}`);
+                return localPath;
             }
         } catch (error) {
             logger.error(`Error checking default PKI directory (${defaultPkiDir}):`, error);
-            logger.warn(`Falling back to local PKI directory due to error: ${path.join(process.cwd(), 'certificates')}`);
-            return path.join(process.cwd(), 'certificates'); // Fallback on error
-        }
-    }
-
-
-    /**
-     * Initialize the certificate manager, creating necessary directories and the client cert if needed.
-     * @returns {Promise<void>}
-     */
-    async initialize() {
-        // This function might be called multiple times (constructor, getClientOptions), ensure idempotency
-        if (this.certManager) {
-            // logger.debug("Certificate Manager already initialized.");
-            return;
-        }
-
-        try {
-            const hostname = os.hostname();
-            // Construct a compliant ApplicationURI
-            this.applicationUri = `urn:${hostname}:${this.applicationName}`;
-            logger.info(`Using ApplicationURI: ${this.applicationUri}`);
-
-            // Ensure all necessary directories exist
-            await this.ensureDirectoryExists(this.pkiDir);
-            await this.ensureDirectoryExists(this.certificatesDir);
-            await this.ensureDirectoryExists(this.privateKeyDir);
-            await this.ensureDirectoryExists(this.trustedDir);
-            await this.ensureDirectoryExists(this.rejectedDir);
-            await this.ensureDirectoryExists(this.issuerDir);
-
-            // Initialize the node-opcua certificate manager instance
-            this.certManager = new OPCUACertificateManager({
-                rootFolder: this.pkiDir,
-                automaticallyAcceptUnknownCertificate: process.env.AUTO_ACCEPT_CERTIFICATES === 'true' // Configure auto-accept here
-            });
-            await this.certManager.initialize(); // Initialize the manager itself
-
-            logger.info(`OPCUACertificateManager initialized for PKI root: ${this.pkiDir}`);
-
-            // Check if certificate exists, create if it doesn't
-            const certExists = await exists(this.certificateFile);
-            const keyExists = await exists(this.privateKeyFile);
-
-            if (!certExists || !keyExists) {
-                logger.info("Client certificate or private key missing, creating new ones...");
-                await this.createClientCertificate();
-            } else {
-                logger.info(`Client certificate found: ${this.certificateFile}`);
-                logger.info(`Client private key found: ${this.privateKeyFile}`);
-                // Optional: Validate existing certificate expiry?
-            }
-        } catch (error) {
-            logger.error('Failed to initialize Certificate Manager:', error);
-            this.certManager = null; // Ensure manager is null on failure
-            throw error; // Re-throw to indicate initialization failure
+            const fallbackPath = path.join(process.cwd(), 'certificates_fallback');
+            logger.warn(`Falling back to local PKI directory due to error: ${fallbackPath}`);
+            return fallbackPath;
         }
     }
 
@@ -171,22 +174,29 @@ class CertificateManager {
      * @returns {Promise<void>}
      */
     async ensureDirectoryExists(dir) {
+        if (typeof dir !== 'string' || dir.trim() === '') {
+            throw new TypeError(`Invalid path provided to ensureDirectoryExists: ${dir}`);
+        }
         try {
-            if (!await exists(dir)) {
-                await fs.promises.mkdir(dir, { recursive: true });
-                logger.info(`Created directory: ${dir}`);
-            }
+            await fs.promises.mkdir(dir, { recursive: true });
+            // logger.debug(`Ensured directory exists: ${dir}`); // Make debug level
         } catch (error) {
-            logger.error(`Failed to ensure directory exists (${dir}):`, error);
-            throw error; // Propagate the error
+            if (error.code !== 'EEXIST') {
+                logger.error(`Failed to ensure directory exists (${dir}):`, error);
+                throw error;
+            }
         }
     }
+
 
     /**
      * Create a new client certificate using the refined custom method.
      * @returns {Promise<Object>} Object containing certificate paths and URI.
      */
     async createClientCertificate() {
+        // Ensure initialization is complete before proceeding
+        await this.ensureInitialized();
+
         try {
             logger.info('Creating new client certificate...');
 
@@ -195,8 +205,6 @@ class CertificateManager {
 
             const hostname = os.hostname();
             const ipAddresses = this.getIpAddresses();
-
-            // Use the applicationUri set during initialization
             const applicationUri = this.applicationUri;
 
             logger.info(`Certificate Details - Hostname: ${hostname}, AppURI: ${applicationUri}, IPs: ${ipAddresses.join(', ')}`);
@@ -204,7 +212,7 @@ class CertificateManager {
 
             // Use node-forge for certificate creation
             const { pki, md } = require('node-forge');
-            const keys = pki.rsa.generateKeyPair(2048); // Generate keys using node-forge
+            const keys = pki.rsa.generateKeyPair(2048);
             const cert = pki.createCertificate();
 
             cert.publicKey = keys.publicKey;
@@ -228,9 +236,7 @@ class CertificateManager {
                 { type: 2, value: hostname },       // DNS Name
                 { type: 2, value: 'localhost' },    // DNS Name
             ];
-            ipAddresses.forEach(ip => {
-                altNames.push({ type: 7, ip: ip }); // IP Address
-            });
+            ipAddresses.forEach(ip => { altNames.push({ type: 7, ip: ip }); });
 
             cert.setExtensions([
                 { name: 'basicConstraints', cA: false }, // Not a CA
@@ -248,24 +254,10 @@ class CertificateManager {
             const privateKeyPem = pki.privateKeyToPem(keys.privateKey);
 
             // --- Robust File Writing ---
-            try {
-                await writeFile(this.certificateFile, certPem);
-                logger.info(`Client certificate written to: ${this.certificateFile}`);
-            } catch (writeError) {
-                logger.error(`Failed to write certificate file (${this.certificateFile}):`, writeError);
-                throw writeError;
-            }
-
-            try {
-                await writeFile(this.privateKeyFile, privateKeyPem);
-                logger.info(`Client private key written to: ${this.privateKeyFile}`);
-            } catch (writeError) {
-                logger.error(`Failed to write private key file (${this.privateKeyFile}):`, writeError);
-                // Attempt to clean up certificate file if key writing fails
-                try { await unlink(this.certificateFile); } catch (cleanupError) { /* ignore */ }
-                throw writeError;
-            }
-            // --- End Robust File Writing ---
+            await writeFile(this.certificateFile, certPem);
+            logger.info(`Client certificate written to: ${this.certificateFile}`);
+            await writeFile(this.privateKeyFile, privateKeyPem);
+            logger.info(`Client private key written to: ${this.privateKeyFile}`);
 
             return {
                 certificateFile: this.certificateFile,
@@ -274,7 +266,7 @@ class CertificateManager {
             };
         } catch (error) {
             logger.error(`Failed to create client certificate: ${error.message}`, { stack: error.stack });
-            throw error; // Re-throw the error
+            throw error;
         }
     }
 
@@ -303,28 +295,24 @@ class CertificateManager {
         return ipAddresses;
     }
 
-
     /**
      * Load certificate and private key with error handling.
      * @returns {Promise<{certificate: Buffer, privateKey: Buffer}>}
      */
     async loadCertificates() {
+        await this.ensureInitialized();
         try {
-            // Ensure manager is initialized and paths are set
-            if (!this.certManager) await this.initialize();
-
+            // Re-check existence after ensuring initialized
             if (!await exists(this.certificateFile) || !await exists(this.privateKeyFile)) {
                 logger.warn("Certificate or key not found during load, attempting to recreate...");
-                await this.createClientCertificate(); // Attempt to recreate if missing
+                await this.createClientCertificate();
             }
-
             const certificate = await readFile(this.certificateFile);
             const privateKey = await readFile(this.privateKeyFile);
-
             return { certificate, privateKey };
         } catch (error) {
             logger.error('Failed to load certificates:', { file: this.certificateFile, key: this.privateKeyFile, error: error.message });
-            throw error; // Re-throw for calling function to handle
+            throw error;
         }
     }
 
@@ -335,6 +323,7 @@ class CertificateManager {
      * @returns {Promise<string>} - Path to the trusted certificate
      */
     async trustCertificate(certificate, name) {
+        await this.ensureInitialized();
         try {
             if (!this.certManager) await this.initialize();
 
@@ -357,6 +346,7 @@ class CertificateManager {
      * @returns {Promise<Array<Object>>} - List of trusted certificates { name, path, content (base64) }
      */
     async getTrustedCertificates() {
+        await this.ensureInitialized();
         return this._getCertificatesFromDir(this.trustedDir, 'trusted');
     }
 
@@ -365,8 +355,10 @@ class CertificateManager {
      * @returns {Promise<Array<Object>>} - List of rejected certificates { name, path, content (base64) }
      */
     async getRejectedCertificates() {
+        await this.ensureInitialized();
         return this._getCertificatesFromDir(this.rejectedDir, 'rejected');
     }
+
 
     /**
      * Helper to read certificates from a directory.
@@ -406,13 +398,13 @@ class CertificateManager {
         return certificates;
     }
 
-
     /**
      * Move a certificate from rejected to trusted with error handling.
      * @param {string} filename - Name of the certificate file
      * @returns {Promise<string>} - Path to the trusted certificate
      */
     async acceptRejectedCertificate(filename) {
+        await this.ensureInitialized();
         try {
             if (!this.certManager) await this.initialize();
 
@@ -453,6 +445,7 @@ class CertificateManager {
      * @returns {Promise<Object>} - Client options for node-opcua.
      */
     async getClientOptions(securityMode = 'None', securityPolicy = 'None') {
+        await this.ensureInitialized();
         try {
             // Ensure manager is initialized (sets applicationUri, checks certs)
             if (!this.certManager) await this.initialize();
@@ -512,10 +505,8 @@ class CertificateManager {
                 securityPolicy: securityPolicyEnum,
                 certificateFile: this.certificateFile,
                 privateKeyFile: this.privateKeyFile,
-                // Use the initialized certManager's properties for trust/rejection
                 trustedCertificateList: this.certManager.trustedCertificateList,
                 rejectedCertificateList: this.certManager.rejectedCertificateList,
-                // Let the manager handle trust decisions based on folders
                 serverCertificateManager: this.certManager
             };
         } catch (error) {
