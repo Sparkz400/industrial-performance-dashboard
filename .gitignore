@@ -4,3 +4,9 @@ client/node_modules/
 server/error.log
 server/src/opc-ua/services/logs
 server/logs
+.idea/
+*.iml
+server/.env
+.env.*
+!.env.example
+package-lock.json
