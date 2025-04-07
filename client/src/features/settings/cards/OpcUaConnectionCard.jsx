@@ -2,7 +2,6 @@ import React from 'react';
 import {
     Box,
     TextField,
-    Button,
     Card,
     CardHeader,
     CardContent,
@@ -15,7 +14,7 @@ import Grid from '@mui/material/Grid2';
 import DnsIcon from '@mui/icons-material/Dns';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import StopCircleIcon from '@mui/icons-material/StopCircle';
-
+import { ButtonLoader } from '../../../shared/components/loading/index.js';
 const OpcUaConnectionCard = ({
                                  opcuaConnected,
                                  ip, setIp,
@@ -126,27 +125,29 @@ const OpcUaConnectionCard = ({
                     <Grid size={{ xs: 12 }}>
                         <Box display="flex" justifyContent="space-between">
                             <Box>
-                                <Button
+                                <ButtonLoader
                                     variant="contained"
                                     color="primary"
                                     onClick={handleConnect}
+                                    loading={loading && !opcuaConnected} // Show loading only when connecting
                                     disabled={opcuaConnected || loading}
                                     startIcon={<PlayCircleOutlineIcon />}
                                     sx={{ mr: 1 }}
                                     size="small"
                                 >
                                     Connect
-                                </Button>
-                                <Button
+                                </ButtonLoader>
+                                <ButtonLoader
                                     variant="outlined"
                                     color="secondary"
                                     onClick={handleDisconnect}
+                                    loading={loading && opcuaConnected}
                                     disabled={!opcuaConnected || loading}
                                     startIcon={<StopCircleIcon />}
                                     size="small"
                                 >
                                     Disconnect
-                                </Button>
+                                </ButtonLoader>
                             </Box>
                         </Box>
                     </Grid>

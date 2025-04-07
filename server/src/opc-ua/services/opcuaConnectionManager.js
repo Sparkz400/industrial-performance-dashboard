@@ -3,7 +3,7 @@ const statusManager = require('../../utils/status');
 const StatusConstants = require('../../utils/statusConstants');
 const logger = require('../../utils/logger');
 const EventEmitter = require('events');
-const { opcua } = require('node-opcua'); // Ensure opcua is imported if needed for AttributeIds
+const { opcua } = require('node-opcua');
 const config = require('../../config/config');
 /**
  * Manager for OPC UA connections with resilient reconnection and certificate support
@@ -349,39 +349,55 @@ class OpcuaConnectionManager extends EventEmitter {
             const { subscription, session, client } = this.currentConnection;
             this.currentConnection = null; // Clear immediately to prevent race conditions
 
+            const TIMEOUT_MS = 5000; // 5 second timeout for each step
+
             try {
                 if (subscription) {
-                    logger.debug("Terminating subscription...");
-                    await subscription.terminate();
-                    logger.debug("Subscription terminated.");
+                    logger.debug("[Manager Shutdown] Terminating OPC UA subscription...");
+                    await Promise.race([
+                        subscription.terminate(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error("Subscription terminate timeout")), TIMEOUT_MS))
+                    ]);
+                    logger.debug("[Manager Shutdown] Subscription terminated or timed out.");
                 }
             } catch (err) {
-                logger.error("Error terminating subscription:", err.message);
+                logger.error("[Manager Shutdown] Error/Timeout terminating subscription:", err.message);
             }
 
             try {
-                if (session && session.isOpen) { // Check if session is open before closing
-                    logger.debug("Closing session...");
-                    await session.close(); // Pass true to delete subscriptions
-                    logger.debug("Session closed.");
+                // Check session status before attempting to close
+                if (session && typeof session.isOpen === 'boolean' && session.isOpen) {
+                    logger.debug("[Manager Shutdown] Closing OPC UA session...");
+                    await Promise.race([
+                        session.close(true), // Pass true to delete subscriptions forcefully
+                        new Promise((_, reject) => setTimeout(() => reject(new Error("Session close timeout")), TIMEOUT_MS))
+                    ]);
+                    logger.debug("[Manager Shutdown] Session closed or timed out.");
                 } else if (session) {
-                    logger.debug("Session already closed or not open.");
+                    logger.debug("[Manager Shutdown] Session already closed or not open.");
+                } else {
+                    logger.debug("[Manager Shutdown] No session object found to close.");
                 }
             } catch (err) {
-                logger.error("Error closing session:", err.message);
+                logger.error("[Manager Shutdown] Error/Timeout closing session:", err.message);
             }
 
             try {
                 if (client) {
-                    logger.debug("Disconnecting client...");
-                    await client.disconnect();
-                    logger.debug("Client disconnected.");
+                    logger.debug("[Manager Shutdown] Disconnecting OPC UA client...");
+                    await Promise.race([
+                        client.disconnect(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error("Client disconnect timeout")), TIMEOUT_MS))
+                    ]);
+                    logger.debug("[Manager Shutdown] Client disconnected or timed out.");
+                } else {
+                    logger.debug("[Manager Shutdown] No client object found to disconnect.");
                 }
             } catch (err) {
-                logger.error("Error disconnecting client:", err.message);
+                logger.error("[Manager Shutdown] Error/Timeout disconnecting client:", err.message);
             }
 
-            logger.info("OPC UA connection resources released.");
+            logger.info("[Manager Shutdown] OPC UA connection resources released.");
             statusManager.setOpcuaStatus(StatusConstants.DISCONNECTED, {
                 message: 'Connection intentionally closed',
                 timestamp: new Date().toISOString()
@@ -389,22 +405,19 @@ class OpcuaConnectionManager extends EventEmitter {
             this.emit('disconnected');
 
         } else {
-            logger.info("No active OPC UA connection to disconnect.");
-            // Ensure status reflects disconnected state even if connection was already null
+            logger.info("[Manager Shutdown] No active OPC UA connection to disconnect.");
             if (statusManager.getServiceStatus(StatusConstants.OPCUA) !== StatusConstants.DISCONNECTED) {
                 statusManager.setOpcuaStatus(StatusConstants.DISCONNECTED, {
                     message: 'No connection was active'
                 });
             }
         }
-        // Allow new connections after disconnect attempt is complete
-        this.isConnecting = false;
-        // Reset connection attempts after a disconnect
-        this.connectionAttempts = 0;
-    }
 
-    // --- Other methods remain largely the same ---
-    // updateConnection, getConnectionInfo, getSecurityOptions, acceptCertificate, getConnectionPromise
+        // Reset state after attempting disconnect
+        this.isConnecting = false;
+        this.connectionAttempts = 0;
+        this.retryDelay = 5000;
+    }
 
     /**
      * Update connection configuration and reconnect

@@ -2,21 +2,18 @@ import { useState, useRef } from 'react';
 import { useSnackbar } from 'notistack'; // Import useSnackbar
 
 export const useBackupRestore = () => {
-    const [backupInProgress, setBackupInProgress] = useState(false);
-    // Removed alertInfo state
+    const [loading, setLoading] = useState(false); // Use a more generic name
     const { enqueueSnackbar } = useSnackbar(); // Use the hook
     const fileInputRef = useRef(null);
 
     // Handle export dashboards
     const handleExportDashboards = () => {
-        setBackupInProgress(true);
+        setLoading(true);
         try {
             const dashboardData = localStorage.getItem('dashboardData');
 
             if (!dashboardData) {
-                // Replace setAlertInfo
                 enqueueSnackbar('No dashboard data to export', { variant: 'warning' });
-                setBackupInProgress(false); // Ensure progress stops
                 return;
             }
 
@@ -30,23 +27,21 @@ export const useBackupRestore = () => {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            // Replace setAlertInfo
             enqueueSnackbar('Dashboards exported successfully', { variant: 'success' });
         } catch (err) {
             console.error('Error exporting dashboards:', err);
-            // Replace setAlertInfo
             enqueueSnackbar(`Export error: ${err.message}`, { variant: 'error' });
         } finally {
-            setBackupInProgress(false);
+            setLoading(false);
         }
     };
 
     // Handle file selection for import
     const handleFileSelected = (event) => {
-        const file = event.target.files?.[0]; // Use optional chaining
+        const file = event.target.files?.[0];
         if (!file) return;
 
-        setBackupInProgress(true);
+        setLoading(true);
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -64,14 +59,12 @@ export const useBackupRestore = () => {
 
                 localStorage.setItem('dashboardData', fileContent);
 
-                // Replace setAlertInfo
                 enqueueSnackbar(`Imported ${data.dashboards.length} dashboards successfully. Reload the dashboard page to see changes.`, { variant: 'success', persist: true }); // Persist important messages
             } catch (err) {
                 console.error('Error importing dashboards:', err);
-                // Replace setAlertInfo
                 enqueueSnackbar(`Import error: ${err.message}`, { variant: 'error' });
             } finally {
-                setBackupInProgress(false);
+                setLoading(false);
                 if (fileInputRef.current) {
                     fileInputRef.current.value = '';
                 }
@@ -79,9 +72,8 @@ export const useBackupRestore = () => {
         };
 
         reader.onerror = () => {
-            // Replace setAlertInfo
             enqueueSnackbar('Error reading file', { variant: 'error' });
-            setBackupInProgress(false);
+            setLoading(false);
         };
 
         reader.readAsText(file);
@@ -94,9 +86,8 @@ export const useBackupRestore = () => {
         }
     };
 
-    // Removed alertInfo and setAlertInfo from return
     return {
-        backupInProgress,
+        loading,
         fileInputRef,
         handleExportDashboards,
         handleFileSelected,

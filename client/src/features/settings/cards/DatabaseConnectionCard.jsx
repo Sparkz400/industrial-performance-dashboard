@@ -1,7 +1,6 @@
 import React from 'react';
 import {
     TextField,
-    Button,
     Card,
     CardHeader,
     CardContent,
@@ -12,7 +11,7 @@ import {
 import Grid from '@mui/material/Grid2';
 import StorageIcon from '@mui/icons-material/Storage';
 import CachedIcon from '@mui/icons-material/Cached';
-
+import { ButtonLoader } from '../../../shared/components/loading/index.js';
 const DatabaseConnectionCard = ({
                                     dbOnline,
                                     dbHost,
@@ -80,16 +79,16 @@ const DatabaseConnectionCard = ({
                         />
                     </Grid>
                     <Grid size={{ xs: 12 }}>
-                        <Button
+                        <ButtonLoader
                             variant="contained"
                             color="primary"
                             onClick={handleTestDbConnection}
-                            disabled={loading}
+                            loading={loading}
                             startIcon={<CachedIcon />}
                             size="small"
                         >
                             Test Connection
-                        </Button>
+                        </ButtonLoader>
                     </Grid>
                 </Grid>
             </CardContent>

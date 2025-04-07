@@ -29,7 +29,8 @@ import {
     LinearProgress,
     Paper,
     Tab,
-    Tabs
+    Tabs,
+    CircularProgress // Import CircularProgress
 } from '@mui/material';
 import {
     Security as SecurityIcon,
@@ -43,6 +44,7 @@ import {
 } from '@mui/icons-material';
 import { API_ENDPOINTS } from '../../../config/config.js';
 import { useSnackbar } from 'notistack'; // Import useSnackbar
+import { ButtonLoader } from '../../../shared/components/loading/index.js'; // Import ButtonLoader
 
 // TabPanel component
 function TabPanel(props) {
@@ -77,8 +79,12 @@ const CertificateManagement = () => {
     const [rejectedCerts, setRejectedCerts] = useState([]);
     const [clientCert, setClientCert] = useState(null);
 
-    // State for loading
-    const [loading, setLoading] = useState(false);
+    // State for loading specific actions
+    const [loadingCerts, setLoadingCerts] = useState(false);
+    const [loadingRegenerate, setLoadingRegenerate] = useState(false);
+    const [loadingAccept, setLoadingAccept] = useState(null); // Store filename being accepted
+    const [loadingUpload, setLoadingUpload] = useState(false);
+    const [loadingSecurityUpdate, setLoadingSecurityUpdate] = useState(false);
     // Removed error/success state
     const { enqueueSnackbar } = useSnackbar(); // Use the hook
 
@@ -110,8 +116,7 @@ const CertificateManagement = () => {
 
     // Function to load certificates
     const loadCertificates = useCallback(async () => {
-        setLoading(true);
-        // setError(null); // Removed
+        setLoadingCerts(true);
 
         try {
             // Fetch certificates in parallel
@@ -156,7 +161,7 @@ const CertificateManagement = () => {
             // Replace setError
             enqueueSnackbar(`Failed to load certificates: ${err.message || 'Unknown error'}`, { variant: 'error' });
         } finally {
-            setLoading(false);
+            setLoadingCerts(false);
         }
     }, [enqueueSnackbar]); // Add enqueueSnackbar dependency
 
@@ -176,8 +181,7 @@ const CertificateManagement = () => {
             return;
         }
 
-        setLoading(true);
-        // setError(null); // Removed
+        setLoadingRegenerate(true);
 
         try {
             const response = await fetch(`${API_ENDPOINTS.status.replace('/status', '')}/certificates/regenerate`, {
@@ -197,14 +201,13 @@ const CertificateManagement = () => {
             // Replace setError
             enqueueSnackbar(`Failed to regenerate certificate: ${err.message || 'Unknown error'}`, { variant: 'error' });
         } finally {
-            setLoading(false);
+            setLoadingRegenerate(false);
         }
     };
 
     // Function to accept rejected certificate
     const handleAcceptRejected = async (filename) => {
-        setLoading(true);
-        // setError(null); // Removed
+        setLoadingAccept(filename); // Set loading state for the specific certificate
 
         try {
             const response = await fetch(`${API_ENDPOINTS.status.replace('/status', '')}/certificates/accept-rejected/${filename}`, {
@@ -224,7 +227,7 @@ const CertificateManagement = () => {
             // Replace setError
             enqueueSnackbar(`Failed to accept certificate: ${err.message || 'Unknown error'}`, { variant: 'error' });
         } finally {
-            setLoading(false);
+            setLoadingAccept(null); // Reset loading state
         }
     };
 
@@ -237,8 +240,7 @@ const CertificateManagement = () => {
             return;
         }
 
-        setLoading(true);
-        // setError(null); // Removed
+        setLoadingUpload(true);
 
         try {
             // Read the file as base64
@@ -282,14 +284,13 @@ const CertificateManagement = () => {
             // Add snackbar for the main error
             enqueueSnackbar(`Failed to upload certificate: ${err.message || 'Unknown error'}`, { variant: 'error' });
         } finally {
-            setLoading(false);
+            setLoadingUpload(false);
         }
     };
 
     // Function to update security configuration
     const handleUpdateSecurity = async () => {
-        setLoading(true);
-        // setError(null); // Removed
+        setLoadingSecurityUpdate(true);
 
         try {
             const response = await fetch(`${API_ENDPOINTS.opcua.connect}`, {
@@ -318,7 +319,7 @@ const CertificateManagement = () => {
             // Replace setError
             enqueueSnackbar(`Failed to update security configuration: ${err.message || 'Unknown error'}`, { variant: 'error' });
         } finally {
-            setLoading(false);
+            setLoadingSecurityUpdate(false);
         }
     };
 
@@ -345,7 +346,7 @@ const CertificateManagement = () => {
                     <Button
                         startIcon={<RefreshIcon />}
                         onClick={loadCertificates}
-                        disabled={loading}
+                        disabled={loadingCerts}
                     >
                         Refresh
                     </Button>
@@ -354,7 +355,7 @@ const CertificateManagement = () => {
             <Divider />
 
             {/* Loading indicator */}
-            {loading && <LinearProgress />}
+            {loadingCerts && <LinearProgress />}
             {/* Removed internal Alert components for error/success */}
 
             {/* Security configuration summary */}
@@ -362,11 +363,11 @@ const CertificateManagement = () => {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="h6">OPC UA Security Configuration</Typography>
                     <Button
-                        variant="contained"
+                        variant="outlined"
                         color="primary"
                         onClick={() => setShowSecurityDialog(true)}
                         startIcon={<SecurityIcon />}
-                        disabled={loading} // Disable if loading certs
+                        disabled={loadingCerts} // Disable if loading certs
                     >
                         Configure Security
                     </Button>
@@ -416,15 +417,15 @@ const CertificateManagement = () => {
                 <TabPanel value={tabValue} index={0}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                         <Typography variant="h6">Client Certificate</Typography>
-                        <Button
+                        <ButtonLoader
                             variant="contained"
                             color="warning"
                             onClick={handleRegenerateClientCert}
                             startIcon={<RefreshIcon />}
-                            disabled={loading}
+                            loading={loadingRegenerate}
                         >
                             Regenerate Certificate
-                        </Button>
+                        </ButtonLoader>
                     </Box>
                     {clientCert ? (
                         <Paper sx={{ p: 3 }}>
@@ -446,9 +447,15 @@ const CertificateManagement = () => {
                 <TabPanel value={tabValue} index={1}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                         <Typography variant="h6">Trusted Certificates</Typography>
-                        <Button variant="contained" color="primary" startIcon={<FileUploadIcon />} onClick={() => setShowUploadDialog(true)} disabled={loading} >
+                        <ButtonLoader
+                            variant="contained"
+                            color="primary"
+                            startIcon={<FileUploadIcon />}
+                            onClick={() => setShowUploadDialog(true)}
+                            loading={loadingUpload}
+                        >
                             Upload Certificate
-                        </Button>
+                        </ButtonLoader>
                     </Box>
                     {trustedCerts.length === 0 ? (
                         <Alert severity="info"> No trusted certificates found. </Alert>
@@ -481,7 +488,15 @@ const CertificateManagement = () => {
                                     <ListItemSecondaryAction>
                                         <Tooltip title="Accept Certificate">
                                             <span> {/* Span needed for tooltip on disabled button */}
-                                                <IconButton edge="end" aria-label="accept" color="primary" onClick={() => handleAcceptRejected(cert.name)} disabled={loading} > <DoneIcon /> </IconButton>
+                                                <IconButton
+                                                    edge="end"
+                                                    aria-label="accept"
+                                                    color="primary"
+                                                    onClick={() => handleAcceptRejected(cert.name)}
+                                                    disabled={!!loadingAccept} // Disable if any accept is in progress
+                                                >
+                                                    {loadingAccept === cert.name ? <CircularProgress size={20} /> : <DoneIcon />}
+                                                </IconButton>
                                             </span>
                                         </Tooltip>
                                         <IconButton edge="end" aria-label="view details" onClick={() => handleViewCertDetails(cert)} > <InfoIcon /> </IconButton>
@@ -515,7 +530,13 @@ const CertificateManagement = () => {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setShowSecurityDialog(false)}>Cancel</Button>
-                    <Button onClick={handleUpdateSecurity} variant="contained" color="primary" disabled={loading} > Save Changes </Button>
+                    <ButtonLoader
+                        onClick={handleUpdateSecurity}
+                        variant="contained"
+                        color="primary"
+                        loading={loadingSecurityUpdate}
+                    > Save Changes
+                    </ButtonLoader>
                 </DialogActions>
             </Dialog>
 
@@ -536,7 +557,13 @@ const CertificateManagement = () => {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => { setShowUploadDialog(false); setUploadState({ name: '', file: null, error: null }); }}> Cancel </Button>
-                    <Button onClick={handleUploadCertificate} variant="contained" color="primary" disabled={!uploadState.file || !uploadState.name || loading} > Upload </Button>
+                    <ButtonLoader
+                        onClick={handleUploadCertificate}
+                        variant="contained"
+                        color="primary"
+                        disabled={!uploadState.file || !uploadState.name}
+                        loading={loadingUpload}
+                    > Upload </ButtonLoader>
                 </DialogActions>
             </Dialog>
 

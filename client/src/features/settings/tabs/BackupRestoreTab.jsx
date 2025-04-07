@@ -1,12 +1,10 @@
-// ===== ..\client\src\features\settings\tabs\BackupRestoreTab.jsx =====
-import React from 'react'; // Import React
+import React from 'react';
 import {
     Typography,
     Card,
     CardHeader,
     CardContent,
     Divider,
-    Button,
     Avatar,
     Alert
 } from '@mui/material';
@@ -14,11 +12,12 @@ import Grid from '@mui/material/Grid2';
 import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import { ButtonLoader } from '../../../shared/components/loading/index.js';
 import { useBackupRestore } from '../hooks/useBackupRestore';
 
 const BackupRestoreTab = () => {
     const {
-        backupInProgress,
+        loading,
         fileInputRef,
         handleExportDashboards,
         handleFileSelected,
@@ -39,16 +38,18 @@ const BackupRestoreTab = () => {
                         <Card variant="outlined">
                             <CardContent>
                                 <Typography variant="h6" gutterBottom> Export Dashboards </Typography>
-                                    <Typography variant="body2" color="text.secondary" paragraph>
-                                        Download a backup file containing all your dashboards, widgets, and layouts
-                                    </Typography>
-                                <Button variant="contained"
-                                        color="primary"
-                                        startIcon={<CloudDownloadIcon />}
-                                        onClick={handleExportDashboards}
-                                        disabled={backupInProgress} >
-                                    {backupInProgress ? 'Exporting...' : 'Export'}
-                                </Button>
+                                <Typography variant="body2" color="text.secondary" paragraph>
+                                    Download a backup file containing all your dashboards, widgets, and layouts
+                                </Typography>
+                                <ButtonLoader
+                                    variant="contained"
+                                    color="primary"
+                                    startIcon={<CloudDownloadIcon />}
+                                    onClick={handleExportDashboards}
+                                    loading={loading}
+                                >
+                                    Export
+                                </ButtonLoader>
                             </CardContent>
                         </Card>
                     </Grid>
@@ -56,9 +57,9 @@ const BackupRestoreTab = () => {
                         <Card variant="outlined">
                             <CardContent>
                                 <Typography variant="h6" gutterBottom> Import Dashboards </Typography>
-                                    <Typography variant="body2" color="text.secondary" paragraph>
-                                        Restore dashboards from a previously exported backup file
-                                    </Typography>
+                                <Typography variant="body2" color="text.secondary" paragraph>
+                                    Restore dashboards from a previously exported backup file
+                                </Typography>
                                 <input
                                     type="file"
                                     accept=".json"
@@ -66,15 +67,15 @@ const BackupRestoreTab = () => {
                                     onChange={handleFileSelected}
                                     ref={fileInputRef}
                                 />
-                                <Button
+                                <ButtonLoader
                                     variant="contained"
                                     color="secondary"
                                     startIcon={<CloudUploadIcon />}
                                     onClick={handleImportClick}
-                                    disabled={backupInProgress}
+                                    loading={loading}
                                 >
-                                    {backupInProgress ? 'Importing...' : 'Import'}
-                                </Button>
+                                    Import
+                                </ButtonLoader>
                             </CardContent>
                         </Card>
                     </Grid>

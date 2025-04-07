@@ -68,8 +68,8 @@ delete nonSecrets.ADMIN_API_KEY;
 delete nonSecrets.COOKIE_SECRET;
 
 // Delete other secrets like JWT_SECRET if added
-console.log("🔧 Loaded configuration (excluding secrets):", nonSecrets);
-console.warn("🔑 Ensure sensitive variables (DB_PASSWORD, ADMIN_API_KEY, etc.) are set securely via environment variables or a secrets manager, NOT hardcoded or in committed .env files.");
+//.log("🔧 Loaded configuration (excluding secrets):", nonSecrets);
+//console.warn("🔑 Ensure sensitive variables (DB_PASSWORD, ADMIN_API_KEY, etc.) are set securely via environment variables or a secrets manager, NOT hardcoded or in committed .env files.");
 
 // Export the validated and coerced configuration object
 module.exports = envVars;

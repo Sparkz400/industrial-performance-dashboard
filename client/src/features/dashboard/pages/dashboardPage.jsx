@@ -5,7 +5,11 @@ import {
     Box,
     Typography,
     Tooltip,
-    Backdrop,
+    Dialog,           // Import Dialog components
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
     Button
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -23,11 +27,12 @@ import {
     useWidgets,
     WidgetPreviewPopup
 } from '../../widgets/index';
-import api from '../../../utils/api.js'; // Use the wrapped fetch
+import api from '../../../utils/api.js';
 
 // Feature imports
 import DashboardTabs from '../components/DashboardTabs.jsx';
 import AddWidgetButton from '../components/addWidgetButton.jsx';
+import { ButtonLoader, LoadingOverlay } from '../../../shared/components/loading/index.js';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -39,21 +44,23 @@ const ActionTypes = {
     SET_SELECTED_DASHBOARD_ID: 'SET_SELECTED_DASHBOARD_ID',
     SET_EDITING_DASHBOARD_ID: 'SET_EDITING_DASHBOARD_ID',
     SET_PREVIEW_OPEN: 'SET_PREVIEW_OPEN',
+    SET_CONFIRM_DELETE_OPEN: 'SET_CONFIRM_DELETE_OPEN',
+    SET_DASHBOARD_TO_DELETE: 'SET_DASHBOARD_TO_DELETE',
 
     // Dashboard CRUD & Updates
     SET_DASHBOARDS: 'SET_DASHBOARDS', // Replace all dashboards
     ADD_DASHBOARD_SUCCESS: 'ADD_DASHBOARD_SUCCESS',
     DELETE_DASHBOARD_SUCCESS: 'DELETE_DASHBOARD_SUCCESS',
     RENAME_DASHBOARD_SUCCESS: 'RENAME_DASHBOARD_SUCCESS',
-    UPDATE_DASHBOARD_CONTENT: 'UPDATE_DASHBOARD_CONTENT', // Update widgets/layout for a specific dashboard
+    UPDATE_DASHBOARD_CONTENT: 'UPDATE_DASHBOARD_CONTENT',
 
     // Loading/Saving States
-    START_LOADING: 'START_LOADING', // General purpose loading
+    START_LOADING: 'START_LOADING',
     STOP_LOADING: 'STOP_LOADING',
-    START_SAVING: 'START_SAVING', // Specific to saving/syncing
+    START_SAVING: 'START_SAVING',
     STOP_SAVING: 'STOP_SAVING',
     SET_HAS_LOCAL_CHANGES: 'SET_HAS_LOCAL_CHANGES',
-    SET_SERVER_SYNC_STATUS: 'SET_SERVER_SYNC_STATUS', // idle, syncing, success, error
+    SET_SERVER_SYNC_STATUS: 'SET_SERVER_SYNC_STATUS',
 };
 
 // --- Dashboard Reducer ---
@@ -68,15 +75,15 @@ function dashboardReducer(state, action) {
                 initialized: true,
                 dashboards: action.payload.dashboards,
                 selectedDashboardId: action.payload.selectedDashboardId,
-                hasLocalChanges: action.payload.hasLocalChanges // Reflect if local differs from server initially
+                hasLocalChanges: action.payload.hasLocalChanges
             };
         case ActionTypes.INITIAL_LOAD_FAIL:
             return {
                 ...state,
                 isLoading: false,
-                initialized: true, // Considered initialized even if failed (shows error/default)
+                initialized: true,
             };
-        case ActionTypes.SET_DASHBOARDS: // Used internally when structure changes (add/delete)
+        case ActionTypes.SET_DASHBOARDS:
             return {
                 ...state,
                 dashboards: action.payload,
@@ -144,6 +151,16 @@ function dashboardReducer(state, action) {
                 ...state,
                 previewOpen: action.payload
             };
+        case ActionTypes.SET_CONFIRM_DELETE_OPEN:
+            return {
+                ...state,
+                confirmDeleteDialogOpen: action.payload
+            };
+        case ActionTypes.SET_DASHBOARD_TO_DELETE:
+            return {
+                ...state,
+                dashboardToDeleteId: action.payload
+            };
         case ActionTypes.START_LOADING:
             return { ...state, isLoading: true };
         case ActionTypes.STOP_LOADING:
@@ -201,6 +218,8 @@ function DashboardPageInternal() {
         isSaving: false,
         hasLocalChanges: false,
         serverSyncStatus: 'idle',
+        confirmDeleteDialogOpen: false, // State for delete confirmation dialog
+        dashboardToDeleteId: null,     // ID of dashboard pending deletion
     });
 
     const [autoSync, setAutoSync] = useState(false);
@@ -367,20 +386,22 @@ function DashboardPageInternal() {
     }, [widgetActions, saveAllToLocalStorage, saveDashboardToServer, enqueueSnackbar]);
 
     // Add a new dashboard
-    const handleAddDashboard = useCallback(async () => {
-        dispatch({ type: ActionTypes.START_LOADING }); // Use general loading for this action
+    const handleAddDashboard = useCallback(async (event) => {
+        // Prevent default if called from a button event
+        if (event && typeof event.preventDefault === 'function') {
+            event.preventDefault();
+        }
 
-        const timestamp = new Date().toISOString();
+        dispatch({ type: ActionTypes.START_LOADING });
+
         const newDashboard = {
             id: 'dashboard-' + Date.now(),
             name: 'New Dashboard',
             widgets: [],
             layout: [],
-            localLastModified: timestamp
+            localLastModified: new Date().toISOString()
         };
-
-        // Update state optimistically via reducer
-        dispatch({ type: ActionTypes.ADD_DASHBOARD_SUCCESS, payload: { newDashboard } });
+        dispatch({ type: ActionTypes.ADD_DASHBOARD_SUCCESS, payload: { newDashboard } }); // Optimistic update
         enqueueSnackbar('New dashboard created', { variant: 'success' });
 
         // Clear widget context for the new dashboard
@@ -388,39 +409,52 @@ function DashboardPageInternal() {
         widgetActions.setLayout([]);
 
         // Persist the new dashboard to server (and implicitly updates local storage via effect)
-        await saveDashboardToServer(newDashboard); // This handles its own saving state
-
-        // Stop general loading if it was started
-        dispatch({ type: ActionTypes.STOP_LOADING });
-
+        try {
+            await saveDashboardToServer(newDashboard);
+        } finally {
+            if (isComponentMounted.current) {
+                dispatch({ type: ActionTypes.STOP_LOADING });
+            }
+        }
     }, [widgetActions, saveDashboardToServer, enqueueSnackbar]);
 
-    // Delete a dashboard
-    const handleDeleteDashboard = useCallback(async (dashboardIdToDelete) => {
+    // Initiate dashboard deletion (opens confirmation dialog)
+    const initiateDeleteDashboard = useCallback((dashboardId) => {
+        if (!dashboardId) return;
+        dispatch({ type: ActionTypes.SET_DASHBOARD_TO_DELETE, payload: dashboardId });
+        dispatch({ type: ActionTypes.SET_CONFIRM_DELETE_OPEN, payload: true });
+    }, []);
+
+    // Close the delete confirmation dialog
+    const handleCloseConfirmDelete = useCallback(() => {
+        dispatch({ type: ActionTypes.SET_CONFIRM_DELETE_OPEN, payload: false });
+        // Optionally clear the dashboardToDeleteId after a delay for animation
+        setTimeout(() => dispatch({ type: ActionTypes.SET_DASHBOARD_TO_DELETE, payload: null }), 300);
+    }, []);
+
+    // Confirm and execute dashboard deletion
+    const handleConfirmDeleteDashboard = useCallback(async () => {
+        const dashboardIdToDelete = state.dashboardToDeleteId;
+        if (!dashboardIdToDelete) return;
+
+        // Close dialog immediately
+        handleCloseConfirmDelete();
+
         // Find index before filtering
         const currentIndex = state.dashboards.findIndex(d => d.id === state.selectedDashboardId);
         const dashboardToDeleteIndex = state.dashboards.findIndex(d => d.id === dashboardIdToDelete);
         if (dashboardToDeleteIndex === -1) return;
 
-        const dashboardNameToDelete = state.dashboards[dashboardToDeleteIndex].name;
-        if (!window.confirm(`Are you sure you want to delete "${dashboardNameToDelete}"?`)) {
-            return;
-        }
-
-        dispatch({ type: ActionTypes.START_SAVING }); // Use saving state for delete op
+        dispatch({ type: ActionTypes.START_SAVING });
 
         const newDashboards = state.dashboards.filter(d => d.id !== dashboardIdToDelete);
         let newSelectedId = state.selectedDashboardId;
 
         // Determine the next selected dashboard
         if (state.selectedDashboardId === dashboardIdToDelete) {
-            if (newDashboards.length > 0) {
-                // Select previous tab if possible, otherwise next, otherwise first
-                const newIndex = Math.min(currentIndex, newDashboards.length - 1);
-                newSelectedId = newDashboards[newIndex].id;
-            } else {
-                newSelectedId = null; // Will trigger creation of default if needed
-            }
+            newSelectedId = newDashboards.length > 0
+                ? newDashboards[Math.min(currentIndex, newDashboards.length - 1)].id
+                : null;
         }
 
         // Update local state first
@@ -428,7 +462,6 @@ function DashboardPageInternal() {
             type: ActionTypes.DELETE_DASHBOARD_SUCCESS,
             payload: { newDashboards, newSelectedId }
         });
-        enqueueSnackbar('Dashboard deleted locally', { variant: 'info' });
 
         // Load the newly selected dashboard's content into widget context
         if (newSelectedId) {
@@ -442,22 +475,21 @@ function DashboardPageInternal() {
             await handleAddDashboard(); // This will set widgets/layout
         }
 
-
         // Attempt server deletion
         try {
             await api.endpoints.deleteDashboard(dashboardIdToDelete);
             dispatch({ type: ActionTypes.SET_SERVER_SYNC_STATUS, payload: { status: 'success' }});
-            enqueueSnackbar('Dashboard deleted from server', { variant: 'success' }); // Notify server delete success
+            enqueueSnackbar('Dashboard deleted successfully', { variant: 'success' });
         } catch (error) {
             console.error('Error deleting dashboard from server:', error);
             dispatch({ type: ActionTypes.SET_SERVER_SYNC_STATUS, payload: { status: 'warning' }});
-            enqueueSnackbar('Deleted locally. Server delete failed.', { variant: 'warning' }); // Notify server delete failure
+            enqueueSnackbar('Dashboard deleted locally, but server sync failed.', { variant: 'warning' });
         } finally {
             if (isComponentMounted.current) {
-                dispatch({ type: ActionTypes.STOP_SAVING });
+                dispatch({ type: ActionTypes.STOP_SAVING }); // This stops the saving indicator
             }
         }
-    }, [state.dashboards, state.selectedDashboardId, widgetActions, handleAddDashboard, enqueueSnackbar]);
+    }, [state.dashboards, state.selectedDashboardId, state.dashboardToDeleteId, widgetActions, handleAddDashboard, enqueueSnackbar]);
 
     // Select a dashboard (handles saving previous state implicitly via effect)
     const handleSelectDashboard = useCallback((event, newIndex) => {
@@ -565,7 +597,7 @@ function DashboardPageInternal() {
             enqueueSnackbar(`Failed to remove widget: ${error.message}`, { variant: 'error' });
         } finally {
             //if (isComponentMounted.current) {
-                //dispatch({ type: ActionTypes.STOP_LOADING });
+            //dispatch({ type: ActionTypes.STOP_LOADING });
             //}
         }
     }, [state.selectedDashboardId, widgetActions, enqueueSnackbar]);
@@ -708,6 +740,11 @@ function DashboardPageInternal() {
         return state.dashboards.findIndex(d => d.id === state.selectedDashboardId);
     }, [state.dashboards, state.selectedDashboardId]);
 
+    // Find the name of the dashboard to delete for the confirmation dialog
+    const dashboardNameToDelete = useMemo(() => {
+        return state.dashboards.find(d => d.id === state.dashboardToDeleteId)?.name || 'this dashboard';
+    }, [state.dashboards, state.dashboardToDeleteId]);
+
     // Loading state fallback for initialization
     if (!state.initialized && state.isLoading) {
         return (
@@ -727,7 +764,7 @@ function DashboardPageInternal() {
                     selectedIndex={selectedIndex !== -1 ? selectedIndex : 0} // Handle case where selectedIndex is -1
                     onSelectDashboard={handleSelectDashboard}
                     onEditName={handleRenameDashboard} // Pass the callback directly
-                    onDeleteDashboard={handleDeleteDashboard} // Pass the callback directly
+                    onDeleteDashboard={initiateDeleteDashboard} // Use initiateDeleteDashboard
                     editingDashboardId={state.editingDashboardId}
                     loading={state.isLoading || state.isSaving} // Combine loading states for tabs
                 />
@@ -735,28 +772,29 @@ function DashboardPageInternal() {
                 <Box sx={{ display: 'flex', alignItems: 'center', ml: 1, gap: 1 }}>
                     <Tooltip title="Save Changes to Server">
                         <span> {/* Span needed for tooltip on disabled button */}
-                            <Button
+                            <ButtonLoader
                                 variant="contained"
                                 color="primary"
                                 onClick={syncWithServer}
-                                disabled={state.isSaving || state.serverSyncStatus === 'syncing' || !state.hasLocalChanges}
-                                startIcon={(state.isSaving || state.serverSyncStatus === 'syncing') ? <CircularProgress size={20} /> : <SaveIcon />}
+                                loading={state.isSaving || state.serverSyncStatus === 'syncing'}
+                                disabled={!state.hasLocalChanges}
+                                startIcon={<SaveIcon />}
                             >
-                                Save
-                            </Button>
+                                 Save
+                            </ButtonLoader>
                         </span>
                     </Tooltip>
                     <Tooltip title="Add New Dashboard">
                         <span>
-                            <Button
+                            <ButtonLoader
                                 variant="outlined"
                                 color="secondary"
                                 onClick={handleAddDashboard}
-                                disabled={state.isLoading || state.isSaving} // Disable during any loading/saving
+                                loading={state.isLoading && !state.isSaving} // Show loading only for add, not save
                                 startIcon={(state.isLoading || state.isSaving) ? <CircularProgress size={20} /> : <AddIcon />}
                             >
-                                New
-                            </Button>
+                                 New
+                            </ButtonLoader>
                         </span>
                     </Tooltip>
                     {/* Optional: Toggle for Auto-Sync */}
@@ -820,14 +858,13 @@ function DashboardPageInternal() {
             )}
 
 
-            {/* Loading Backdrop for saving/syncing */}
-            <Backdrop
-                sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+            {/* Loading Overlay for saving/syncing */}
+            <LoadingOverlay
                 open={state.isSaving || state.serverSyncStatus === 'syncing'} // Show during save/sync
-            >
-                <CircularProgress color="inherit" />
-                <Typography sx={{ ml: 2 }}>Saving...</Typography>
-            </Backdrop>
+                message="Saving..."
+                fullPage={false} // Make it relative to the main content area
+                zIndex={1100} // Ensure it's above other elements like sidebar
+            />
 
             {/* Unsaved Changes Indicator */}
             {state.hasLocalChanges && !state.isSaving && (
@@ -851,21 +888,43 @@ function DashboardPageInternal() {
                     <Typography variant="body2" sx={{ mr: 2 }} color="text.secondary">
                         Unsaved changes
                     </Typography>
-                    <Button
+                    <ButtonLoader
                         variant="contained"
                         size="small"
                         onClick={syncWithServer}
-                        disabled={state.isSaving || state.serverSyncStatus === 'syncing'}
+                        loading={state.isSaving || state.serverSyncStatus === 'syncing'}
                     >
                         Save Now
-                    </Button>
+                    </ButtonLoader>
                 </Box>
             )}
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={state.confirmDeleteDialogOpen}
+                onClose={handleCloseConfirmDelete}
+                aria-labelledby="alert-dialog-title"
+                aria-describedby="alert-dialog-description"
+            >
+                <DialogTitle id="alert-dialog-title">Confirm Deletion</DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="alert-dialog-description">
+                        Are you sure you want to delete the dashboard "{dashboardNameToDelete}"? This action cannot be undone.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseConfirmDelete} color="primary">
+                        Cancel
+                    </Button>
+                    <Button onClick={handleConfirmDeleteDashboard} color="error" autoFocus>
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }
 
-// Wrapper component to include the WidgetProvider
 function DashboardPage() {
     return (
         <WidgetProvider>

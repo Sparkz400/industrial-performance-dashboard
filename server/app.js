@@ -1,6 +1,8 @@
 require('dotenv').config();
 
 const express = require('express');
+const session = require('express-session');
+const FileStore = require('session-file-store')(session);
 const http = require('http');
 const cors = require('cors');
 const socketIo = require('socket.io');
@@ -17,8 +19,9 @@ const compression = require('compression');
 const connectionTracker = require('./src/utils/connectionTracker');
 const statusManager = require("./src/utils/status");
 const StatusConstants = require('./src/utils/statusConstants');
-const { CSRF_HEADER_NAME } = require('./src/utils/csrf'); // Import CSRF header name
+const { CSRF_HEADER_NAME } = require('./src/utils/csrf');
 const config = require('./src/config/config');
+const path = require('path');
 
 const app = express();
 
@@ -44,6 +47,33 @@ app.use(rateLimiter);
 app.use(compression());
 app.use(express.json());
 
+// --- Session Middleware ---
+// Ensure SESSION_SECRET is loaded from .env
+if (!process.env.SESSION_SECRET) {
+    console.warn("⚠️ WARNING: SESSION_SECRET not set in .env file. Using insecure default. Please set a strong secret!");
+}
+
+// --- Configure FileStore ---
+const sessionStore = new FileStore({
+    path: path.join(__dirname, './sessions'), // Creates a 'sessions' directory
+    logFn: logger.debug.bind(logger), // Optional: Log session store actions
+    ttl: 60 * 60 * 2 // Optional: Session Time-To-Live in seconds (e.g., 2 hours)
+});
+
+app.use(session({
+    store: sessionStore,
+    secret: process.env.SESSION_SECRET || 'fallback-insecure-secret',
+    resave: false,
+    saveUninitialized: true, // Important for CSRF to store secret in new sessions
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        sameSite: 'Lax', // Keep Lax
+        path: '/'
+        // maxAge: 1000 * 60 * 60 * 2 // Optional: 2 hour session expiry
+    }
+}));
+
 app.set('etag', 'strong');
 app.disable('x-powered-by');
 
@@ -54,20 +84,12 @@ if (!config.COOKIE_SECRET) {
 // Initialize cookie-parser with the secret
 app.use(cookieParser(config.COOKIE_SECRET));
 
-const csrfProtection = csrf({
-    cookie: {
-        httpOnly: true, // Cannot be accessed by client-side scripts
-        secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
-        sameSite: 'lax', // strict Helps mitigate CSRF attacks
-        signed: true,
-    }
-});
-
+const csrfProtection = csrf();
 app.use(csrfProtection);
 
 app.get('/api/csrf-token', (req, res) => {
     const token = req.csrfToken();
-    logger.info(`[CSRF] Sending token: ${token}, Signed Cookie: ${req.signedCookies ? req.signedCookies['_csrf'] : 'Not Signed/Available'}`);
+    logger.info(`[CSRF Token Gen] Session ID: ${req.sessionID}, Secret Stored in Session: ${req.session?.csrfSecret}, Token Sent: ${token}`);
     res.json({ csrfToken: token });
 });
 
@@ -76,6 +98,8 @@ const opcuaDataQueue = new AsyncQueue();
 const BATCH_SIZE = config.OPCUA_BATCH_SIZE;
 const QUEUE_PROCESS_DELAY = config.OPCUA_QUEUE_DELAY;
 const MAX_QUEUE_LOG_THRESHOLD = config.OPCUA_QUEUE_WARN_THRESHOLD;
+let isShuttingDown = false; // Flag to signal shutdown
+let queueProcessingPromise = null; // To track the queue processing loop
 
 setInterval(() => {
     const currentSize = opcuaDataQueue.size();
@@ -88,6 +112,10 @@ setInterval(() => {
 }, 60000);
 
 const persistOpcuaData = (data) => {
+    if (isShuttingDown) {
+        logger.warn("Shutdown in progress. Dropping incoming OPC UA data:", data.key);
+        return; // Don't enqueue new data during shutdown
+    }
     try {
         opcuaDataQueue.enqueue(data);
     } catch (error) {
@@ -141,8 +169,8 @@ const processQueue = async () => {
     const maxConsecutiveErrors = 5; // Stop hammering DB if it's consistently failing
 
     const stopProcessing = () => {
-        logger.info("Stopping queue processing loop.");
-        isRunning = false;
+        logger.info("[Queue] Received stop signal. Finishing current batch if any, then exiting loop.");
+        isRunning = false; // Signal the loop to stop
     };
 
     process.on('SIGTERM', stopProcessing);
@@ -150,39 +178,57 @@ const processQueue = async () => {
 
     logger.info(`Starting OPC UA data queue processor with batch size ${BATCH_SIZE} and delay ${QUEUE_PROCESS_DELAY}ms.`);
 
-    while (isRunning) {
+    // Check isShuttingDown flag in the loop condition
+    while (isRunning) { // Check the flag each iteration
         try {
+            // Check BEFORE processing if we should stop
+            if (!isRunning) break;
+
             const processed = await processOpcuaDataQueue();
+
+            if (!isRunning) break;
+
             if (processed) {
                 consecutiveErrors = 0; // Reset errors on success
                 // If processed successfully and queue still has items, process immediately again
-                if (!opcuaDataQueue.isEmpty()) {
-                    continue; // Skip delay if more data exists
+                if (!opcuaDataQueue.isEmpty() && isRunning) {
+                    await new Promise(resolve => setImmediate(resolve)); // Yield event loop
+                    continue; // Skip the longer delay
                 }
             }
-            // Wait only if nothing was processed or queue is empty
-            await new Promise(resolve => setTimeout(resolve, QUEUE_PROCESS_DELAY));
+            // Wait only if nothing was processed or queue is empty (and still running)
+            if (isRunning) {
+                // Check one last time before sleeping
+                if (!isRunning) break;
+                await new Promise(resolve => setTimeout(resolve, QUEUE_PROCESS_DELAY));
+            }
 
         } catch (error) { // Catch errors from processOpcuaDataQueue itself (should be rare now)
             logger.error('Unexpected error in queue processing loop:', error);
+            if (!isRunning) break;
+
             consecutiveErrors++;
             if (consecutiveErrors > maxConsecutiveErrors) {
                 logger.error(`Queue processor encountered ${consecutiveErrors} consecutive errors. Pausing for 60 seconds.`);
+                if (!isRunning) break;
                 await new Promise(resolve => setTimeout(resolve, 60000));
-                consecutiveErrors = 0; // Reset after pause
+                consecutiveErrors = 0;
             } else {
                 // Wait before retrying the loop on error
+                if (!isRunning) break;
                 await new Promise(resolve => setTimeout(resolve, QUEUE_PROCESS_DELAY * consecutiveErrors));
             }
         }
     }
-    logger.info("Queue processing loop finished.");
+    logger.info("Queue processing loop is exiting due to shutdown signal.");
 };
 
-processQueue().catch(err => {
+// Start the queue processing and store the promise
+queueProcessingPromise = processQueue().catch(err => {
     logger.error('Fatal error: Queue processing loop exited unexpectedly.', err);
     process.exit(1); // Exit if the loop itself crashes
 });
+
 
 opcuaEmitter.on('nodeChanged', (data) => {
     // Basic validation
@@ -287,10 +333,11 @@ const io = socketIo(server, {
     }
 });
 
-// --- Listen for Status Manager Updates and Broadcast ---
-statusManager.on('broadcastUpdate', (fullStatus) => {
+// --- Ensure statusManager broadcasts updates ---
+statusManager.on('statusChanged', (statusData) => {
     logger.info('[WebSocket] Broadcasting status update to clients.');
-    io.emit('statusUpdate', fullStatus);
+    const fullStatus = statusManager.getFullStatus();
+    io.emit('statusUpdate', fullStatus); // Broadcast to all clients
 });
 
 // --- Socket.IO Authentication Middleware ---
@@ -399,12 +446,12 @@ io.on('connection', (socket) => {
     }
 
     socket.on('disconnect', (reason) => {
-        logger.info(`Client disconnected: ${socket.id}, Reason: ${reason}`);
         connectionTracker.removeConnection(socket.id);
+        logger.info(`Client disconnected: ${socket.id}, Reason: ${reason}`);
     });
+
     socket.on('error', (error) => {
-        logger.error(`Socket error for ${socket.id}:`, error);
-        // Consider disconnecting on certain errors: socket.disconnect(true);
+        logger.error(`WebSocket error for client ${socket.id}:`, error);
     });
 });
 
@@ -412,30 +459,30 @@ io.on('connection', (socket) => {
 logger.info("Initiating initial OPC UA connection...");
 opcuaConnectionManager.startConnection().catch(err => {
     logger.error("Initial OPC UA connection failed:", err);
-    // Status will be set to ERROR by the connection manager
 });
 
 // --- Global Error Handling Middleware ---
 app.use((err, req, res, next) => {
-    // --- Handle CSRF Errors Specifically ---
     if (err.code === 'EBADCSRFTOKEN') {
-        logger.error('[CSRF Error] Invalid token detected:', {
+        logger.error('[CSRF Error - Session Mode] Invalid token detected:', {
             url: req.originalUrl,
-            method: req.method, // CSRF token from header
+            method: req.method,
             ip: req.ip,
-            receivedTokenHeader: req.headers['x-csrf-token'] || 'MISSING', // Check specific header
-            receivedCookies: req.cookies, // Log parsed cookies
-            expectedSecret: req.session?.csrfSecret || 'N/A (Session Missing/Unused)', // If using session storage for secret
-            cookieSecret: req.secret || 'N/A (No req.secret)' // If using cookie signing secret
+            receivedTokenHeader: req.headers['x-csrf-token'] || 'MISSING',
+            receivedCookies: req.cookies, // Log the actual cookies received
+            sessionID: req.sessionID || 'N/A', // Log the session ID loaded by express-session
+            sessionExists: !!req.session, // Did express-session load a session object?
+            // CRITICAL: Log the secret that csurf FOUND in the session for this specific request
+            sessionCSRFSecretFoundAtValidation: req.session?.csrfSecret || 'MISSING/DIFFERENT FROM SESSION AT VALIDATION',
+            errorDetails: { code: err.code, message: err.message } // Log details from the csurf error
         });
         res.status(403).json({
             status: 'error',
-            error: 'Invalid CSRF token. Please refresh the page or token and try again.',
+            error: 'Invalid CSRF token. Your security session may be invalid. Please refresh the page and try again.',
             code: 'INVALID_CSRF_TOKEN'
         });
-        return; // Stop further processing
+        return; // Ensure we exit the handler here
     }
-    // --- End CSRF Error Handling ---
 
 
     // Log the full error stack for debugging
@@ -459,52 +506,59 @@ app.use((err, req, res, next) => {
 
 // --- Graceful Shutdown ---
 const shutdown = async (signal) => {
-    logger.warn(`Received ${signal}. Starting graceful shutdown...`);
+    logger.warn(`[Shutdown] Received ${signal}. Starting graceful shutdown...`);
+    // Set status immediately
     statusManager.setOpcuaStatus(StatusConstants.DISCONNECTED, { message: "Server shutting down" });
     statusManager.setDatabaseStatus(StatusConstants.DISCONNECTED, { message: "Server shutting down" });
 
-    // 1. Stop accepting new connections
-    server.close(async (err) => {
-        if (err) {
-            logger.error("Error closing HTTP server:", err);
-            process.exit(1); // Exit immediately if server can't close
-        }
-        logger.info("HTTP server closed. No longer accepting connections.");
+    // --- Add timeout for the entire shutdown process ---
+    let shutdownTimer = setTimeout(() => {
+        logger.error("[Shutdown] Graceful shutdown OVERALL timeout exceeded (30s). Forcing exit.");
+        process.exit(1);
+    }, 30000); // 30 second overall timeout
 
-        // 2. Close WebSocket connections gracefully (optional, Socket.IO handles some of this)
-        io.close(() => {
-            logger.info("All WebSocket connections closed.");
+    try {
+        // 1. Stop accepting new connections
+        logger.info("[Shutdown] Closing HTTP server...");
+        await new Promise((resolve, reject) => {
+            server.close((err) => {
+                if (err) {
+                    logger.error("[Shutdown] Error closing HTTP server:", err);
+                    return reject(err); // Reject promise on error
+                }
+                logger.info("[Shutdown] HTTP server closed.");
+                resolve();
+            });
         });
 
-        // 3. Disconnect OPC UA
-        try {
-            await opcuaConnectionManager.disconnectConnection();
-            logger.info("OPC UA connection closed.");
-        } catch (opcErr) {
-            logger.error("Error during OPC UA disconnection:", opcErr);
-        }
+        // 2. Close WebSocket connections
+        logger.info("[Shutdown] Closing WebSocket connections...");
+        await new Promise((resolve) => {
+            io.close(() => {
+                logger.info("[Shutdown] All WebSocket connections closed.");
+                resolve();
+            });
+        });
+
+        // 3. Disconnect OPC UA (now with internal timeouts)
+        logger.info("[Shutdown] Disconnecting OPC UA...");
+        await opcuaConnectionManager.disconnectConnection();
+        // Log already happens inside disconnectConnection
 
         // 4. Close Database Pool
-        try {
-            await dbClient.end(); // Use the end method from DatabaseManager
-            logger.info("Database pool closed.");
-        } catch (dbErr) {
-            logger.error("Error closing database pool:", dbErr);
-        }
+        logger.info("[Shutdown] Closing Database pool...");
+        await dbClient.end();
+        // Log already happens inside dbClient.end
 
-        // 5. Add delay for any pending queue processing (optional)
-        logger.info("Waiting briefly for queue processing...");
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
-
-        logger.info("Graceful shutdown complete.");
+        logger.info("[Shutdown] Graceful shutdown sequence complete.");
+        clearTimeout(shutdownTimer); // Cancel the force exit timer
         process.exit(0); // Exit successfully
-    });
 
-    // Force shutdown after a timeout if graceful shutdown hangs
-    setTimeout(() => {
-        logger.error("Graceful shutdown timed out. Forcing exit.");
-        process.exit(1);
-    }, 15000); // 15 second timeout
+    } catch (shutdownError) {
+        logger.error("[Shutdown] Error during graceful shutdown sequence:", shutdownError);
+        clearTimeout(shutdownTimer); // Cancel the force exit timer
+        process.exit(1); // Exit with error
+    }
 };
 
 process.on('SIGINT', () => shutdown('SIGINT'));

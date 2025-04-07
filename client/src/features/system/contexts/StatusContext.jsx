@@ -36,7 +36,7 @@ export function StatusProvider({ children }) {
         // console.log('[StatusProvider] Refreshing status via HTTP GET...'); // Optional debug log
         try {
             const res = await fetch(API_ENDPOINTS.status); // Fetch standardized status
-            if (!res.ok) throw new Error('Failed to fetch status');
+            if (!res.ok) throw new Error(`Failed to fetch status: ${res.status}`);
             const data = await res.json();
             // Update state only if WS isn't connected or data is newer
             // (Simple approach: always update from poll for now)
@@ -47,28 +47,43 @@ export function StatusProvider({ children }) {
             // Optionally set an error state or revert to UNKNOWN
             // setStatus({ ...initial state ... });
         } finally {
+            // Use setTimeout to prevent rapid polling if errors occur quickly
             setTimeout(() => setIsPolling(false), 2000);
         }
     }, [isPolling]); // Keep isPolling dependency
 
     // Setup WebSocket connection and listeners
     useEffect(() => {
-        // Prevent multiple connections
-        if (socketRef.current) return;
+        // Prevent multiple connections if ref already holds a socket
+        if (socketRef.current) {
+            console.log('[StatusProvider] WebSocket connection already exists or is being established.');
+            return;
+        }
 
         console.log('[StatusProvider] Attempting WebSocket connection to:', WEBSOCKET_ADDR);
         const token = getStoredCsrfToken(); // Get CSRF token for handshake
         if (!token) {
-            console.warn('[StatusProvider] No CSRF token found for WebSocket handshake. Authentication might fail.');
+            // This is expected if the initial CSRF fetch failed, don't log as warning necessarily
+            console.info('[StatusProvider] No CSRF token found for WebSocket handshake. Authentication might fail if required by server.');
         }
-        const socketInstance = io(WEBSOCKET_ADDR, {
-            reconnectionAttempts: 5,
-            reconnectionDelay: 3000,
-            transports: ['websocket'], // Prefer websocket
-            auth: { token: token || undefined } // Send CSRF token in auth object
-            // Add query params if needed, e.g., for roles: query: { role: 'dashboard-viewer' }
-        });
-        socketRef.current = socketInstance;
+
+        let socketInstance;
+        try {
+            socketInstance = io(WEBSOCKET_ADDR, {
+                reconnectionAttempts: 5,
+                reconnectionDelay: 3000,
+                transports: ['websocket'], // Prefer websocket
+                auth: { token: token || undefined } // Send CSRF token in auth object
+                // Add query params if needed, e.g., for roles: query: { role: 'dashboard-viewer' }
+            });
+            socketRef.current = socketInstance; // Store instance immediately
+        } catch (error) {
+            console.error('[StatusProvider] Error creating WebSocket instance:', error);
+            // Fallback to polling if WS instance creation fails
+            refreshStatus();
+            return; // Stop effect execution
+        }
+
 
         socketInstance.on('connect', () => {
             console.log('[StatusProvider] WebSocket connected:', socketInstance.id);
@@ -87,7 +102,7 @@ export function StatusProvider({ children }) {
         });
 
         socketInstance.on('connect_error', (error) => {
-            console.error('[StatusProvider] WebSocket connection error:', error);
+            console.error('[StatusProvider] WebSocket connection error:', error.message || error);
             setSocketConnected(false);
             // Fallback to polling if WS connection fails
             refreshStatus();
@@ -113,7 +128,7 @@ export function StatusProvider({ children }) {
                 socketRef.current.off('connect_error');
                 socketRef.current.off('statusUpdate');
                 socketRef.current.disconnect();
-                socketRef.current = null;
+                socketRef.current = null; // Clear the ref
             }
             setSocketConnected(false);
         };
@@ -124,8 +139,11 @@ export function StatusProvider({ children }) {
         // Poll less frequently if WebSocket is connected
         const interval = socketConnected ? 60000 : 20000; // e.g., 60s if WS connected, 20s otherwise
         const pollId = setInterval(() => {
-            // console.log(`[StatusProvider] Fallback polling... (WS Connected: ${socketConnected})`); // Optional debug log
-            refreshStatus();
+            // Only poll if WebSocket is not connected
+            if (!socketConnected) {
+                // console.log(`[StatusProvider] Fallback polling... (WS Connected: ${socketConnected})`); // Optional debug log
+                refreshStatus();
+            }
         }, interval);
 
         return () => clearInterval(pollId);
