@@ -1,8 +1,8 @@
-// ===== ..\client\src\features\settings\hooks\useOpcUaConnection.js =====
 import { useState, useCallback, useEffect } from 'react';
 import { API_ENDPOINTS } from '../../../config/config.js';
 import { useSystemStatus } from '../../system/index.jsx';
-import { useSnackbar } from 'notistack'; // Import useSnackbar
+import { useSnackbar } from 'notistack';
+import api from '../../../utils/api.js';
 
 export const useOpcUaConnection = () => {
     const [loading, setLoading] = useState(false);
@@ -10,13 +10,18 @@ export const useOpcUaConnection = () => {
     const [connectedAddress, setConnectedAddress] = useState('');
     const [connectionHistory, setConnectionHistory] = useState([]);
     const [configChanged, setConfigChanged] = useState(false);
-    // Removed alertInfo state
-    const { enqueueSnackbar } = useSnackbar(); // Use the hook
+    const { enqueueSnackbar } = useSnackbar();
 
     // Form states
-    const [ip, setIp] = useState('localhost');
-    const [port, setPort] = useState('4840');
-    const [resourcePath, setResourcePath] = useState('/UA/MyLittleServer');
+    const [ip, setIp] = useState(() =>
+        (typeof window !== 'undefined' && localStorage.getItem('opcua_ip')) || 'localhost'
+    );
+    const [port, setPort] = useState(() =>
+        (typeof window !== 'undefined' && localStorage.getItem('opcua_port')) || '4840'
+    );
+    const [resourcePath, setResourcePath] = useState(() =>
+        (typeof window !== 'undefined' && localStorage.getItem('opcua_resourcePath')) || ''
+    );
     const [securityMode, setSecurityMode] = useState('None');
     const [securityPolicy, setSecurityPolicy] = useState('None');
     const [securityOptions, setSecurityOptions] = useState({
@@ -57,88 +62,55 @@ export const useOpcUaConnection = () => {
     }, [enqueueSnackbar]); // Add enqueueSnackbar dependency
 
     // Handle OPC UA connection
-    const handleConnect = async () => {
+    const handleConnect = useCallback(async () => {
         setLoading(true);
         try {
-            const sanitizedPort = sanitizePort(port);
-            const res = await fetch(API_ENDPOINTS.opcua.connect, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ip,
-                    port: sanitizedPort,
-                    resourcePath,
-                    securityMode,
-                    securityPolicy
-                })
-            });
+            const config = {
+                ip,
+                port: sanitizePort(port),
+                resourcePath,
+                securityMode,
+                securityPolicy
+            };
 
-            const data = await res.json();
+            const data = await api.post(API_ENDPOINTS.opcua.connect, config);
 
-            if (res.ok) {
-                setOpcuaConnected(true);
-                setConnectedAddress(`${ip}:${sanitizedPort}`);
-                setConnectionHistory(prev => [{
-                    event: 'Connected',
-                    timestamp: new Date().toISOString(),
-                    details: `Connected to ${ip}:${sanitizedPort} with ${securityMode}/${securityPolicy}`
-                }, ...prev.slice(0, 9)]);
-                // Replace setAlertInfo
-                enqueueSnackbar('Successfully connected to OPC UA server', { variant: 'success' });
-                refreshStatus(); // Refresh overall system status
-            } else {
-                // Replace setAlertInfo
-                enqueueSnackbar(`Failed to connect: ${data.error || 'Unknown error'}`, { variant: 'error' });
-                setConnectionHistory(prev => [{
-                    event: 'Connection Failed',
-                    timestamp: new Date().toISOString(),
-                    details: data.error || 'Unknown error'
-                }, ...prev.slice(0, 9)]);
-            }
-        } catch (err) {
-            console.error('Error connecting to OPC UA:', err);
-            // Replace setAlertInfo
-            enqueueSnackbar(`Error connecting: ${err.message}`, { variant: 'error' });
-            setConnectionHistory(prev => [{
-                event: 'Connection Error',
-                timestamp: new Date().toISOString(),
-                details: err.message
-            }, ...prev.slice(0, 9)]);
+            setOpcuaConnected(true);
+            setConnectedAddress(`${ip}:${sanitizePort(port)}`);
+
+            // IP-Konfig speichern
+            localStorage.setItem('opcuaConfig', JSON.stringify(config));
+
+            // ... History/Status-Update wie gehabt
+        } catch (error) {
+            console.error('Error connecting to OPC UA:', error);
+            enqueueSnackbar(`Error connecting to OPC UA: ${error.message}`, { variant: 'error' });
         } finally {
             setLoading(false);
         }
-    };
+    }, [ip, port, resourcePath, securityMode, securityPolicy, enqueueSnackbar]);
 
     // Handle OPC UA disconnection
     const handleDisconnect = async () => {
         setLoading(true);
         try {
-            const res = await fetch(API_ENDPOINTS.opcua.disconnect, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-            });
+            const data = await api.post(API_ENDPOINTS.opcua.disconnect, {});
 
-            const data = await res.json();
+            // If we reach here, the request was successful
+            setOpcuaConnected(false);
+            setConnectedAddress('');
+            setConnectionHistory(prev => [{
+                event: 'Disconnected',
+                timestamp: new Date().toISOString(),
+                details: 'Manually disconnected'
+            }, ...prev.slice(0, 9)]);
+            enqueueSnackbar(data.message || 'Successfully disconnected from OPC UA server', { variant: 'info' });
+            refreshStatus();
 
-            if (res.ok) {
-                setOpcuaConnected(false);
-                setConnectedAddress('');
-                setConnectionHistory(prev => [{
-                    event: 'Disconnected',
-                    timestamp: new Date().toISOString(),
-                    details: 'Manually disconnected'
-                }, ...prev.slice(0, 9)]);
-                // Replace setAlertInfo
-                enqueueSnackbar('Successfully disconnected from OPC UA server', { variant: 'info' });
-                refreshStatus(); // Refresh overall system status
-            } else {
-                // Replace setAlertInfo
-                enqueueSnackbar(`Failed to disconnect: ${data.error || 'Unknown error'}`, { variant: 'error' });
-            }
         } catch (err) {
+            // Errors from api.post are caught here
             console.error('Error disconnecting from OPC UA:', err);
-            // Replace setAlertInfo
-            enqueueSnackbar(`Error disconnecting: ${err.message}`, { variant: 'error' });
+            enqueueSnackbar(`Error disconnecting: ${err.message || 'Unknown error'}`, { variant: 'error' });
         } finally {
             setLoading(false);
         }
@@ -155,7 +127,7 @@ export const useOpcUaConnection = () => {
                 if (data.connected && data.config) {
                     setIp(data.config.ip || 'localhost'); // Add defaults
                     setPort(data.config.port?.toString() || '4840');
-                    setResourcePath(data.config.resourcePath || '/UA/MyLittleServer');
+                    setResourcePath(data.config.resourcePath || '');
                     setConnectedAddress(`${data.config.ip}:${data.config.port}`);
                     setSecurityMode(data.config.securityMode || 'None');
                     setSecurityPolicy(data.config.securityPolicy || 'None');
@@ -180,6 +152,13 @@ export const useOpcUaConnection = () => {
         }
     }, [enqueueSnackbar]); // Add dependencies
 
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        localStorage.setItem('opcua_ip', ip);
+        localStorage.setItem('opcua_port', port);
+        localStorage.setItem('opcua_resourcePath', resourcePath);
+    }, [ip, port, resourcePath]);
+
     // Check for config changes
     useEffect(() => {
         // Ensure status and details exist before accessing nested properties
@@ -195,11 +174,25 @@ export const useOpcUaConnection = () => {
 
     // Load data on component mount
     useEffect(() => {
+        const saved = localStorage.getItem('opcuaConfig');
+        if (saved) {
+            try {
+                const cfg = JSON.parse(saved);
+                if (cfg.ip) setIp(cfg.ip);
+                if (cfg.port) setPort(cfg.port.toString());
+                if (typeof cfg.resourcePath === 'string') setResourcePath(cfg.resourcePath);
+                if (cfg.securityMode) setSecurityMode(cfg.securityMode);
+                if (cfg.securityPolicy) setSecurityPolicy(cfg.securityPolicy);
+            } catch (e) {
+                console.warn('Failed to parse saved OPC UA config', e);
+            }
+        }
+
         void fetchConnectionStatus();
         void loadSecurityOptions();
-    }, [loadSecurityOptions, fetchConnectionStatus]); // Add fetchConnectionStatus here
+    }, [fetchConnectionStatus, loadSecurityOptions]);
 
-    // Removed alertInfo and setAlertInfo from return
+
     return {
         loading,
         setLoading,

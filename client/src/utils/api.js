@@ -8,30 +8,28 @@ import { isCsrfError } from './csrf.js';
  * @returns {Promise<any>} The parsed response data
  */
 const handleResponse = async (response) => {
-    // Check for CSRF errors and dispatch custom event
     if (await isCsrfError(response)) {
-        // Dispatch a custom event that the CsrfErrorHandler can listen for
         window.dispatchEvent(new CustomEvent('csrf:error'));
     }
 
     if (!response.ok) {
-        // Try to extract more detailed error information
+        let message = `HTTP Error: ${response.status}`;
         try {
             const errorData = await response.json();
-            throw new Error(errorData.message || errorData.error || `HTTP Error: ${response.status}`);
+            message = errorData.message || errorData.error || message;
         } catch (e) {
-            // If we can't parse the response as JSON, just throw a generic error
-            throw new Error(`HTTP Error: ${response.status}`);
+            // ignore JSON parse error, behalte generic message
         }
+        throw new Error(message);
     }
 
-    // Try to parse as JSON, but don't fail if it's not
     try {
         return await response.json();
     } catch (e) {
         return await response.text();
     }
 };
+
 
 /**
  * API utility functions with CSRF protection

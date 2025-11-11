@@ -9,7 +9,7 @@ const { validateBody } = require('../../middleware/validation');
 const opcuaConnectionSchema = Joi.object({
     ip: Joi.string().required(),
     port: Joi.number().port().required(),
-    resourcePath: Joi.string().default('/UA/MyLittleServer'),
+    resourcePath: Joi.string().allow('').default(''),
     securityMode: Joi.string().valid('None', 'Sign', 'SignAndEncrypt').default('None'),
     securityPolicy: Joi.string().default('None')
 });
@@ -46,21 +46,27 @@ router.post('/connect', validateBody(opcuaConnectionSchema), async (req, res) =>
     try {
         const { ip, port, resourcePath, securityMode, securityPolicy } = req.body;
 
-        // Log connection attempt with security details
-        logger.info(`Attempting to connect to OPC UA server: ${ip}:${port}${resourcePath} with SecurityMode=${securityMode}, SecurityPolicy=${securityPolicy}`);
+        const normalizedPath =
+            typeof resourcePath === 'string'
+                ? resourcePath.trim() === '' || resourcePath.trim() === '/'
+                    ? ''                                   // leer oder "/" => kein Pfad
+                    : resourcePath.trim().startsWith('/')
+                        ? resourcePath.trim()
+                        : `/${resourcePath.trim()}`
+                : '';
 
         const newConfig = {
             ip,
             port,
-            resourcePath: resourcePath || "/UA/MyLittleServer",
-            securityMode: securityMode || "None",
-            securityPolicy: securityPolicy || "None"
+            resourcePath: normalizedPath,             // <- kein Fallback mehr
+            securityMode: securityMode || 'None',
+            securityPolicy: securityPolicy || 'None'
         };
 
         const config = await opcuaConnectionManager.updateConnection(newConfig);
 
         res.json({
-            message: "OPC UA connection reinitialized",
+            message: 'OPC UA connection reinitialized',
             config,
             securityMode: newConfig.securityMode,
             securityPolicy: newConfig.securityPolicy

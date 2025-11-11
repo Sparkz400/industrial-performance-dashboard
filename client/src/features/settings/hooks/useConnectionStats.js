@@ -1,7 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import { API_ENDPOINTS } from '../../../config/config.js';
 
-export const useConnectionStats = () => {
+export const useConnectionStats = (
+    autoRefresh = true,
+    refreshIntervalMs = 30000
+) => {
     const [loadingConnections, setLoadingConnections] = useState(false);
     const [connectionStats, setConnectionStats] = useState(null);
 
@@ -63,10 +66,12 @@ export const useConnectionStats = () => {
     useEffect(() => {
         void fetchConnectionStats();
 
-        const interval = setInterval(fetchConnectionStats, 30000); // Refresh every 30 seconds
+        if (!autoRefresh) return;
+
+        const interval = setInterval(fetchConnectionStats, refreshIntervalMs); // Refresh every 30 seconds
 
         return () => clearInterval(interval);
-    }, [fetchConnectionStats]);
+    }, [fetchConnectionStats, autoRefresh, refreshIntervalMs]);
 
     return {
         loadingConnections,

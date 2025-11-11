@@ -194,79 +194,82 @@ class CertificateManager {
      * @returns {Promise<Object>} Object containing certificate paths and URI.
      */
     async createClientCertificate() {
-        // Ensure initialization is complete before proceeding
-        await this.ensureInitialized();
+        await this.ensureInitialized(); // Ensure paths etc. are set
+
+        logger.info('[CertMgr:createClientCert] Starting creation...');
+        const creationPromise = (async () => {
+            try {
+                const { pki, md } = require('node-forge');
+
+                const keys = pki.rsa.generateKeyPair(2048);
+                const cert = pki.createCertificate();
+
+                cert.publicKey = keys.publicKey;
+                cert.serialNumber = crypto.randomBytes(16).toString('hex');
+                cert.validity.notBefore = new Date();
+                cert.validity.notAfter = new Date();
+                cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 5);
+
+                const subjectAttrs = [
+                    { name: 'commonName', value: this.applicationName },
+                    { name: 'organizationName', value: this.organizationName },
+                    { name: 'localityName', value: this.localityName },
+                    { name: 'stateOrProvinceName', value: this.stateName },
+                    { name: 'countryName', value: this.countryName }
+                ];
+                cert.setSubject(subjectAttrs);
+                cert.setIssuer(subjectAttrs); // Self-signed
+
+                const altNames = [
+                    { type: 6, value: applicationUri }, // URI
+                    { type: 2, value: hostname },       // DNS Name
+                    { type: 2, value: 'localhost' },    // DNS Name
+                ];
+                ipAddresses.forEach(ip => { altNames.push({ type: 7, ip: ip }); });
+
+                cert.setExtensions([
+                    { name: 'basicConstraints', cA: false }, // Not a CA
+                    { name: 'keyUsage', digitalSignature: true, keyEncipherment: true, dataEncipherment: true },
+                    { name: 'extKeyUsage', serverAuth: true, clientAuth: true },
+                    { name: 'subjectAltName', altNames: altNames },
+                    { name: 'subjectKeyIdentifier' }
+                ]);
+
+
+                cert.sign(keys.privateKey, md.sha256.create());
+
+                const certPem = pki.certificateToPem(cert);
+                const privateKeyPem = pki.privateKeyToPem(keys.privateKey);
+
+                // Use Promise.all for concurrent writes
+                await Promise.all([
+                    writeFile(this.certificateFile, certPem),
+                    writeFile(this.privateKeyFile, privateKeyPem)
+                ]);
+
+                logger.info('[CertMgr:createClientCert] Files written successfully.');
+                return {
+                    certificateFile: this.certificateFile,
+                    privateKeyFile: this.privateKeyFile,
+                    applicationUri: this.applicationUri
+                };
+            } catch (error) {
+                logger.error(`[CertMgr:createClientCert] Failed during generation/write: ${error.message}`, { stack: error.stack });
+                throw error; // Re-throw error
+            }
+        })();
+
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Certificate creation timed out after 45 seconds')), 45000); // 45 second timeout
+        });
 
         try {
-            logger.info('Creating new client certificate...');
-
-            // Ensure certManager is initialized (might call initialize again, but it's idempotent)
-            if (!this.certManager) await this.initialize();
-
-            const hostname = os.hostname();
-            const ipAddresses = this.getIpAddresses();
-            const applicationUri = this.applicationUri;
-
-            logger.info(`Certificate Details - Hostname: ${hostname}, AppURI: ${applicationUri}, IPs: ${ipAddresses.join(', ')}`);
-            logger.info(`Subject - CN: ${this.applicationName}, O: ${this.organizationName}, C: ${this.countryName}`);
-
-            // Use node-forge for certificate creation
-            const { pki, md } = require('node-forge');
-            const keys = pki.rsa.generateKeyPair(2048);
-            const cert = pki.createCertificate();
-
-            cert.publicKey = keys.publicKey;
-            cert.serialNumber = crypto.randomBytes(16).toString('hex');
-            cert.validity.notBefore = new Date();
-            cert.validity.notAfter = new Date();
-            cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 5); // 5 year validity
-
-            const subjectAttrs = [
-                { name: 'commonName', value: this.applicationName },
-                { name: 'organizationName', value: this.organizationName },
-                { name: 'localityName', value: this.localityName },
-                { name: 'stateOrProvinceName', value: this.stateName },
-                { name: 'countryName', value: this.countryName }
-            ];
-            cert.setSubject(subjectAttrs);
-            cert.setIssuer(subjectAttrs); // Self-signed
-
-            const altNames = [
-                { type: 6, value: applicationUri }, // URI
-                { type: 2, value: hostname },       // DNS Name
-                { type: 2, value: 'localhost' },    // DNS Name
-            ];
-            ipAddresses.forEach(ip => { altNames.push({ type: 7, ip: ip }); });
-
-            cert.setExtensions([
-                { name: 'basicConstraints', cA: false }, // Not a CA
-                { name: 'keyUsage', digitalSignature: true, keyEncipherment: true, dataEncipherment: true },
-                { name: 'extKeyUsage', serverAuth: true, clientAuth: true },
-                { name: 'subjectAltName', altNames: altNames },
-                { name: 'subjectKeyIdentifier' }
-            ]);
-
-            // Sign the certificate
-            cert.sign(keys.privateKey, md.sha256.create());
-
-            // Convert to PEM format
-            const certPem = pki.certificateToPem(cert);
-            const privateKeyPem = pki.privateKeyToPem(keys.privateKey);
-
-            // --- Robust File Writing ---
-            await writeFile(this.certificateFile, certPem);
-            logger.info(`Client certificate written to: ${this.certificateFile}`);
-            await writeFile(this.privateKeyFile, privateKeyPem);
-            logger.info(`Client private key written to: ${this.privateKeyFile}`);
-
-            return {
-                certificateFile: this.certificateFile,
-                privateKeyFile: this.privateKeyFile,
-                applicationUri: applicationUri
-            };
-        } catch (error) {
-            logger.error(`Failed to create client certificate: ${error.message}`, { stack: error.stack });
-            throw error;
+            const result = await Promise.race([creationPromise, timeoutPromise]);
+            logger.info('[CertMgr:createClientCert] Completed successfully (within timeout).');
+            return result;
+        } catch(error) {
+            logger.error(`[CertMgr:createClientCert] Failed or timed out: ${error.message}`);
+            throw error; // Propagate the timeout or the original error
         }
     }
 

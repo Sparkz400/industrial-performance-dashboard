@@ -101,15 +101,46 @@ const MAX_QUEUE_LOG_THRESHOLD = config.OPCUA_QUEUE_WARN_THRESHOLD;
 let isShuttingDown = false; // Flag to signal shutdown
 let queueProcessingPromise = null; // To track the queue processing loop
 
+// Placeholder for DLQ persistence logic - Implement this separately
+// Likely involves dbClient.query to insert into a dedicated DLQ table
+const persistToDLQ = async (batch, error) => {
+    logger.warn(`[DLQ] Persisting batch of size ${batch.length} to Dead-Letter Queue due to error: ${error.message}`, {
+        error: error.toString(),
+        // Log first few items for diagnosis
+        sampleBatch: batch.slice(0, 5).map(d => ({ key: d.key, ts: d.timestamp, val: d.value }))
+    });
+    // --- Implement DLQ Insertion Logic Here ---
+    try {
+        // Ensure batch data is serializable to JSON
+        const batchJson = JSON.stringify(batch); 
+        await dbClient.query(
+            'INSERT INTO opcua_data_dlq (error_message, batch_data) VALUES ($1, $2)',
+            [error.message || 'Unknown error', batchJson]
+        );
+        logger.info(`[DLQ] Successfully persisted batch of size ${batch.length} to DLQ.`);
+        // [ALERT] Consider triggering an alert here for DLQ entries, maybe throttled.
+    } catch (dlqError) {
+        logger.error(`[DLQ] CRITICAL ERROR: Failed to persist batch to Dead-Letter Queue! Data loss occurred. DLQ Error: ${dlqError.message}`, {
+            originalError: error.message,
+            dlqError: dlqError.toString(),
+            batchSize: batch.length
+            // Avoid logging the batch data again here if it's large or causes issues
+        });
+        // [ALERT] Trigger a critical alert here - failed to write to DLQ
+    }
+    // --- End Implementation ---
+};
+
 setInterval(() => {
     const currentSize = opcuaDataQueue.size();
     if (currentSize > 0) {
         logger.info(`OPC UA Data Queue Size: ${currentSize}`);
         if (currentSize > MAX_QUEUE_LOG_THRESHOLD) {
-            logger.warn(`OPC UA Data Queue size (${currentSize}) exceeds threshold (${MAX_QUEUE_LOG_THRESHOLD}). Processing might be falling behind.`);
+            logger.warn(`[ALERT] OPC UA Data Queue size (${currentSize}) exceeds threshold (${MAX_QUEUE_LOG_THRESHOLD}). Processing might be falling behind.`);
+            // Add actual alert notification logic here (e.g., email, webhook)
         }
     }
-}, 60000);
+}, 60000); // Check every minute
 
 const persistOpcuaData = (data) => {
     if (isShuttingDown) {
@@ -156,9 +187,11 @@ const processOpcuaDataQueue = async () => {
             sampleBatch: batch.slice(0, 5).map(d => ({ key: d.key, ts: d.timestamp, val: d.value })),
             dbErrorCode: error.code
         });
+        // --- Send to DLQ instead of dropping ---
+        await persistToDLQ(batch, error); 
         // DO NOT prepend the batch back to the queue: opcuaDataQueue.prepend(batch);
         // Consider sending failed batches to a separate log file or dead-letter queue system
-        // --- End Log and Drop ---
+        // --- End Send to DLQ ---
         return false; // Indicate processing failed for this cycle
     }
 };
@@ -209,7 +242,8 @@ const processQueue = async () => {
 
             consecutiveErrors++;
             if (consecutiveErrors > maxConsecutiveErrors) {
-                logger.error(`Queue processor encountered ${consecutiveErrors} consecutive errors. Pausing for 60 seconds.`);
+                logger.error(`[ALERT] Queue processor encountered ${consecutiveErrors} consecutive errors. Pausing for 60 seconds.`);
+                // Add actual alert notification logic here
                 if (!isRunning) break;
                 await new Promise(resolve => setTimeout(resolve, 60000));
                 consecutiveErrors = 0;

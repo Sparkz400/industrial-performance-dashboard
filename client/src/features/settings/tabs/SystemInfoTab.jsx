@@ -37,7 +37,7 @@ const SystemInfoTab = () => {
         connectionStats,
         formatDuration,
         fetchConnectionStats
-    } = useConnectionStats();
+    } = useConnectionStats(true, 1000);
 
     return (
         <Card>
@@ -49,8 +49,6 @@ const SystemInfoTab = () => {
                             lastStatsUpdate={lastStatsUpdate}
                             error={error}
                             formatUptime={formatUptime}
-                            fetchSystemStats={fetchSystemStats}
-                            loading={loading}
                         />
                     </Grid>
 

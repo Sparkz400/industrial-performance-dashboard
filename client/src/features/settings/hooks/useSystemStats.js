@@ -74,7 +74,7 @@ export const useSystemStats = () => {
         fetchSystemStats();
 
         // Set up auto-refresh interval (every 30 seconds)
-        const refreshInterval = setInterval(fetchSystemStats, 30000);
+        const refreshInterval = setInterval(fetchSystemStats, 1000);
 
         // Clean up
         return () => clearInterval(refreshInterval);

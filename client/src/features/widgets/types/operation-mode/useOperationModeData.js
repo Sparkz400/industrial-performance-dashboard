@@ -61,6 +61,11 @@ export function useOperationModeData(options = {}) {
         // Fetch initial historical data
         void fetchHistoricalData();
 
+        // --- Check if socket is available and connected ---
+        if (!socket || !socketConnected) {
+            return; // Exit effect if socket isn't ready
+            }
+
         // Only proceed if socket is available and connected
         if (socket && socketConnected) {
             const roomName = 'opcua-OperationMode'; // Room for this specific data type

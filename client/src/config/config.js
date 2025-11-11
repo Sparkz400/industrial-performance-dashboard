@@ -19,6 +19,16 @@ export const API_ENDPOINTS = {
         connections: `${API_BASE_URL}/system/connections`
     },
     csrfToken: `${API_BASE_URL}/csrf-token`,
+    certificates: {
+        base: `${API_BASE_URL}/certificates`, // Base path
+        trusted: `${API_BASE_URL}/certificates/trusted`,
+        rejected: `${API_BASE_URL}/certificates/rejected`,
+        client: `${API_BASE_URL}/certificates/client`,
+        securityOptions: `${API_BASE_URL}/certificates/security-options`,
+        regenerate: `${API_BASE_URL}/certificates/regenerate`,
+        trust: `${API_BASE_URL}/certificates/trust`,
+        acceptRejected: (filename) => `${API_BASE_URL}/certificates/accept-rejected/${filename}` // Function for dynamic paths
+    }
 };
 
 // Other constants

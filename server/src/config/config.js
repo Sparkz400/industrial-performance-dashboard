@@ -21,9 +21,14 @@ const envVarsSchema = Joi.object({
     DB_HEALTH_CHECK_INTERVAL: Joi.number().integer().min(0).default(60000).description('Database health check interval (ms, 0 to disable)'),
 
     // OPC UA Configuration
-    OPCUA_IP: Joi.string().ip({ version: ['ipv4', 'ipv6'] }).default('localhost').description('OPC UA server IP address'),
+    OPCUA_IP: Joi.string().default('localhost')
+        .description('OPC UA server host/IP'),
     OPCUA_PORT: Joi.number().port().default(4840).description('OPC UA server port'),
-    OPCUA_RESOURCE_PATH: Joi.string().default('/UA/MyLittleServer').description('OPC UA resource path'),
+    OPCUA_RESOURCE_PATH: Joi.string()
+        .allow('')
+        .default('')
+        .description('OPC UA resource path (kann leer sein)'),
+
     OPCUA_SECURITY_MODE: Joi.string().valid('None', 'Sign', 'SignAndEncrypt').default('None').description('OPC UA security mode'),
     OPCUA_SECURITY_POLICY: Joi.string().default('None').description('OPC UA security policy'), // Consider validating against known policies if strictness needed
     OPCUA_SECURITY_FALLBACK_ENABLED: Joi.boolean().default(false).description('Enable fallback to SecurityMode=None on security errors'),

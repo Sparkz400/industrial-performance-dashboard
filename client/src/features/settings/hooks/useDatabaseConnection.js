@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import { API_ENDPOINTS } from '../../../config/config.js';
 import { useSystemStatus } from '../../system/index.jsx';
-import { useSnackbar } from 'notistack'; // Import useSnackbar
+import { useSnackbar } from 'notistack';
+import api from "../../../utils/api.js"; // Import useSnackbar
 
 export const useDatabaseConnection = () => {
     const [loading, setLoading] = useState(false);
@@ -22,30 +23,20 @@ export const useDatabaseConnection = () => {
     const handleTestDbConnection = async () => {
         setLoading(true);
         try {
-            const res = await fetch(API_ENDPOINTS.dbTest);
-            const data = await res.json();
+            const data = await api.get(API_ENDPOINTS.dbTest);
 
-            if (res.ok) {
-                setDbOnline(true);
-                // Replace setAlertInfo
-                enqueueSnackbar('Database connection successful', { variant: 'success' });
-                refreshStatus(); // Refresh overall system status
-            } else {
-                setDbOnline(false);
-                // Replace setAlertInfo
-                enqueueSnackbar(`Database connection failed: ${data.error || 'Unknown error'}`, { variant: 'error' });
-            }
-        } catch (err) {
+            setDbOnline(true);
+            enqueueSnackbar('Database connection successful', { variant: 'success' });
+            refreshStatus();
+        } catch (err) { // api.get throws on error
             console.error('Error testing database connection:', err);
             setDbOnline(false);
-            // Replace setAlertInfo
-            enqueueSnackbar(`Database error: ${err.message}`, { variant: 'error' });
+            enqueueSnackbar(`Database connection failed: ${err.message || 'Unknown error'}`, { variant: 'error' });
         } finally {
             setLoading(false);
         }
     };
 
-    // Removed alertInfo and setAlertInfo from return
     return {
         loading,
         setLoading,

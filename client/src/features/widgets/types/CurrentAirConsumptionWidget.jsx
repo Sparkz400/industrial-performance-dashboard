@@ -11,7 +11,7 @@ import {
     Brush
 } from 'recharts';
 import PropTypes from 'prop-types';
-import { Card, CardContent, Typography } from '@mui/material';
+import {Box, Card, CardContent, Typography} from '@mui/material';
 
 const generateInitialData = () => {
     const data = [];
@@ -58,7 +58,7 @@ const CurrentAirConsumptionWidget = ({ config }) => {
                     Air Consumption (Last 24 Hours)
                 </Typography>
                 {/* Container that fills available space */}
-                <div style={{ flexGrow: 1 }}>
+                <Box sx={{ flexGrow: 1, width: '100%', minHeight: '150px'}}>
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={data}>
                             <CartesianGrid strokeDasharray="3 3" />
@@ -83,7 +83,7 @@ const CurrentAirConsumptionWidget = ({ config }) => {
                             />
                         </LineChart>
                     </ResponsiveContainer>
-                </div>
+                </Box>
                 <Typography variant="body2" color="textSecondary">
                     Use the brush above to scroll back up to 24 hours.
                 </Typography>

@@ -17,7 +17,7 @@ import ErrorBoundary from './features/system/components/ErrorBoundary.jsx';
 import { useSystemStatus } from './features/system/index.jsx';
 import CertificateNotification from './features/settings/components/CertificateNotification.jsx';
 import CsrfErrorHandler from './shared/components/CsrfErrorHandler.jsx';
-import { useSnackbar } from 'notistack';
+import { useSnackbar, closeSnackbar } from 'notistack';
 
 // Lazy load pages with better naming
 const DashboardPage = React.lazy(() => import('./features/dashboard/pages/dashboardPage.jsx'));
@@ -85,13 +85,16 @@ function App() {
 
     // Check for system errors and show notifications
     useEffect(() => {
+        const snackbarKey = 'system-connection-error';
         if (isError) {
-            // Use enqueueSnackbar instead of setNotification
+            closeSnackbar(snackbarKey);
             enqueueSnackbar('System connection issue detected', {
                 variant: 'error',
-                persist: true, // Keep critical errors visible until dismissed
-                key: 'system-connection-error' // Prevent duplicate system errors
+                persist: true,
+                key: snackbarKey
             });
+        }else {
+            closeSnackbar(snackbarKey);
         }
     }, [isError, enqueueSnackbar]);
 
@@ -106,13 +109,15 @@ function App() {
             flexGrow: 1,
             ml: `${drawerWidth}px`,
             transition: 'margin-left 0.3s ease',
-            overflow: 'hidden',
+            overflowX: 'hidden',
+            overflowY: 'auto',
             height: '100vh',
             display: 'flex',
             flexDirection: 'column',
         }),
         [drawerWidth]
     );
+
 
     return (
         <Router>

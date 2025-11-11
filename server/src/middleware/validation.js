@@ -40,7 +40,7 @@ const dashboardSchema = Joi.object({
 const opcuaConnectionSchema = Joi.object({
     ip: Joi.string().required().hostname(),
     port: Joi.number().port().required(),
-    resourcePath: Joi.string().default('/UA/MyLittleServer')
+    resourcePath: Joi.string().allow('').default('')
 });
 
 // Database test validation schema

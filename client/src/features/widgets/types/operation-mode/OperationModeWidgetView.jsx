@@ -96,7 +96,8 @@ const OperationModeWidgetView = ({
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    mb: 1
+                    mb: 1,
+                    flexShrink: 0
                 }}>
                     <Typography variant="h6">
                         Operation Mode Over Time
@@ -156,7 +157,6 @@ const OperationModeWidgetView = ({
                                         className="no-drag"
                                         height={30}
                                         stroke="#82ca9d"
-                                        y={undefined}
                                         startIndex={Math.max(0, data.length - 50)}
                                         endIndex={data.length - 1}
                                     />

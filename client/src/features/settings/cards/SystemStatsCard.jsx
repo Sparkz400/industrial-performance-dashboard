@@ -14,15 +14,12 @@ import {
     CircularProgress
 } from '@mui/material';
 import InfoIcon from '@mui/icons-material/Info';
-import RefreshIcon from '@mui/icons-material/Refresh';
 
 const SystemStatsCard = ({
                              systemStats,
                              lastStatsUpdate,
                              error,
                              formatUptime,
-                             fetchSystemStats,
-                             loading
                          }) => {
     return (
         <Card>
@@ -120,18 +117,6 @@ const SystemStatsCard = ({
                     </Typography>
                 )}
 
-                <Box sx={{ mt: 2 }}>
-                    <Button
-                        variant="outlined"
-                        color="primary"
-                        startIcon={loading ? <CircularProgress size={20} /> : <RefreshIcon />}
-                        onClick={fetchSystemStats}
-                        disabled={loading}
-                        fullWidth
-                    >
-                        Refresh System Info
-                    </Button>
-                </Box>
             </CardContent>
         </Card>
     );

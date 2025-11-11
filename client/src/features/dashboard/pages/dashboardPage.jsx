@@ -10,7 +10,7 @@ import {
     DialogContent,
     DialogContentText,
     DialogTitle,
-    Button
+    Button, FormControlLabel, Switch
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
@@ -289,6 +289,7 @@ function DashboardPageInternal() {
     }, [enqueueSnackbar]);
 
     // Initial data loading strategy
+    // Initial data loading strategy
     const loadInitialDashboards = useCallback(async () => {
         if (!isComponentMounted.current) return;
         dispatch({ type: ActionTypes.INITIAL_LOAD_START });
@@ -301,21 +302,25 @@ function DashboardPageInternal() {
         // 1. Try Server First
         try {
             const serverDashboards = await api.endpoints.getDashboards();
-            if (serverDashboards && serverDashboards.length > 0) {
+
+            if (Array.isArray(serverDashboards) && serverDashboards.length > 0) {
                 console.log(`Loaded ${serverDashboards.length} dashboards from server.`);
                 loadedDashboards = serverDashboards;
                 selectedId = serverDashboards[0].id;
                 loadSource = 'server';
+
                 // Save server data to local storage immediately for offline fallback
                 saveAllToLocalStorage(loadedDashboards);
             } else {
-                // Server returned empty, treat as no dashboards found yet
-                console.log("Server returned no dashboards.");
+                console.log('Server returned no dashboards.');
             }
         } catch (serverError) {
             console.error('Error fetching dashboards from server:', serverError);
-            notificationPayload = { message: `Failed to sync with server: ${serverError.message}. Displaying local data if available.`, variant: 'warning' };
-            // Proceed to try local storage
+            notificationPayload = {
+                message: `Failed to sync with server: ${serverError.message}. Displaying local data if available.`,
+                variant: 'warning',
+            };
+            // loadSource bleibt 'none' → danach wird LocalStorage probiert
         }
 
         // 2. Try Local Storage if Server Failed or Returned Empty
@@ -324,23 +329,28 @@ function DashboardPageInternal() {
                 const localDataStr = localStorage.getItem('dashboardData');
                 if (localDataStr) {
                     const localData = JSON.parse(localDataStr);
-                    if (localData.dashboards && localData.dashboards.length > 0) {
+                    if (Array.isArray(localData.dashboards) && localData.dashboards.length > 0) {
                         console.log(`Loaded ${localData.dashboards.length} dashboards from local storage.`);
                         loadedDashboards = localData.dashboards;
-                        selectedId = loadedDashboards[0].id;
+                        selectedId =
+                            localData.selectedDashboardId || localData.dashboards[0].id;
                         loadSource = 'local';
                     }
                 }
             } catch (localError) {
                 console.error('Error loading from local storage:', localError);
-                notificationPayload = { message: `Error loading local data: ${localError.message}`, variant: 'error'};
+                notificationPayload = {
+                    message: `Error loading local data: ${localError.message}`,
+                    variant: 'error',
+                };
             }
         }
 
         // 3. Create Default if Nothing Loaded
         if (loadedDashboards.length === 0) {
-            console.log("Creating default dashboard.");
+            console.log('Creating default dashboard.');
             loadSource = 'default';
+
             const timestamp = new Date().toISOString();
             const defaultDashboard = {
                 id: 'dashboard-' + Date.now(),
@@ -348,40 +358,55 @@ function DashboardPageInternal() {
                 widgets: [],
                 layout: [],
                 localLastModified: timestamp,
-                serverLastModified: null // Indicate it hasn't been saved to server yet
+                serverLastModified: null,
             };
+
             loadedDashboards = [defaultDashboard];
             selectedId = defaultDashboard.id;
-            saveAllToLocalStorage(loadedDashboards); // Save default locally
-            // Attempt to save default to server in background - don't await
-            saveDashboardToServer(defaultDashboard).catch(err => {
-                console.error("Failed to save initial default dashboard to server:", err);
-                // Update notification maybe? Or rely on user saving later.
-                // Might need to set hasLocalChanges = true here
+
+            // Save default locally
+            saveAllToLocalStorage(loadedDashboards);
+
+            // Try to push the default to the server (fire-and-forget)
+            saveDashboardToServer(defaultDashboard).catch((err) => {
+                console.error('Failed to save initial default dashboard to server:', err);
             });
-            notificationPayload = { message: 'Created default dashboard', variant: 'info' };
+
+            notificationPayload = {
+                message: 'Created default dashboard',
+                variant: 'info',
+            };
         }
 
-        // 4. Update State
-        if (isComponentMounted.current) {
-            const dashboardToLoad = loadedDashboards.find(d => d.id === selectedId);
-            widgetActions.setWidgets(dashboardToLoad?.widgets || []);
-            widgetActions.setLayout(dashboardToLoad?.layout || []);
+        // 4. Update State + Widget-Context
+        if (!isComponentMounted.current) return;
 
-            dispatch({
-                type: ActionTypes.INITIAL_LOAD_SUCCESS,
-                payload: {
-                    dashboards: loadedDashboards,
-                    selectedDashboardId: selectedId,
-                    // Mark local changes only if loaded from local storage *because* server failed
-                    hasLocalChanges: loadSource === 'local' && notificationPayload?.severity === 'warning',
-                }
+        const dashboardToLoad =
+            loadedDashboards.find((d) => d.id === selectedId) || loadedDashboards[0] || null;
+
+        widgetActions.setWidgets(dashboardToLoad?.widgets || []);
+        widgetActions.setLayout(dashboardToLoad?.layout || []);
+
+        const shouldMarkLocalChanges =
+            loadSource === 'local' &&
+            notificationPayload &&
+            notificationPayload.variant === 'warning';
+
+        dispatch({
+            type: ActionTypes.INITIAL_LOAD_SUCCESS,
+            payload: {
+                dashboards: loadedDashboards,
+                selectedDashboardId: dashboardToLoad ? dashboardToLoad.id : null,
+                // WICHTIG: hier war vorher notificationPayload?.severity
+                hasLocalChanges: shouldMarkLocalChanges,
+            },
+        });
+
+        // 5. Notification (falls gesetzt)
+        if (notificationPayload) {
+            enqueueSnackbar(notificationPayload.message, {
+                variant: notificationPayload.variant,
             });
-
-            // Show notification if one was generated
-            if (notificationPayload) {
-                enqueueSnackbar(notificationPayload.message, { variant: notificationPayload.variant });
-            }
         }
     }, [widgetActions, saveAllToLocalStorage, saveDashboardToServer, enqueueSnackbar]);
 
@@ -798,7 +823,7 @@ function DashboardPageInternal() {
                         </span>
                     </Tooltip>
                     {/* Optional: Toggle for Auto-Sync */}
-                    {/* <FormControlLabel control={<Switch checked={autoSync} onChange={(e) => setAutoSync(e.target.checked)} />} label="Auto Sync" /> */}
+                    { <FormControlLabel control={<Switch checked={autoSync} onChange={(e) => setAutoSync(e.target.checked)} />} label="Auto Sync" /> }
                 </Box>
             </Box>
 

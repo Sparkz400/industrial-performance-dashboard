@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent, Typography } from '@mui/material';
+import {Box, Card, CardContent, Typography} from '@mui/material';
 import {
     LineChart,
     Line,
@@ -57,7 +57,8 @@ const UptimeLineChartWidget = ({ config }) => {
                 <Typography variant="h6" gutterBottom>
                     Uptime Rate (Last 7 Days)
                 </Typography>
-                <ResponsiveContainer width="100%" height="100%">
+                <Box sx={{ flexGrow: 1, width: '100%', minHeight: '150px'}}>
+                    <ResponsiveContainer width="100%" height="100%">
                     <LineChart
                         data={uptimeData}
                         margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
@@ -82,8 +83,9 @@ const UptimeLineChartWidget = ({ config }) => {
                             stroke="red"
                             strokeDasharray="3 3"
                         />
-                    </LineChart>
-                </ResponsiveContainer>
+                        </LineChart>
+                    </ResponsiveContainer>
+                </Box>
             </CardContent>
         </Card>
     );
