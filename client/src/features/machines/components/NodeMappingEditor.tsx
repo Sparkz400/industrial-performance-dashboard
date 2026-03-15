@@ -1,0 +1,365 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Box,
+  Typography,
+  TextField,
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Switch,
+  Alert,
+  Tabs,
+  Tab,
+  Tooltip,
+  Select,
+  MenuItem,
+  FormControl,
+} from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import SaveIcon from '@mui/icons-material/Save';
+import AddIcon from '@mui/icons-material/Add';
+import { useMachineStore } from '@/stores/useMachineStore';
+import NodeBrowser from './NodeBrowser';
+import type { Machine, NodeMapping, BrowsedNode } from '@/types';
+
+interface NodeMappingEditorProps {
+  open: boolean;
+  onClose: () => void;
+  machine: Machine | null;
+}
+
+interface EditableMapping {
+  id?: number;
+  node_id: string;
+  node_key: string;
+  display_name: string;
+  data_type: string;
+  sampling_interval: number;
+  is_active: boolean;
+  isNew?: boolean;
+}
+
+const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, machine }) => {
+  const [tab, setTab] = useState(0);
+  const [mappings, setMappings] = useState<EditableMapping[]>([]);
+  const [selectedBrowseNodes, setSelectedBrowseNodes] = useState<BrowsedNode[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const getMappings = useMachineStore((s) => s.getMappings);
+  const saveMappings = useMachineStore((s) => s.saveMappings);
+  const deleteMapping = useMachineStore((s) => s.deleteMapping);
+  const fetchMachines = useMachineStore((s) => s.fetchMachines);
+
+  const loadMappings = useCallback(async () => {
+    if (!machine) return;
+    try {
+      const existing = await getMappings(machine.id);
+      setMappings(existing.map((m: NodeMapping) => ({ ...m })));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    }
+  }, [machine, getMappings]);
+
+  useEffect(() => {
+    if (open && machine) {
+      loadMappings();
+      setSelectedBrowseNodes([]);
+      setError(null);
+      setSuccess(null);
+      setTab(0);
+    }
+  }, [open, machine, loadMappings]);
+
+  const handleToggleBrowseNode = (node: BrowsedNode) => {
+    setSelectedBrowseNodes((prev) => {
+      const exists = prev.some((n) => n.nodeId === node.nodeId);
+      if (exists) return prev.filter((n) => n.nodeId !== node.nodeId);
+      return [...prev, node];
+    });
+  };
+
+  const handleAddSelectedNodes = () => {
+    const newMappings: EditableMapping[] = selectedBrowseNodes
+      .filter((node) => !mappings.some((m) => m.node_id === node.nodeId))
+      .map((node) => ({
+        node_id: node.nodeId,
+        node_key: node.displayName.replace(/[^a-zA-Z0-9_]/g, ''),
+        display_name: node.displayName,
+        data_type: 'Double',
+        sampling_interval: 500,
+        is_active: true,
+        isNew: true,
+      }));
+
+    if (newMappings.length === 0) {
+      setError('Selected nodes are already mapped');
+      return;
+    }
+
+    setMappings((prev) => [...prev, ...newMappings]);
+    setSelectedBrowseNodes([]);
+    setTab(0);
+    setSuccess(`Added ${newMappings.length} node(s). Click Save to persist.`);
+  };
+
+  const handleUpdateMapping = (
+    index: number,
+    field: keyof EditableMapping,
+    value: EditableMapping[keyof EditableMapping],
+  ) => {
+    setMappings((prev) => prev.map((m, i) => (i === index ? { ...m, [field]: value } : m)));
+  };
+
+  const handleDeleteMapping = async (index: number) => {
+    // eslint-disable-next-line security/detect-object-injection -- index is a numeric parameter from the caller
+    const mapping = mappings[index];
+    if (mapping.id && machine) {
+      try {
+        await deleteMapping(machine.id, mapping.id);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        return;
+      }
+    }
+    setMappings((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSave = async () => {
+    if (!machine) return;
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      await saveMappings(machine.id, mappings);
+      setSuccess('Mappings saved successfully. Connection will refresh to apply changes.');
+      await fetchMachines();
+      await loadMappings();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddManual = () => {
+    setMappings((prev) => [
+      ...prev,
+      {
+        node_id: '',
+        node_key: '',
+        display_name: '',
+        data_type: 'Double',
+        sampling_interval: 500,
+        is_active: true,
+        isNew: true,
+      },
+    ]);
+  };
+
+  if (!machine) return null;
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+      <DialogTitle>
+        Node Mappings — {machine.name}
+        <Typography variant="body2" color="text.secondary">
+          {machine.endpoint_url}
+        </Typography>
+      </DialogTitle>
+
+      <DialogContent>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+        {success && (
+          <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
+            {success}
+          </Alert>
+        )}
+
+        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
+          <Tab label={`Current Mappings (${mappings.length})`} />
+          <Tab label="Browse & Add Nodes" />
+        </Tabs>
+
+        {tab === 0 && (
+          <Box>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+              <Button startIcon={<AddIcon />} size="small" onClick={handleAddManual}>
+                Add Manual Entry
+              </Button>
+            </Box>
+
+            <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 400 }}>
+              <Table size="small" stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Node ID</TableCell>
+                    <TableCell>Key</TableCell>
+                    <TableCell>Display Name</TableCell>
+                    <TableCell>Data Type</TableCell>
+                    <TableCell sx={{ width: 100 }}>Interval (ms)</TableCell>
+                    <TableCell sx={{ width: 70 }}>Active</TableCell>
+                    <TableCell sx={{ width: 50 }} />
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {mappings.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center">
+                        <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                          No mappings yet. Browse nodes or add manually.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    mappings.map((mapping, index) => (
+                      <TableRow key={mapping.id || `new-${index}`}>
+                        <TableCell>
+                          <TextField
+                            value={mapping.node_id}
+                            onChange={(e) => handleUpdateMapping(index, 'node_id', e.target.value)}
+                            size="small"
+                            variant="standard"
+                            fullWidth
+                            placeholder="ns=1;s=NodeName"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            value={mapping.node_key}
+                            onChange={(e) => handleUpdateMapping(index, 'node_key', e.target.value)}
+                            size="small"
+                            variant="standard"
+                            fullWidth
+                            placeholder="UniqueKey"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            value={mapping.display_name}
+                            onChange={(e) =>
+                              handleUpdateMapping(index, 'display_name', e.target.value)
+                            }
+                            size="small"
+                            variant="standard"
+                            fullWidth
+                            placeholder="Display Name"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <FormControl size="small" variant="standard" fullWidth>
+                            <Select
+                              value={mapping.data_type}
+                              onChange={(e) =>
+                                handleUpdateMapping(index, 'data_type', e.target.value)
+                              }
+                            >
+                              <MenuItem value="Double">Double</MenuItem>
+                              <MenuItem value="Float">Float</MenuItem>
+                              <MenuItem value="Int32">Int32</MenuItem>
+                              <MenuItem value="Int64">Int64</MenuItem>
+                              <MenuItem value="UInt32">UInt32</MenuItem>
+                              <MenuItem value="Boolean">Boolean</MenuItem>
+                              <MenuItem value="String">String</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            type="number"
+                            value={mapping.sampling_interval}
+                            onChange={(e) =>
+                              handleUpdateMapping(
+                                index,
+                                'sampling_interval',
+                                parseInt(e.target.value, 10),
+                              )
+                            }
+                            size="small"
+                            variant="standard"
+                            inputProps={{ min: 100, step: 100 }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Switch
+                            checked={mapping.is_active}
+                            onChange={(e) =>
+                              handleUpdateMapping(index, 'is_active', e.target.checked)
+                            }
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title="Remove">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDeleteMapping(index)}
+                              color="error"
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        )}
+
+        {tab === 1 && (
+          <Box>
+            <NodeBrowser
+              machineId={machine.id}
+              selectedNodes={selectedBrowseNodes}
+              onToggleNode={handleToggleBrowseNode}
+            />
+            {selectedBrowseNodes.length > 0 && (
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={handleAddSelectedNodes}
+                >
+                  Add {selectedBrowseNodes.length} Selected Node(s) to Mappings
+                </Button>
+              </Box>
+            )}
+          </Box>
+        )}
+      </DialogContent>
+
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+        <Button
+          onClick={handleSave}
+          variant="contained"
+          startIcon={<SaveIcon />}
+          disabled={saving || mappings.length === 0}
+        >
+          {saving ? 'Saving...' : 'Save Mappings'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+export default NodeMappingEditor;

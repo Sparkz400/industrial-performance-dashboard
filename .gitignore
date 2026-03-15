@@ -10,3 +10,7 @@ server/.env
 .env.*
 !.env.example
 package-lock.json
+
+# Sensitive files
+server/certificates/own/private/
+server/sessions/

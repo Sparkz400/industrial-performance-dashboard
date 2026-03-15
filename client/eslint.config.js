@@ -1,34 +1,31 @@
 import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import jsdoc from 'eslint-plugin-jsdoc';
 import security from 'eslint-plugin-security';
-import {browser} from "globals";
+import prettierConfig from 'eslint-config-prettier';
+import globals from 'globals';
 
-// Export the configuration as an array
-export default [
+export default tseslint.config(
   {
-    // Ignore the 'dist' directory for linting
     ignores: ['dist'],
   },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
-    // Apply to JavaScript and JSX files
-    files: ['**/*.{js,jsx}'],
+    files: ['**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
-      // Use the latest ECMAScript version
       ecmaVersion: 'latest',
       sourceType: 'module',
-      // Define globals for browser environment
       globals: {
-        ...(browser),
+        ...globals.browser,
       },
       parserOptions: {
-        // Enable JSX syntax
         ecmaFeatures: { jsx: true },
       },
     },
-    // Define plugins to use
     plugins: {
       react,
       'react-hooks': reactHooks,
@@ -36,39 +33,44 @@ export default [
       jsdoc,
       security,
     },
-    // Define rules
     rules: {
-      // Include recommended rules from ESLint, React, React Hooks, JSDoc, and Security plugins
-      ...js.configs.recommended.rules,
       ...react.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
       ...jsdoc.configs.recommended.rules,
       ...security.configs.recommended.rules,
 
-      // React rules
-      'react/prop-types': 'error', // Enforce prop-types for type safety
-      'react/jsx-key': 'error', // Ensure keys are provided for list items
+      // TypeScript provides type information, so JSDoc param types/descriptions and return types are redundant
+      'jsdoc/require-param-description': 'off',
+      'jsdoc/require-param-type': 'off',
+      'jsdoc/require-returns': 'off',
+      'jsdoc/require-returns-type': 'off',
 
-      // Modern JavaScript rules
-      'no-var': 'error', // Disallow 'var' (prefer 'let' or 'const')
-      'prefer-const': 'error', // Enforce 'const' for variables that are not reassigned
-      'arrow-body-style': ['error', 'as-needed'], // Enforce concise arrow function syntax
+      'react/prop-types': 'off',
+      'react/jsx-key': 'error',
 
-      // Code quality rules
-      'no-console': ['error', { allow: ['warn', 'error'] }], // Disallow console.logs but allow warnings and errors
-      'no-debugger': 'error', // Disallow debugger statements
-      'no-unused-vars': ['warn', { vars: 'all', args: 'after-used', ignoreRestSiblings: true }], // Warn about unused variables
+      'no-var': 'error',
+      'prefer-const': 'error',
+      'arrow-body-style': ['error', 'as-needed'],
 
-      // Security rules
-      'security/detect-object-injection': 'error', // Enforce strict object injection checks
-      'security/detect-non-literal-regexp': 'error', // Enforce non-literal RegExp checks
+      'no-console': ['error', { allow: ['warn', 'error'] }],
+      'no-debugger': 'error',
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { vars: 'all', args: 'after-used', ignoreRestSiblings: true, caughtErrors: 'all', varsIgnorePattern: '^_', argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_', destructuredArrayIgnorePattern: '^_' },
+      ],
 
-      // React Refresh rules
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }], // Ensure only components are exported
+      'security/detect-object-injection': 'error',
+      'security/detect-non-literal-regexp': 'error',
+
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true, allowExportNames: ['useSystemStatus', 'useTheme', 'useWidgets', 'useLoading', 'useCsrf', 'StatusContext', 'ThemeContext', 'templates', 'useStatusStore', 'useThemeStore', 'modeMapping', 'queryClient'] },
+      ],
     },
-    // React version detection settings
     settings: {
       react: { version: 'detect' },
     },
   },
-];
+  prettierConfig,
+);
