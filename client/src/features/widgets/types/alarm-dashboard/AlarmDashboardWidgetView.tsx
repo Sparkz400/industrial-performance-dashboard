@@ -12,8 +12,8 @@ import {
   Paper,
   Chip,
   IconButton,
-  CircularProgress,
 } from '@mui/material';
+import WidgetSkeleton from '@/shared/components/loading/WidgetSkeleton';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import { SEVERITY_LEVELS, ALARM_STATUS } from './useAlarmData';
@@ -58,8 +58,8 @@ interface AlarmDashboardWidgetViewProps {
   alarms: Alarm[];
   loading: boolean;
   error: string | null;
-  onAcknowledge: (id: string) => void;
-  onClear: (id: string) => void;
+  onAcknowledge: (id: number) => void;
+  onClear: (id: number) => void;
 }
 
 const AlarmDashboardWidgetView = memo(function AlarmDashboardWidgetView({
@@ -81,21 +81,9 @@ const AlarmDashboardWidgetView = memo(function AlarmDashboardWidgetView({
     setPage(0);
   }, []);
 
-  // Display loading state
+  // Display loading state with skeleton
   if (loading) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '100%',
-          height: '100%',
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
+    return <WidgetSkeleton variant="table" />;
   }
 
   // Display error state
@@ -128,18 +116,22 @@ const AlarmDashboardWidgetView = memo(function AlarmDashboardWidgetView({
           <TableBody>
             {alarms.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((alarm) => (
               <TableRow key={alarm.id}>
-                <TableCell>{formatDate(alarm.time)}</TableCell>
+                <TableCell>{formatDate(alarm.createdAt ?? undefined)}</TableCell>
                 <TableCell>
                   <Chip
-                    label={alarm.severity}
-                    color={getSeverityColor(alarm.severity)}
+                    label={alarm.severity ?? 'unknown'}
+                    color={getSeverityColor((alarm.severity ?? 'info') as SeverityLevel)}
                     size="small"
                   />
                 </TableCell>
                 <TableCell>
-                  <Chip label={alarm.status} color={getStatusColor(alarm.status)} size="small" />
+                  <Chip
+                    label={alarm.status ?? 'unknown'}
+                    color={getStatusColor((alarm.status ?? 'active') as AlarmStatus)}
+                    size="small"
+                  />
                 </TableCell>
-                <TableCell>{alarm.source}</TableCell>
+                <TableCell>{alarm.ruleName ?? alarm.nodeKey ?? '-'}</TableCell>
                 <TableCell>{alarm.message}</TableCell>
                 <TableCell>
                   {alarm.status === ALARM_STATUS.ACTIVE && (

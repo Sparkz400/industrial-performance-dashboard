@@ -1,72 +1,53 @@
-import express, {
-  type Request,
-  type Response,
-  type NextFunction,
-} from "express";
+import express, { type Request, type Response } from "express";
 import fs from "fs";
 import path from "path";
 import { promisify } from "util";
 import logger from "../../utils/logger.js";
 import certificateManager from "../services/certificateManager.js";
 import opcuaConnectionManager from "../services/opcuaConnectionManager.js";
+import { asyncHandler } from "../../middleware/errorHandler.js";
+import { requireRole } from "../../middleware/auth.js";
+import {
+  AppError,
+  NotFoundError,
+  ValidationError,
+} from "../../utils/errors.js";
 
 const router = express.Router();
 
-const ensureCertificatesInitialized = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  try {
+const ensureCertificatesInitialized = asyncHandler(
+  async (req: Request, res: Response, next) => {
     await certificateManager.ensureInitialized();
     next();
-  } catch (error: any) {
-    logger.error("Error initializing certificates:", error);
-    res.status(500).json({
-      error: "Failed to initialize certificates",
-      message: error.message,
-    });
-  }
-};
+  },
+);
 
 router.use(ensureCertificatesInitialized);
 
-router.get("/trusted", async (req: Request, res: Response) => {
-  try {
+router.get(
+  "/trusted",
+  asyncHandler(async (req: Request, res: Response) => {
     const trustedCerts = await certificateManager.getTrustedCertificates();
     res.json(trustedCerts);
-  } catch (error: any) {
-    logger.error("Error getting trusted certificates:", error);
-    res.status(500).json({
-      error: "Failed to get trusted certificates",
-      message: error.message,
-    });
-  }
-});
+  }),
+);
 
-router.get("/rejected", async (req: Request, res: Response) => {
-  try {
+router.get(
+  "/rejected",
+  asyncHandler(async (req: Request, res: Response) => {
     const rejectedCerts = await certificateManager.getRejectedCertificates();
     res.json(rejectedCerts);
-  } catch (error: any) {
-    logger.error("Error getting rejected certificates:", error);
-    res.status(500).json({
-      error: "Failed to get rejected certificates",
-      message: error.message,
-    });
-  }
-});
+  }),
+);
 
-router.post("/trust", async (req: Request, res: Response) => {
-  try {
+router.post(
+  "/trust",
+  requireRole("admin"),
+  asyncHandler(async (req: Request, res: Response) => {
     const { certificate, name } = req.body;
 
     if (!certificate || !name) {
-      res.status(400).json({
-        error: "Invalid request",
-        message: "Certificate and name are required",
-      });
-      return;
+      throw new ValidationError("Certificate and name are required");
     }
 
     const certBuffer = Buffer.from(certificate, "base64");
@@ -75,68 +56,42 @@ router.post("/trust", async (req: Request, res: Response) => {
       name,
     );
 
-    res.json({
-      message: "Certificate trusted successfully",
-      filepath,
-    });
-  } catch (error: any) {
-    logger.error("Error trusting certificate:", error);
-    res.status(500).json({
-      error: "Failed to trust certificate",
-      message: error.message,
-    });
-  }
-});
+    res.json({ message: "Certificate trusted successfully", filepath });
+  }),
+);
 
 router.post(
   "/accept-rejected/:filename",
-  async (req: Request, res: Response) => {
-    try {
-      const filename = req.params.filename as string;
+  requireRole("admin"),
+  asyncHandler(async (req: Request, res: Response) => {
+    const filename = req.params.filename as string;
 
-      if (!filename) {
-        res.status(400).json({
-          error: "Invalid request",
-          message: "Filename is required",
-        });
-        return;
-      }
-
-      const filepath =
-        await certificateManager.acceptRejectedCertificate(filename);
-
-      res.json({
-        message: "Rejected certificate accepted successfully",
-        filepath,
-      });
-    } catch (error: any) {
-      logger.error("Error accepting rejected certificate:", error);
-      res.status(500).json({
-        error: "Failed to accept rejected certificate",
-        message: error.message,
-      });
+    if (!filename) {
+      throw new ValidationError("Filename is required");
     }
-  },
-);
 
-router.post("/regenerate", async (req: Request, res: Response) => {
-  try {
-    await certificateManager.createClientCertificate();
+    const filepath =
+      await certificateManager.acceptRejectedCertificate(filename);
 
     res.json({
-      message: "Client certificate regenerated successfully",
+      message: "Rejected certificate accepted successfully",
+      filepath,
     });
-  } catch (error: any) {
-    logger.error("Error regenerating client certificate:", error);
-    res.status(500).json({
-      error: "Failed to regenerate client certificate",
-      message: error.message,
-    });
-  }
-});
+  }),
+);
 
-router.get("/client", async (req: Request, res: Response) => {
-  try {
+router.post(
+  "/regenerate",
+  requireRole("admin"),
+  asyncHandler(async (req: Request, res: Response) => {
+    await certificateManager.createClientCertificate();
+    res.json({ message: "Client certificate regenerated successfully" });
+  }),
+);
+
+router.get(
+  "/client",
+  asyncHandler(async (req: Request, res: Response) => {
     const certificateFile = path.join(
       certificateManager.certificatesDir!,
       "client_certificate.pem",
@@ -158,11 +113,7 @@ router.get("/client", async (req: Request, res: Response) => {
     ]);
 
     if (!certExists || !keyExists) {
-      res.status(404).json({
-        error: "Client certificate not found",
-        message: "Please generate a client certificate first",
-      });
-      return;
+      throw new NotFoundError("Client certificate");
     }
 
     const certificate = await promisify(fs.readFile)(certificateFile, "utf8");
@@ -173,36 +124,22 @@ router.get("/client", async (req: Request, res: Response) => {
       privateKeyPath: privateKeyFile,
       hasPrivateKey: keyExists,
     });
-  } catch (error: any) {
-    logger.error("Error getting client certificate:", error);
-    res.status(500).json({
-      error: "Failed to get client certificate",
-      message: error.message,
-    });
-  }
-});
+  }),
+);
 
 router.get("/security-options", (req: Request, res: Response) => {
-  try {
-    const securityOptions = opcuaConnectionManager.getSecurityOptions();
-    const connectionInfo = opcuaConnectionManager.getConnectionInfo();
+  const securityOptions = opcuaConnectionManager.getSecurityOptions();
+  const connectionInfo = opcuaConnectionManager.getConnectionInfo();
 
-    res.json({
-      ...securityOptions,
-      current: {
-        securityMode:
-          connectionInfo.securityMode || connectionInfo.config.securityMode,
-        securityPolicy:
-          connectionInfo.securityPolicy || connectionInfo.config.securityPolicy,
-      },
-    });
-  } catch (error: any) {
-    logger.error("Error getting security options:", error);
-    res.status(500).json({
-      error: "Failed to get security options",
-      message: error.message,
-    });
-  }
+  res.json({
+    ...securityOptions,
+    current: {
+      securityMode:
+        connectionInfo.securityMode || connectionInfo.config.securityMode,
+      securityPolicy:
+        connectionInfo.securityPolicy || connectionInfo.config.securityPolicy,
+    },
+  });
 });
 
 export default router;

@@ -2,7 +2,7 @@ import express, { type Request, type Response } from "express";
 import os from "os";
 import logger from "../utils/logger.js";
 import connectionTracker from "../utils/connectionTracker.js";
-import config from "../config/config.js";
+import { asyncHandler } from "../middleware/errorHandler.js";
 
 const router = express.Router();
 
@@ -39,8 +39,9 @@ const calculateCpuUsage = (): number => {
   return Math.min(100, Math.max(0, usage));
 };
 
-router.get("/stats", (req: Request, res: Response) => {
-  try {
+router.get(
+  "/stats",
+  asyncHandler(async (req: Request, res: Response) => {
     const uptime = Math.floor(process.uptime());
 
     const totalMemory = os.totalmem();
@@ -84,17 +85,12 @@ router.get("/stats", (req: Request, res: Response) => {
     };
 
     res.json(stats);
-  } catch (error: any) {
-    logger.error("Error getting system stats:", error);
-    res.status(500).json({
-      error: "Error retrieving system statistics",
-      message: error.message,
-    });
-  }
-});
+  }),
+);
 
-router.get("/connections", (req: Request, res: Response) => {
-  try {
+router.get(
+  "/connections",
+  asyncHandler(async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 20;
 
     const stats = {
@@ -104,13 +100,7 @@ router.get("/connections", (req: Request, res: Response) => {
     };
 
     res.json(stats);
-  } catch (error: any) {
-    logger.error("Error fetching connection stats:", error);
-    res.status(500).json({
-      error: "Error retrieving connection statistics",
-      message: error.message,
-    });
-  }
-});
+  }),
+);
 
 export default router;

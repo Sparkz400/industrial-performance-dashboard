@@ -12,7 +12,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "storybook": "storybook dev -p 6006",
+    "storybook:build": "storybook build"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -25,7 +27,10 @@
     "@nivo/line": "^0.99.0",
     "@nivo/pie": "^0.99.0",
     "@nivo/tooltip": "^0.99.0",
+    "@performance-dashboard/shared": "*",
     "@tanstack/react-query": "^5.90.21",
+    "@trpc/client": "^11.13.4",
+    "@trpc/react-query": "^11.13.4",
     "@types/file-saver": "^2.0.7",
     "@types/react-window": "^1.8.8",
     "csrf-sync": "^4.2.1",
@@ -46,10 +51,16 @@
     "react-virtualized-auto-sizer": "^1.0.25",
     "react-window": "^1.8.11",
     "socket.io-client": "^4.8.1",
+    "zod": "^4.3.6",
     "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
+    "@storybook/addon-essentials": "^8.6.14",
+    "@storybook/blocks": "^8.6.14",
+    "@storybook/react": "^8.6.18",
+    "@storybook/react-vite": "^8.6.18",
+    "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -66,6 +77,7 @@
     "globals": "^15.14.0",
     "jsdom": "^29.0.0",
     "prettier": "^3.8.1",
+    "storybook": "^8.6.18",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.57.0",
     "vite": "^6.1.0",

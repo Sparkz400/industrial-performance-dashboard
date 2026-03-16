@@ -1,0 +1,241 @@
+import { Router, type Request, type Response } from "express";
+import Joi from "joi";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../middleware/validation.js";
+import { asyncHandler } from "../middleware/errorHandler.js";
+import { requireAuth, requireRole } from "../middleware/auth.js";
+import { reportRepository } from "../repositories/reportRepository.js";
+import { reportSchedulerService } from "../services/reportSchedulerService.js";
+import { reportGeneratorService } from "../services/reportGeneratorService.js";
+import { NotFoundError } from "../utils/errors.js";
+
+const router = Router();
+
+// All report routes require authentication
+router.use(requireAuth);
+
+// ===== Validation Schemas =====
+
+const idParamSchema = Joi.object({ id: Joi.number().integer().required() });
+
+// --- Templates ---
+
+const templateBodySchema = Joi.object({
+  name: Joi.string().required().min(1).max(255),
+  type: Joi.string().required().min(1).max(50),
+  description: Joi.string().optional().allow("", null),
+  templateConfig: Joi.object().required(),
+  plantId: Joi.number().integer().optional().allow(null),
+  isActive: Joi.boolean().default(true),
+});
+
+const templateUpdateSchema = Joi.object({
+  name: Joi.string().min(1).max(255).optional(),
+  type: Joi.string().min(1).max(50).optional(),
+  description: Joi.string().optional().allow("", null),
+  templateConfig: Joi.object().optional(),
+  plantId: Joi.number().integer().optional().allow(null),
+  isActive: Joi.boolean().optional(),
+}).min(1);
+
+// --- Schedules ---
+
+const scheduleBodySchema = Joi.object({
+  templateId: Joi.number().integer().required(),
+  name: Joi.string().required().min(1).max(255),
+  cronExpression: Joi.string().required().min(1).max(100),
+  timezone: Joi.string().max(50).default("UTC"),
+  machineIds: Joi.array().items(Joi.number().integer()).default([]),
+  recipients: Joi.array().items(Joi.string().email()).default([]),
+  deliveryChannels: Joi.array()
+    .items(Joi.string().valid("email", "webhook"))
+    .default(["email"]),
+  isActive: Joi.boolean().default(true),
+});
+
+const scheduleUpdateSchema = Joi.object({
+  templateId: Joi.number().integer().optional(),
+  name: Joi.string().min(1).max(255).optional(),
+  cronExpression: Joi.string().min(1).max(100).optional(),
+  timezone: Joi.string().max(50).optional(),
+  machineIds: Joi.array().items(Joi.number().integer()).optional(),
+  recipients: Joi.array().items(Joi.string().email()).optional(),
+  deliveryChannels: Joi.array()
+    .items(Joi.string().valid("email", "webhook"))
+    .optional(),
+  isActive: Joi.boolean().optional(),
+}).min(1);
+
+// --- History ---
+
+const historyQuerySchema = Joi.object({
+  scheduleId: Joi.number().integer().optional(),
+  status: Joi.string().valid("generating", "completed", "failed").optional(),
+  startDate: Joi.date().iso().optional(),
+  endDate: Joi.date().iso().optional(),
+  limit: Joi.number().integer().min(1).max(500).default(50),
+  offset: Joi.number().integer().min(0).default(0),
+});
+
+// =========================================================================
+// Templates
+// =========================================================================
+
+router.get(
+  "/templates",
+  asyncHandler(async (_req: Request, res: Response) => {
+    const templates = await reportRepository.listTemplates();
+    res.json(templates);
+  }),
+);
+
+router.post(
+  "/templates",
+  requireRole("admin"),
+  validateBody(templateBodySchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const template = await reportRepository.createTemplate({
+      ...req.body,
+      createdBy: req.session?.userId ?? null,
+    });
+    res.status(201).json(template);
+  }),
+);
+
+router.put(
+  "/templates/:id",
+  requireRole("admin"),
+  validateParams(idParamSchema),
+  validateBody(templateUpdateSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    const template = await reportRepository.updateTemplate(id, req.body);
+    if (!template) {
+      throw new NotFoundError("Report template");
+    }
+    res.json(template);
+  }),
+);
+
+router.delete(
+  "/templates/:id",
+  requireRole("admin"),
+  validateParams(idParamSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    const deleted = await reportRepository.deleteTemplate(id);
+    if (!deleted) {
+      throw new NotFoundError("Report template");
+    }
+    res.json({ message: "Template deleted successfully" });
+  }),
+);
+
+// =========================================================================
+// Schedules
+// =========================================================================
+
+router.get(
+  "/schedules",
+  asyncHandler(async (_req: Request, res: Response) => {
+    const schedules = await reportRepository.listSchedules();
+    res.json(schedules);
+  }),
+);
+
+router.post(
+  "/schedules",
+  requireRole("admin"),
+  validateBody(scheduleBodySchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const schedule = await reportRepository.createSchedule({
+      ...req.body,
+      createdBy: req.session?.userId ?? null,
+    });
+    await reportSchedulerService.refreshAll();
+    res.status(201).json(schedule);
+  }),
+);
+
+router.put(
+  "/schedules/:id",
+  requireRole("admin"),
+  validateParams(idParamSchema),
+  validateBody(scheduleUpdateSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    const schedule = await reportRepository.updateSchedule(id, req.body);
+    if (!schedule) {
+      throw new NotFoundError("Report schedule");
+    }
+    await reportSchedulerService.refreshAll();
+    res.json(schedule);
+  }),
+);
+
+router.delete(
+  "/schedules/:id",
+  requireRole("admin"),
+  validateParams(idParamSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    const deleted = await reportRepository.deleteSchedule(id);
+    if (!deleted) {
+      throw new NotFoundError("Report schedule");
+    }
+    await reportSchedulerService.refreshAll();
+    res.json({ message: "Schedule deleted successfully" });
+  }),
+);
+
+router.post(
+  "/schedules/:id/run-now",
+  requireRole("admin"),
+  validateParams(idParamSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    const schedule = await reportRepository.findScheduleById(id);
+    if (!schedule) {
+      throw new NotFoundError("Report schedule");
+    }
+
+    // Trigger generation asynchronously — return immediately
+    reportGeneratorService.generate(id).catch((err) => {
+      // Error is already logged inside the generator
+    });
+
+    res.json({ message: "Report generation started", scheduleId: id });
+  }),
+);
+
+// =========================================================================
+// History
+// =========================================================================
+
+router.get(
+  "/history",
+  validateQuery(historyQuerySchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const history = await reportRepository.listHistory(req.query as any);
+    res.json(history);
+  }),
+);
+
+router.get(
+  "/history/:id/download",
+  validateParams(idParamSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    const entry = await reportRepository.findHistoryById(id);
+    if (!entry || !entry.filePath) {
+      throw new NotFoundError("Report file");
+    }
+
+    res.download(entry.filePath);
+  }),
+);
+
+export default router;

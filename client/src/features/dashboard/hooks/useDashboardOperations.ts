@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 
 import api from '@/utils/api';
-import { widgetRegistry } from '../../widgets/index';
+import { widgetRegistry } from '../../widgets/registry/WidgetRegistry';
 import { useWidgetStore } from '@/stores/useWidgetStore';
 import { ActionTypes, useDebounce } from './useDashboardState';
 

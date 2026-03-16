@@ -1,5 +1,16 @@
 import { create } from 'zustand';
 import type { Notification } from '../types';
+import type { Socket } from 'socket.io-client';
+import type {
+  AlarmEvent,
+  MachineStatusUpdate,
+  SystemStatus,
+  CertificateNotification,
+  ServerToClientEvents,
+  ClientToServerEvents,
+} from '@performance-dashboard/shared';
+
+type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 interface NotificationState {
   notifications: Notification[];
@@ -13,45 +24,12 @@ interface NotificationState {
   clearAll: () => void;
   togglePanel: () => void;
   setOpen: (open: boolean) => void;
+  initSocketListeners: (socket: TypedSocket) => () => void;
 }
 
-// Generate initial demo notifications
-const demoNotifications: Notification[] = [
-  {
-    id: 'notif-1',
-    type: 'alarm',
-    severity: 'high',
-    title: 'High Air Pressure',
-    message: 'Air pressure exceeded threshold at Line A',
-    timestamp: new Date(Date.now() - 5 * 60 * 1000),
-    read: false,
-    source: 'Compressor Unit 1',
-  },
-  {
-    id: 'notif-2',
-    type: 'status',
-    severity: 'info',
-    title: 'System Connected',
-    message: 'OPC UA server connection established successfully',
-    timestamp: new Date(Date.now() - 30 * 60 * 1000),
-    read: true,
-    source: 'System',
-  },
-  {
-    id: 'notif-3',
-    type: 'system',
-    severity: 'medium',
-    title: 'Database Latency',
-    message: 'Database response time above 200ms',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    read: false,
-    source: 'Database Monitor',
-  },
-];
-
 export const useNotificationStore = create<NotificationState>((set) => ({
-  notifications: demoNotifications,
-  unreadCount: demoNotifications.filter((n) => !n.read).length,
+  notifications: [],
+  unreadCount: 0,
   isOpen: false,
 
   addNotification: (notification) => {
@@ -103,5 +81,77 @@ export const useNotificationStore = create<NotificationState>((set) => ({
 
   setOpen: (open) => {
     set({ isOpen: open });
+  },
+
+  initSocketListeners: (socket: TypedSocket) => {
+    const addNotif = useNotificationStore.getState().addNotification;
+
+    const onAlarmTriggered = (alarm: AlarmEvent) => {
+      addNotif({
+        type: 'alarm',
+        severity: (alarm.severity as string) ?? 'medium',
+        title: `Alarm: ${alarm.source}`,
+        message: alarm.message,
+        timestamp: new Date(alarm.triggeredAt),
+        source: alarm.nodeKey,
+      });
+    };
+
+    const onMachineStatusUpdate = (data: MachineStatusUpdate) => {
+      const isDown = data.status === 'disconnected' || data.status === 'error';
+      if (isDown) {
+        addNotif({
+          type: 'status',
+          severity: 'high',
+          title: `Machine ${data.machineId} ${data.status}`,
+          message: `Machine ${data.machineId} is now ${data.status}`,
+          timestamp: new Date(),
+          source: `Machine ${data.machineId}`,
+        });
+      }
+    };
+
+    let lastOverallStatus: string | undefined;
+    const onStatusUpdate = (status: SystemStatus) => {
+      const current = status.overall?.status;
+      if (
+        lastOverallStatus &&
+        lastOverallStatus !== current &&
+        (current === 'DISCONNECTED' || current === 'ERROR' || current === 'WARNING')
+      ) {
+        addNotif({
+          type: 'system',
+          severity: current === 'ERROR' ? 'critical' : 'medium',
+          title: `System status: ${status.overall?.statusText ?? current}`,
+          message: `System health changed to ${current}`,
+          timestamp: new Date(),
+          source: 'System',
+        });
+      }
+      lastOverallStatus = current;
+    };
+
+    const onUntrustedCertificate = (data: CertificateNotification) => {
+      addNotif({
+        type: 'system',
+        severity: 'high',
+        title: 'Untrusted Certificate',
+        message: `Untrusted certificate from ${data.serverUri ?? data.filename}`,
+        timestamp: new Date(data.timestamp),
+        source: 'Certificate Manager',
+      });
+    };
+
+    socket.on('alarmTriggered', onAlarmTriggered);
+    socket.on('machineStatusUpdate', onMachineStatusUpdate);
+    socket.on('statusUpdate', onStatusUpdate);
+    socket.on('untrustedCertificate', onUntrustedCertificate);
+
+    return () => {
+      socket.off('alarmTriggered', onAlarmTriggered);
+      socket.off('machineStatusUpdate', onMachineStatusUpdate);
+      socket.off('statusUpdate', onStatusUpdate);
+      socket.off('untrustedCertificate', onUntrustedCertificate);
+    };
   },
 }));

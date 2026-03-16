@@ -17,7 +17,7 @@ import 'react-resizable/css/styles.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSnackbar } from 'notistack';
 
-import { WidgetContainer } from '../../widgets/index';
+import WidgetContainer from '../../widgets/components/WidgetContainer';
 import { ButtonLoader, LoadingOverlay } from '@/shared/components/loading/index';
 import KpiSummaryBar from '../components/KpiSummaryBar';
 import DashboardTemplates from '../components/DashboardTemplates';

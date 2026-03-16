@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { trpc, createTrpcClient } from '../utils/trpc';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -11,9 +12,15 @@ const queryClient = new QueryClient({
   },
 });
 
-export const QueryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-);
+export const QueryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [trpcClient] = useState(() => createTrpcClient());
+
+  return (
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </trpc.Provider>
+  );
+};
 
 export { queryClient };
 export default QueryProvider;

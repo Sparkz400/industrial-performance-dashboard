@@ -4,13 +4,23 @@ client/node_modules/
 server/error.log
 server/src/opc-ua/services/logs
 server/logs
+server/dist/
 .idea/
 *.iml
 server/.env
 .env.*
 !.env.example
-package-lock.json
+# Per-workspace lockfiles (root package-lock.json is tracked)
+client/package-lock.json
+server/package-lock.json
 
 # Sensitive files
 server/certificates/own/private/
 server/sessions/
+
+# Test artifacts
+playwright-report/
+test-results/
+coverage/
+client/coverage/
+server/coverage/

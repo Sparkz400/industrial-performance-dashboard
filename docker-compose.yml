@@ -13,7 +13,15 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/performance_dashboard
+      - CLIENT_URL=${CLIENT_URL:-http://localhost:3000}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=performance_dashboard
+      - DB_READ_REPLICA_URLS=${DB_READ_REPLICA_URLS:-}
+      - DB_QUERY_SLOW_THRESHOLD_MS=${DB_QUERY_SLOW_THRESHOLD_MS:-250}
+      - DB_QUERY_METRICS_MAX_SAMPLES=${DB_QUERY_METRICS_MAX_SAMPLES:-250}
       - REDIS_URL=redis://redis:6379
       - SESSION_SECRET=${SESSION_SECRET:-change-me-in-production}
       - COOKIE_SECRET=${COOKIE_SECRET:-change-me-in-production}

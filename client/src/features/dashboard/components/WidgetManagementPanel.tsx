@@ -5,7 +5,7 @@ import ViewQuiltIcon from '@mui/icons-material/ViewQuilt';
 import { motion } from 'framer-motion';
 
 import AddWidgetButton from './addWidgetButton';
-import { WidgetPreviewPopup } from '../../widgets/index';
+import WidgetPreviewPopup from '../../widgets/components/WidgetPreviewPopup';
 
 interface WidgetManagementPanelProps {
   hasDashboards: boolean;

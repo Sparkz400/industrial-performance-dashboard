@@ -1,34 +1,19 @@
 import { EventEmitter } from "events";
+import { eq, and } from "drizzle-orm";
 import opcua from "node-opcua";
 import * as opcuaClient from "../opcuaClient.js";
 import logger from "../../utils/logger.js";
-import dbClient from "../../database/dbConnection.js";
+import db from "../../database/db.js";
+import {
+  machines,
+  nodeMappings,
+  type Machine,
+  type NodeMapping,
+} from "../../database/schema.js";
 import type { OpcuaMappingConfig } from "../config/opcuaMapping.js";
 import type { OpcuaConnectionResult } from "../opcuaClient.js";
 
-export interface MachineRecord {
-  id: number;
-  name: string;
-  endpoint_url: string;
-  ip: string;
-  port: number;
-  resource_path: string;
-  security_mode: string;
-  security_policy: string;
-  is_active: boolean;
-  status: string;
-}
-
-export interface NodeMappingRecord {
-  id: number;
-  machine_id: number;
-  node_id: string;
-  node_key: string;
-  display_name: string;
-  data_type: string;
-  sampling_interval: number;
-  is_active: boolean;
-}
+export type { Machine as MachineRecord, NodeMapping as NodeMappingRecord };
 
 export interface BrowsedNode {
   nodeId: string;
@@ -39,7 +24,7 @@ export interface BrowsedNode {
 }
 
 interface MachineConnection {
-  machine: MachineRecord;
+  machine: Machine;
   connection: OpcuaConnectionResult | null;
   healthCheckInterval: ReturnType<typeof setInterval> | null;
 }
@@ -52,12 +37,12 @@ class MultiMachineManager extends EventEmitter {
     if (this.isInitialized) return;
 
     try {
-      const result = await dbClient.query(
-        "SELECT * FROM machines WHERE is_active = true",
-      );
-      const machines: MachineRecord[] = result.rows;
+      const activeMachines = await db
+        .select()
+        .from(machines)
+        .where(eq(machines.isActive, true));
 
-      if (machines.length === 0) {
+      if (activeMachines.length === 0) {
         logger.info(
           "[MultiMachine] No active machines configured. Use /machines API to add machines.",
         );
@@ -66,10 +51,10 @@ class MultiMachineManager extends EventEmitter {
       }
 
       logger.info(
-        `[MultiMachine] Found ${machines.length} active machine(s). Starting connections...`,
+        `[MultiMachine] Found ${activeMachines.length} active machine(s). Starting connections...`,
       );
 
-      for (const machine of machines) {
+      for (const machine of activeMachines) {
         try {
           await this.connectMachine(machine);
         } catch (err: any) {
@@ -86,7 +71,7 @@ class MultiMachineManager extends EventEmitter {
     }
   }
 
-  async connectMachine(machine: MachineRecord): Promise<void> {
+  async connectMachine(machine: Machine): Promise<void> {
     const existing = this.connections.get(machine.id);
     if (existing?.connection) {
       logger.info(
@@ -95,9 +80,9 @@ class MultiMachineManager extends EventEmitter {
       await this.disconnectMachine(machine.id);
     }
 
-    const mappings = await this.getNodeMappingsForMachine(machine.id);
+    const mappingsList = await this.getNodeMappingsForMachine(machine.id);
 
-    if (mappings.length === 0) {
+    if (mappingsList.length === 0) {
       logger.info(
         `[MultiMachine] Machine ${machine.name} has no active node mappings. Skipping connection.`,
       );
@@ -106,18 +91,18 @@ class MultiMachineManager extends EventEmitter {
     }
 
     const dynamicMapping: OpcuaMappingConfig = {};
-    for (const m of mappings) {
-      dynamicMapping[m.node_key] = {
-        nodeId: m.node_id,
-        dataType: m.data_type,
-        label: m.display_name,
+    for (const m of mappingsList) {
+      dynamicMapping[m.nodeKey] = {
+        nodeId: m.nodeId,
+        dataType: m.dataType ?? "Double",
+        label: m.displayName,
       };
     }
 
-    const endpointUrl = machine.endpoint_url;
+    const endpointUrl = machine.endpointUrl;
     const securityOptions = {
-      securityMode: machine.security_mode,
-      securityPolicy: machine.security_policy,
+      securityMode: machine.securityMode ?? "None",
+      securityPolicy: machine.securityPolicy ?? "None",
     };
 
     logger.info(
@@ -244,13 +229,14 @@ class MultiMachineManager extends EventEmitter {
 
         // Attempt reconnect
         try {
-          const result = await dbClient.query(
-            "SELECT * FROM machines WHERE id = $1",
-            [machineId],
-          );
-          if (result.rows.length > 0 && result.rows[0].is_active) {
+          const result = await db
+            .select()
+            .from(machines)
+            .where(eq(machines.id, machineId));
+
+          if (result.length > 0 && result[0].isActive) {
             setTimeout(() => {
-              this.connectMachine(result.rows[0]).catch((e: any) => {
+              this.connectMachine(result[0]).catch((e: any) => {
                 logger.error(
                   `[MultiMachine] Reconnect failed for machine ${machineId}: ${e.message}`,
                 );
@@ -281,21 +267,22 @@ class MultiMachineManager extends EventEmitter {
       session = entry.connection.session;
     } else {
       // Create temp connection just for browsing
-      const result = await dbClient.query(
-        "SELECT * FROM machines WHERE id = $1",
-        [machineId],
-      );
-      if (result.rows.length === 0) throw new Error("Machine not found");
+      const result = await db
+        .select()
+        .from(machines)
+        .where(eq(machines.id, machineId));
 
-      const machine = result.rows[0] as MachineRecord;
+      if (result.length === 0) throw new Error("Machine not found");
+
+      const machine = result[0];
       const clientOptions =
         await opcuaClient.certificateManager.getClientOptions(
-          machine.security_mode,
-          machine.security_policy,
+          machine.securityMode ?? "None",
+          machine.securityPolicy ?? "None",
         );
 
       tempClient = opcua.OPCUAClient.create(clientOptions);
-      await tempClient.connect(machine.endpoint_url);
+      await tempClient.connect(machine.endpointUrl);
       session = await tempClient.createSession();
       useTempConnection = true;
     }
@@ -335,14 +322,17 @@ class MultiMachineManager extends EventEmitter {
     }
   }
 
-  async getNodeMappingsForMachine(
-    machineId: number,
-  ): Promise<NodeMappingRecord[]> {
-    const result = await dbClient.query(
-      "SELECT * FROM node_mappings WHERE machine_id = $1 AND is_active = true ORDER BY node_key",
-      [machineId],
-    );
-    return result.rows;
+  async getNodeMappingsForMachine(machineId: number): Promise<NodeMapping[]> {
+    return db
+      .select()
+      .from(nodeMappings)
+      .where(
+        and(
+          eq(nodeMappings.machineId, machineId),
+          eq(nodeMappings.isActive, true),
+        ),
+      )
+      .orderBy(nodeMappings.nodeKey);
   }
 
   private async updateMachineStatus(
@@ -350,10 +340,11 @@ class MultiMachineManager extends EventEmitter {
     status: string,
   ): Promise<void> {
     try {
-      await dbClient.query(
-        "UPDATE machines SET status = $1, updated_at = NOW() WHERE id = $2",
-        [status, machineId],
-      );
+      await db
+        .update(machines)
+        .set({ status, updatedAt: new Date() })
+        .where(eq(machines.id, machineId));
+
       this.emit("machineStatusChanged", { machineId, status });
     } catch (err: any) {
       logger.error(
@@ -374,14 +365,15 @@ class MultiMachineManager extends EventEmitter {
   }
 
   async refreshMachineConnection(machineId: number): Promise<void> {
-    const result = await dbClient.query(
-      "SELECT * FROM machines WHERE id = $1",
-      [machineId],
-    );
-    if (result.rows.length === 0) throw new Error("Machine not found");
+    const result = await db
+      .select()
+      .from(machines)
+      .where(eq(machines.id, machineId));
 
-    const machine = result.rows[0] as MachineRecord;
-    if (!machine.is_active) {
+    if (result.length === 0) throw new Error("Machine not found");
+
+    const machine = result[0];
+    if (!machine.isActive) {
       await this.disconnectMachine(machineId);
       return;
     }

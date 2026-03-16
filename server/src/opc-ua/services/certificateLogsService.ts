@@ -1,4 +1,5 @@
-import dbClient from "../../database/dbConnection.js";
+import { sql } from "drizzle-orm";
+import db from "../../database/db.js";
 import logger from "../../utils/logger.js";
 
 export interface CertificateEventData {
@@ -36,7 +37,9 @@ export interface CertificateStats {
 }
 
 /**
- * Service for managing certificate logs in the database
+ * Service for managing certificate logs in the database.
+ * Uses raw SQL via Drizzle's sql template since certificate_logs
+ * uses a stored procedure and isn't part of the core schema.
  */
 class CertificateLogsService {
   async logCertificateEvent(
@@ -53,17 +56,8 @@ class CertificateLogsService {
         details,
       } = eventData;
 
-      await dbClient.query(
-        `SELECT log_certificate_event($1, $2, $3, $4, $5, $6, $7)`,
-        [
-          eventType,
-          certificateName,
-          certificateHash,
-          serverUri,
-          action,
-          status,
-          details,
-        ],
+      await db.execute(
+        sql`SELECT log_certificate_event(${eventType}, ${certificateName}, ${certificateHash}, ${serverUri}, ${action}, ${status}, ${details})`,
       );
 
       return { success: true };
@@ -82,54 +76,33 @@ class CertificateLogsService {
     const { limit = 100, offset = 0, eventType, startDate, endDate } = options;
 
     try {
-      let whereClause = "";
-      const queryParams: any[] = [];
+      const conditions: ReturnType<typeof sql>[] = [];
 
       if (eventType) {
-        queryParams.push(eventType);
-        whereClause += `event_type = $${queryParams.length}`;
+        conditions.push(sql`event_type = ${eventType}`);
       }
-
       if (startDate) {
-        if (whereClause) whereClause += " AND ";
-        queryParams.push(new Date(startDate));
-        whereClause += `timestamp >= $${queryParams.length}`;
+        conditions.push(sql`timestamp >= ${new Date(startDate)}`);
       }
-
       if (endDate) {
-        if (whereClause) whereClause += " AND ";
-        queryParams.push(new Date(endDate));
-        whereClause += `timestamp <= $${queryParams.length}`;
+        conditions.push(sql`timestamp <= ${new Date(endDate)}`);
       }
 
-      const whereStatement = whereClause ? `WHERE ${whereClause}` : "";
-
-      queryParams.push(limit);
-      queryParams.push(offset);
-
-      const query = `
-                SELECT *
-                FROM certificate_logs
-                ${whereStatement}
-                ORDER BY timestamp DESC
-                LIMIT $${queryParams.length - 1}
-                OFFSET $${queryParams.length}
-            `;
-
-      const countQuery = `
-                SELECT COUNT(*)
-                FROM certificate_logs
-                ${whereStatement}
-            `;
+      const whereClause =
+        conditions.length > 0
+          ? sql`WHERE ${sql.join(conditions, sql` AND `)}`
+          : sql``;
 
       const [logsResult, countResult] = await Promise.all([
-        dbClient.query(query, queryParams),
-        dbClient.query(countQuery, queryParams.slice(0, -2)),
+        db.execute(
+          sql`SELECT * FROM certificate_logs ${whereClause} ORDER BY timestamp DESC LIMIT ${limit} OFFSET ${offset}`,
+        ),
+        db.execute(sql`SELECT COUNT(*) FROM certificate_logs ${whereClause}`),
       ]);
 
       return {
         logs: logsResult.rows,
-        total: parseInt(countResult.rows[0].count),
+        total: parseInt((countResult.rows[0] as any).count),
         limit,
         offset,
       };
@@ -141,20 +114,18 @@ class CertificateLogsService {
 
   async getCertificateStats(): Promise<CertificateStats> {
     try {
-      const query = `
-                SELECT
-                    (SELECT COUNT(*) FROM certificate_logs) AS total_events,
-                    (SELECT COUNT(*) FROM certificate_logs WHERE event_type = 'SERVER_CERTIFICATE_RECEIVED') AS received_count,
-                    (SELECT COUNT(*) FROM certificate_logs WHERE action = 'TRUST') AS trusted_count,
-                    (SELECT COUNT(*) FROM certificate_logs WHERE action = 'REJECT') AS rejected_count,
-                    (SELECT COUNT(*) FROM certificate_logs WHERE status = 'FAILED') AS failed_count,
-                    (SELECT COUNT(*) FROM certificate_logs WHERE timestamp > NOW() - INTERVAL '24 hours') AS last_24h_count
-            `;
-
-      const result = await dbClient.query(query);
+      const result = await db.execute(sql`
+        SELECT
+          (SELECT COUNT(*) FROM certificate_logs) AS total_events,
+          (SELECT COUNT(*) FROM certificate_logs WHERE event_type = 'SERVER_CERTIFICATE_RECEIVED') AS received_count,
+          (SELECT COUNT(*) FROM certificate_logs WHERE action = 'TRUST') AS trusted_count,
+          (SELECT COUNT(*) FROM certificate_logs WHERE action = 'REJECT') AS rejected_count,
+          (SELECT COUNT(*) FROM certificate_logs WHERE status = 'FAILED') AS failed_count,
+          (SELECT COUNT(*) FROM certificate_logs WHERE timestamp > NOW() - INTERVAL '24 hours') AS last_24h_count
+      `);
 
       return (
-        result.rows[0] || {
+        (result.rows[0] as unknown as CertificateStats) || {
           total_events: 0,
           received_count: 0,
           trusted_count: 0,

@@ -1,8 +1,13 @@
 import Joi from "joi";
 import type { Request, Response, NextFunction } from "express";
+import { ValidationError } from "../utils/errors.js";
+import type {
+  SaveDashboardRequest,
+  OpcuaConnectRequest,
+} from "@performance-dashboard/shared";
 
-// Dashboard validation schema
-const dashboardSchema = Joi.object({
+// Dashboard validation schema — mirrors SaveDashboardRequest & Dashboard from shared types
+const dashboardSchema: Joi.ObjectSchema<SaveDashboardRequest> = Joi.object({
   id: Joi.string().required().min(3).max(100),
   name: Joi.string().required().trim().min(1).max(100).messages({
     "string.empty": "Dashboard name cannot be empty",
@@ -40,12 +45,14 @@ const dashboardSchema = Joi.object({
   localLastModified: Joi.string().isoDate().optional(),
 }).unknown(true);
 
-// OPC UA connection validation schema
-const opcuaConnectionSchema = Joi.object({
-  ip: Joi.string().required().hostname(),
-  port: Joi.number().port().required(),
-  resourcePath: Joi.string().allow("").default(""),
-});
+// OPC UA connection validation schema — mirrors OpcuaConnectRequest from shared types
+const opcuaConnectionSchema: Joi.ObjectSchema<OpcuaConnectRequest> = Joi.object(
+  {
+    ip: Joi.string().required().hostname(),
+    port: Joi.number().port().required(),
+    resourcePath: Joi.string().allow("").default(""),
+  },
+);
 
 // Database test validation schema
 const dbTestSchema = Joi.object({
@@ -63,13 +70,10 @@ export const validateBody = (schema: Joi.ObjectSchema) => {
       stripUnknown: true,
     });
     if (error) {
-      const errorMessage = error.details
-        .map((detail) => detail.message)
-        .join(", ");
-      res.status(400).json({
-        status: "error",
-        error: `Validation Error: ${errorMessage}`,
-      });
+      const details = error.details.map((detail) => detail.message);
+      next(
+        new ValidationError(`Validation Error: ${details.join(", ")}`, details),
+      );
       return;
     }
     req.body = value;
@@ -82,13 +86,10 @@ export const validateParams = (schema: Joi.ObjectSchema) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     const { error, value } = schema.validate(req.params, { abortEarly: false });
     if (error) {
-      const errorMessage = error.details
-        .map((detail) => detail.message)
-        .join(", ");
-      res.status(400).json({
-        status: "error",
-        error: `Validation Error: ${errorMessage}`,
-      });
+      const details = error.details.map((detail) => detail.message);
+      next(
+        new ValidationError(`Validation Error: ${details.join(", ")}`, details),
+      );
       return;
     }
     req.params = value;
@@ -103,13 +104,10 @@ export const validateQuery = (schema: Joi.ObjectSchema) => {
       abortEarly: false,
     });
     if (error) {
-      const errorMessage = error.details
-        .map((detail) => detail.message)
-        .join(", ");
-      res.status(400).json({
-        status: "error",
-        error: `Validation Error: ${errorMessage}`,
-      });
+      const details = error.details.map((detail) => detail.message);
+      next(
+        new ValidationError(`Validation Error: ${details.join(", ")}`, details),
+      );
       return;
     }
     req.query = value;

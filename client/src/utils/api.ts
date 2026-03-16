@@ -1,7 +1,24 @@
 import { protectedFetch } from './protectedFetch';
 import { API_ENDPOINTS } from '../config/config';
 import { isCsrfError } from './csrf';
-import type { Dashboard } from '@/types';
+import type { Dashboard, GetAuditLogsRequest } from '@/types';
+
+/**
+ *
+ * @param params
+ */
+function buildQueryString(params: Record<string, string | number | undefined>): string {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+
+  const queryString = searchParams.toString();
+  return queryString ? `?${queryString}` : '';
+}
 
 /**
  * Handle response parsing and error handling
@@ -95,6 +112,27 @@ export const api = {
   },
 
   /**
+   * Make a PATCH request
+   * @param url
+   * @param data
+   * @param options
+   */
+  patch: async (url: string, data?: unknown, options: RequestInit = {}): Promise<unknown> => {
+    const response = await protectedFetch(url, {
+      method: 'PATCH',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...(options.headers || {}),
+      },
+      body: JSON.stringify(data),
+    });
+
+    return handleResponse(response);
+  },
+
+  /**
    * Make a DELETE request
    * @param url
    * @param options
@@ -129,6 +167,19 @@ export const api = {
 
   // Convenience methods for API endpoints
   endpoints: {
+    // Auth operations
+    login: (username: string, password: string) =>
+      api.post(API_ENDPOINTS.auth.login, { username, password }),
+    logout: () => api.post(API_ENDPOINTS.auth.logout),
+    getMe: () => api.get(API_ENDPOINTS.auth.me),
+    register: (data: { username: string; email: string; password: string; role?: string }) =>
+      api.post(API_ENDPOINTS.auth.register, data),
+    changePassword: (currentPassword: string, newPassword: string) =>
+      api.post(API_ENDPOINTS.auth.changePassword, { currentPassword, newPassword }),
+    getUsers: () => api.get(API_ENDPOINTS.auth.users),
+    updateUser: (id: number, data: Record<string, unknown>) =>
+      api.put(API_ENDPOINTS.auth.userById(id), data),
+
     // CSRF operations
     getCsrfToken: () => api.get(API_ENDPOINTS.csrfToken),
     validateCsrfToken: () => api.validateCsrfToken(),
@@ -159,6 +210,20 @@ export const api = {
     // Operation mode
     getOperationModeData: () => api.get(API_ENDPOINTS.operationModeData),
 
+    // Audit logs
+    getAuditLogs: (filters: GetAuditLogsRequest = {}) =>
+      api.get(
+        `${API_ENDPOINTS.auditLogs}${buildQueryString({
+          action: filters.action,
+          entityType: filters.entityType,
+          search: filters.search,
+          userId: filters.userId,
+          dateFrom: filters.dateFrom,
+          dateTo: filters.dateTo,
+          limit: filters.limit,
+        })}`,
+      ),
+
     // Machine operations
     getMachines: () => api.get(API_ENDPOINTS.machines.base),
     getMachine: (id: number) => api.get(API_ENDPOINTS.machines.byId(id)),
@@ -175,6 +240,35 @@ export const api = {
       api.post(API_ENDPOINTS.machines.mappings(machineId), { mappings }),
     deleteMapping: (machineId: number, mappingId: number) =>
       api.delete(API_ENDPOINTS.machines.deleteMapping(machineId, mappingId)),
+
+    // Natural Language Query
+    nlQuery: (query: string, machineId?: number) =>
+      api.post(API_ENDPOINTS.nlQuery, { query, machineId }),
+
+    // Webhooks
+    getWebhooks: () => api.get(API_ENDPOINTS.webhooks.base),
+    createWebhook: (data: { name: string; url: string; events: string[] }) =>
+      api.post(API_ENDPOINTS.webhooks.base, data),
+    updateWebhook: (id: number, data: Record<string, unknown>) =>
+      api.put(API_ENDPOINTS.webhooks.byId(id), data),
+    deleteWebhook: (id: number) => api.delete(API_ENDPOINTS.webhooks.byId(id)),
+    testWebhook: (id: number) => api.post(API_ENDPOINTS.webhooks.test(id)),
+
+    // Dashboard Sharing
+    createShare: (
+      dashboardId: string,
+      data: { expiresInHours?: number | null; allowEmbed?: boolean },
+    ) => api.post(API_ENDPOINTS.share.create(dashboardId), data),
+    getShares: (dashboardId: string) => api.get(API_ENDPOINTS.share.list(dashboardId)),
+    revokeShare: (id: number) => api.delete(API_ENDPOINTS.share.revoke(id)),
+    getPublicDashboard: (token: string) => api.get(API_ENDPOINTS.share.public(token)),
+    getEmbedDashboard: (token: string) => api.get(API_ENDPOINTS.share.embed(token)),
+
+    // Custom Widgets
+    getCustomWidgets: () => api.get(API_ENDPOINTS.customWidgets.base),
+    registerCustomWidget: (manifestUrl: string) =>
+      api.post(API_ENDPOINTS.customWidgets.base, { manifestUrl }),
+    unregisterCustomWidget: (id: number) => api.delete(API_ENDPOINTS.customWidgets.byId(id)),
   },
 };
 

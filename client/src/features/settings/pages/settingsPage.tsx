@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Typography,
   Box,
@@ -18,6 +18,9 @@ import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore
 import InfoIcon from '@mui/icons-material/Info';
 import DnsIcon from '@mui/icons-material/Dns';
 import StorageIcon from '@mui/icons-material/Storage';
+import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
+import WebhookIcon from '@mui/icons-material/Webhook';
+import ExtensionIcon from '@mui/icons-material/Extension';
 
 // Import custom components
 import TabPanel from '../ui/TabPanel';
@@ -30,12 +33,16 @@ import AppearanceTab from '../tabs/AppearanceTab';
 import CertificatesTab from '../components/CertificateManagement';
 import BackupRestoreTab from '../tabs/BackupRestoreTab';
 import SystemInfoTab from '../tabs/SystemInfoTab';
+import AuditTrailTab from '../tabs/AuditTrailTab';
+import WebhookManager from '../../webhooks/components/WebhookManager';
+import CustomWidgetManager from '../../widgets/sdk/CustomWidgetManager';
 
 // Import hooks
 import { useStatusStore } from '@/stores/useStatusStore';
 import { useOpcUaConnection } from '../hooks/useOpcUaConnection';
 import { useDatabaseConnection } from '../hooks/useDatabaseConnection';
 import { useSnackbar } from 'notistack';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 // Main settings page component
 const SettingsPage: React.FC = () => {
@@ -43,6 +50,7 @@ const SettingsPage: React.FC = () => {
   const [tabValue, setTabValue] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const { enqueueSnackbar } = useSnackbar();
+  const user = useAuthStore((s) => s.user);
 
   const status = useStatusStore((s) => s.status);
   const refreshStatus = useStatusStore((s) => s.refreshStatus);
@@ -50,6 +58,62 @@ const SettingsPage: React.FC = () => {
   const { opcuaConnected, connectedAddress, securityMode, securityPolicy, fetchConnectionStatus } =
     useOpcUaConnection();
   const { dbOnline, dbHost, dbPort } = useDatabaseConnection();
+
+  const tabs = useMemo(
+    () => [
+      {
+        label: 'Connections',
+        icon: <LanguageIcon />,
+        content: <ConnectionsTab />,
+      },
+      {
+        label: 'Appearance',
+        icon: <PaletteIcon />,
+        content: <AppearanceTab />,
+      },
+      {
+        label: 'Backup & Restore',
+        icon: <SettingsBackupRestoreIcon />,
+        content: <BackupRestoreTab />,
+      },
+      ...(user?.role === 'admin'
+        ? [
+            {
+              label: 'Certificates',
+              icon: <SecurityIcon />,
+              content: <CertificatesTab />,
+            },
+            {
+              label: 'Audit Trail',
+              icon: <HistoryEduIcon />,
+              content: <AuditTrailTab />,
+            },
+            {
+              label: 'Webhooks',
+              icon: <WebhookIcon />,
+              content: <WebhookManager />,
+            },
+            {
+              label: 'Custom Widgets',
+              icon: <ExtensionIcon />,
+              content: <CustomWidgetManager />,
+            },
+          ]
+        : []),
+      {
+        label: 'System Info',
+        icon: <InfoIcon />,
+        content: <SystemInfoTab />,
+      },
+    ],
+    [user?.role],
+  );
+
+  useEffect(() => {
+    if (tabValue >= tabs.length) {
+      setTabValue(0);
+    }
+  }, [tabValue, tabs.length]);
 
   // Handle tab change
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number): void => {
@@ -153,47 +217,22 @@ const SettingsPage: React.FC = () => {
           aria-label="settings tabs"
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
-          <Tab
-            label="Connections"
-            id="settings-tab-0"
-            icon={<LanguageIcon />}
-            iconPosition="start"
-          />
-          <Tab label="Appearance" id="settings-tab-1" icon={<PaletteIcon />} iconPosition="start" />
-          <Tab
-            label="Certificates"
-            id="settings-tab-2"
-            icon={<SecurityIcon />}
-            iconPosition="start"
-          />
-          <Tab
-            label="Backup & Restore"
-            id="settings-tab-3"
-            icon={<SettingsBackupRestoreIcon />}
-            iconPosition="start"
-          />
-          <Tab label="System Info" id="settings-tab-4" icon={<InfoIcon />} iconPosition="start" />
+          {tabs.map((tab, index) => (
+            <Tab
+              key={tab.label}
+              label={tab.label}
+              id={`settings-tab-${index}`}
+              icon={tab.icon}
+              iconPosition="start"
+            />
+          ))}
         </Tabs>
 
-        <TabPanel value={tabValue} index={0} sx={{ flexGrow: 1 }}>
-          <ConnectionsTab />
-        </TabPanel>
-
-        <TabPanel value={tabValue} index={1} sx={{ flexGrow: 1 }}>
-          <AppearanceTab />
-        </TabPanel>
-
-        <TabPanel value={tabValue} index={2} sx={{ flexGrow: 1 }}>
-          <CertificatesTab />
-        </TabPanel>
-
-        <TabPanel value={tabValue} index={3}>
-          <BackupRestoreTab />
-        </TabPanel>
-
-        <TabPanel value={tabValue} index={4}>
-          <SystemInfoTab />
-        </TabPanel>
+        {tabs.map((tab, index) => (
+          <TabPanel key={tab.label} value={tabValue} index={index} sx={{ flexGrow: 1 }}>
+            {tab.content}
+          </TabPanel>
+        ))}
       </Paper>
 
       {/* Loading overlay */}

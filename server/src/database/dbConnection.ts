@@ -1,30 +1,83 @@
+import { performance } from "node:perf_hooks";
+
 import pg from "pg";
+
+import config from "../config/config.js";
+import logger from "../utils/logger.js";
 import statusManager from "../utils/status.js";
 import StatusConstants from "../utils/statusConstants.js";
-import logger from "../utils/logger.js";
-import config from "../config/config.js";
+import DatabaseQueryMonitor from "./queryMonitor.js";
 
 const { Pool } = pg;
 
-/**
- * Class for managing database connections with integrated health monitoring
- */
-class DatabaseManager {
-  pool: InstanceType<typeof Pool>;
+type PoolInstance = InstanceType<typeof Pool>;
+type PoolRole = "primary" | "replica";
+type QueryTarget = "read" | "write";
+type QueryOptions = {
+  maxRetries?: number;
+  target?: QueryTarget;
+};
+
+interface MonitoredPool {
+  name: string;
+  role: PoolRole;
+  pool: PoolInstance;
+  rawQuery: PoolInstance["query"];
+  isHealthy: boolean;
   isConnecting: boolean;
-  healthCheckInterval: ReturnType<typeof setInterval> | null;
+  reconnectTimer: ReturnType<typeof setTimeout> | null;
   connectionAttempts: number;
   maxConnectionAttempts: number;
   retryDelay: number;
+}
+
+const isRetryableError = (error: any): boolean =>
+  [
+    "ECONNRESET",
+    "ETIMEDOUT",
+    "57P01",
+    "57P03",
+    "08003",
+    "08006",
+    "40001",
+  ].includes(error?.code);
+
+const formatQueryPreview = (text: string): string => {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  return normalized.slice(0, 140) + (normalized.length > 140 ? "..." : "");
+};
+
+const parseReplicaUrls = (value: string): string[] =>
+  value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+/**
+ * Class for managing database connections with integrated health monitoring.
+ * Primary traffic always goes to the writer pool. Replica pools are used for
+ * read-only queries when available and fall back to the writer automatically.
+ */
+class DatabaseManager {
+  pool: PoolInstance;
+  private readonly primaryPoolState: MonitoredPool;
+  private readonly replicaPoolStates: MonitoredPool[];
+  private healthCheckInterval: ReturnType<typeof setInterval> | null;
+  private readonly queryMonitor: DatabaseQueryMonitor;
+  private readReplicaCursor: number;
+  private lastReadTarget: string;
+  private readonly wrappedClients = new WeakSet<object>();
 
   constructor() {
-    this.isConnecting = false;
     this.healthCheckInterval = null;
-    this.connectionAttempts = 0;
-    this.maxConnectionAttempts = 5;
-    this.retryDelay = 5000;
+    this.readReplicaCursor = 0;
+    this.lastReadTarget = "primary";
+    this.queryMonitor = new DatabaseQueryMonitor(
+      config.DB_QUERY_SLOW_THRESHOLD_MS,
+      config.DB_QUERY_METRICS_MAX_SAMPLES,
+    );
 
-    this.pool = new Pool({
+    this.primaryPoolState = this.createMonitoredPool("primary", "primary", {
       host: config.DB_HOST,
       port: config.DB_PORT,
       user: config.DB_USER,
@@ -35,87 +88,244 @@ class DatabaseManager {
       idleTimeoutMillis: config.DB_IDLE_TIMEOUT,
     });
 
-    this.pool.on("error", (err: Error) => {
-      logger.error("Unexpected error on idle PostgreSQL client:", err);
-      statusManager.setDatabaseStatus(StatusConstants.ERROR, {
-        message: "Unexpected pool error",
-        error: err.message,
-      });
-      this.scheduleReconnect();
-    });
-
-    void this.connect();
-  }
-
-  async connect(): Promise<void> {
-    if (this.isConnecting) return;
-
-    this.isConnecting = true;
-    this.connectionAttempts++;
-
-    statusManager.setDatabaseStatus(StatusConstants.CONNECTING, {
-      message: `Attempting connection (Attempt ${this.connectionAttempts}/${this.maxConnectionAttempts})`,
-      attempt: this.connectionAttempts,
-    });
-    logger.info(
-      `Attempting database connection (Attempt ${this.connectionAttempts}/${this.maxConnectionAttempts})...`,
+    this.replicaPoolStates = parseReplicaUrls(config.DB_READ_REPLICA_URLS).map(
+      (connectionString, index) =>
+        this.createMonitoredPool(`replica-${index + 1}`, "replica", {
+          connectionString,
+          max: config.DB_REPLICA_MAX_POOL,
+          connectionTimeoutMillis: config.DB_CONNECTION_TIMEOUT,
+          idleTimeoutMillis: config.DB_IDLE_TIMEOUT,
+        }),
     );
 
+    this.pool = this.primaryPoolState.pool;
+
+    void this.connectPool(this.primaryPoolState);
+    for (const replicaPoolState of this.replicaPoolStates) {
+      void this.connectPool(replicaPoolState);
+    }
+  }
+
+  private createMonitoredPool(
+    name: string,
+    role: PoolRole,
+    poolConfig: pg.PoolConfig,
+  ): MonitoredPool {
+    const pool = new Pool(poolConfig);
+    const rawQuery = pool.query.bind(pool);
+    const poolState: MonitoredPool = {
+      name,
+      role,
+      pool,
+      rawQuery,
+      isHealthy: false,
+      isConnecting: false,
+      reconnectTimer: null,
+      connectionAttempts: 0,
+      maxConnectionAttempts: 5,
+      retryDelay: 5000,
+    };
+
+    pool.on("error", (error: Error) => {
+      logger.error("Unexpected PostgreSQL pool error", {
+        pool: poolState.name,
+        role: poolState.role,
+        error: error.message,
+      });
+
+      poolState.isHealthy = false;
+      this.scheduleReconnect(poolState);
+      this.refreshDatabaseStatus("Unexpected database pool error");
+    });
+
+    pool.on("connect", (client) => {
+      this.wrapClientQuery(client as pg.PoolClient, poolState.name);
+    });
+
+    return poolState;
+  }
+
+  private wrapClientQuery(client: pg.PoolClient, target: string): void {
+    if (this.wrappedClients.has(client)) return;
+
+    this.wrappedClients.add(client);
+    const originalQuery = client.query.bind(client);
+
+    (client as any).query = async (...args: any[]) => {
+      if (
+        typeof args[1] === "function" ||
+        typeof args[2] === "function" ||
+        typeof args[0] === "function"
+      ) {
+        return (originalQuery as any)(...args);
+      }
+
+      const queryText = this.extractQueryText(args[0]);
+      const startedAt = performance.now();
+
+      try {
+        const result = await (originalQuery as any)(...args);
+        this.recordQueryExecution({
+          target,
+          text: queryText,
+          durationMs: performance.now() - startedAt,
+          rowCount: result.rowCount,
+        });
+        return result;
+      } catch (error: any) {
+        this.recordQueryExecution({
+          target,
+          text: queryText,
+          durationMs: performance.now() - startedAt,
+          errorCode: error?.code,
+          errorMessage: error?.message,
+        });
+        throw error;
+      }
+    };
+  }
+
+  private extractQueryText(
+    query: string | { text?: string } | undefined,
+  ): string {
+    if (typeof query === "string") return query;
+    if (query && typeof query.text === "string") return query.text;
+    return "unknown";
+  }
+
+  private recordQueryExecution(record: {
+    target: string;
+    text: string;
+    durationMs: number;
+    rowCount?: number | null;
+    errorCode?: string;
+    errorMessage?: string;
+  }): void {
+    const durationMs = Number(record.durationMs.toFixed(2));
+
+    this.queryMonitor.record({
+      text: record.text,
+      target: record.target,
+      durationMs,
+      rowCount: record.rowCount,
+      errorCode: record.errorCode,
+      errorMessage: record.errorMessage,
+    });
+
+    if (durationMs >= config.DB_QUERY_SLOW_THRESHOLD_MS) {
+      logger.warn("Slow database query detected", {
+        target: record.target,
+        durationMs,
+        rowCount: record.rowCount ?? 0,
+        query: formatQueryPreview(record.text),
+      });
+    }
+  }
+
+  private async connectPool(poolState: MonitoredPool): Promise<void> {
+    if (poolState.isConnecting) return;
+
+    poolState.isConnecting = true;
+    poolState.connectionAttempts += 1;
+
+    if (poolState.role === "primary") {
+      statusManager.setDatabaseStatus(StatusConstants.CONNECTING, {
+        message: `Attempting primary database connection (${poolState.connectionAttempts}/${poolState.maxConnectionAttempts})`,
+        attempt: poolState.connectionAttempts,
+      });
+    }
+
+    logger.info("Attempting database connection", {
+      pool: poolState.name,
+      role: poolState.role,
+      attempt: poolState.connectionAttempts,
+      maxAttempts: poolState.maxConnectionAttempts,
+    });
+
     try {
-      const client = await this.pool.connect();
-      logger.info(
-        `Connected to PostgreSQL database: ${config.DB_NAME} on ${config.DB_HOST}`,
-      );
-
-      statusManager.setDatabaseStatus(StatusConstants.CONNECTED, {
-        message: "Connection successful",
-        timestamp: new Date().toISOString(),
-      });
-
+      const client = await poolState.pool.connect();
       client.release();
-      this.connectionAttempts = 0;
-      this.retryDelay = 5000;
-      this.startHealthCheck();
-    } catch (err: any) {
-      logger.error("PostgreSQL connection error:", {
-        message: err.message,
-        code: err.code,
+
+      poolState.isHealthy = true;
+      poolState.connectionAttempts = 0;
+      poolState.retryDelay = 5000;
+
+      logger.info("Connected to PostgreSQL pool", {
+        pool: poolState.name,
+        role: poolState.role,
       });
-      statusManager.setDatabaseStatus(StatusConstants.ERROR, {
-        message: "Connection failed",
-        error: err.message,
+
+      if (poolState.reconnectTimer) {
+        clearTimeout(poolState.reconnectTimer);
+        poolState.reconnectTimer = null;
+      }
+
+      if (poolState.role === "primary") {
+        this.startHealthCheck();
+      }
+
+      this.refreshDatabaseStatus("Database connection successful");
+    } catch (error: any) {
+      poolState.isHealthy = false;
+
+      logger.error("PostgreSQL connection error", {
+        pool: poolState.name,
+        role: poolState.role,
+        message: error.message,
+        code: error.code,
       });
-      this.scheduleReconnect();
+
+      if (poolState.role === "primary") {
+        statusManager.setDatabaseStatus(StatusConstants.ERROR, {
+          message: "Primary database connection failed",
+          error: error.message,
+          pool: poolState.name,
+        });
+      }
+
+      this.scheduleReconnect(poolState);
+      this.refreshDatabaseStatus("Database connection failed");
     } finally {
-      this.isConnecting = false;
+      poolState.isConnecting = false;
     }
   }
 
-  scheduleReconnect(): void {
-    if (this.healthCheckInterval) {
-      clearInterval(this.healthCheckInterval);
-      this.healthCheckInterval = null;
-    }
-    if (this.connectionAttempts < this.maxConnectionAttempts) {
-      const delay = Math.min(this.retryDelay * 1.5, 60000);
-      this.retryDelay = delay;
+  private scheduleReconnect(poolState: MonitoredPool): void {
+    if (poolState.reconnectTimer) return;
 
-      logger.info(
-        `Scheduling database reconnection attempt in ${delay / 1000} seconds...`,
-      );
-      setTimeout(() => this.connect(), delay);
-    } else {
-      logger.error(
-        `Database connection failed after ${this.maxConnectionAttempts} attempts. Stopping automatic retries. Manual intervention required.`,
-      );
-      statusManager.setDatabaseStatus(StatusConstants.ERROR, {
-        message: `Max connection attempts (${this.maxConnectionAttempts}) reached. Auto-reconnect stopped.`,
-        attempts: this.connectionAttempts,
+    if (poolState.connectionAttempts >= poolState.maxConnectionAttempts) {
+      logger.error("Maximum database reconnect attempts reached", {
+        pool: poolState.name,
+        role: poolState.role,
+        attempts: poolState.connectionAttempts,
       });
+
+      if (poolState.role === "primary") {
+        statusManager.setDatabaseStatus(StatusConstants.ERROR, {
+          message: `Primary database reconnect limit reached (${poolState.maxConnectionAttempts})`,
+          attempts: poolState.connectionAttempts,
+        });
+      }
+
+      return;
     }
+
+    const delay = Math.min(poolState.retryDelay * 1.5, 60000);
+    poolState.retryDelay = delay;
+
+    logger.info("Scheduling database reconnect", {
+      pool: poolState.name,
+      role: poolState.role,
+      delayMs: delay,
+    });
+
+    poolState.reconnectTimer = setTimeout(() => {
+      poolState.reconnectTimer = null;
+      void this.connectPool(poolState);
+    }, delay);
   }
 
-  startHealthCheck(): void {
+  private startHealthCheck(): void {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
     }
@@ -127,118 +337,242 @@ class DatabaseManager {
       return;
     }
 
-    this.healthCheckInterval = setInterval(async () => {
-      try {
-        const poolStats = {
-          totalCount: this.pool.totalCount,
-          idleCount: this.pool.idleCount,
-          waitingCount: this.pool.waitingCount,
-        };
-        logger.debug("Database pool stats:", poolStats);
-
-        const res = await this.pool.query("SELECT 1");
-        if (res.rowCount! > 0) {
-          if (
-            statusManager.getServiceStatus(StatusConstants.DATABASE) !==
-            StatusConstants.CONNECTED
-          ) {
-            logger.info(
-              "Database health check passed, restoring status to CONNECTED.",
-            );
-            statusManager.setDatabaseStatus(StatusConstants.CONNECTED, {
-              message: "Health check passed",
-              timestamp: new Date().toISOString(),
-            });
-          }
-        } else {
-          throw new Error("Health check query returned no rows.");
-        }
-      } catch (error: any) {
-        logger.error("Database health check failed:", {
-          message: error.message,
-          code: error.code,
-        });
-        statusManager.setDatabaseStatus(StatusConstants.ERROR, {
-          message: "Health check failed",
-          error: error.message,
-        });
-        if (this.healthCheckInterval) clearInterval(this.healthCheckInterval);
-        this.healthCheckInterval = null;
-        this.scheduleReconnect();
-      }
+    this.healthCheckInterval = setInterval(() => {
+      void this.performHealthCheck();
     }, intervalMs);
 
-    logger.info(
-      `Database health check scheduled every ${intervalMs / 1000} seconds`,
+    logger.info("Database health check scheduled", {
+      intervalMs,
+      replicas: this.replicaPoolStates.length,
+    });
+  }
+
+  private async performHealthCheck(): Promise<void> {
+    const primaryHealthy = await this.checkPoolHealth(this.primaryPoolState);
+    const replicaResults = await Promise.all(
+      this.replicaPoolStates.map((replicaPoolState) =>
+        this.checkPoolHealth(replicaPoolState),
+      ),
     );
+
+    if (!primaryHealthy) {
+      this.scheduleReconnect(this.primaryPoolState);
+    }
+
+    for (let index = 0; index < this.replicaPoolStates.length; index += 1) {
+      if (!replicaResults[index]) {
+        this.scheduleReconnect(this.replicaPoolStates[index]);
+      }
+    }
+
+    this.refreshDatabaseStatus("Database health check completed");
+  }
+
+  private async checkPoolHealth(poolState: MonitoredPool): Promise<boolean> {
+    try {
+      const result = await poolState.rawQuery("SELECT 1");
+
+      if (result.rowCount && result.rowCount > 0) {
+        poolState.isHealthy = true;
+        return true;
+      }
+
+      throw new Error("Health check returned no rows");
+    } catch (error: any) {
+      poolState.isHealthy = false;
+
+      logger.error("Database health check failed", {
+        pool: poolState.name,
+        role: poolState.role,
+        message: error.message,
+        code: error.code,
+      });
+
+      return false;
+    }
+  }
+
+  private refreshDatabaseStatus(message: string): void {
+    const healthyReplicas = this.replicaPoolStates.filter(
+      (poolState) => poolState.isHealthy,
+    ).length;
+    const replicasConfigured = this.replicaPoolStates.length;
+    const databaseStatus = !this.primaryPoolState.isHealthy
+      ? StatusConstants.ERROR
+      : healthyReplicas < replicasConfigured
+        ? StatusConstants.WARNING
+        : StatusConstants.CONNECTED;
+
+    const summaryMessage = !this.primaryPoolState.isHealthy
+      ? "Primary database unavailable"
+      : replicasConfigured === 0
+        ? "Primary database connected; no read replicas configured"
+        : healthyReplicas === 0
+          ? "Primary database connected; read traffic is falling back to primary"
+          : `${healthyReplicas}/${replicasConfigured} read replicas available`;
+
+    statusManager.setDatabaseStatus(databaseStatus, {
+      message: `${summaryMessage}. ${message}`,
+      timestamp: new Date().toISOString(),
+      primary: this.getPoolSnapshot(this.primaryPoolState),
+      replicas: this.replicaPoolStates.map((poolState) =>
+        this.getPoolSnapshot(poolState),
+      ),
+      queryMetrics: this.queryMonitor.getStatusSummary(),
+      readRouting: {
+        strategy:
+          this.replicaPoolStates.length > 0
+            ? "replica-preferred"
+            : "primary-only",
+        lastTarget: this.lastReadTarget,
+      },
+    });
+  }
+
+  private getPoolSnapshot(poolState: MonitoredPool): Record<string, any> {
+    return {
+      name: poolState.name,
+      role: poolState.role,
+      healthy: poolState.isHealthy,
+      totalCount: poolState.pool.totalCount,
+      idleCount: poolState.pool.idleCount,
+      waitingCount: poolState.pool.waitingCount,
+      connectionAttempts: poolState.connectionAttempts,
+    };
+  }
+
+  private selectReadPoolState(): MonitoredPool {
+    const healthyReplicas = this.replicaPoolStates.filter(
+      (poolState) => poolState.isHealthy,
+    );
+
+    if (healthyReplicas.length === 0) {
+      this.lastReadTarget = this.primaryPoolState.name;
+      return this.primaryPoolState;
+    }
+
+    const selectedPoolState =
+      healthyReplicas[this.readReplicaCursor % healthyReplicas.length];
+    this.readReplicaCursor += 1;
+    this.lastReadTarget = selectedPoolState.name;
+    return selectedPoolState;
+  }
+
+  getReadPool(): PoolInstance {
+    return this.selectReadPoolState().pool;
+  }
+
+  getQueryMetrics() {
+    return this.queryMonitor.getSnapshot(10);
+  }
+
+  getConnectionOverview() {
+    return {
+      primary: this.getPoolSnapshot(this.primaryPoolState),
+      replicas: this.replicaPoolStates.map((poolState) =>
+        this.getPoolSnapshot(poolState),
+      ),
+      readRouting: {
+        strategy:
+          this.replicaPoolStates.length > 0
+            ? "replica-preferred"
+            : "primary-only",
+        lastTarget: this.lastReadTarget,
+      },
+    };
   }
 
   async query(
     text: string,
     params: any[] = [],
-    options: { maxRetries?: number } = { maxRetries: 2 },
+    options: QueryOptions = { maxRetries: 2, target: "write" },
   ): Promise<pg.QueryResult> {
     let retries = 0;
     const maxRetries = options.maxRetries ?? 2;
+    let poolState =
+      options.target === "read"
+        ? this.selectReadPoolState()
+        : this.primaryPoolState;
 
     while (retries <= maxRetries) {
       try {
-        return await this.pool.query(text, params);
+        return await poolState.pool.query(text, params);
       } catch (error: any) {
-        logger.error(
-          `Database query error (attempt ${retries + 1}/${maxRetries + 1}):`,
-          {
-            message: error.message,
+        logger.error("Database query error", {
+          pool: poolState.name,
+          role: poolState.role,
+          attempt: retries + 1,
+          maxAttempts: maxRetries + 1,
+          message: error.message,
+          code: error.code,
+          query: formatQueryPreview(text),
+        });
+
+        if (options.target === "read" && poolState.role === "replica") {
+          logger.warn("Read query on replica failed; falling back to primary", {
+            failedPool: poolState.name,
             code: error.code,
-            query: text.substring(0, 100) + (text.length > 100 ? "..." : ""),
-          },
-        );
+          });
 
-        retries++;
-        const isRetryable =
-          error.code === "ECONNRESET" ||
-          error.code === "ETIMEDOUT" ||
-          error.code === "57P01" ||
-          error.code === "57P03" ||
-          error.code === "08003" ||
-          error.code === "08006";
+          poolState.isHealthy = false;
+          this.scheduleReconnect(poolState);
+          poolState = this.primaryPoolState;
+          this.lastReadTarget = this.primaryPoolState.name;
+          continue;
+        }
 
-        if (retries > maxRetries || !isRetryable) {
-          logger.error(`Query failed permanently after ${retries} attempts.`);
-          if (isRetryable || error.message.includes("connection")) {
-            statusManager.setDatabaseStatus(StatusConstants.ERROR, {
-              message: "Persistent connection issue during query",
-              error: error.message,
-            });
-            this.scheduleReconnect();
+        retries += 1;
+        if (retries > maxRetries || !isRetryableError(error)) {
+          if (poolState.role === "primary") {
+            this.primaryPoolState.isHealthy = false;
+            this.scheduleReconnect(this.primaryPoolState);
+            this.refreshDatabaseStatus("Primary database query failure");
           }
           throw error;
         }
 
-        const delay = 1000 * retries;
-        logger.warn(`Retrying query in ${delay}ms...`);
-        await new Promise((resolve) => setTimeout(resolve, delay));
+        const delayMs = 1000 * retries;
+        logger.warn("Retrying database query", {
+          pool: poolState.name,
+          delayMs,
+          nextAttempt: retries + 1,
+        });
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
     }
+
     throw new Error("Query retry logic failed unexpectedly.");
   }
 
   async end(): Promise<void> {
-    logger.info("Closing database pool...");
+    logger.info("Closing database pools...");
+
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
       this.healthCheckInterval = null;
     }
+
+    const pools = [this.primaryPoolState, ...this.replicaPoolStates];
+
+    for (const poolState of pools) {
+      if (poolState.reconnectTimer) {
+        clearTimeout(poolState.reconnectTimer);
+        poolState.reconnectTimer = null;
+      }
+    }
+
     try {
-      await this.pool.end();
-      logger.info("Database pool closed successfully.");
+      await Promise.all(pools.map((poolState) => poolState.pool.end()));
+      logger.info("Database pools closed successfully.");
       statusManager.setDatabaseStatus(StatusConstants.DISCONNECTED, {
-        message: "Connection pool closed",
+        message: "All database pools closed",
       });
     } catch (error: any) {
-      logger.error("Error closing database pool:", error);
+      logger.error("Error closing database pools", {
+        message: error.message,
+      });
       statusManager.setDatabaseStatus(StatusConstants.ERROR, {
-        message: "Error closing pool",
+        message: "Error closing database pools",
         error: error.message,
       });
     }

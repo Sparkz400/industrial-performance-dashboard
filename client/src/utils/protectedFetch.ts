@@ -35,6 +35,14 @@ export const protectedFetch = async (
   options.method = options.method || 'GET';
   options.credentials = 'include';
 
+  // Inject plant context header
+  const plantId = (window as unknown as Record<string, unknown>).__currentPlantId;
+  if (plantId) {
+    const headers = (options.headers || {}) as Record<string, string>;
+    headers['X-Plant-Id'] = String(plantId);
+    options.headers = headers;
+  }
+
   const isStateChanging = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method);
 
   // Attach CSRF token for state-changing requests
@@ -48,6 +56,11 @@ export const protectedFetch = async (
   }
 
   const response = await fetch(url, options);
+
+  // On 401, dispatch auth error event so the app can redirect to login
+  if (response.status === 401 && !url.includes('/auth/')) {
+    window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+  }
 
   // On CSRF error, refresh token and retry once
   if (!response.ok && (await isCsrfError(response)) && !isRetry) {

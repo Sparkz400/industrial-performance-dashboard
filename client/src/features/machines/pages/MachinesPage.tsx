@@ -10,8 +10,8 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  CircularProgress,
 } from '@mui/material';
+import PageSkeleton from '@/shared/components/loading/PageSkeleton';
 import AddIcon from '@mui/icons-material/Add';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useMachineStore } from '@/stores/useMachineStore';
@@ -19,7 +19,7 @@ import { useStatusStore } from '@/stores/useStatusStore';
 import MachineStatusCard from '../components/MachineStatusCard';
 import MachineForm from '../components/MachineForm';
 import NodeMappingEditor from '../components/NodeMappingEditor';
-import type { Machine, MachineFormData } from '@/types';
+import type { Machine, MachineFormData, MachineStatusUpdate } from '@/types';
 
 const MachinesPage: React.FC = () => {
   const machines = useMachineStore((s) => s.machines);
@@ -49,7 +49,7 @@ const MachinesPage: React.FC = () => {
   useEffect(() => {
     if (!socket || !socketConnected) return;
 
-    const handleStatusUpdate = (data: { machineId: number; status: string }) => {
+    const handleStatusUpdate = (data: MachineStatusUpdate) => {
       updateMachineStatus(data.machineId, data.status);
     };
 
@@ -140,8 +140,8 @@ const MachinesPage: React.FC = () => {
       )}
 
       {loading && machines.length === 0 ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <CircularProgress />
+        <Box sx={{ py: 2 }}>
+          <PageSkeleton variant="cards" count={3} />
         </Box>
       ) : machines.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>

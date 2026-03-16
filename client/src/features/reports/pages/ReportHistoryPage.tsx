@@ -1,0 +1,227 @@
+import React, { useState } from 'react';
+import {
+  Box,
+  Typography,
+  Button,
+  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  IconButton,
+  TablePagination,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from '@mui/material';
+import DownloadIcon from '@mui/icons-material/Download';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import PageSkeleton from '@/shared/components/loading/PageSkeleton';
+import { useQuery } from '@tanstack/react-query';
+import { API_ENDPOINTS } from '@/config/config';
+import protectedFetch from '@/utils/protectedFetch';
+
+interface ReportHistoryItem {
+  id: number;
+  scheduleId: number;
+  scheduleName: string;
+  generatedAt: string;
+  status: 'generating' | 'completed' | 'failed';
+  fileSize: number | null;
+  errorMessage: string | null;
+}
+
+interface ReportHistoryResponse {
+  data: ReportHistoryItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+interface ReportScheduleOption {
+  id: number;
+  name: string;
+}
+
+const getStatusColor = (status: string): 'warning' | 'success' | 'error' | 'default' => {
+  switch (status) {
+    case 'generating':
+      return 'warning';
+    case 'completed':
+      return 'success';
+    case 'failed':
+      return 'error';
+    default:
+      return 'default';
+  }
+};
+
+const formatDate = (isoDate: string): string => new Date(isoDate).toLocaleString();
+
+const formatFileSize = (bytes: number | null): string => {
+  if (bytes === null || bytes === undefined) return '-';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const fetchScheduleOptions = async (): Promise<ReportScheduleOption[]> => {
+  const res = await protectedFetch(API_ENDPOINTS.reports.schedules);
+  if (!res.ok) throw new Error('Failed to fetch schedules');
+  return res.json();
+};
+
+const ReportHistoryPage: React.FC = () => {
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [scheduleFilter, setScheduleFilter] = useState<number | 'all'>('all');
+
+  const { data: scheduleOptions = [] } = useQuery({
+    queryKey: ['reportScheduleOptions'],
+    queryFn: fetchScheduleOptions,
+  });
+
+  const { data, isLoading, error, refetch } = useQuery<ReportHistoryResponse>({
+    queryKey: ['reportHistory', page, rowsPerPage, scheduleFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set('page', String(page + 1));
+      params.set('limit', String(rowsPerPage));
+      if (scheduleFilter !== 'all') params.set('scheduleId', String(scheduleFilter));
+      const res = await protectedFetch(`${API_ENDPOINTS.reports.history}?${params.toString()}`);
+      if (!res.ok) throw new Error('Failed to fetch report history');
+      return res.json();
+    },
+  });
+
+  const handleDownload = (id: number) => {
+    const url = API_ENDPOINTS.reports.download(id);
+    window.open(url, '_blank');
+  };
+
+  const items = data?.data ?? [];
+  const total = data?.total ?? 0;
+
+  return (
+    <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box>
+          <Typography variant="h4" fontWeight="bold">
+            Report History
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            View generated reports and download completed ones
+          </Typography>
+        </Box>
+        <Button startIcon={<RefreshIcon />} onClick={() => refetch()} disabled={isLoading}>
+          Refresh
+        </Button>
+      </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {(error as Error).message}
+        </Alert>
+      )}
+
+      {/* Filter bar */}
+      <Paper sx={{ p: 2, mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>Schedule</InputLabel>
+          <Select
+            value={scheduleFilter}
+            label="Schedule"
+            onChange={(e) => {
+              setScheduleFilter(e.target.value as number | 'all');
+              setPage(0);
+            }}
+          >
+            <MenuItem value="all">All Schedules</MenuItem>
+            {scheduleOptions.map((s) => (
+              <MenuItem key={s.id} value={s.id}>
+                {s.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Paper>
+
+      {isLoading ? (
+        <PageSkeleton variant="cards" count={3} />
+      ) : (
+        <>
+          <TableContainer component={Paper}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Schedule</TableCell>
+                  <TableCell>Generated At</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>File Size</TableCell>
+                  <TableCell>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {items.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        No report history found
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  items.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.scheduleName}</TableCell>
+                      <TableCell>{formatDate(item.generatedAt)}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={item.status}
+                          color={getStatusColor(item.status)}
+                          size="small"
+                          sx={{ textTransform: 'capitalize' }}
+                        />
+                      </TableCell>
+                      <TableCell>{formatFileSize(item.fileSize)}</TableCell>
+                      <TableCell>
+                        {item.status === 'completed' && (
+                          <IconButton
+                            size="small"
+                            title="Download"
+                            onClick={() => handleDownload(item.id)}
+                          >
+                            <DownloadIcon fontSize="small" />
+                          </IconButton>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            component="div"
+            count={total}
+            page={page}
+            onPageChange={(_e, newPage) => setPage(newPage)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(e) => {
+              setRowsPerPage(parseInt(e.target.value, 10));
+              setPage(0);
+            }}
+            rowsPerPageOptions={[10, 25, 50, 100]}
+          />
+        </>
+      )}
+    </Box>
+  );
+};
+
+export default ReportHistoryPage;

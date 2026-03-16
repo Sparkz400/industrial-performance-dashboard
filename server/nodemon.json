@@ -1,12 +1,14 @@
 {
-  "watch": ["*.js", "src/**/*.js"],
-  "ext": "js,mjs,json",
+  "watch": ["*.ts", "src/**/*.ts"],
+  "ext": "ts,mts,json",
   "ignore": [
     "sessions/*",
     "logs/*",
     "certificates/*",
     "node_modules/*",
-    "*.test.js"
+    "dist/*",
+    "*.test.ts"
   ],
+  "exec": "tsx app.ts",
   "delay": "500ms"
 }

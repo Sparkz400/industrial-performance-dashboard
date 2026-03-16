@@ -6,14 +6,35 @@ import ResponsiveSidebar from './features/layout/components/sidebar';
 import ErrorBoundary from './features/system/components/ErrorBoundary';
 import CertificateNotification from './features/settings/components/CertificateNotification';
 import CsrfErrorHandler from './shared/components/CsrfErrorHandler';
+import PrivateRoute from './shared/components/PrivateRoute';
 import { useSnackbar, closeSnackbar } from 'notistack';
 import { useStatusStore } from './stores/useStatusStore';
+import { useAuthStore } from './stores/useAuthStore';
 
 // Lazy load pages
+const LoginPage = React.lazy(() => import('./features/auth/pages/LoginPage'));
 const DashboardPage = React.lazy(() => import('./features/dashboard/pages/dashboardPage'));
 const SettingsPage = React.lazy(() => import('./features/settings/pages/settingsPage'));
 const HelpPage = React.lazy(() => import('./features/help/pages/helpPage'));
 const MachinesPage = React.lazy(() => import('./features/machines/pages/MachinesPage'));
+const EmbedPage = React.lazy(() => import('./features/embed/pages/EmbedPage'));
+const NLQueryPanel = React.lazy(() => import('./features/nl-query/components/NLQueryPanel'));
+
+// Tier 1 feature pages
+const PlantsPage = React.lazy(() => import('./features/plants/pages/PlantsPage'));
+const OeeConfigPage = React.lazy(() => import('./features/oee/pages/OeeConfigPage'));
+const AlertRulesPage = React.lazy(() => import('./features/alerts/pages/AlertRulesPage'));
+const AlertHistoryPage = React.lazy(() => import('./features/alerts/pages/AlertHistoryPage'));
+const NotificationChannelsPage = React.lazy(
+  () => import('./features/alerts/pages/NotificationChannelsPage'),
+);
+const ReportTemplatesPage = React.lazy(
+  () => import('./features/reports/pages/ReportTemplatesPage'),
+);
+const ReportSchedulesPage = React.lazy(
+  () => import('./features/reports/pages/ReportSchedulesPage'),
+);
+const ReportHistoryPage = React.lazy(() => import('./features/reports/pages/ReportHistoryPage'));
 
 // Modern loading component with skeleton
 const PageLoader = () => (
@@ -110,6 +131,26 @@ function App() {
   const isError = useStatusStore((s) => s.isError);
   const { enqueueSnackbar } = useSnackbar();
 
+  const user = useAuthStore((s) => s.user);
+  const isInitialized = useAuthStore((s) => s.isInitialized);
+  const checkAuth = useAuthStore((s) => s.checkAuth);
+
+  const logout = useAuthStore((s) => s.logout);
+
+  // Check authentication on mount
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  // Listen for session expiry (401 from API)
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      logout();
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, [logout]);
+
   useEffect(() => {
     localStorage.setItem('sidebarOpen', sidebarOpen.toString());
   }, [sidebarOpen]);
@@ -145,6 +186,27 @@ function App() {
     }),
     [drawerWidth],
   );
+
+  // Show loader while checking authentication
+  if (!isInitialized) {
+    return <PageLoader />;
+  }
+
+  // If not logged in, show login + public routes (shared/embed dashboards)
+  if (!user) {
+    return (
+      <Router>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/shared/:token" element={<EmbedPage mode="shared" />} />
+            <Route path="/embed/:token" element={<EmbedPage mode="embed" />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </Suspense>
+      </Router>
+    );
+  }
 
   return (
     <Router>
@@ -182,9 +244,11 @@ function App() {
                     <Route
                       path="/machines"
                       element={
-                        <PageTransition>
-                          <MachinesPage />
-                        </PageTransition>
+                        <PrivateRoute requiredRole="admin">
+                          <PageTransition>
+                            <MachinesPage />
+                          </PageTransition>
+                        </PrivateRoute>
                       }
                     />
                     <Route
@@ -203,6 +267,89 @@ function App() {
                         </PageTransition>
                       }
                     />
+                    {/* Tier 1: Multi-plant */}
+                    <Route
+                      path="/plants"
+                      element={
+                        <PrivateRoute requiredRole="admin">
+                          <PageTransition>
+                            <PlantsPage />
+                          </PageTransition>
+                        </PrivateRoute>
+                      }
+                    />
+                    {/* Tier 1: OEE */}
+                    <Route
+                      path="/oee/config"
+                      element={
+                        <PrivateRoute requiredRole="admin">
+                          <PageTransition>
+                            <OeeConfigPage />
+                          </PageTransition>
+                        </PrivateRoute>
+                      }
+                    />
+                    {/* Tier 1: Alerts */}
+                    <Route
+                      path="/alerts/rules"
+                      element={
+                        <PrivateRoute requiredRole="admin">
+                          <PageTransition>
+                            <AlertRulesPage />
+                          </PageTransition>
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="/alerts/history"
+                      element={
+                        <PageTransition>
+                          <AlertHistoryPage />
+                        </PageTransition>
+                      }
+                    />
+                    <Route
+                      path="/alerts/channels"
+                      element={
+                        <PrivateRoute requiredRole="admin">
+                          <PageTransition>
+                            <NotificationChannelsPage />
+                          </PageTransition>
+                        </PrivateRoute>
+                      }
+                    />
+                    {/* Tier 1: Reports */}
+                    <Route
+                      path="/reports/templates"
+                      element={
+                        <PrivateRoute requiredRole="admin">
+                          <PageTransition>
+                            <ReportTemplatesPage />
+                          </PageTransition>
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="/reports/schedules"
+                      element={
+                        <PrivateRoute requiredRole="admin">
+                          <PageTransition>
+                            <ReportSchedulesPage />
+                          </PageTransition>
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="/reports/history"
+                      element={
+                        <PageTransition>
+                          <ReportHistoryPage />
+                        </PageTransition>
+                      }
+                    />
+                    <Route path="/shared/:token" element={<EmbedPage mode="shared" />} />
+                    <Route path="/embed/:token" element={<EmbedPage mode="embed" />} />
+                    <Route path="/login" element={<Navigate to="/" replace />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </AnimatePresence>
@@ -214,6 +361,9 @@ function App() {
 
       <CertificateNotification />
       <CsrfErrorHandler />
+      <Suspense fallback={null}>
+        <NLQueryPanel />
+      </Suspense>
     </Router>
   );
 }

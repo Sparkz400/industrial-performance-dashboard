@@ -11,6 +11,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import ViewQuiltIcon from '@mui/icons-material/ViewQuilt';
+import ShareIcon from '@mui/icons-material/Share';
 
 import DashboardTabs from './DashboardTabs';
 import TimeRangePicker from './TimeRangePicker';
@@ -18,6 +19,7 @@ import AutoRefreshIndicator from './AutoRefreshIndicator';
 import NotificationCenter from './NotificationCenter';
 import ExportMenu from './ExportMenu';
 import { ButtonLoader } from '@/shared/components/loading/index';
+import ShareDialog from './ShareDialog';
 
 import type { Dashboard, Widget, LayoutItem } from '@/types';
 
@@ -71,6 +73,9 @@ const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
   onOpenTemplates,
   onDashboardImported,
 }) => {
+  const [shareOpen, setShareOpen] = React.useState(false);
+  const selectedDashboard = dashboards.find((d) => d.id === selectedDashboardId);
+
   const exportDashboard = (() => {
     const d = dashboards.find((db) => db.id === selectedDashboardId);
     return d ? { id: d.id, name: d.name, widgets, layout } : undefined;
@@ -111,7 +116,30 @@ const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
       <NotificationCenter />
 
       {selectedDashboardId && (
-        <ExportMenu dashboard={exportDashboard} onDashboardImported={onDashboardImported} />
+        <>
+          <ExportMenu dashboard={exportDashboard} onDashboardImported={onDashboardImported} />
+          <Tooltip title="Share Dashboard">
+            <IconButton
+              size="small"
+              onClick={() => setShareOpen(true)}
+              sx={{
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: '10px',
+                width: 36,
+                height: 36,
+              }}
+            >
+              <ShareIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+          <ShareDialog
+            open={shareOpen}
+            onClose={() => setShareOpen(false)}
+            dashboardId={selectedDashboardId}
+            dashboardName={selectedDashboard?.name || 'Dashboard'}
+          />
+        </>
       )}
 
       <Tooltip title="Dashboard Templates">

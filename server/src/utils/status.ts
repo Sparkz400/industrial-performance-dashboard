@@ -1,38 +1,13 @@
 import StatusConstants from "./statusConstants.js";
 import { EventEmitter } from "events";
+import type {
+  StatusDetails,
+  ServiceStatusInfo,
+  FullStatusResponse,
+} from "@performance-dashboard/shared";
 
-export interface StatusDetails {
-  message?: string;
-  error?: string;
-  timestamp?: string;
-  attempt?: number;
-  attempts?: number;
-  endpoint?: string;
-  connected?: boolean;
-  config?: Record<string, any>;
-  securityMode?: string;
-  securityPolicy?: string;
-  lastDataTimestamp?: any;
-  [key: string]: any;
-}
-
-export interface ServiceStatusInfo {
-  status: string;
-  statusText: string;
-  statusColor: string;
-  details: StatusDetails;
-}
-
-export interface FullStatus {
-  database: ServiceStatusInfo;
-  opcua: ServiceStatusInfo;
-  overall: {
-    status: string;
-    statusText: string;
-    statusColor: string;
-  };
-  lastUpdated: string;
-}
+export type { StatusDetails, ServiceStatusInfo };
+export type FullStatus = FullStatusResponse;
 
 interface StatusMap {
   [key: string]: string;

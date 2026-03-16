@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API_ENDPOINTS } from '@/config/config';
 import { useStatusStore } from '@/stores/useStatusStore';
+import type { OpcuaNodeData } from '@/types';
 
 export interface OperationModeDataPoint {
   time: string;
@@ -18,11 +19,6 @@ interface UseOperationModeDataReturn {
   error: string | null;
   lastUpdated: Date | null;
   refresh: () => Promise<void>;
-}
-
-interface OpcuaNodeData {
-  value: number;
-  key?: string;
 }
 
 /**
@@ -102,7 +98,7 @@ export function useOperationModeData(
         const now = new Date();
         const newPoint: OperationModeDataPoint = {
           time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          mode: nodeData.value,
+          mode: nodeData.value as number,
         };
         addDataPoint(newPoint);
       };

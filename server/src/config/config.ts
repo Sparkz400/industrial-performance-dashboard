@@ -20,6 +20,14 @@ const envVarsSchema = Joi.object({
   DB_USER: Joi.string().required().description("Database user"),
   DB_PASSWORD: Joi.string().required().description("Database password"),
   DB_NAME: Joi.string().required().description("Database name"),
+  DB_READ_REPLICA_URLS: Joi.string()
+    .allow("")
+    .default("")
+    .description("Comma-separated PostgreSQL replica connection URLs"),
+  REDIS_URL: Joi.string()
+    .uri()
+    .optional()
+    .description("Optional Redis connection URL"),
   DB_MAX_POOL: Joi.number()
     .integer()
     .min(1)
@@ -40,6 +48,21 @@ const envVarsSchema = Joi.object({
     .min(0)
     .default(60000)
     .description("Database health check interval (ms, 0 to disable)"),
+  DB_REPLICA_MAX_POOL: Joi.number()
+    .integer()
+    .min(1)
+    .default(10)
+    .description("Replica pool size for read-only database traffic"),
+  DB_QUERY_SLOW_THRESHOLD_MS: Joi.number()
+    .integer()
+    .min(1)
+    .default(250)
+    .description("Threshold for slow query monitoring (ms)"),
+  DB_QUERY_METRICS_MAX_SAMPLES: Joi.number()
+    .integer()
+    .min(10)
+    .default(250)
+    .description("Number of recent query samples retained in memory"),
 
   // OPC UA Configuration
   OPCUA_IP: Joi.string()
@@ -86,6 +109,9 @@ const envVarsSchema = Joi.object({
   COOKIE_SECRET: Joi.string()
     .required()
     .description("Secret used for signing cookies"),
+  SESSION_SECRET: Joi.string()
+    .required()
+    .description("Secret used for signing sessions"),
   AUTO_ACCEPT_CERTIFICATES: Joi.boolean()
     .default(false)
     .description("Automatically trust unknown server certificates"),
@@ -132,14 +158,85 @@ const envVarsSchema = Joi.object({
     .integer()
     .default(1000)
     .description("Max requests per window for rate limit"),
+
+  // Claude API (for Natural Language Queries)
+  ANTHROPIC_API_KEY: Joi.string()
+    .allow("")
+    .default("")
+    .description("Anthropic API key for natural language query feature"),
+  ANTHROPIC_MODEL: Joi.string()
+    .default("claude-sonnet-4-20250514")
+    .description("Claude model ID for NL queries"),
+
+  // Webhooks
+  WEBHOOK_SIGNING_SECRET: Joi.string()
+    .default("whsec_default_change_me")
+    .description("Default secret for webhook HMAC signing"),
+  ALLOW_PRIVATE_OUTBOUND_URLS: Joi.boolean()
+    .default(false)
+    .description(
+      "Allow outbound HTTP(S) requests to localhost/private network hosts",
+    ),
+
+  // Compliance
+  COMPLIANCE_MODE_ENABLED: Joi.boolean()
+    .default(false)
+    .description("Enable 21 CFR Part 11 compliance mode"),
+
+  // Edge Gateway
+  EDGE_MODE_ENABLED: Joi.boolean()
+    .default(false)
+    .description("Enable edge gateway mode"),
+  EDGE_CLOUD_URL: Joi.string()
+    .uri()
+    .allow("")
+    .default("")
+    .description("Cloud server URL for edge sync"),
+  EDGE_SYNC_INTERVAL_MS: Joi.number()
+    .integer()
+    .min(5000)
+    .default(30000)
+    .description("Edge sync interval (ms)"),
+  EDGE_SYNC_BATCH_SIZE: Joi.number()
+    .integer()
+    .min(10)
+    .default(500)
+    .description("Edge sync batch size"),
+  EDGE_DATA_RETENTION_DAYS: Joi.number()
+    .integer()
+    .min(1)
+    .default(7)
+    .description("Edge data retention (days)"),
+  EDGE_LIGHTWEIGHT_MODE: Joi.boolean()
+    .default(false)
+    .description(
+      "Enable lightweight mode for resource-constrained edge devices",
+    ),
+
+  // Observability
+  OTEL_ENABLED: Joi.boolean()
+    .default(false)
+    .description("Enable OpenTelemetry tracing"),
+  OTEL_EXPORTER_OTLP_ENDPOINT: Joi.string()
+    .uri()
+    .default("http://localhost:4318")
+    .description("OTLP exporter endpoint for traces"),
+  OTEL_SERVICE_NAME: Joi.string()
+    .default("performance-dashboard-server")
+    .description("Service name for OpenTelemetry"),
 }).unknown(true);
 
 const { value: envVars, error } = envVarsSchema
-  .prefs({ errors: { label: "key" } })
+  .prefs({ errors: { label: "key" }, abortEarly: false })
   .validate(process.env);
 
 if (error) {
-  throw new Error(`Environment variable validation error: ${error.message}`);
+  const details = error.details
+    .map((d) => `  - ${d.context?.key ?? d.path.join(".")}: ${d.message}`)
+    .join("\n");
+  throw new Error(
+    `\n\nEnvironment configuration failed — fix the following and restart:\n\n${details}\n\nSee .env.example for reference values.\n`,
+  );
 }
 
 export interface AppConfig {
@@ -151,10 +248,15 @@ export interface AppConfig {
   DB_USER: string;
   DB_PASSWORD: string;
   DB_NAME: string;
+  DB_READ_REPLICA_URLS: string;
+  REDIS_URL?: string;
   DB_MAX_POOL: number;
   DB_CONNECTION_TIMEOUT: number;
   DB_IDLE_TIMEOUT: number;
   DB_HEALTH_CHECK_INTERVAL: number;
+  DB_REPLICA_MAX_POOL: number;
+  DB_QUERY_SLOW_THRESHOLD_MS: number;
+  DB_QUERY_METRICS_MAX_SAMPLES: number;
   OPCUA_IP: string;
   OPCUA_PORT: number;
   OPCUA_RESOURCE_PATH: string;
@@ -178,7 +280,21 @@ export interface AppConfig {
   MAX_QUEUE_SIZE: number;
   RATE_LIMIT_WINDOW_MS: number;
   RATE_LIMIT_MAX_REQUESTS: number;
-  SESSION_SECRET?: string;
+  SESSION_SECRET: string;
+  COMPLIANCE_MODE_ENABLED: boolean;
+  EDGE_MODE_ENABLED: boolean;
+  EDGE_CLOUD_URL: string;
+  EDGE_SYNC_INTERVAL_MS: number;
+  EDGE_SYNC_BATCH_SIZE: number;
+  EDGE_DATA_RETENTION_DAYS: number;
+  EDGE_LIGHTWEIGHT_MODE: boolean;
+  OTEL_ENABLED: boolean;
+  OTEL_EXPORTER_OTLP_ENDPOINT: string;
+  OTEL_SERVICE_NAME: string;
+  ANTHROPIC_API_KEY: string;
+  ANTHROPIC_MODEL: string;
+  WEBHOOK_SIGNING_SECRET: string;
+  ALLOW_PRIVATE_OUTBOUND_URLS: boolean;
   [key: string]: any;
 }
 

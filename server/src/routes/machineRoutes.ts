@@ -1,13 +1,45 @@
 import express, { type Request, type Response } from "express";
 import Joi from "joi";
-import { validateBody } from "../middleware/validation.js";
-import dbClient from "../database/dbConnection.js";
-import multiMachineManager from "../opc-ua/services/multiMachineManager.js";
-import logger from "../utils/logger.js";
+import { validateBody, validateParams } from "../middleware/validation.js";
+import { asyncHandler } from "../middleware/errorHandler.js";
+import { machineService } from "../services/machineService.js";
+import { auditLogService, getAuditActor } from "../services/auditLogService.js";
 
 const router = express.Router();
+type MachineIdParams = { id: string };
+type MachineMappingParams = { id: string; mappingId: string };
+type MachineBody = {
+  name: string;
+  ip: string;
+  port: number;
+  resourcePath: string;
+  securityMode: string;
+  securityPolicy: string;
+  isActive: boolean;
+};
+type BrowseNodesBody = {
+  parentNodeId?: string;
+};
+type NodeMappingBody = {
+  mappings: Array<{
+    nodeId: string;
+    nodeKey: string;
+    displayName: string;
+    dataType: string;
+    samplingInterval: number;
+    isActive: boolean;
+  }>;
+};
 
-// --- Validation Schemas ---
+const machineIdParamSchema = Joi.object({
+  id: Joi.string().pattern(/^\d+$/).required(),
+});
+
+const machineMappingParamSchema = Joi.object({
+  id: Joi.string().pattern(/^\d+$/).required(),
+  mappingId: Joi.string().pattern(/^\d+$/).required(),
+});
+
 const machineSchema = Joi.object({
   name: Joi.string().min(1).max(100).required(),
   ip: Joi.string().required(),
@@ -40,376 +72,226 @@ const browseSchema = Joi.object({
   parentNodeId: Joi.string().allow("").default(""),
 });
 
-// --- Machine CRUD ---
+router.get(
+  "/",
+  asyncHandler(async (req: Request, res: Response) => {
+    res.json(await machineService.listMachines());
+  }),
+);
 
-// GET /api/machines — list all machines
-router.get("/", async (req: Request, res: Response) => {
-  try {
-    const result = await dbClient.query(
-      "SELECT * FROM machines ORDER BY name ASC",
-    );
-
-    // Attach mapping count to each machine
-    const machines = await Promise.all(
-      result.rows.map(async (machine: any) => {
-        const mappingResult = await dbClient.query(
-          "SELECT COUNT(*) as count FROM node_mappings WHERE machine_id = $1",
-          [machine.id],
-        );
-        return {
-          ...machine,
-          mappingCount: parseInt(mappingResult.rows[0].count, 10),
-        };
-      }),
-    );
-
-    res.json(machines);
-  } catch (err: any) {
-    logger.error("Error fetching machines:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// POST /api/machines — add a new machine
 router.post(
   "/",
   validateBody(machineSchema),
-  async (req: Request, res: Response) => {
-    try {
-      const {
-        name,
-        ip,
-        port,
-        resourcePath,
-        securityMode,
-        securityPolicy,
-        isActive,
-      } = req.body;
-
-      const normalizedPath =
-        typeof resourcePath === "string"
-          ? resourcePath.trim() === "" || resourcePath.trim() === "/"
-            ? ""
-            : resourcePath.trim().startsWith("/")
-              ? resourcePath.trim()
-              : `/${resourcePath.trim()}`
-          : "";
-
-      const endpointUrl = `opc.tcp://${ip}:${port}${normalizedPath}`;
-
-      const result = await dbClient.query(
-        `INSERT INTO machines (name, endpoint_url, ip, port, resource_path, security_mode, security_policy, is_active)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-             RETURNING *`,
-        [
-          name,
-          endpointUrl,
-          ip,
-          port,
-          normalizedPath,
-          securityMode,
-          securityPolicy,
-          isActive,
-        ],
+  asyncHandler(
+    async (req: Request<unknown, unknown, MachineBody>, res: Response) => {
+      const machine = await machineService.createMachine(req.body);
+      await auditLogService.recordEvent(
+        {
+          action: "machine.created",
+          entityType: "machine",
+          entityId: machine.id,
+          entityName: machine.name,
+          message: `Created machine "${machine.name}"`,
+          metadata: {
+            endpointUrl: machine.endpointUrl,
+            securityMode: machine.securityMode,
+            securityPolicy: machine.securityPolicy,
+          },
+        },
+        getAuditActor(req),
       );
-
-      res.status(201).json(result.rows[0]);
-    } catch (err: any) {
-      if (err.code === "23505") {
-        res
-          .status(409)
-          .json({ error: "A machine with this endpoint URL already exists" });
-        return;
-      }
-      logger.error("Error creating machine:", err);
-      res.status(500).json({ error: err.message });
-    }
-  },
+      res.status(201).json(machine);
+    },
+  ),
 );
 
-// GET /api/machines/:id — get machine with its mappings
-router.get("/:id", async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const machineResult = await dbClient.query(
-      "SELECT * FROM machines WHERE id = $1",
-      [id],
-    );
+router.get(
+  "/:id",
+  validateParams(machineIdParamSchema),
+  asyncHandler(async (req: Request<MachineIdParams>, res: Response) => {
+    res.json(await machineService.getMachineWithMappings(req.params.id));
+  }),
+);
 
-    if (machineResult.rows.length === 0) {
-      res.status(404).json({ error: "Machine not found" });
-      return;
-    }
-
-    const mappingsResult = await dbClient.query(
-      "SELECT * FROM node_mappings WHERE machine_id = $1 ORDER BY node_key",
-      [id],
-    );
-
-    res.json({
-      ...machineResult.rows[0],
-      mappings: mappingsResult.rows,
-    });
-  } catch (err: any) {
-    logger.error("Error fetching machine:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// PUT /api/machines/:id — update machine config
 router.put(
   "/:id",
+  validateParams(machineIdParamSchema),
   validateBody(machineSchema),
-  async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const {
-        name,
-        ip,
-        port,
-        resourcePath,
-        securityMode,
-        securityPolicy,
-        isActive,
-      } = req.body;
-
-      const normalizedPath =
-        typeof resourcePath === "string"
-          ? resourcePath.trim() === "" || resourcePath.trim() === "/"
-            ? ""
-            : resourcePath.trim().startsWith("/")
-              ? resourcePath.trim()
-              : `/${resourcePath.trim()}`
-          : "";
-
-      const endpointUrl = `opc.tcp://${ip}:${port}${normalizedPath}`;
-
-      const result = await dbClient.query(
-        `UPDATE machines
-             SET name = $1, endpoint_url = $2, ip = $3, port = $4, resource_path = $5,
-                 security_mode = $6, security_policy = $7, is_active = $8, updated_at = NOW()
-             WHERE id = $9
-             RETURNING *`,
-        [
-          name,
-          endpointUrl,
-          ip,
-          port,
-          normalizedPath,
-          securityMode,
-          securityPolicy,
-          isActive,
-          id,
-        ],
+  asyncHandler(
+    async (
+      req: Request<MachineIdParams, unknown, MachineBody>,
+      res: Response,
+    ) => {
+      const machine = await machineService.updateMachine(
+        req.params.id,
+        req.body,
       );
-
-      if (result.rows.length === 0) {
-        res.status(404).json({ error: "Machine not found" });
-        return;
-      }
-
-      // Reconnect the machine with new config
-      try {
-        await multiMachineManager.refreshMachineConnection(parseInt(id, 10));
-      } catch (connErr: any) {
-        logger.warn(
-          `Machine ${id} config updated but reconnect failed: ${connErr.message}`,
-        );
-      }
-
-      res.json(result.rows[0]);
-    } catch (err: any) {
-      if (err.code === "23505") {
-        res
-          .status(409)
-          .json({ error: "A machine with this endpoint URL already exists" });
-        return;
-      }
-      logger.error("Error updating machine:", err);
-      res.status(500).json({ error: err.message });
-    }
-  },
+      await auditLogService.recordEvent(
+        {
+          action: "machine.updated",
+          entityType: "machine",
+          entityId: machine.id,
+          entityName: machine.name,
+          message: `Updated machine "${machine.name}"`,
+          metadata: {
+            endpointUrl: machine.endpointUrl,
+            securityMode: machine.securityMode,
+            securityPolicy: machine.securityPolicy,
+            isActive: machine.isActive,
+          },
+        },
+        getAuditActor(req),
+      );
+      res.json(machine);
+    },
+  ),
 );
 
-// DELETE /api/machines/:id
-router.delete("/:id", async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-
-    await multiMachineManager.disconnectMachine(parseInt(id, 10));
-
-    const result = await dbClient.query(
-      "DELETE FROM machines WHERE id = $1 RETURNING *",
-      [id],
+router.delete(
+  "/:id",
+  validateParams(machineIdParamSchema),
+  asyncHandler(async (req: Request<MachineIdParams>, res: Response) => {
+    const machine = await machineService.deleteMachine(req.params.id);
+    await auditLogService.recordEvent(
+      {
+        action: "machine.deleted",
+        entityType: "machine",
+        entityId: machine.id,
+        entityName: machine.name,
+        message: `Deleted machine "${machine.name}"`,
+      },
+      getAuditActor(req),
     );
+    res.json({ message: "Machine deleted", machine });
+  }),
+);
 
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: "Machine not found" });
-      return;
-    }
-
-    res.json({ message: "Machine deleted", machine: result.rows[0] });
-  } catch (err: any) {
-    logger.error("Error deleting machine:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// POST /api/machines/:id/connect — connect to machine
-router.post("/:id/connect", async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    await multiMachineManager.refreshMachineConnection(parseInt(id, 10));
+router.post(
+  "/:id/connect",
+  validateParams(machineIdParamSchema),
+  asyncHandler(async (req: Request<MachineIdParams>, res: Response) => {
+    const machine = await machineService.getMachineWithMappings(req.params.id);
+    await machineService.connectMachine(req.params.id);
+    await auditLogService.recordEvent(
+      {
+        action: "machine.connect_requested",
+        entityType: "machine",
+        entityId: machine.id,
+        entityName: machine.name,
+        message: `Requested connection for machine "${machine.name}"`,
+      },
+      getAuditActor(req),
+    );
     res.json({ message: "Machine connection initiated" });
-  } catch (err: any) {
-    logger.error(`Error connecting machine ${req.params.id}:`, err);
-    res.status(500).json({ error: err.message });
-  }
-});
+  }),
+);
 
-// POST /api/machines/:id/disconnect — disconnect from machine
-router.post("/:id/disconnect", async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    await multiMachineManager.disconnectMachine(parseInt(id, 10));
+router.post(
+  "/:id/disconnect",
+  validateParams(machineIdParamSchema),
+  asyncHandler(async (req: Request<MachineIdParams>, res: Response) => {
+    const machine = await machineService.getMachineWithMappings(req.params.id);
+    await machineService.disconnectMachine(req.params.id);
+    await auditLogService.recordEvent(
+      {
+        action: "machine.disconnect_requested",
+        entityType: "machine",
+        entityId: machine.id,
+        entityName: machine.name,
+        message: `Requested disconnect for machine "${machine.name}"`,
+      },
+      getAuditActor(req),
+    );
     res.json({ message: "Machine disconnected" });
-  } catch (err: any) {
-    logger.error(`Error disconnecting machine ${req.params.id}:`, err);
-    res.status(500).json({ error: err.message });
-  }
-});
+  }),
+);
 
-// POST /api/machines/:id/browse-nodes — browse OPC-UA nodes
 router.post(
   "/:id/browse-nodes",
+  validateParams(machineIdParamSchema),
   validateBody(browseSchema),
-  async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const { parentNodeId } = req.body;
-
-      const nodes = await multiMachineManager.browseNodes(
-        parseInt(id, 10),
-        parentNodeId || undefined,
+  asyncHandler(
+    async (
+      req: Request<MachineIdParams, unknown, BrowseNodesBody>,
+      res: Response,
+    ) => {
+      res.json(
+        await machineService.browseNodes({
+          id: req.params.id,
+          parentNodeId: req.body.parentNodeId,
+        }),
       );
-
-      res.json(nodes);
-    } catch (err: any) {
-      logger.error(`Error browsing nodes for machine ${req.params.id}:`, err);
-      res.status(500).json({ error: err.message });
-    }
-  },
+    },
+  ),
 );
 
-// --- Node Mapping Routes ---
+router.get(
+  "/:id/mappings",
+  validateParams(machineIdParamSchema),
+  asyncHandler(async (req: Request<MachineIdParams>, res: Response) => {
+    res.json(await machineService.listMappings(req.params.id));
+  }),
+);
 
-// GET /api/machines/:id/mappings
-router.get("/:id/mappings", async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const result = await dbClient.query(
-      "SELECT * FROM node_mappings WHERE machine_id = $1 ORDER BY node_key",
-      [id],
-    );
-    res.json(result.rows);
-  } catch (err: any) {
-    logger.error("Error fetching node mappings:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// POST /api/machines/:id/mappings — bulk upsert mappings
 router.post(
   "/:id/mappings",
+  validateParams(machineIdParamSchema),
   validateBody(nodeMappingSchema),
-  async (req: Request, res: Response) => {
-    try {
-      const machineId = parseInt(req.params.id, 10);
-      const { mappings } = req.body;
-
-      // Verify machine exists
-      const machineResult = await dbClient.query(
-        "SELECT id FROM machines WHERE id = $1",
-        [machineId],
+  asyncHandler(
+    async (
+      req: Request<MachineIdParams, unknown, NodeMappingBody>,
+      res: Response,
+    ) => {
+      const machine = await machineService.getMachineWithMappings(
+        req.params.id,
       );
-      if (machineResult.rows.length === 0) {
-        res.status(404).json({ error: "Machine not found" });
-        return;
-      }
-
-      const results = [];
-      for (const mapping of mappings) {
-        const result = await dbClient.query(
-          `INSERT INTO node_mappings (machine_id, node_id, node_key, display_name, data_type, sampling_interval, is_active)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7)
-                 ON CONFLICT (machine_id, node_id) DO UPDATE
-                 SET node_key = EXCLUDED.node_key,
-                     display_name = EXCLUDED.display_name,
-                     data_type = EXCLUDED.data_type,
-                     sampling_interval = EXCLUDED.sampling_interval,
-                     is_active = EXCLUDED.is_active,
-                     updated_at = NOW()
-                 RETURNING *`,
-          [
-            machineId,
-            mapping.nodeId,
-            mapping.nodeKey,
-            mapping.displayName,
-            mapping.dataType,
-            mapping.samplingInterval,
-            mapping.isActive,
-          ],
-        );
-        results.push(result.rows[0]);
-      }
-
-      // Refresh connection to pick up new mappings
-      try {
-        await multiMachineManager.refreshMachineConnection(machineId);
-      } catch (connErr: any) {
-        logger.warn(
-          `Mappings saved but reconnect failed for machine ${machineId}: ${connErr.message}`,
-        );
-      }
-
-      res.json(results);
-    } catch (err: any) {
-      logger.error("Error saving node mappings:", err);
-      res.status(500).json({ error: err.message });
-    }
-  },
+      const mappings = await machineService.saveMappings(
+        req.params.id,
+        req.body.mappings,
+      );
+      await auditLogService.recordEvent(
+        {
+          action: "machine.mappings_saved",
+          entityType: "machine",
+          entityId: machine.id,
+          entityName: machine.name,
+          message: `Saved ${mappings.length} node mappings for "${machine.name}"`,
+          metadata: {
+            mappingCount: mappings.length,
+          },
+        },
+        getAuditActor(req),
+      );
+      res.json(mappings);
+    },
+  ),
 );
 
-// DELETE /api/machines/:id/mappings/:mappingId
 router.delete(
   "/:id/mappings/:mappingId",
-  async (req: Request, res: Response) => {
-    try {
-      const { id, mappingId } = req.params;
-
-      const result = await dbClient.query(
-        "DELETE FROM node_mappings WHERE id = $1 AND machine_id = $2 RETURNING *",
-        [mappingId, id],
-      );
-
-      if (result.rows.length === 0) {
-        res.status(404).json({ error: "Mapping not found" });
-        return;
-      }
-
-      // Refresh connection
-      try {
-        await multiMachineManager.refreshMachineConnection(parseInt(id, 10));
-      } catch (connErr: any) {
-        logger.warn(`Mapping deleted but reconnect failed: ${connErr.message}`);
-      }
-
-      res.json({ message: "Mapping deleted", mapping: result.rows[0] });
-    } catch (err: any) {
-      logger.error("Error deleting node mapping:", err);
-      res.status(500).json({ error: err.message });
-    }
-  },
+  validateParams(machineMappingParamSchema),
+  asyncHandler(async (req: Request<MachineMappingParams>, res: Response) => {
+    const machine = await machineService.getMachineWithMappings(req.params.id);
+    const mapping = await machineService.deleteMapping(
+      req.params.id,
+      req.params.mappingId,
+    );
+    await auditLogService.recordEvent(
+      {
+        action: "machine.mapping_deleted",
+        entityType: "machine",
+        entityId: machine.id,
+        entityName: machine.name,
+        message: `Deleted mapping "${mapping.displayName}" from "${machine.name}"`,
+        metadata: {
+          mappingId: mapping.id,
+          nodeKey: mapping.nodeKey,
+        },
+      },
+      getAuditActor(req),
+    );
+    res.json({ message: "Mapping deleted", mapping });
+  }),
 );
 
 export default router;

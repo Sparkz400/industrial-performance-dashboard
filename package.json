@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
+    "shared",
     "client",
     "server"
   ],
@@ -10,15 +11,18 @@
     "node": ">=20.0.0"
   },
   "scripts": {
+    "build:shared": "npm run build -w shared",
     "start:server": "cd server && npx tsx app.ts",
     "start:client": "npm run dev -w client",
     "start": "concurrently \"npm run start:server\" \"npm run start:client\"",
-    "build": "concurrently \"npm run build -w client\" \"npm run build -w server\"",
-    "build:client": "npm run build -w client",
-    "build:server": "npm run build -w server",
-    "test": "concurrently \"npm run test -w client\" \"npm run test -w server\"",
-    "test:client": "npm run test -w client",
-    "test:server": "npm run test -w server",
+    "build": "npm run build:shared && concurrently \"npm run build -w client\" \"npm run build -w server\"",
+    "build:client": "npm run build:shared && npm run build -w client",
+    "build:server": "npm run build:shared && npm run build -w server",
+    "test": "npm run build:shared && concurrently \"npm run test -w client\" \"npm run test -w server\"",
+    "test:client": "npm run build:shared && npm run test -w client",
+    "test:server": "npm run build:shared && npm run test -w server",
+    "test:e2e": "npx playwright test",
+    "test:coverage": "concurrently \"npm run test:coverage -w client\" \"npx vitest run --coverage -w server\"",
     "lint": "npm run lint -w client",
     "prepare": "husky"
   },
@@ -32,6 +36,9 @@
     ]
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "@playwright/test": "^1.58.2",
     "concurrently": "^9.2.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0"

@@ -1,0 +1,54 @@
+name: Docker Security Scan
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - Dockerfile
+      - docker-compose.yml
+      - server/package.json
+      - server/package-lock.json
+  pull_request:
+    branches: [master]
+    paths:
+      - Dockerfile
+      - docker-compose.yml
+      - server/package.json
+      - server/package-lock.json
+  schedule:
+    - cron: "0 6 * * 1" # Weekly Monday 6am UTC
+
+jobs:
+  scan:
+    name: Scan Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t performance-dashboard:scan .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: performance-dashboard:scan
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+
+      - name: Upload Trivy scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+
+      - name: Run Trivy (table output for PR comment)
+        uses: aquasecurity/trivy-action@0.28.0
+        if: always()
+        with:
+          image-ref: performance-dashboard:scan
+          format: table
+          severity: CRITICAL,HIGH

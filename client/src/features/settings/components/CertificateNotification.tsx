@@ -15,26 +15,18 @@ import {
 } from '@mui/material';
 import SecurityIcon from '@mui/icons-material/Security';
 import GppBadIcon from '@mui/icons-material/GppBad';
-import io, { Socket } from 'socket.io-client';
+import io, { type Socket } from 'socket.io-client';
 import { WEBSOCKET_ADDR } from '@/config/config';
 import { useSnackbar } from 'notistack';
+import type {
+  ServerToClientEvents,
+  ClientToServerEvents,
+  CertificateNotification as CertificateNotificationData,
+  CertificateAcceptedResult,
+  CertificateError as CertificateErrorData,
+} from '@/types';
 
-interface CertificateNotificationData {
-  filename: string;
-  serverUri?: string;
-  timestamp: string;
-  certificateHash?: string;
-}
-
-interface CertificateAcceptedData {
-  success: boolean;
-  filename: string;
-  error?: string;
-}
-
-interface CertificateErrorData {
-  error?: string;
-}
+type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 /**
  * Component that listens for certificate events and shows notifications
@@ -45,12 +37,12 @@ const CertificateNotification: React.FC = () => {
   const [open, setOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const { enqueueSnackbar } = useSnackbar();
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [socket, setSocket] = useState<TypedSocket | null>(null);
 
   // Create socket connection on mount
   useEffect(() => {
     // Create socket connection with admin role
-    const socketConnection: Socket = io(WEBSOCKET_ADDR, {
+    const socketConnection: TypedSocket = io(WEBSOCKET_ADDR, {
       query: { role: 'admin' },
     });
     setSocket(socketConnection);
@@ -64,7 +56,7 @@ const CertificateNotification: React.FC = () => {
     });
 
     // Listen for acceptance events
-    socketConnection.on('certificateAccepted', (data: CertificateAcceptedData) => {
+    socketConnection.on('certificateAccepted', (data: CertificateAcceptedResult) => {
       if (data.success) {
         enqueueSnackbar(`Certificate ${data.filename} accepted successfully`, {
           variant: 'success',

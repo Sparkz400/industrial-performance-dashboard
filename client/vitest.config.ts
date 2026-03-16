@@ -10,6 +10,14 @@ export default mergeConfig(
       globals: true,
       coverage: {
         provider: 'v8',
+        include: ['src/**/*.{ts,tsx}'],
+        exclude: ['src/test/**', 'src/**/*.test.*', 'src/**/*.stories.*', 'src/**/__stories__/**'],
+        thresholds: {
+          statements: 5,
+          branches: 3,
+          functions: 5,
+          lines: 5,
+        },
       },
     },
   }),

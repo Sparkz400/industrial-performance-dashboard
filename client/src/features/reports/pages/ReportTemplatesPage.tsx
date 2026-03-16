@@ -1,0 +1,389 @@
+import React, { useState, useCallback } from 'react';
+import {
+  Box,
+  Typography,
+  Button,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  IconButton,
+  Switch,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+} from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import PageSkeleton from '@/shared/components/loading/PageSkeleton';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { API_ENDPOINTS } from '@/config/config';
+import protectedFetch from '@/utils/protectedFetch';
+
+interface ReportTemplate {
+  id: number;
+  name: string;
+  type: 'shift' | 'daily' | 'weekly';
+  description: string;
+  isActive: boolean;
+  sections: string[];
+}
+
+interface TemplateFormValues {
+  name: string;
+  type: 'shift' | 'daily' | 'weekly';
+  description: string;
+  isActive: boolean;
+  sections: string[];
+}
+
+const TEMPLATE_TYPES = ['shift', 'daily', 'weekly'] as const;
+
+const AVAILABLE_SECTIONS = [
+  { key: 'oee_summary', label: 'OEE Summary' },
+  { key: 'alert_summary', label: 'Alert Summary' },
+  { key: 'trending_data', label: 'Trending Data' },
+  { key: 'uptime_chart', label: 'Uptime Chart' },
+];
+
+const getTypeColor = (type: string): 'primary' | 'secondary' | 'success' => {
+  switch (type) {
+    case 'shift':
+      return 'primary';
+    case 'daily':
+      return 'secondary';
+    case 'weekly':
+      return 'success';
+    default:
+      return 'primary';
+  }
+};
+
+const defaultFormValues: TemplateFormValues = {
+  name: '',
+  type: 'daily',
+  description: '',
+  isActive: true,
+  sections: [],
+};
+
+const fetchTemplates = async (): Promise<ReportTemplate[]> => {
+  const res = await protectedFetch(API_ENDPOINTS.reports.templates);
+  if (!res.ok) throw new Error('Failed to fetch report templates');
+  return res.json();
+};
+
+const ReportTemplatesPage: React.FC = () => {
+  const queryClient = useQueryClient();
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<ReportTemplate | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<ReportTemplate | null>(null);
+  const [formValues, setFormValues] = useState<TemplateFormValues>(defaultFormValues);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  const {
+    data: templates = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ['reportTemplates'],
+    queryFn: fetchTemplates,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (values: TemplateFormValues) => {
+      const res = await protectedFetch(API_ENDPOINTS.reports.templates, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+      if (!res.ok) throw new Error('Failed to create template');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reportTemplates'] });
+      handleCloseForm();
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, values }: { id: number; values: TemplateFormValues }) => {
+      const res = await protectedFetch(API_ENDPOINTS.reports.templateById(id), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+      if (!res.ok) throw new Error('Failed to update template');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reportTemplates'] });
+      handleCloseForm();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await protectedFetch(API_ENDPOINTS.reports.templateById(id), {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to delete template');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reportTemplates'] });
+      setDeleteConfirm(null);
+    },
+  });
+
+  const handleCloseForm = useCallback(() => {
+    setFormOpen(false);
+    setEditingTemplate(null);
+    setFormValues(defaultFormValues);
+    setFormErrors({});
+  }, []);
+
+  const handleOpenCreate = useCallback(() => {
+    setEditingTemplate(null);
+    setFormValues(defaultFormValues);
+    setFormErrors({});
+    setFormOpen(true);
+  }, []);
+
+  const handleOpenEdit = useCallback((template: ReportTemplate) => {
+    setEditingTemplate(template);
+    setFormValues({
+      name: template.name,
+      type: template.type,
+      description: template.description,
+      isActive: template.isActive,
+      sections: template.sections ?? [],
+    });
+    setFormErrors({});
+    setFormOpen(true);
+  }, []);
+
+  const handleSectionToggle = (sectionKey: string) => {
+    setFormValues((prev) => ({
+      ...prev,
+      sections: prev.sections.includes(sectionKey)
+        ? prev.sections.filter((s) => s !== sectionKey)
+        : [...prev.sections, sectionKey],
+    }));
+  };
+
+  const handleSubmit = () => {
+    const errors: Record<string, string> = {};
+    if (!formValues.name.trim()) errors.name = 'Name is required';
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    if (editingTemplate) {
+      updateMutation.mutate({ id: editingTemplate.id, values: formValues });
+    } else {
+      createMutation.mutate(formValues);
+    }
+  };
+
+  const mutationError = createMutation.error || updateMutation.error || deleteMutation.error;
+
+  return (
+    <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box>
+          <Typography variant="h4" fontWeight="bold">
+            Report Templates
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Configure report templates for automated report generation
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button startIcon={<RefreshIcon />} onClick={() => refetch()} disabled={isLoading}>
+            Refresh
+          </Button>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>
+            Create Template
+          </Button>
+        </Box>
+      </Box>
+
+      {(error || mutationError) && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {(error as Error)?.message || (mutationError as Error)?.message}
+        </Alert>
+      )}
+
+      {isLoading ? (
+        <PageSkeleton variant="cards" count={3} />
+      ) : templates.length === 0 ? (
+        <Box sx={{ textAlign: 'center', py: 8 }}>
+          <Typography variant="h6" color="text.secondary" gutterBottom>
+            No report templates configured
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Create templates to define the structure of your automated reports.
+          </Typography>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>
+            Create Your First Template
+          </Button>
+        </Box>
+      ) : (
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Name</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Description</TableCell>
+                <TableCell>Active</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {templates.map((template) => (
+                <TableRow key={template.id}>
+                  <TableCell>{template.name}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={template.type}
+                      color={getTypeColor(template.type)}
+                      size="small"
+                      sx={{ textTransform: 'capitalize' }}
+                    />
+                  </TableCell>
+                  <TableCell>{template.description}</TableCell>
+                  <TableCell>
+                    <Switch checked={template.isActive} size="small" disabled />
+                  </TableCell>
+                  <TableCell>
+                    <IconButton size="small" onClick={() => handleOpenEdit(template)}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => setDeleteConfirm(template)}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={formOpen} onClose={handleCloseForm} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {editingTemplate ? 'Edit Report Template' : 'Create Report Template'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <TextField
+              label="Name"
+              value={formValues.name}
+              onChange={(e) => setFormValues((prev) => ({ ...prev, name: e.target.value }))}
+              error={!!formErrors.name}
+              helperText={formErrors.name}
+              fullWidth
+              required
+            />
+            <FormControl fullWidth>
+              <InputLabel>Type</InputLabel>
+              <Select
+                value={formValues.type}
+                label="Type"
+                onChange={(e) =>
+                  setFormValues((prev) => ({
+                    ...prev,
+                    type: e.target.value as TemplateFormValues['type'],
+                  }))
+                }
+              >
+                {TEMPLATE_TYPES.map((t) => (
+                  <MenuItem key={t} value={t} sx={{ textTransform: 'capitalize' }}>
+                    {t}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              label="Description"
+              value={formValues.description}
+              onChange={(e) => setFormValues((prev) => ({ ...prev, description: e.target.value }))}
+              fullWidth
+              multiline
+              rows={2}
+            />
+            <Typography variant="subtitle2">Report Sections</Typography>
+            <FormGroup>
+              {AVAILABLE_SECTIONS.map((section) => (
+                <FormControlLabel
+                  key={section.key}
+                  control={
+                    <Checkbox
+                      checked={formValues.sections.includes(section.key)}
+                      onChange={() => handleSectionToggle(section.key)}
+                    />
+                  }
+                  label={section.label}
+                />
+              ))}
+            </FormGroup>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseForm}>Cancel</Button>
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            disabled={createMutation.isPending || updateMutation.isPending}
+          >
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirm} onClose={() => setDeleteConfirm(null)}>
+        <DialogTitle>Delete Report Template</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete &quot;{deleteConfirm?.name}&quot;? This action cannot be
+            undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+          <Button
+            onClick={() => deleteConfirm && deleteMutation.mutate(deleteConfirm.id)}
+            color="error"
+            variant="contained"
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+};
+
+export default ReportTemplatesPage;

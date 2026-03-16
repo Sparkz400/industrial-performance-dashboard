@@ -11,9 +11,9 @@ import {
   Tooltip,
   Fade,
   Box,
-  CircularProgress,
   alpha,
 } from '@mui/material';
+import WidgetSkeleton from '@/shared/components/loading/WidgetSkeleton';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ErrorIcon from '@mui/icons-material/Error';
@@ -65,26 +65,8 @@ const ErrorFallback = memo<ErrorFallbackProps>(({ error, resetErrorBoundary }) =
 ));
 ErrorFallback.displayName = 'ErrorFallback';
 
-// Skeleton loader
-const WidgetLoader = memo(() => (
-  <Box
-    sx={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: '100%',
-      background: (theme) =>
-        `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.5)}, ${alpha(theme.palette.background.default, 0.3)})`,
-    }}
-  >
-    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-      <CircularProgress size={24} sx={{ opacity: 0.6 }} />
-      <Typography variant="caption" color="text.disabled">
-        Loading...
-      </Typography>
-    </Box>
-  </Box>
-));
+// Skeleton loader for widget suspense fallback
+const WidgetLoader = memo(() => <WidgetSkeleton variant="default" />);
 WidgetLoader.displayName = 'WidgetLoader';
 
 // Custom error boundary for widget content

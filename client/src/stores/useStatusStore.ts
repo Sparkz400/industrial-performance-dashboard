@@ -1,14 +1,17 @@
 import { create } from 'zustand';
-import io, { Socket } from 'socket.io-client';
-import type { SystemStatus } from '../types';
+import io, { type Socket } from 'socket.io-client';
+import type { SystemStatus, ServerToClientEvents, ClientToServerEvents } from '../types';
 import { API_ENDPOINTS, WEBSOCKET_ADDR } from '../config/config';
 import { getStoredCsrfToken } from '../utils/csrf';
+import { useNotificationStore } from './useNotificationStore';
+
+type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 interface StatusState {
   status: SystemStatus;
   lastChecked: Date | null;
   socketConnected: boolean;
-  socket: Socket | null;
+  socket: TypedSocket | null;
   isError: boolean;
   isConnected: boolean;
   statusText: string;
@@ -25,9 +28,10 @@ const defaultStatus: SystemStatus = {
 };
 
 export const useStatusStore = create<StatusState>((set, get) => {
-  let socketInstance: Socket | null = null;
+  let socketInstance: TypedSocket | null = null;
   let pollingInterval: ReturnType<typeof setInterval> | null = null;
   let isPolling = false;
+  let cleanupNotificationListeners: (() => void) | null = null;
 
   const refreshStatus = async () => {
     if (isPolling) return;
@@ -88,6 +92,13 @@ export const useStatusStore = create<StatusState>((set, get) => {
         socketInstance.on('connect', () => {
           set({ socketConnected: true, socket: socketInstance });
           setupPolling();
+
+          // Wire up notification listeners on connect
+          if (socketInstance && !cleanupNotificationListeners) {
+            cleanupNotificationListeners = useNotificationStore
+              .getState()
+              .initSocketListeners(socketInstance);
+          }
         });
 
         socketInstance.on('disconnect', () => {
@@ -124,6 +135,10 @@ export const useStatusStore = create<StatusState>((set, get) => {
     },
 
     cleanup: () => {
+      if (cleanupNotificationListeners) {
+        cleanupNotificationListeners();
+        cleanupNotificationListeners = null;
+      }
       if (socketInstance) {
         socketInstance.off('connect');
         socketInstance.off('disconnect');

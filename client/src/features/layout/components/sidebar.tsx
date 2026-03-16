@@ -27,11 +27,26 @@ import ErrorIcon from '@mui/icons-material/Error';
 import WarningIcon from '@mui/icons-material/Warning';
 import NetworkCheckIcon from '@mui/icons-material/NetworkCheck';
 import PrecisionManufacturingIcon from '@mui/icons-material/PrecisionManufacturing';
+import SpeedIcon from '@mui/icons-material/Speed';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import FactoryIcon from '@mui/icons-material/Factory';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import LogoutIcon from '@mui/icons-material/Logout';
+import PersonIcon from '@mui/icons-material/Person';
+import InstallMobileIcon from '@mui/icons-material/InstallMobile';
+import GavelIcon from '@mui/icons-material/Gavel';
+import TimelineIcon from '@mui/icons-material/Timeline';
+import ScienceIcon from '@mui/icons-material/Science';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import ViewInArIcon from '@mui/icons-material/ViewInAr';
 import BurgerButton from './burgerButton';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { useStatusStore } from '@/stores/useStatusStore';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { useSpcStore } from '@/stores/useSpcStore';
+import { usePWA } from '@/hooks/usePWA';
 
 import type { ServiceStatus } from '@/types';
 
@@ -85,6 +100,11 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ open, onToggle, o
   const [statusExpanded, setStatusExpanded] = useState<boolean>(false);
   const status = useStatusStore((s) => s.status);
   const socketConnected = useStatusStore((s) => s.socketConnected);
+
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const spcAlertCount = useSpcStore((s) => s.activeAlertCount);
+  const { canInstall, promptInstall } = usePWA();
 
   const overallStatus = status?.overall?.status || 'UNKNOWN';
 
@@ -249,23 +269,116 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ open, onToggle, o
             </ListItemButton>
           </ListItem>
 
-          {/* Machines */}
+          {/* Machines (admin only) */}
+          {user?.role === 'admin' && (
+            <ListItem disablePadding>
+              <ListItemButton
+                component={Link}
+                to="/machines"
+                selected={location.pathname === '/machines'}
+                sx={{
+                  py: 1.5,
+                  justifyContent: open ? 'flex-start' : 'center',
+                  '&.Mui-selected': {
+                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    '&:hover': {
+                      bgcolor: alpha(theme.palette.primary.main, 0.2),
+                    },
+                    '& .MuiListItemIcon-root': {
+                      color: theme.palette.primary.main,
+                    },
+                    '& .MuiListItemText-primary': {
+                      fontWeight: 'bold',
+                      color: theme.palette.primary.main,
+                    },
+                  },
+                }}
+              >
+                <ListItemIcon
+                  sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
+                >
+                  <PrecisionManufacturingIcon />
+                </ListItemIcon>
+                {open && <ListItemText primary="Machines" />}
+              </ListItemButton>
+            </ListItem>
+          )}
+
+          {/* Plants (admin only) */}
+          {user?.role === 'admin' && (
+            <ListItem disablePadding>
+              <ListItemButton
+                component={Link}
+                to="/plants"
+                selected={location.pathname === '/plants'}
+                sx={{
+                  py: 1.5,
+                  justifyContent: open ? 'flex-start' : 'center',
+                  '&.Mui-selected': {
+                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
+                    '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
+                    '& .MuiListItemText-primary': {
+                      fontWeight: 'bold',
+                      color: theme.palette.primary.main,
+                    },
+                  },
+                }}
+              >
+                <ListItemIcon
+                  sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
+                >
+                  <FactoryIcon />
+                </ListItemIcon>
+                {open && <ListItemText primary="Plants" />}
+              </ListItemButton>
+            </ListItem>
+          )}
+
+          {/* OEE Config (admin only) */}
+          {user?.role === 'admin' && (
+            <ListItem disablePadding>
+              <ListItemButton
+                component={Link}
+                to="/oee/config"
+                selected={location.pathname === '/oee/config'}
+                sx={{
+                  py: 1.5,
+                  justifyContent: open ? 'flex-start' : 'center',
+                  '&.Mui-selected': {
+                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
+                    '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
+                    '& .MuiListItemText-primary': {
+                      fontWeight: 'bold',
+                      color: theme.palette.primary.main,
+                    },
+                  },
+                }}
+              >
+                <ListItemIcon
+                  sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
+                >
+                  <SpeedIcon />
+                </ListItemIcon>
+                {open && <ListItemText primary="OEE Config" />}
+              </ListItemButton>
+            </ListItem>
+          )}
+
+          {/* Alerts */}
           <ListItem disablePadding>
             <ListItemButton
               component={Link}
-              to="/machines"
-              selected={location.pathname === '/machines'}
+              to="/alerts/history"
+              selected={location.pathname.startsWith('/alerts')}
               sx={{
                 py: 1.5,
                 justifyContent: open ? 'flex-start' : 'center',
                 '&.Mui-selected': {
                   bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  '&:hover': {
-                    bgcolor: alpha(theme.palette.primary.main, 0.2),
-                  },
-                  '& .MuiListItemIcon-root': {
-                    color: theme.palette.primary.main,
-                  },
+                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
+                  '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
                   '& .MuiListItemText-primary': {
                     fontWeight: 'bold',
                     color: theme.palette.primary.main,
@@ -276,9 +389,187 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ open, onToggle, o
               <ListItemIcon
                 sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
               >
-                <PrecisionManufacturingIcon />
+                <NotificationsActiveIcon />
               </ListItemIcon>
-              {open && <ListItemText primary="Machines" />}
+              {open && <ListItemText primary="Alerts" />}
+            </ListItemButton>
+          </ListItem>
+
+          {/* Reports */}
+          <ListItem disablePadding>
+            <ListItemButton
+              component={Link}
+              to="/reports/history"
+              selected={location.pathname.startsWith('/reports')}
+              sx={{
+                py: 1.5,
+                justifyContent: open ? 'flex-start' : 'center',
+                '&.Mui-selected': {
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
+                  '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
+                  '& .MuiListItemText-primary': {
+                    fontWeight: 'bold',
+                    color: theme.palette.primary.main,
+                  },
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
+              >
+                <AssessmentIcon />
+              </ListItemIcon>
+              {open && <ListItemText primary="Reports" />}
+            </ListItemButton>
+          </ListItem>
+
+          {/* Compliance (admin only) */}
+          {user?.role === 'admin' && (
+            <ListItem disablePadding>
+              <ListItemButton
+                component={Link}
+                to="/compliance"
+                selected={location.pathname.startsWith('/compliance')}
+                sx={{
+                  py: 1.5,
+                  justifyContent: open ? 'flex-start' : 'center',
+                  '&.Mui-selected': {
+                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
+                    '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
+                    '& .MuiListItemText-primary': {
+                      fontWeight: 'bold',
+                      color: theme.palette.primary.main,
+                    },
+                  },
+                }}
+              >
+                <ListItemIcon
+                  sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
+                >
+                  <GavelIcon />
+                </ListItemIcon>
+                {open && <ListItemText primary="Compliance" />}
+              </ListItemButton>
+            </ListItem>
+          )}
+
+          {/* SPC Profiles */}
+          <ListItem disablePadding>
+            <ListItemButton
+              component={Link}
+              to="/spc"
+              selected={location.pathname.startsWith('/spc')}
+              sx={{
+                py: 1.5,
+                justifyContent: open ? 'flex-start' : 'center',
+                '&.Mui-selected': {
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
+                  '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
+                  '& .MuiListItemText-primary': {
+                    fontWeight: 'bold',
+                    color: theme.palette.primary.main,
+                  },
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
+              >
+                <Badge badgeContent={spcAlertCount} color="error" max={99}>
+                  <TimelineIcon />
+                </Badge>
+              </ListItemIcon>
+              {open && <ListItemText primary="SPC Profiles" />}
+            </ListItemButton>
+          </ListItem>
+
+          {/* Recipes */}
+          <ListItem disablePadding>
+            <ListItemButton
+              component={Link}
+              to="/recipes"
+              selected={location.pathname === '/recipes'}
+              sx={{
+                py: 1.5,
+                justifyContent: open ? 'flex-start' : 'center',
+                '&.Mui-selected': {
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
+                  '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
+                  '& .MuiListItemText-primary': {
+                    fontWeight: 'bold',
+                    color: theme.palette.primary.main,
+                  },
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
+              >
+                <MenuBookIcon />
+              </ListItemIcon>
+              {open && <ListItemText primary="Recipes" />}
+            </ListItemButton>
+          </ListItem>
+
+          {/* Batches */}
+          <ListItem disablePadding>
+            <ListItemButton
+              component={Link}
+              to="/batches"
+              selected={location.pathname === '/batches'}
+              sx={{
+                py: 1.5,
+                justifyContent: open ? 'flex-start' : 'center',
+                '&.Mui-selected': {
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
+                  '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
+                  '& .MuiListItemText-primary': {
+                    fontWeight: 'bold',
+                    color: theme.palette.primary.main,
+                  },
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
+              >
+                <ScienceIcon />
+              </ListItemIcon>
+              {open && <ListItemText primary="Batches" />}
+            </ListItemButton>
+          </ListItem>
+
+          {/* Digital Twins */}
+          <ListItem disablePadding>
+            <ListItemButton
+              component={Link}
+              to="/digital-twins"
+              selected={location.pathname.startsWith('/digital-twins')}
+              sx={{
+                py: 1.5,
+                justifyContent: open ? 'flex-start' : 'center',
+                '&.Mui-selected': {
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
+                  '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
+                  '& .MuiListItemText-primary': {
+                    fontWeight: 'bold',
+                    color: theme.palette.primary.main,
+                  },
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
+              >
+                <ViewInArIcon />
+              </ListItemIcon>
+              {open && <ListItemText primary="Digital Twins" />}
             </ListItemButton>
           </ListItem>
 
@@ -412,6 +703,28 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ open, onToggle, o
             </ListItemButton>
           </ListItem>
 
+          {/* PWA Install */}
+          {canInstall && (
+            <ListItem disablePadding>
+              <Tooltip title="Install App" placement="right">
+                <ListItemButton
+                  onClick={promptInstall}
+                  sx={{
+                    py: 1.5,
+                    justifyContent: open ? 'flex-start' : 'center',
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.success.main }}
+                  >
+                    <InstallMobileIcon />
+                  </ListItemIcon>
+                  {open && <ListItemText primary="Install App" />}
+                </ListItemButton>
+              </Tooltip>
+            </ListItem>
+          )}
+
           {/* Theme toggle */}
           <ListItem disablePadding>
             <Tooltip
@@ -436,6 +749,66 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ open, onToggle, o
               </ListItemButton>
             </Tooltip>
           </ListItem>
+
+          {/* User info & logout */}
+          {user && (
+            <>
+              <Divider sx={{ my: 1 }} />
+              <ListItem disablePadding>
+                <Tooltip title={`${user.username} (${user.role})`} placement="right">
+                  <ListItemButton
+                    sx={{
+                      py: 1.5,
+                      justifyContent: open ? 'flex-start' : 'center',
+                      cursor: 'default',
+                      '&:hover': { bgcolor: 'transparent' },
+                    }}
+                    disableRipple
+                  >
+                    <ListItemIcon
+                      sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.primary.main }}
+                    >
+                      <PersonIcon />
+                    </ListItemIcon>
+                    {open && (
+                      <ListItemText
+                        primary={user.username}
+                        secondary={user.role}
+                        primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 600 }}
+                        secondaryTypographyProps={{
+                          fontSize: '0.75rem',
+                          textTransform: 'capitalize',
+                        }}
+                      />
+                    )}
+                  </ListItemButton>
+                </Tooltip>
+              </ListItem>
+              <ListItem disablePadding>
+                <Tooltip title="Sign out" placement="right">
+                  <ListItemButton
+                    onClick={logout}
+                    sx={{
+                      py: 1.5,
+                      justifyContent: open ? 'flex-start' : 'center',
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.error.main }}
+                    >
+                      <LogoutIcon />
+                    </ListItemIcon>
+                    {open && (
+                      <ListItemText
+                        primary="Sign Out"
+                        primaryTypographyProps={{ color: theme.palette.error.main }}
+                      />
+                    )}
+                  </ListItemButton>
+                </Tooltip>
+              </ListItem>
+            </>
+          )}
         </List>
       </Box>
     </Drawer>
