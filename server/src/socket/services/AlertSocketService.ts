@@ -4,6 +4,8 @@ import type {
   ClientToServerEvents,
   InterServerEvents,
   SocketData,
+  AcknowledgeAlertPayload,
+  AlertNotification,
 } from "@performance-dashboard/shared";
 import { alertRepository } from "../../repositories/alertRepository.js";
 import logger from "../../utils/logger.js";
@@ -31,7 +33,8 @@ export class AlertSocketService {
           status: "active",
           limit: 50,
         });
-        socket.emit("activeAlerts" as any, activeAlerts);
+        // DB rows use Date objects; shared types use ISO strings — bridged at the serialization layer
+        socket.emit("activeAlerts", activeAlerts as unknown as Parameters<ServerToClientEvents["activeAlerts"]>[0]);
       } catch (err) {
         logger.error(
           "[AlertSocket] Failed to send active alerts on connection:",
@@ -41,8 +44,8 @@ export class AlertSocketService {
 
       // Listen for acknowledge requests from client
       socket.on(
-        "acknowledgeAlert" as any,
-        async (data: { id: number; userId?: number }) => {
+        "acknowledgeAlert",
+        async (data: AcknowledgeAlertPayload) => {
           try {
             const updated = await alertRepository.updateAlertStatus(
               data.id,
@@ -50,7 +53,7 @@ export class AlertSocketService {
               data.userId ?? null,
             );
             if (updated) {
-              this.io.emit("alertAcknowledged" as any, updated);
+              this.io.emit("alertAcknowledged", updated as unknown as Parameters<ServerToClientEvents["alertAcknowledged"]>[0]);
               logger.info(
                 `[AlertSocket] Alert ${data.id} acknowledged by user ${data.userId}`,
               );
@@ -66,10 +69,10 @@ export class AlertSocketService {
     });
   }
 
-  broadcastAlert(alert: Record<string, unknown>): void {
-    this.io.emit("alertTriggered" as any, alert);
+  broadcastAlert(alert: AlertNotification): void {
+    this.io.emit("alertTriggered", alert);
     logger.info(
-      `[AlertSocket] Broadcast alertTriggered: ${alert.message ?? alert.id}`,
+      `[AlertSocket] Broadcast alertTriggered: ${alert.message ?? alert.alertId}`,
     );
   }
 }

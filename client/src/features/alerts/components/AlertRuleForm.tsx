@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
 
-interface AlertRuleFormValues {
+export interface AlertRuleFormValues {
   name: string;
   description: string;
   machineId: number | '';

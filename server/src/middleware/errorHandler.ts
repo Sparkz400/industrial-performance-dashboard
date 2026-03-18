@@ -20,8 +20,8 @@ interface ErrorResponse {
  * - Handles CSRF token errors as a special case
  */
 export function errorHandler(invalidCsrfTokenError: unknown) {
-  return (err: any, req: Request, res: Response, _next: NextFunction): void => {
-    const requestId: string | undefined = (req as any).requestId;
+  return (err: Error & { code?: string; statusCode?: number }, req: Request, res: Response, _next: NextFunction): void => {
+    const requestId: string | undefined = req.requestId;
 
     // --- CSRF errors ---
     if (
@@ -39,7 +39,7 @@ export function errorHandler(invalidCsrfTokenError: unknown) {
           (req.headers[CSRF_HEADER_NAME] as string) || "MISSING",
         sessionID: req.sessionID || "N/A",
         sessionExists: !!req.session,
-        sessionCsrfToken: (req.session as any)?.csrfToken
+        sessionCsrfToken: req.session?.csrfToken
           ? "present"
           : "MISSING",
       });
@@ -111,10 +111,10 @@ export function errorHandler(invalidCsrfTokenError: unknown) {
  * Wraps an async route handler so that rejected promises are forwarded to
  * the Express error-handling middleware via next(err).
  */
-export function asyncHandler(
-  fn: (req: any, res: any, next: NextFunction) => Promise<any>,
+export function asyncHandler<P = import("express-serve-static-core").ParamsDictionary>(
+  fn: (req: Request<P>, res: Response, next: NextFunction) => Promise<void>,
 ) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request<P>, res: Response, next: NextFunction): void => {
     fn(req, res, next).catch(next);
   };
 }

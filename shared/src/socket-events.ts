@@ -19,8 +19,8 @@ export interface SystemStatus {
 export interface OpcuaNodeData {
   key: string;
   label: string;
-  value: unknown;
-  timestamp: string;
+  value: number | string | boolean | null;
+  timestamp: Date | string;
   dataType: string;
   statusCode: string;
   machineId?: number;
@@ -109,6 +109,17 @@ export interface EdgeSyncStatusEvent {
   retryingCount: number;
 }
 
+// ===== Alert Socket Payloads =====
+
+import type { AlertHistoryEntry } from './domain-types.js';
+
+export type { AlertHistoryEntry };
+
+export interface AcknowledgeAlertPayload {
+  id: number;
+  userId?: number;
+}
+
 // ===== Socket.io Typed Event Maps =====
 
 // ===== Alert Engine Notification (Tier 1) =====
@@ -138,6 +149,8 @@ export interface ServerToClientEvents {
   alarmAcknowledged: (data: AlarmEvent) => void;
   alarmCleared: (data: AlarmEvent) => void;
   alertTriggered: (data: AlertNotification) => void;
+  activeAlerts: (data: AlertHistoryEntry[]) => void;
+  alertAcknowledged: (data: AlertHistoryEntry) => void;
   spcAlert: (data: SpcAlertEvent) => void;
   batchStatusUpdate: (data: BatchStatusEvent) => void;
   edgeSyncUpdate: (data: EdgeSyncStatusEvent) => void;
@@ -148,7 +161,7 @@ export interface ClientToServerEvents {
   joinRoom: (roomName: string) => void;
   leaveRoom: (roomName: string) => void;
   acceptCertificate: (filename: string) => void;
-  acknowledgeAlert: (alertId: number) => void;
+  acknowledgeAlert: (data: AcknowledgeAlertPayload) => void;
 }
 
 /** Inter-server events (not used currently, placeholder for scaling) */

@@ -28,6 +28,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     try {
       const response = await fetch(
         `${API_ENDPOINTS.annotations}?dashboardId=${encodeURIComponent(dashboardId)}`,
+        { credentials: 'include' },
       );
       if (!response.ok) throw new Error(`HTTP error ${response.status}`);
       const annotations: Annotation[] = await response.json();

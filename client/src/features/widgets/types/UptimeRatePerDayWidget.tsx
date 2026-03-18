@@ -19,7 +19,7 @@ interface UptimeLineChartWidgetProps {
 }
 
 const UptimeLineChartWidget = memo<UptimeLineChartWidgetProps>(({ config }) => {
-  const expectedUptime = config?.expectedUptime || 99;
+  const expectedUptime = (config?.expectedUptime as number) || 99;
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 

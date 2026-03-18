@@ -2,7 +2,12 @@ import fs from "fs";
 import path from "path";
 import puppeteer from "puppeteer";
 import { reportRepository } from "../repositories/reportRepository.js";
+import {
+  alertRepository,
+  type AlertHistoryFilters,
+} from "../repositories/alertRepository.js";
 import { trendingDataService } from "./trendingDataService.js";
+import { oeeCalculationService } from "./oeeCalculationService.js";
 import { reportEmailService } from "./reportEmailService.js";
 import logger from "../utils/logger.js";
 
@@ -126,16 +131,107 @@ function renderTrendingSection(
 </table>`;
 }
 
-function renderAlertSection(title: string): string {
-  // Placeholder — real implementation would query alertHistory
+async function renderAlertSection(
+  title: string,
+  startDate: Date,
+  endDate: Date,
+  machineId?: number,
+): Promise<string> {
+  const filters: AlertHistoryFilters = {
+    startDate,
+    endDate,
+    limit: 200,
+  };
+  if (machineId) filters.machineId = machineId;
+
+  const alerts = await alertRepository.listAlertHistory(filters);
+
+  if (alerts.length === 0) {
+    return `<h2>${escapeHtml(title)}</h2>
+<div class="summary-box"><p>No alerts recorded in this period.</p></div>`;
+  }
+
+  // Summary counts by severity
+  const bySeverity: Record<string, number> = {};
+  for (const a of alerts) {
+    const sev = a.severity ?? "unknown";
+    bySeverity[sev] = (bySeverity[sev] ?? 0) + 1;
+  }
+
+  const summaryParts = Object.entries(bySeverity)
+    .map(([sev, count]) => `<strong>${escapeHtml(sev)}:</strong> ${count}`)
+    .join(" &middot; ");
+
+  const rows = alerts.map(
+    (a: (typeof alerts)[number]) =>
+      `<tr>
+        <td>${a.createdAt ? new Date(a.createdAt).toLocaleString() : "N/A"}</td>
+        <td>${escapeHtml(a.severity ?? "N/A")}</td>
+        <td>${escapeHtml(a.status ?? "N/A")}</td>
+        <td>${escapeHtml(a.ruleName ?? "N/A")}</td>
+        <td>${escapeHtml(a.message ?? "")}</td>
+        <td>${a.triggerValue != null ? a.triggerValue : "N/A"}</td>
+      </tr>`,
+  );
+
   return `<h2>${escapeHtml(title)}</h2>
-<div class="summary-box"><p>Alert summary data will appear here when alert history is available.</p></div>`;
+<div class="summary-box"><p>Total alerts: ${alerts.length} &mdash; ${summaryParts}</p></div>
+<table>
+  <thead><tr><th>Time</th><th>Severity</th><th>Status</th><th>Rule</th><th>Message</th><th>Value</th></tr></thead>
+  <tbody>${rows.join("")}</tbody>
+</table>`;
 }
 
-function renderOeeSection(title: string): string {
-  // Placeholder — real implementation would call oeeCalculationService
-  return `<h2>${escapeHtml(title)}</h2>
-<div class="summary-box"><p>OEE summary data will appear here when OEE data is available.</p></div>`;
+async function renderOeeSection(
+  title: string,
+  startDate: Date,
+  endDate: Date,
+  machineId?: number,
+): Promise<string> {
+  if (!machineId) {
+    return `<h2>${escapeHtml(title)}</h2>
+<div class="summary-box"><p>No machine configured for OEE section.</p></div>`;
+  }
+
+  try {
+    const result = await oeeCalculationService.calculateOee(
+      machineId,
+      startDate,
+      endDate,
+    );
+
+    const pct = (v: number) => (v * 100).toFixed(1) + "%";
+
+    return `<h2>${escapeHtml(title)}</h2>
+<div class="summary-box">
+  <p><strong>OEE:</strong> ${pct(result.oee)}</p>
+</div>
+<table>
+  <thead><tr><th>Metric</th><th>Value</th><th>Details</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Availability</td>
+      <td>${pct(result.availability.availability)}</td>
+      <td>Running: ${result.availability.runningTimeMinutes.toFixed(1)} min, Planned stop: ${result.availability.plannedStopTimeMinutes.toFixed(1)} min</td>
+    </tr>
+    <tr>
+      <td>Performance</td>
+      <td>${pct(result.performance.performance)}</td>
+      <td>Total count: ${result.performance.totalCount}</td>
+    </tr>
+    <tr>
+      <td>Quality</td>
+      <td>${pct(result.quality.quality)}</td>
+      <td>Good: ${result.quality.goodCount}, Rejected: ${result.quality.rejectCount}</td>
+    </tr>
+  </tbody>
+</table>`;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.warn(`[ReportGenerator] OEE section failed for machine ${machineId}: ${msg}`);
+    return `<h2>${escapeHtml(title)}</h2>
+<div class="summary-box"><p>OEE data unavailable: ${escapeHtml(msg)}</p></div>`;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -208,10 +304,24 @@ class ReportGeneratorService {
             break;
           }
           case "alerts":
-            sections.push(renderAlertSection(section.title ?? "Alerts"));
+            sections.push(
+              await renderAlertSection(
+                section.title ?? "Alerts",
+                startDate,
+                endDate,
+                section.machineId,
+              ),
+            );
             break;
           case "oee":
-            sections.push(renderOeeSection(section.title ?? "OEE Summary"));
+            sections.push(
+              await renderOeeSection(
+                section.title ?? "OEE Summary",
+                startDate,
+                endDate,
+                section.machineId,
+              ),
+            );
             break;
           default:
             sections.push(

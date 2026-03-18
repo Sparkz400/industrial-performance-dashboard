@@ -128,14 +128,29 @@ export const spcRepository = {
       conditions.push(isNull(spcAlerts.acknowledgedAt));
     }
 
-    const query = getReadDb()
-      .select()
+    const rows = await getReadDb()
+      .select({
+        id: spcAlerts.id,
+        profileId: spcAlerts.profileId,
+        profileName: spcProfiles.name,
+        machineId: spcAlerts.machineId,
+        nodeKey: spcAlerts.nodeKey,
+        alertType: spcAlerts.alertType,
+        value: spcAlerts.value,
+        threshold: spcAlerts.threshold,
+        message: spcAlerts.message,
+        severity: spcAlerts.severity,
+        acknowledgedAt: spcAlerts.acknowledgedAt,
+        acknowledgedBy: spcAlerts.acknowledgedBy,
+        createdAt: spcAlerts.createdAt,
+      })
       .from(spcAlerts)
+      .leftJoin(spcProfiles, eq(spcAlerts.profileId, spcProfiles.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(spcAlerts.createdAt))
       .limit(filters.limit ?? 100);
 
-    return query;
+    return rows;
   },
 
   async acknowledgeAlert(id: number, userId: number) {

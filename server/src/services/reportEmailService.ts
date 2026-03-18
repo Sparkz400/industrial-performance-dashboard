@@ -17,10 +17,10 @@ class ReportEmailService {
   private getTransporter(): nodemailer.Transporter | null {
     if (this.transporter) return this.transporter;
 
-    const host = (config as any).SMTP_HOST;
-    const port = (config as any).SMTP_PORT;
-    const user = (config as any).SMTP_USER;
-    const pass = (config as any).SMTP_PASS;
+    const host = config.SMTP_HOST;
+    const port = config.SMTP_PORT;
+    const user = config.SMTP_USER;
+    const pass = config.SMTP_PASS;
 
     if (!host) {
       logger.warn(
@@ -62,8 +62,8 @@ class ReportEmailService {
     }
 
     const from =
-      (config as any).SMTP_FROM ??
-      (config as any).SMTP_USER ??
+      config.SMTP_FROM ??
+      config.SMTP_USER ??
       "noreply@performancedashboard.local";
 
     const filename = path.basename(pdfPath);

@@ -28,7 +28,9 @@ const OperationModeWidgetSettings: React.FC<OperationModeWidgetSettingsProps> = 
   config,
   onConfigChange,
 }) => {
-  const { maxPoints = 120, showBrush = true, machineId = '' } = config || {};
+  const maxPoints = ((config || {}).maxPoints as number) ?? 120;
+  const showBrush = ((config || {}).showBrush as boolean) ?? true;
+  const machineId = String((config || {}).machineId ?? '');
   const machines = useMachineStore((s) => s.machines);
   const fetchMachines = useMachineStore((s) => s.fetchMachines);
 

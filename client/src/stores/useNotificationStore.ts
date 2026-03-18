@@ -6,8 +6,10 @@ import type {
   MachineStatusUpdate,
   SystemStatus,
   CertificateNotification,
+  SpcAlertEvent,
   ServerToClientEvents,
   ClientToServerEvents,
+  NotificationSeverity,
 } from '@performance-dashboard/shared';
 
 type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -89,7 +91,7 @@ export const useNotificationStore = create<NotificationState>((set) => ({
     const onAlarmTriggered = (alarm: AlarmEvent) => {
       addNotif({
         type: 'alarm',
-        severity: (alarm.severity as string) ?? 'medium',
+        severity: (alarm.severity as NotificationSeverity) ?? 'medium',
         title: `Alarm: ${alarm.source}`,
         message: alarm.message,
         timestamp: new Date(alarm.triggeredAt),
@@ -142,16 +144,29 @@ export const useNotificationStore = create<NotificationState>((set) => ({
       });
     };
 
+    const onSpcAlert = (data: SpcAlertEvent) => {
+      addNotif({
+        type: 'alarm',
+        severity: (data.severity as NotificationSeverity) ?? 'medium',
+        title: `SPC Alert: ${data.alertType}`,
+        message: data.message,
+        timestamp: new Date(data.createdAt),
+        source: data.nodeKey,
+      });
+    };
+
     socket.on('alarmTriggered', onAlarmTriggered);
     socket.on('machineStatusUpdate', onMachineStatusUpdate);
     socket.on('statusUpdate', onStatusUpdate);
     socket.on('untrustedCertificate', onUntrustedCertificate);
+    socket.on('spcAlert', onSpcAlert);
 
     return () => {
       socket.off('alarmTriggered', onAlarmTriggered);
       socket.off('machineStatusUpdate', onMachineStatusUpdate);
       socket.off('statusUpdate', onStatusUpdate);
       socket.off('untrustedCertificate', onUntrustedCertificate);
+      socket.off('spcAlert', onSpcAlert);
     };
   },
 }));

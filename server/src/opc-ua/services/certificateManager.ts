@@ -491,14 +491,14 @@ class CertificateManagerService {
   async getClientOptions(
     securityMode: string = "None",
     securityPolicy: string = "None",
-  ): Promise<Record<string, any>> {
+  ): Promise<opcua.OPCUAClientOptions> {
     await this.ensureInitialized();
     try {
       if (!this.certManager) await this.ensureInitialized();
 
-      const baseOptions: Record<string, any> = {
+      const baseOptions: opcua.OPCUAClientOptions = {
         applicationName: this.applicationName,
-        applicationUri: this.applicationUri,
+        applicationUri: this.applicationUri!,
         connectionStrategy: {
           initialDelay: 1000,
           maxRetry: 3,
@@ -509,18 +509,22 @@ class CertificateManagerService {
         requestedSessionTimeout: 60000,
       };
 
-      const messageSecurityModeEnum = (MessageSecurityMode as any)[
-        securityMode
-      ];
-      if (!messageSecurityModeEnum) {
+      const modeKey = securityMode as keyof typeof MessageSecurityMode;
+      const resolvedMode = MessageSecurityMode[modeKey] as
+        | (typeof MessageSecurityMode)[keyof typeof MessageSecurityMode]
+        | undefined;
+      if (resolvedMode === undefined) {
         logger.warn(
           `Invalid security mode specified: ${securityMode}. Defaulting to None.`,
         );
         securityMode = "None";
       }
 
-      const securityPolicyEnum = (SecurityPolicy as any)[securityPolicy];
-      if (!securityPolicyEnum) {
+      const policyKey = securityPolicy as keyof typeof SecurityPolicy;
+      const resolvedPolicy = SecurityPolicy[policyKey] as
+        | (typeof SecurityPolicy)[keyof typeof SecurityPolicy]
+        | undefined;
+      if (resolvedPolicy === undefined) {
         logger.warn(
           `Invalid security policy specified: ${securityPolicy}. Defaulting to None.`,
         );
@@ -556,21 +560,22 @@ class CertificateManagerService {
         }
       }
 
+      const finalMode =
+        MessageSecurityMode[securityMode as keyof typeof MessageSecurityMode];
+      const finalPolicy =
+        SecurityPolicy[securityPolicy as keyof typeof SecurityPolicy];
+
       logger.info(
-        `Using SecurityMode=${securityMode} (${messageSecurityModeEnum.key}) and SecurityPolicy=${securityPolicy} (${securityPolicyEnum.key})`,
+        `Using SecurityMode=${securityMode} and SecurityPolicy=${securityPolicy}`,
       );
 
       return {
         ...baseOptions,
-        securityMode: messageSecurityModeEnum,
-        securityPolicy: securityPolicyEnum,
-        certificateFile: this.certificateFile,
-        privateKeyFile: this.privateKeyFile,
-        trustedCertificateList: (this.certManager as any)
-          .trustedCertificateList,
-        rejectedCertificateList: (this.certManager as any)
-          .rejectedCertificateList,
-        serverCertificateManager: this.certManager,
+        securityMode: finalMode,
+        securityPolicy: finalPolicy,
+        certificateFile: this.certificateFile!,
+        privateKeyFile: this.privateKeyFile!,
+        clientCertificateManager: this.certManager!,
       };
     } catch (error) {
       logger.error("Failed to get client options:", error);
@@ -579,28 +584,17 @@ class CertificateManagerService {
   }
 
   getAvailableSecurityPolicies(): string[] {
-    return Object.keys(SecurityPolicy)
-      .filter(
-        (policy) =>
-          policy !== "Invalid" &&
-          policy !== "PubSub_Aes128_CTR" &&
-          typeof (SecurityPolicy as any)[policy] === "object" &&
-          (SecurityPolicy as any)[policy].key !==
-            (SecurityPolicy as any).Invalid.key,
-      )
-      .map((policy) => (SecurityPolicy as any)[policy].key);
+    return Object.keys(SecurityPolicy).filter(
+      (policy) =>
+        policy !== "Invalid" && policy !== "PubSub_Aes128_CTR",
+    );
   }
 
   getAvailableSecurityModes(): string[] {
-    return Object.keys(MessageSecurityMode)
-      .filter(
-        (mode) =>
-          mode !== "Invalid" &&
-          typeof (MessageSecurityMode as any)[mode] === "object" &&
-          (MessageSecurityMode as any)[mode].key !==
-            (MessageSecurityMode as any).Invalid.key,
-      )
-      .map((mode) => (MessageSecurityMode as any)[mode].key);
+    return Object.keys(MessageSecurityMode).filter(
+      (mode) =>
+        mode !== "Invalid" && isNaN(Number(mode)),
+    );
   }
 }
 

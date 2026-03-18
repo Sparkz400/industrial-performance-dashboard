@@ -25,7 +25,13 @@ router.get(
   "/",
   validateQuery(aggregateSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const { nodeKey, machineId, resolution, start, end } = req.query as any;
+    const { nodeKey, machineId, resolution, start, end } = req.query as {
+      nodeKey: string;
+      machineId?: string;
+      resolution: string;
+      start: string;
+      end: string;
+    };
     const readDb = getReadDb();
 
     const viewName = VIEW_MAP[resolution] ?? "opcua_data_hourly";

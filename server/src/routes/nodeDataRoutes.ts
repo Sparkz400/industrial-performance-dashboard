@@ -22,7 +22,14 @@ router.get(
   validateQuery(nodeDataSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const { nodeKey, machineId, limit, offset, startDate, endDate } =
-      req.query as any;
+      req.query as unknown as {
+        nodeKey: string;
+        machineId?: string;
+        limit: number;
+        offset: number;
+        startDate?: string;
+        endDate?: string;
+      };
     const readDb = getReadDb();
 
     const conditions = [eq(opcuaData.nodeKey, nodeKey)];

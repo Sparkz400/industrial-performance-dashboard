@@ -4,14 +4,13 @@ export interface ClientConnectionInfo {
   ip?: string;
   userAgent?: string;
   query?: Record<string, string>;
-  [key: string]: any;
 }
 
 export interface ConnectionHistoryEntry {
   type: "connect" | "disconnect";
   timestamp: Date;
   id: string;
-  info?: Record<string, any>;
+  info?: Record<string, unknown>;
   duration?: number | null;
 }
 
@@ -31,7 +30,7 @@ class ConnectionTracker {
     this.connectedClients = new Map();
   }
 
-  addConnection(socketId: string, info: Record<string, any> = {}): number {
+  addConnection(socketId: string, info: Omit<ClientConnectionInfo, "id" | "connectedAt"> = {}): number {
     this.activeConnections++;
 
     const connectionInfo: ClientConnectionInfo = {

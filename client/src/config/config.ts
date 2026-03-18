@@ -123,6 +123,9 @@ export const API_ENDPOINTS = {
     verifySignature: `${API_BASE_URL}/compliance/verify-signature`,
     integrityCheck: `${API_BASE_URL}/compliance/integrity-check`,
     export: `${API_BASE_URL}/compliance/export`,
+    stats: `${API_BASE_URL}/compliance/stats`,
+    config: `${API_BASE_URL}/compliance/config`,
+    generateReport: `${API_BASE_URL}/compliance/reports/generate`,
     dashboardVersions: (dashboardId: string) =>
       `${API_BASE_URL}/compliance/dashboards/${dashboardId}/versions`,
     dashboardVersion: (dashboardId: string, version: number) =>
@@ -170,14 +173,8 @@ export const API_ENDPOINTS = {
   },
 } as const;
 
-// Other constants
-export const POLLING_INTERVAL_MS = 20000;
-export const DB_HEALTH_CHECK_INTERVAL = 60000;
-
 export default {
   WEBSOCKET_ADDR,
   API_BASE_URL,
   API_ENDPOINTS,
-  POLLING_INTERVAL_MS,
-  DB_HEALTH_CHECK_INTERVAL,
 };

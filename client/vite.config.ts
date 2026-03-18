@@ -12,9 +12,18 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
-      // Force all imports of react/react-dom to resolve consistently (hoisted to root in monorepo)
-      'react': path.resolve(__dirname, '../node_modules/react'),
-      'react-dom': path.resolve(__dirname, '../node_modules/react-dom'),
     },
+    dedupe: ['react', 'react-dom', 'react-router', 'react-router-dom', '@emotion/react', '@emotion/styled'],
+  },
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router',
+      'react-router-dom',
+      '@emotion/react',
+      '@emotion/styled',
+      '@emotion/react/jsx-runtime',
+    ],
   },
 })

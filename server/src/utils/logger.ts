@@ -55,13 +55,14 @@ export const generateRequestId = (): string => crypto.randomUUID();
  * Express middleware to assign a request ID and log incoming requests.
  */
 logger.middleware = (req: Request, res: Response, next: NextFunction): void => {
-  (req as any).requestId =
+  const r = req as Request & { requestId?: string };
+  r.requestId =
     (req.headers["x-request-id"] as string) || generateRequestId();
-  res.setHeader("x-request-id", (req as any).requestId);
+  res.setHeader("x-request-id", r.requestId);
 
   logger.info({
     message: `${req.method} ${req.url}`,
-    requestId: (req as any).requestId,
+    requestId: r.requestId,
     method: req.method,
     url: req.url,
     ip: req.ip,

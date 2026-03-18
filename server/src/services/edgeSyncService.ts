@@ -64,15 +64,20 @@ export const edgeSyncService = {
 
     const cloudReachable = await this.isCloudReachable();
 
+    const pending = pendingResult.rows[0] as { count: string } | undefined;
+    const lastSync = lastSyncResult.rows[0] as { synced_at: string } | undefined;
+    const lastError = lastErrorResult.rows[0] as { last_error: string } | undefined;
+    const retrying = retryingResult.rows[0] as { count: string } | undefined;
+
     return {
       isEdgeMode: this.isEdgeMode(),
       cloudReachable,
-      syncQueueDepth: Number((pendingResult.rows[0] as any)?.count ?? 0),
-      lastSuccessfulSync: (lastSyncResult.rows[0] as any)?.synced_at
-        ? new Date((lastSyncResult.rows[0] as any).synced_at).toISOString()
+      syncQueueDepth: Number(pending?.count ?? 0),
+      lastSuccessfulSync: lastSync?.synced_at
+        ? new Date(lastSync.synced_at).toISOString()
         : null,
-      lastSyncError: (lastErrorResult.rows[0] as any)?.last_error ?? null,
-      retryingCount: Number((retryingResult.rows[0] as any)?.count ?? 0),
+      lastSyncError: lastError?.last_error ?? null,
+      retryingCount: Number(retrying?.count ?? 0),
     };
   },
 

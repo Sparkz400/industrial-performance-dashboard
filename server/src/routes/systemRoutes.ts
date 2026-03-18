@@ -73,6 +73,7 @@ router.get(
         model: os.cpus()[0].model,
         speed: os.cpus()[0].speed,
       },
+      nodeVersion: process.version,
       platform,
       processMemory: {
         rss: bytesToMB(processMemoryUsage.rss),

@@ -109,7 +109,7 @@ export const digitalTwinService = {
             ORDER BY node_key, timestamp DESC`,
       );
       const values: Record<string, { value: unknown; timestamp: string }> = {};
-      for (const row of result.rows as any[]) {
+      for (const row of result.rows as { node_key: string; value: unknown; timestamp: string }[]) {
         values[row.node_key] = {
           value: row.value,
           timestamp: new Date(row.timestamp).toISOString(),
@@ -154,7 +154,7 @@ export const digitalTwinService = {
     return {
       svgElementId,
       nodeKey: binding.nodeKey,
-      dataPoints: (result.rows as any[]).map((row) => ({
+      dataPoints: (result.rows as { timestamp: string; value: unknown }[]).map((row) => ({
         timestamp: new Date(row.timestamp).toISOString(),
         value: row.value,
       })),

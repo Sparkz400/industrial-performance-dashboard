@@ -13,7 +13,8 @@ const TrendingExplorerWidgetSettings: React.FC<TrendingExplorerWidgetSettingsPro
   config,
   onConfigChange,
 }) => {
-  const { machineId = '', defaultTags = [] } = config || {};
+  const machineId = String((config || {}).machineId ?? '');
+  const defaultTags = ((config || {}).defaultTags as string[]) ?? [];
   const machines = useMachineStore((s) => s.machines);
   const fetchMachines = useMachineStore((s) => s.fetchMachines);
 
@@ -56,7 +57,7 @@ const TrendingExplorerWidgetSettings: React.FC<TrendingExplorerWidgetSettingsPro
 
       <TagSelector
         machineId={numericMachineId}
-        selectedTags={defaultTags as string[]}
+        selectedTags={defaultTags}
         onTagsChange={handleTagsChange}
       />
     </Box>

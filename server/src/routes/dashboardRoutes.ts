@@ -1,9 +1,14 @@
 import express, { type Request, type Response } from "express";
 import Joi from "joi";
 import { validateBody, validateParams } from "../middleware/validation.js";
+import { optionalComplianceFields } from "../middleware/complianceMiddleware.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { dashboardService } from "../services/dashboardService.js";
 import { auditLogService, getAuditActor } from "../services/auditLogService.js";
+import {
+  complianceService,
+  getComplianceActor,
+} from "../services/complianceService.js";
 
 const router = express.Router();
 type DashboardIdParams = { id: string };
@@ -11,6 +16,8 @@ type DashboardBody = {
   name: string;
   widgets?: unknown;
   layout?: unknown;
+  reasonForChange?: string | null;
+  electronicSignature?: Record<string, unknown> | null;
 };
 
 const idParamSchema = Joi.object({
@@ -75,15 +82,20 @@ router.post(
   "/:id",
   validateParams(idParamSchema),
   validateBody(dashboardBodySchema),
+  optionalComplianceFields,
   asyncHandler(
     async (
       req: Request<DashboardIdParams, unknown, DashboardBody>,
       res: Response,
     ) => {
+      const existing = await dashboardService
+        .getDashboardById(req.params.id)
+        .catch(() => null);
       const dashboard = await dashboardService.saveDashboard({
         id: req.params.id,
         ...req.body,
       });
+      const actor = getAuditActor(req);
       await auditLogService.recordEvent(
         {
           action: "dashboard.saved",
@@ -100,7 +112,27 @@ router.post(
               : 0,
           },
         },
-        getAuditActor(req),
+        actor,
+      );
+      // Record compliance event with before/after snapshots
+      await complianceService.recordComplianceEvent(
+        {
+          action: "dashboard.saved",
+          entityType: "dashboard",
+          entityId: dashboard.id,
+          entityName: dashboard.name,
+          message: `Saved dashboard "${dashboard.name}"`,
+          reasonForChange: req.body.reasonForChange ?? null,
+          electronicSignature: req.body.electronicSignature ?? null,
+          snapshotBefore: existing
+            ? { widgets: existing.widgets, layout: existing.layout }
+            : null,
+          snapshotAfter: {
+            widgets: dashboard.widgets,
+            layout: dashboard.layout,
+          },
+        },
+        getComplianceActor(req),
       );
       res.json(dashboard);
     },
@@ -113,6 +145,7 @@ router.delete(
   asyncHandler(async (req: Request<DashboardIdParams>, res: Response) => {
     const dashboard = await dashboardService.getDashboardById(req.params.id);
     await dashboardService.deleteDashboard(req.params.id);
+    const actor = getAuditActor(req);
     await auditLogService.recordEvent(
       {
         action: "dashboard.deleted",
@@ -121,7 +154,22 @@ router.delete(
         entityName: dashboard.name,
         message: `Deleted dashboard "${dashboard.name}"`,
       },
-      getAuditActor(req),
+      actor,
+    );
+    await complianceService.recordComplianceEvent(
+      {
+        action: "dashboard.deleted",
+        entityType: "dashboard",
+        entityId: dashboard.id,
+        entityName: dashboard.name,
+        message: `Deleted dashboard "${dashboard.name}"`,
+        snapshotBefore: {
+          name: dashboard.name,
+          widgets: dashboard.widgets,
+          layout: dashboard.layout,
+        },
+      },
+      getComplianceActor(req),
     );
     res.json({ message: "Dashboard deleted successfully" });
   }),

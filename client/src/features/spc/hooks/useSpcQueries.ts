@@ -1,65 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/utils/api';
 import { API_ENDPOINTS } from '@/config/config';
+import type {
+  SpcProfile,
+  SpcAlert,
+  SpcChartData,
+} from '@performance-dashboard/shared';
 
-// ── Types ──────────────────────────────────────────────────────────────────
+// Re-export shared types for convenience
+export type { SpcProfile, SpcAlert, SpcChartData };
 
-export interface SpcProfile {
-  id: number;
-  name: string;
-  machineId: number;
-  machineName?: string;
-  nodeKey: string;
-  method: 'xbar-r' | 'xbar-s' | 'individuals' | 'p-chart' | 'c-chart';
-  sensitivity: number;
-  ucl: number | null;
-  lcl: number | null;
-  mean: number | null;
-  subgroupSize: number;
-  baselineComputedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+// ── Local-only types ────────────────────────────────────────────────────────
 
 export interface CreateSpcProfileRequest {
   name: string;
   machineId: number;
   nodeKey: string;
-  method: string;
+  method: 'zscore' | 'moving_avg' | 'std_bands' | 'cusum';
   sensitivity: number;
-  subgroupSize?: number;
-}
-
-export interface SpcChartDataPoint {
-  timestamp: string;
-  value: number;
-  subgroupIndex?: number;
-  outOfControl: boolean;
-}
-
-export interface SpcChartData {
-  profileId: number;
-  profileName: string;
-  ucl: number;
-  lcl: number;
-  mean: number;
-  points: SpcChartDataPoint[];
-}
-
-export interface SpcAlert {
-  id: number;
-  profileId: number;
-  profileName: string;
-  machineId: number;
-  nodeKey: string;
-  alertType: string;
-  value: number;
-  threshold: number;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  acknowledged: boolean;
-  acknowledgedBy: string | null;
-  acknowledgedAt: string | null;
-  createdAt: string;
+  windowSize?: number;
 }
 
 export interface SpcAlertFilters {

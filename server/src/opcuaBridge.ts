@@ -12,9 +12,13 @@ import dbClient from "./database/dbConnection.js";
 import { shutdownTracing } from "./observability/tracing.js";
 import { opcuaDataPointsReceived } from "./observability/metrics.js";
 
-import type { OpcuaNodeData, AlarmEvent } from "@performance-dashboard/shared";
+import type {
+  OpcuaNodeData,
+  AlarmEvent,
+  SpcAlertEvent,
+} from "@performance-dashboard/shared";
 import alarmEvaluator from "./services/alarmService.js";
-import { spcService } from "./services/spcService.js";
+import { spcService, spcEvents } from "./services/spcService.js";
 import { edgeSyncService } from "./services/edgeSyncService.js";
 
 interface Services {
@@ -27,16 +31,23 @@ interface Services {
     }) => void;
   };
   alarmService: { broadcastAlarmTriggered: (data: AlarmEvent) => void };
+  spcService: { broadcastSpcAlert: (data: SpcAlertEvent) => void };
 }
 
 /** Wire OPC UA events to socket broadcasts, queue, metrics, and alarm evaluation. */
 export function setupOpcuaBridge({
   opcuaService,
   alarmService,
+  spcService: spcSocketService,
 }: Services): void {
   // Wire alarm evaluator to socket broadcasts
   alarmEvaluator.on("alarmTriggered", (alarm: AlarmEvent) => {
     alarmService.broadcastAlarmTriggered(alarm);
+  });
+
+  // Wire SPC alert events to socket broadcasts
+  spcEvents.on("spcAlert", (alert: SpcAlertEvent) => {
+    spcSocketService.broadcastSpcAlert(alert);
   });
 
   // Load alarm rules on startup

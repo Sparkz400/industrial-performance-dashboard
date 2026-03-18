@@ -31,8 +31,9 @@ interface MonitoredPool {
   retryDelay: number;
 }
 
-const isRetryableError = (error: any): boolean =>
-  [
+const isRetryableError = (error: unknown): boolean => {
+  const code = (error as { code?: string })?.code;
+  return code != null && [
     "ECONNRESET",
     "ETIMEDOUT",
     "57P01",
@@ -40,7 +41,8 @@ const isRetryableError = (error: any): boolean =>
     "08003",
     "08006",
     "40001",
-  ].includes(error?.code);
+  ].includes(code);
+};
 
 const formatQueryPreview = (text: string): string => {
   const normalized = text.replace(/\s+/g, " ").trim();
@@ -149,22 +151,23 @@ class DatabaseManager {
     if (this.wrappedClients.has(client)) return;
 
     this.wrappedClients.add(client);
-    const originalQuery = client.query.bind(client);
+    const originalQuery = client.query.bind(client) as (...args: unknown[]) => unknown;
 
-    (client as any).query = async (...args: any[]) => {
+    // Override the query method to add monitoring
+    (client as unknown as { query: typeof originalQuery }).query = async (...args: unknown[]) => {
       if (
         typeof args[1] === "function" ||
         typeof args[2] === "function" ||
         typeof args[0] === "function"
       ) {
-        return (originalQuery as any)(...args);
+        return originalQuery(...args);
       }
 
-      const queryText = this.extractQueryText(args[0]);
+      const queryText = this.extractQueryText(args[0] as string | { text?: string } | undefined);
       const startedAt = performance.now();
 
       try {
-        const result = await (originalQuery as any)(...args);
+        const result = await (originalQuery(...args) as Promise<pg.QueryResult>);
         this.recordQueryExecution({
           target,
           text: queryText,
@@ -172,13 +175,14 @@ class DatabaseManager {
           rowCount: result.rowCount,
         });
         return result;
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as { code?: string; message?: string };
         this.recordQueryExecution({
           target,
           text: queryText,
           durationMs: performance.now() - startedAt,
-          errorCode: error?.code,
-          errorMessage: error?.message,
+          errorCode: err?.code,
+          errorMessage: err?.message,
         });
         throw error;
       }
@@ -265,20 +269,21 @@ class DatabaseManager {
       }
 
       this.refreshDatabaseStatus("Database connection successful");
-    } catch (error: any) {
+    } catch (error: unknown) {
       poolState.isHealthy = false;
+      const err = error as { message?: string; code?: string };
 
       logger.error("PostgreSQL connection error", {
         pool: poolState.name,
         role: poolState.role,
-        message: error.message,
-        code: error.code,
+        message: err.message,
+        code: err.code,
       });
 
       if (poolState.role === "primary") {
         statusManager.setDatabaseStatus(StatusConstants.ERROR, {
           message: "Primary database connection failed",
-          error: error.message,
+          error: err.message,
           pool: poolState.name,
         });
       }
@@ -378,14 +383,15 @@ class DatabaseManager {
       }
 
       throw new Error("Health check returned no rows");
-    } catch (error: any) {
+    } catch (error: unknown) {
       poolState.isHealthy = false;
+      const err = error as { message?: string; code?: string };
 
       logger.error("Database health check failed", {
         pool: poolState.name,
         role: poolState.role,
-        message: error.message,
-        code: error.code,
+        message: err.message,
+        code: err.code,
       });
 
       return false;
@@ -429,7 +435,7 @@ class DatabaseManager {
     });
   }
 
-  private getPoolSnapshot(poolState: MonitoredPool): Record<string, any> {
+  private getPoolSnapshot(poolState: MonitoredPool): Record<string, unknown> {
     return {
       name: poolState.name,
       role: poolState.role,
@@ -497,21 +503,22 @@ class DatabaseManager {
     while (retries <= maxRetries) {
       try {
         return await poolState.pool.query(text, params);
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as { message?: string; code?: string };
         logger.error("Database query error", {
           pool: poolState.name,
           role: poolState.role,
           attempt: retries + 1,
           maxAttempts: maxRetries + 1,
-          message: error.message,
-          code: error.code,
+          message: err.message,
+          code: err.code,
           query: formatQueryPreview(text),
         });
 
         if (options.target === "read" && poolState.role === "replica") {
           logger.warn("Read query on replica failed; falling back to primary", {
             failedPool: poolState.name,
-            code: error.code,
+            code: err.code,
           });
 
           poolState.isHealthy = false;
@@ -567,13 +574,14 @@ class DatabaseManager {
       statusManager.setDatabaseStatus(StatusConstants.DISCONNECTED, {
         message: "All database pools closed",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       logger.error("Error closing database pools", {
-        message: error.message,
+        message: err.message,
       });
       statusManager.setDatabaseStatus(StatusConstants.ERROR, {
         message: "Error closing database pools",
-        error: error.message,
+        error: err.message,
       });
     }
   }

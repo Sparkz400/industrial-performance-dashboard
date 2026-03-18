@@ -6,8 +6,10 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import {
   complianceService,
   getComplianceActor,
+  type ComplianceLogQuery,
 } from "../services/complianceService.js";
 import { dashboardVersionService } from "../services/dashboardVersionService.js";
+import config from "../config/config.js";
 
 const router = express.Router();
 
@@ -60,8 +62,10 @@ router.get(
   requireRole("admin"),
   validateQuery(listLogsQuerySchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const logs = await complianceService.listComplianceLogs(req.query as any);
-    res.json(logs);
+    const logs = await complianceService.listComplianceLogs(
+      req.query as ComplianceLogQuery,
+    );
+    res.json({ logs, total: logs.length });
   }),
 );
 
@@ -220,6 +224,72 @@ router.post(
       res.json(restored);
     },
   ),
+);
+
+// GET /stats - Compliance overview statistics
+router.get(
+  "/stats",
+  requireRole("admin"),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const stats = await complianceService.getComplianceStats();
+    res.json(stats);
+  }),
+);
+
+// GET /config - Get compliance configuration
+router.get(
+  "/config",
+  requireRole("admin"),
+  asyncHandler(async (_req: Request, res: Response) => {
+    const complianceConfig = await complianceService.getComplianceConfig();
+    res.json(complianceConfig);
+  }),
+);
+
+// PUT /config - Update compliance configuration
+router.put(
+  "/config",
+  requireRole("admin"),
+  asyncHandler(async (req: Request, res: Response) => {
+    const updated = await complianceService.updateComplianceConfig(req.body);
+    const actor = getComplianceActor(req);
+    await complianceService.recordComplianceEvent(
+      {
+        action: "compliance.config_updated",
+        entityType: "compliance_config",
+        message: "Compliance configuration updated",
+        metadata: { changes: req.body },
+      },
+      actor,
+    );
+    res.json(updated);
+  }),
+);
+
+// POST /reports/generate - Generate compliance report
+router.post(
+  "/reports/generate",
+  requireRole("admin"),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { reportType, dateFrom, dateTo, format } = req.body;
+    const report = await complianceService.generateReport({
+      reportType,
+      dateFrom,
+      dateTo,
+      format: format || "json",
+    });
+
+    if (format === "csv") {
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="compliance-${reportType}-${new Date().toISOString().slice(0, 10)}.csv"`,
+      );
+      res.send(report);
+    } else {
+      res.json(report);
+    }
+  }),
 );
 
 export default router;

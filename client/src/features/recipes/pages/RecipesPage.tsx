@@ -107,11 +107,16 @@ const RecipesPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
+    <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-        <Typography variant="h4">Recipes</Typography>
+        <Box>
+          <Typography variant="h5">Process Specifications</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Define reference parameters and tolerances for compliance monitoring during batch runs.
+          </Typography>
+        </Box>
         <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>
-          Create Recipe
+          New Specification
         </Button>
       </Stack>
 
@@ -210,7 +215,7 @@ const RecipesPage: React.FC = () => {
               <TableRow>
                 <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                   <Typography variant="body2" color="text.secondary">
-                    No recipes found. Create one to get started.
+                    No process specifications found. Create one to define compliance reference values.
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -221,11 +226,11 @@ const RecipesPage: React.FC = () => {
 
       {/* Create / Edit Dialog */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editTarget ? 'Edit Recipe' : 'Create Recipe'}</DialogTitle>
+        <DialogTitle>{editTarget ? 'Edit Specification' : 'New Process Specification'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
-              label="Recipe Name"
+              label="Specification Name"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               fullWidth
@@ -251,7 +256,7 @@ const RecipesPage: React.FC = () => {
               minRows={2}
             />
             <Typography variant="subtitle2" color="text.secondary">
-              Parameters can be configured after creation via the recipe detail view.
+              Parameters and tolerances can be configured after creation.
             </Typography>
           </Stack>
         </DialogContent>
@@ -271,7 +276,7 @@ const RecipesPage: React.FC = () => {
 
       {/* Delete Confirmation */}
       <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
-        <DialogTitle>Delete Recipe</DialogTitle>
+        <DialogTitle>Delete Specification</DialogTitle>
         <DialogContent>
           <Typography>
             Are you sure you want to delete <strong>{deleteTarget?.name}</strong> (v

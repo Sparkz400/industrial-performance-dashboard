@@ -12,7 +12,7 @@ const UptimeRatePerDaySettings: React.FC<UptimeRatePerDaySettingsProps> = ({
   onConfigChange,
 }) => {
   // The current expected uptime, defaulting to 99 if not provided
-  const expectedUptime = config.expectedUptime || 99;
+  const expectedUptime = (config.expectedUptime as number) || 99;
 
   const handleChange = (_event: Event, newValue: number | number[]) => {
     onConfigChange({ ...config, expectedUptime: newValue as number });

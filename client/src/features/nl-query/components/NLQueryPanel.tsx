@@ -57,9 +57,9 @@ function NLChart({ config }: { config: NLChartConfig }) {
     const lineData = [
       {
         id: config.yAxis,
-        data: config.data.map((d: Record<string, unknown>) => ({
-          x: d[config.xAxis],
-          y: d[config.yAxis],
+        data: (config.data as Record<string, unknown>[]).map((d) => ({
+          x: d[config.xAxis] as string | number,
+          y: d[config.yAxis] as number,
         })),
       },
     ];
@@ -88,7 +88,7 @@ function NLChart({ config }: { config: NLChartConfig }) {
     return (
       <Box sx={{ height: 250 }}>
         <ResponsiveBar
-          data={config.data as Record<string, unknown>[]}
+          data={config.data as Record<string, string | number>[]}
           keys={[config.yAxis]}
           indexBy={config.xAxis}
           margin={{ top: 20, right: 20, bottom: 50, left: 60 }}
@@ -102,10 +102,10 @@ function NLChart({ config }: { config: NLChartConfig }) {
   }
 
   if (config.type === 'pie') {
-    const pieData = config.data.map((d: Record<string, unknown>, i: number) => ({
-      id: d[config.xAxis] || `item-${i}`,
-      label: d[config.xAxis] || `Item ${i}`,
-      value: d[config.yAxis],
+    const pieData = (config.data as Record<string, unknown>[]).map((d, i: number) => ({
+      id: (d[config.xAxis] as string) || `item-${i}`,
+      label: (d[config.xAxis] as string) || `Item ${i}`,
+      value: d[config.yAxis] as number,
     }));
     return (
       <Box sx={{ height: 250 }}>

@@ -116,7 +116,7 @@ const SpcAlertsList: React.FC<SpcAlertsListProps> = ({ profileId, machineId }) =
               alerts.map((alert) => (
                 <TableRow key={alert.id} hover>
                   <TableCell>{new Date(alert.createdAt).toLocaleString()}</TableCell>
-                  <TableCell>{alert.profileName}</TableCell>
+                  <TableCell>{alert.profileName ?? `Profile #${alert.profileId}`}</TableCell>
                   <TableCell>
                     <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem">
                       {alert.nodeKey}
@@ -133,14 +133,14 @@ const SpcAlertsList: React.FC<SpcAlertsListProps> = ({ profileId, machineId }) =
                     />
                   </TableCell>
                   <TableCell>
-                    {alert.acknowledged ? (
+                    {alert.acknowledgedAt ? (
                       <Chip label="Acknowledged" size="small" color="success" variant="outlined" />
                     ) : (
                       <Chip label="Open" size="small" color="warning" variant="outlined" />
                     )}
                   </TableCell>
                   <TableCell align="right">
-                    {!alert.acknowledged && (
+                    {!alert.acknowledgedAt && (
                       <Button
                         size="small"
                         startIcon={<CheckIcon />}

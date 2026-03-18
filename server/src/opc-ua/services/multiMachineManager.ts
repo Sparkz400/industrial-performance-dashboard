@@ -259,8 +259,8 @@ class MultiMachineManager extends EventEmitter {
     const entry = this.connections.get(machineId);
 
     // If not connected, do a temporary connection for browsing
-    let session: any;
-    let tempClient: any;
+    let session: opcua.ClientSession | null = null;
+    let tempClient: opcua.OPCUAClient | null = null;
     let useTempConnection = false;
 
     if (entry?.connection?.session?.isOpen) {
@@ -297,7 +297,7 @@ class MultiMachineManager extends EventEmitter {
       });
 
       const nodes: BrowsedNode[] = (browseResult.references || []).map(
-        (ref: any) => ({
+        (ref: opcua.ReferenceDescription) => ({
           nodeId: ref.nodeId.toString(),
           browseName: ref.browseName.toString(),
           displayName: ref.displayName?.text || ref.browseName.toString(),

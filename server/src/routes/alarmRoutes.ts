@@ -31,7 +31,15 @@ router.get(
   "/",
   validateQuery(alarmsQuerySchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const alarms = await alarmRepository.listAlarms(req.query as any);
+    const alarms = await alarmRepository.listAlarms(req.query as {
+      severity?: string;
+      status?: string;
+      machineId?: number;
+      limit?: number;
+      offset?: number;
+      startDate?: string;
+      endDate?: string;
+    });
     res.json(alarms);
   }),
 );
@@ -45,7 +53,7 @@ router.post(
   validateParams(idParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id);
-    const userId = (req as any).session?.userId ?? null;
+    const userId = req.session?.userId ?? null;
     const alarm = await alarmRepository.acknowledgeAlarm(id, userId);
     if (!alarm) {
       res.status(404).json({ error: "Alarm not found" });
@@ -121,7 +129,7 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const rule = await alarmRepository.createRule({
       ...req.body,
-      createdBy: (req as any).session?.userId ?? null,
+      createdBy: req.session?.userId ?? null,
     });
     await alarmEvaluator.reloadRules();
     res.status(201).json(rule);

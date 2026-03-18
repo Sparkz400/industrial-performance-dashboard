@@ -4,39 +4,48 @@ import { API_ENDPOINTS } from '@/config/config';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export interface BatchParameterValue {
-  name: string;
-  unit: string;
-  setpoint: number;
-  currentValue: number;
-  min: number;
-  max: number;
-}
-
 export interface Batch {
   id: number;
   batchNumber: string;
-  recipeId: number;
-  recipeName: string;
-  recipeVersion: number;
-  machineId: number;
-  machineName?: string;
-  status: 'pending' | 'running' | 'completed' | 'aborted';
+  recipeId: number | null;
+  recipeName: string | null;
+  recipeVersion: number | null;
+  machineId: number | null;
+  status: 'planned' | 'running' | 'completed' | 'aborted';
   startedAt: string | null;
   completedAt: string | null;
-  abortedAt: string | null;
+  notes: string | null;
+  metadata: Record<string, unknown>;
+  summary: BatchSummary | null;
   abortReason: string | null;
-  createdBy: string;
+  startedBy: number | null;
+  completedBy: number | null;
   createdAt: string;
+  updatedAt: string;
 }
 
-export interface BatchData {
-  batchId: number;
-  parameters: BatchParameterValue[];
-  dataPoints: Array<{
-    timestamp: string;
-    values: Record<string, number>;
-  }>;
+export interface BatchSummary {
+  duration: number;
+  parameterResults: BatchParameterResult[];
+  overallCompliance: number;
+}
+
+export interface BatchParameterResult {
+  nodeKey: string;
+  displayName: string;
+  targetValue: number;
+  actualAvg: number;
+  actualMin: number;
+  actualMax: number;
+  withinTolerance: boolean;
+}
+
+/** Time-series data for a single parameter within a batch */
+export interface BatchDataSeries {
+  nodeKey: string;
+  displayName: string;
+  dataPoints: Array<{ timestamp: string; value: number }>;
+  setpoint?: number;
 }
 
 export interface CreateBatchRequest {
@@ -57,11 +66,9 @@ export interface CompareBatchesRequest {
 }
 
 export interface BatchComparison {
-  batches: Batch[];
-  parameterComparison: Array<{
-    name: string;
-    values: Record<number, { avg: number; min: number; max: number }>;
-  }>;
+  batchId: number;
+  batchNumber: string;
+  data: BatchDataSeries[];
 }
 
 // ── Query Keys ─────────────────────────────────────────────────────────────
@@ -76,10 +83,6 @@ const batchKeys = {
 
 // ── Hooks ──────────────────────────────────────────────────────────────────
 
-/**
- *
- * @param filters
- */
 function buildBatchParams(filters: BatchFilters): string {
   const params = new URLSearchParams();
   if (filters.recipeId) params.set('recipeId', String(filters.recipeId));
@@ -90,10 +93,6 @@ function buildBatchParams(filters: BatchFilters): string {
   return qs ? `?${qs}` : '';
 }
 
-/**
- *
- * @param filters
- */
 export function useBatches(filters: BatchFilters = {}) {
   return useQuery({
     queryKey: batchKeys.list(filters),
@@ -102,10 +101,6 @@ export function useBatches(filters: BatchFilters = {}) {
   });
 }
 
-/**
- *
- * @param id
- */
 export function useBatch(id: number) {
   return useQuery({
     queryKey: batchKeys.detail(id),
@@ -114,9 +109,6 @@ export function useBatch(id: number) {
   });
 }
 
-/**
- *
- */
 export function useCreateBatch() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -128,9 +120,6 @@ export function useCreateBatch() {
   });
 }
 
-/**
- *
- */
 export function useStartBatch() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -141,9 +130,6 @@ export function useStartBatch() {
   });
 }
 
-/**
- *
- */
 export function useCompleteBatch() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -154,9 +140,6 @@ export function useCompleteBatch() {
   });
 }
 
-/**
- *
- */
 export function useAbortBatch() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -168,32 +151,22 @@ export function useAbortBatch() {
   });
 }
 
-/**
- *
- * @param id
- */
+/** Fetches time-series data for a batch (array of series per parameter) */
 export function useBatchData(id: number) {
   return useQuery({
     queryKey: batchKeys.data(id),
-    queryFn: () => api.get(API_ENDPOINTS.batches.data(id)) as Promise<BatchData>,
+    queryFn: () => api.get(API_ENDPOINTS.batches.data(id)) as Promise<BatchDataSeries[]>,
     enabled: id > 0,
   });
 }
 
-/**
- *
- */
 export function useCompareBatches() {
   return useMutation({
     mutationFn: (data: CompareBatchesRequest) =>
-      api.post(API_ENDPOINTS.batches.compare, data) as Promise<BatchComparison>,
+      api.post(API_ENDPOINTS.batches.compare, data) as Promise<BatchComparison[]>,
   });
 }
 
-/**
- *
- * @param machineId
- */
 export function useActiveBatch(machineId?: number) {
   return useQuery({
     queryKey: batchKeys.active(machineId),

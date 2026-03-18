@@ -36,7 +36,7 @@ const activeQuerySchema = Joi.object({
 // --- Body schemas ---
 
 const createBatchSchema = Joi.object({
-  batchNumber: Joi.string().min(1).max(100).required(),
+  batchNumber: Joi.string().min(1).max(100).allow("", null).optional(),
   recipeId: Joi.number().integer().positive().allow(null).optional(),
   machineId: Joi.number().integer().positive().allow(null).optional(),
   notes: Joi.string().allow("", null).optional(),

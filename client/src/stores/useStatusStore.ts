@@ -4,6 +4,7 @@ import type { SystemStatus, ServerToClientEvents, ClientToServerEvents } from '.
 import { API_ENDPOINTS, WEBSOCKET_ADDR } from '../config/config';
 import { getStoredCsrfToken } from '../utils/csrf';
 import { useNotificationStore } from './useNotificationStore';
+import { useSpcStore } from './useSpcStore';
 
 type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -32,12 +33,13 @@ export const useStatusStore = create<StatusState>((set, get) => {
   let pollingInterval: ReturnType<typeof setInterval> | null = null;
   let isPolling = false;
   let cleanupNotificationListeners: (() => void) | null = null;
+  let cleanupSpcListeners: (() => void) | null = null;
 
   const refreshStatus = async () => {
     if (isPolling) return;
     isPolling = true;
     try {
-      const res = await fetch(API_ENDPOINTS.status);
+      const res = await fetch(API_ENDPOINTS.status, { credentials: 'include' });
       if (!res.ok) throw new Error(`Failed to fetch status: ${res.status}`);
       const data = await res.json();
       set({
@@ -86,6 +88,7 @@ export const useStatusStore = create<StatusState>((set, get) => {
           reconnectionAttempts: 5,
           reconnectionDelay: 3000,
           transports: ['websocket'],
+          withCredentials: true,
           auth: { token: token || undefined },
         });
 
@@ -96,6 +99,12 @@ export const useStatusStore = create<StatusState>((set, get) => {
           // Wire up notification listeners on connect
           if (socketInstance && !cleanupNotificationListeners) {
             cleanupNotificationListeners = useNotificationStore
+              .getState()
+              .initSocketListeners(socketInstance);
+          }
+          // Wire up SPC alert count listeners on connect
+          if (socketInstance && !cleanupSpcListeners) {
+            cleanupSpcListeners = useSpcStore
               .getState()
               .initSocketListeners(socketInstance);
           }
@@ -138,6 +147,10 @@ export const useStatusStore = create<StatusState>((set, get) => {
       if (cleanupNotificationListeners) {
         cleanupNotificationListeners();
         cleanupNotificationListeners = null;
+      }
+      if (cleanupSpcListeners) {
+        cleanupSpcListeners();
+        cleanupSpcListeners = null;
       }
       if (socketInstance) {
         socketInstance.off('connect');

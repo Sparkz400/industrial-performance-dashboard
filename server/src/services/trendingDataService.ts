@@ -107,7 +107,7 @@ export const trendingDataService = {
     const seriesList: Series[] = [];
 
     for (const nodeKey of nodeKeys) {
-      let rows: { timestamp: Date | string; value: number | null }[];
+      let rows: { timestamp: unknown; value: number | null }[];
 
       const conditions = [
         eq(opcuaData.nodeKey, nodeKey),
@@ -197,7 +197,7 @@ export const trendingDataService = {
         conditions.push(eq(opcuaData.machineId, machineId));
       }
 
-      let rows: { timestamp: Date | string; value: number | null }[];
+      let rows: { timestamp: unknown; value: number | null }[];
 
       if (bucketSeconds != null) {
         const bucketExpr = sql`to_timestamp(floor(extract(epoch from ${opcuaData.timestamp}) / ${bucketSeconds}) * ${bucketSeconds})`;

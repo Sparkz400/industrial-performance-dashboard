@@ -224,6 +224,24 @@ const envVarsSchema = Joi.object({
   OTEL_SERVICE_NAME: Joi.string()
     .default("performance-dashboard-server")
     .description("Service name for OpenTelemetry"),
+
+  // SMTP / Email
+  SMTP_HOST: Joi.string()
+    .optional()
+    .description("SMTP server host for email delivery"),
+  SMTP_PORT: Joi.alternatives()
+    .try(Joi.number().port(), Joi.string())
+    .optional()
+    .description("SMTP server port"),
+  SMTP_USER: Joi.string()
+    .optional()
+    .description("SMTP authentication user"),
+  SMTP_PASS: Joi.string()
+    .optional()
+    .description("SMTP authentication password"),
+  SMTP_FROM: Joi.string()
+    .optional()
+    .description("Sender address for outgoing emails"),
 }).unknown(true);
 
 const { value: envVars, error } = envVarsSchema
@@ -295,7 +313,11 @@ export interface AppConfig {
   ANTHROPIC_MODEL: string;
   WEBHOOK_SIGNING_SECRET: string;
   ALLOW_PRIVATE_OUTBOUND_URLS: boolean;
-  [key: string]: any;
+  SMTP_HOST?: string;
+  SMTP_PORT?: number | string;
+  SMTP_USER?: string;
+  SMTP_PASS?: string;
+  SMTP_FROM?: string;
 }
 
 // Export the validated and coerced configuration object

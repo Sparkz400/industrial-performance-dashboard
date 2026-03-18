@@ -9,11 +9,21 @@ export interface ComplianceLogEntry {
   action: string;
   entityType: string;
   entityId: string;
+  entityName: string | null;
   userId: number;
   username: string;
+  userRole: string | null;
+  ipAddress: string | null;
+  message: string;
   reason: string | null;
+  reasonForChange: string | null;
   signature: string | null;
+  electronicSignature: Record<string, unknown> | null;
   metadata: Record<string, unknown>;
+  snapshotBefore: Record<string, unknown> | null;
+  snapshotAfter: Record<string, unknown> | null;
+  checksum: string;
+  previousChecksum: string | null;
   createdAt: string;
 }
 
@@ -30,9 +40,40 @@ export interface ComplianceLogFilters {
 export interface IntegrityCheckResult {
   valid: boolean;
   totalRecords: number;
+  checkedRecords: number;
   invalidRecords: number;
+  firstBrokenId: number | null;
   details: Array<{ id: number; reason: string }>;
   checkedAt: string;
+}
+
+export interface ComplianceStats {
+  complianceModeEnabled: boolean;
+  totalEvents: number;
+  eventsLast30Days: number;
+  eventsLast7Days: number;
+  unsignedEventsLast30Days: number;
+  signedEventsLast30Days: number;
+  eventsWithoutReasonLast30Days: number;
+  eventsWithReasonLast30Days: number;
+  signatureCoverage: number;
+  reasonCoverage: number;
+  byAction: Array<{ action: string; count: number }>;
+  byEntityType: Array<{ entityType: string; count: number }>;
+  recentEvents: ComplianceLogEntry[];
+}
+
+export interface ComplianceConfig {
+  complianceModeEnabled: boolean;
+  requireSignatureFor: string[];
+  requireReasonFor: string[];
+}
+
+export interface ReportRequest {
+  reportType: string;
+  dateFrom?: string;
+  dateTo?: string;
+  format: 'csv' | 'json';
 }
 
 export interface VerifySignatureRequest {
@@ -71,6 +112,8 @@ const complianceKeys = {
   all: ['compliance'] as const,
   logs: (filters: ComplianceLogFilters) => [...complianceKeys.all, 'logs', filters] as const,
   integrityCheck: () => [...complianceKeys.all, 'integrity-check'] as const,
+  stats: () => [...complianceKeys.all, 'stats'] as const,
+  config: () => [...complianceKeys.all, 'config'] as const,
   dashboardVersions: (dashboardId: string) =>
     [...complianceKeys.all, 'dashboard-versions', dashboardId] as const,
   dashboardDiff: (dashboardId: string, versionA: number, versionB: number) =>
@@ -180,5 +223,40 @@ export function useRestoreVersion() {
         queryKey: complianceKeys.dashboardVersions(variables.dashboardId),
       });
     },
+  });
+}
+
+// ── New hooks for compliance overview, config, and reports ───────────────
+
+export function useComplianceStats() {
+  return useQuery({
+    queryKey: complianceKeys.stats(),
+    queryFn: () => api.get(API_ENDPOINTS.compliance.stats) as Promise<ComplianceStats>,
+    refetchInterval: 60_000, // Refresh every minute
+  });
+}
+
+export function useComplianceConfig() {
+  return useQuery({
+    queryKey: complianceKeys.config(),
+    queryFn: () => api.get(API_ENDPOINTS.compliance.config) as Promise<ComplianceConfig>,
+  });
+}
+
+export function useUpdateComplianceConfig() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (config: Partial<ComplianceConfig>) =>
+      api.put(API_ENDPOINTS.compliance.config, config) as Promise<ComplianceConfig>,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: complianceKeys.config() });
+    },
+  });
+}
+
+export function useGenerateReport() {
+  return useMutation({
+    mutationFn: (request: ReportRequest) =>
+      api.post(API_ENDPOINTS.compliance.generateReport, request) as Promise<unknown>,
   });
 }

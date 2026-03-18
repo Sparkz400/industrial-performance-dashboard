@@ -124,6 +124,7 @@ export type {
   ClientToServerEvents,
   InterServerEvents,
   SocketData,
+  AcknowledgeAlertPayload,
 } from './socket-events.js';
 
 // API Request/Response Types

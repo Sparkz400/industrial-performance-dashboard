@@ -36,6 +36,13 @@ const ReportSchedulesPage = React.lazy(
 );
 const ReportHistoryPage = React.lazy(() => import('./features/reports/pages/ReportHistoryPage'));
 
+// Tier 2 feature pages
+const CompliancePage = React.lazy(() => import('./features/compliance/pages/CompliancePage'));
+const SpcProfilesPage = React.lazy(() => import('./features/spc/pages/SpcProfilesPage'));
+const SpcChartPage = React.lazy(() => import('./features/spc/pages/SpcChartPage'));
+const RecipesPage = React.lazy(() => import('./features/recipes/pages/RecipesPage'));
+const BatchesPage = React.lazy(() => import('./features/recipes/pages/BatchesPage'));
+
 // Modern loading component with skeleton
 const PageLoader = () => (
   <Box
@@ -344,6 +351,55 @@ function App() {
                       element={
                         <PageTransition>
                           <ReportHistoryPage />
+                        </PageTransition>
+                      }
+                    />
+                    {/* Tier 2: Compliance */}
+                    <Route
+                      path="/compliance"
+                      element={
+                        <PrivateRoute requiredRole="admin">
+                          <PageTransition>
+                            <CompliancePage />
+                          </PageTransition>
+                        </PrivateRoute>
+                      }
+                    />
+                    {/* Tier 2: SPC */}
+                    <Route
+                      path="/spc"
+                      element={
+                        <PrivateRoute requiredRole="admin">
+                          <PageTransition>
+                            <SpcProfilesPage />
+                          </PageTransition>
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="/spc/chart/:id"
+                      element={
+                        <PageTransition>
+                          <SpcChartPage />
+                        </PageTransition>
+                      }
+                    />
+                    {/* Tier 2: Recipes & Batches */}
+                    <Route
+                      path="/recipes"
+                      element={
+                        <PrivateRoute requiredRole="admin">
+                          <PageTransition>
+                            <RecipesPage />
+                          </PageTransition>
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="/batches"
+                      element={
+                        <PageTransition>
+                          <BatchesPage />
                         </PageTransition>
                       }
                     />

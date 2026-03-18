@@ -69,7 +69,7 @@ const SystemInfoTab: React.FC = () => {
                     Node.js Version
                   </Typography>
                   <Typography variant="body1">
-                    {systemStats?.platform?.release || 'v16.14.2'}
+                    {systemStats?.nodeVersion || 'Unknown'}
                   </Typography>
                 </Box>
               </Card>

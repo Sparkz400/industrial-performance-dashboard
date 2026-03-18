@@ -219,7 +219,14 @@ router.get(
   "/history",
   validateQuery(historyQuerySchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const history = await reportRepository.listHistory(req.query as any);
+    const history = await reportRepository.listHistory(req.query as {
+      scheduleId?: number;
+      status?: string;
+      startDate?: string;
+      endDate?: string;
+      limit?: number;
+      offset?: number;
+    });
     res.json(history);
   }),
 );

@@ -12,7 +12,7 @@ const OeeGaugeWidgetSettings: React.FC<OeeGaugeWidgetSettingsProps> = ({
   config,
   onConfigChange,
 }) => {
-  const { machineId = '' } = config || {};
+  const machineId = String((config || {}).machineId ?? '');
   const machines = useMachineStore((s) => s.machines);
   const fetchMachines = useMachineStore((s) => s.fetchMachines);
 

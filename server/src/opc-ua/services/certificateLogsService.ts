@@ -102,7 +102,7 @@ class CertificateLogsService {
 
       return {
         logs: logsResult.rows,
-        total: parseInt((countResult.rows[0] as any).count),
+        total: parseInt((countResult.rows[0] as { count: string }).count),
         limit,
         offset,
       };

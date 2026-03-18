@@ -46,7 +46,14 @@ vi.mock('../../components/MachineStatusCard', () => ({
     onConnect,
     onDisconnect,
     onManageMappings,
-  }: Record<string, unknown> & { machine: { id: number; name: string } }) => (
+  }: {
+    machine: { id: number; name: string };
+    onEdit: (machine: { id: number; name: string }) => void;
+    onDelete: (machine: { id: number; name: string }) => void;
+    onConnect: (machine: { id: number; name: string }) => void;
+    onDisconnect: (machine: { id: number; name: string }) => void;
+    onManageMappings: (machine: { id: number; name: string }) => void;
+  }) => (
     <div data-testid={`machine-card-${machine.id}`}>
       <span>{machine.name}</span>
       <button data-testid={`edit-${machine.id}`} onClick={() => onEdit(machine)}>
@@ -69,7 +76,12 @@ vi.mock('../../components/MachineStatusCard', () => ({
 }));
 
 vi.mock('../../components/MachineForm', () => ({
-  default: ({ open, onClose, onSubmit, machine }: Record<string, unknown>) =>
+  default: ({ open, onClose, onSubmit, machine }: {
+    open: boolean;
+    onClose: () => void;
+    onSubmit: (data: { name: string; ip: string; port: number }) => void;
+    machine?: unknown;
+  }) =>
     open ? (
       <div data-testid="machine-form">
         <span data-testid="form-mode">{machine ? 'edit' : 'add'}</span>
@@ -91,7 +103,11 @@ vi.mock('../../components/NodeMappingEditor', () => ({
     open,
     onClose,
     machine,
-  }: Record<string, unknown> & { machine?: { name: string } }) =>
+  }: {
+    open: boolean;
+    onClose: () => void;
+    machine?: { name: string };
+  }) =>
     open ? (
       <div data-testid="node-mapping-editor">
         <span>{machine?.name}</span>

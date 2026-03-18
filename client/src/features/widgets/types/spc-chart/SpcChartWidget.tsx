@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
-import { ResponsiveLine, type Serie, type CustomLayerProps } from '@nivo/line';
+import {
+  ResponsiveLine,
+  type LineSeries,
+  type LineCustomSvgLayerProps,
+} from '@nivo/line';
 import { useSpcChartData } from '@/features/spc/hooks/useSpcQueries';
 import type { WidgetConfig } from '@/types';
 
@@ -19,16 +23,16 @@ const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError })
     }
   }, [error, onError]);
 
-  const chartData: Serie[] = useMemo(() => {
-    if (!data?.points) return [];
+  const chartData: LineSeries[] = useMemo(() => {
+    if (!data?.dataPoints) return [];
 
     return [
       {
         id: 'values',
-        data: data.points.map((p) => ({
+        data: data.dataPoints.map((p) => ({
           x: new Date(p.timestamp),
           y: p.value,
-          outOfControl: p.outOfControl,
+          isAnomaly: p.isAnomaly,
         })),
       },
     ];
@@ -38,7 +42,7 @@ const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError })
   const controlLimitsLayer = useMemo(() => {
     if (!data) return undefined;
 
-    const ControlLimitsLayer = ({ yScale, innerWidth }: CustomLayerProps) => {
+    const ControlLimitsLayer = ({ yScale, innerWidth }: LineCustomSvgLayerProps<LineSeries>) => {
       const lines = [
         { value: data.ucl, label: 'UCL', color: '#f44336', dash: '6,3' },
         { value: data.mean, label: 'CL', color: '#2196f3', dash: '4,4' },
@@ -115,7 +119,7 @@ const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError })
     );
   }
 
-  if (!data || !data.points.length) {
+  if (!data || !data.dataPoints.length) {
     return (
       <Box
         sx={{
@@ -141,7 +145,7 @@ const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError })
   return (
     <Box sx={{ width: '100%', height: '100%', p: 1 }}>
       <Typography variant="subtitle2" sx={{ mb: 0.5, textAlign: 'center' }}>
-        {data.profileName}
+        {data.profile.name}
       </Typography>
       <Box sx={{ width: '100%', height: 'calc(100% - 24px)' }}>
         <ResponsiveLine
@@ -168,9 +172,9 @@ const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError })
           }}
           enablePoints
           pointSize={6}
-          pointColor={(point) => {
-            const d = point.data as unknown as { outOfControl?: boolean };
-            return d.outOfControl ? '#f44336' : '#2196f3';
+          pointColor={(point: Record<string, unknown>) => {
+            const d = (point as { data?: { isAnomaly?: boolean } }).data;
+            return d?.isAnomaly ? '#f44336' : '#2196f3';
           }}
           pointBorderWidth={1}
           pointBorderColor={{ from: 'serieColor' }}

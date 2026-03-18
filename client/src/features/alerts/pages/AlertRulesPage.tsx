@@ -30,6 +30,7 @@ import { API_ENDPOINTS } from '@/config/config';
 import protectedFetch from '@/utils/protectedFetch';
 import { useMachineStore } from '@/stores/useMachineStore';
 import AlertRuleForm from '../components/AlertRuleForm';
+import type { AlertRuleFormValues } from '../components/AlertRuleForm';
 
 interface AlertRule {
   id: number;
@@ -149,11 +150,12 @@ const AlertRulesPage: React.FC = () => {
   });
 
   const handleSubmit = useCallback(
-    (values: Record<string, unknown>) => {
+    (values: AlertRuleFormValues) => {
+      const payload = values as unknown as Record<string, unknown>;
       if (editingRule) {
-        updateMutation.mutate({ id: editingRule.id, values });
+        updateMutation.mutate({ id: editingRule.id, values: payload });
       } else {
-        createMutation.mutate(values);
+        createMutation.mutate(payload);
       }
     },
     [editingRule, createMutation, updateMutation],

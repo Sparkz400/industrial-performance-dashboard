@@ -92,6 +92,7 @@ export const useOpcUaConnection = (): OpcUaConnectionReturn => {
     try {
       const response = await fetch(
         `${API_ENDPOINTS.opcua.status.replace('/status', '')}/security-options`,
+        { credentials: 'include' },
       );
       if (response.ok) {
         const options = await response.json();
@@ -151,7 +152,7 @@ export const useOpcUaConnection = (): OpcUaConnectionReturn => {
   const handleDisconnect = async (): Promise<void> => {
     setLoading(true);
     try {
-      const data = await api.post(API_ENDPOINTS.opcua.disconnect, {});
+      const data = await api.post(API_ENDPOINTS.opcua.disconnect, {}) as { message?: string };
 
       // If we reach here, the request was successful
       setOpcuaConnected(false);
@@ -182,7 +183,7 @@ export const useOpcUaConnection = (): OpcUaConnectionReturn => {
   // Fetch OPC UA connection status
   const fetchConnectionStatus = useCallback(async (): Promise<void> => {
     try {
-      const res = await fetch(API_ENDPOINTS.opcua.status);
+      const res = await fetch(API_ENDPOINTS.opcua.status, { credentials: 'include' });
       const data: OpcUaStatusResponse = await res.json();
 
       if (res.ok) {

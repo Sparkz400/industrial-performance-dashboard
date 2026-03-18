@@ -12,12 +12,13 @@ export interface TrpcContext {
 export const createContext = ({
   req,
 }: CreateExpressContextOptions): TrpcContext => {
-  const session = (req as any).session ?? {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sess = req.session as any;
   return {
     session: {
-      userId: session.userId,
-      username: session.username,
-      userRole: session.userRole,
+      userId: sess?.userId as number | undefined,
+      username: sess?.username as string | undefined,
+      userRole: sess?.userRole as string | undefined,
     },
   };
 };
@@ -25,7 +26,6 @@ export const createContext = ({
 const t = initTRPC.context<TrpcContext>().create();
 
 export const router = t.router;
-export const publicProcedure = t.procedure;
 
 export const authedProcedure = t.procedure.use(({ ctx, next }) => {
   if (!ctx.session.userId) {

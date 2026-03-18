@@ -175,7 +175,8 @@ export const isCsrfError = async (response: Response): Promise<boolean> => {
           text.includes("csrf") ||
           text.includes("Invalid CSRF token")
         );
-      } catch (_err) {
+      } catch (err) {
+        console.warn("CSRF error check: unable to read response body", err);
         return false;
       }
     }

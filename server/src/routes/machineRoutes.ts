@@ -1,9 +1,14 @@
 import express, { type Request, type Response } from "express";
 import Joi from "joi";
 import { validateBody, validateParams } from "../middleware/validation.js";
+import { optionalComplianceFields } from "../middleware/complianceMiddleware.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { machineService } from "../services/machineService.js";
 import { auditLogService, getAuditActor } from "../services/auditLogService.js";
+import {
+  complianceService,
+  getComplianceActor,
+} from "../services/complianceService.js";
 
 const router = express.Router();
 type MachineIdParams = { id: string };
@@ -16,6 +21,8 @@ type MachineBody = {
   securityMode: string;
   securityPolicy: string;
   isActive: boolean;
+  reasonForChange?: string | null;
+  electronicSignature?: Record<string, unknown> | null;
 };
 type BrowseNodesBody = {
   parentNodeId?: string;
@@ -82,9 +89,11 @@ router.get(
 router.post(
   "/",
   validateBody(machineSchema),
+  optionalComplianceFields,
   asyncHandler(
     async (req: Request<unknown, unknown, MachineBody>, res: Response) => {
       const machine = await machineService.createMachine(req.body);
+      const actor = getAuditActor(req);
       await auditLogService.recordEvent(
         {
           action: "machine.created",
@@ -98,7 +107,24 @@ router.post(
             securityPolicy: machine.securityPolicy,
           },
         },
-        getAuditActor(req),
+        actor,
+      );
+      await complianceService.recordComplianceEvent(
+        {
+          action: "machine.created",
+          entityType: "machine",
+          entityId: machine.id,
+          entityName: machine.name,
+          message: `Created machine "${machine.name}"`,
+          reasonForChange: req.body.reasonForChange ?? null,
+          electronicSignature: req.body.electronicSignature ?? null,
+          snapshotAfter: {
+            name: machine.name,
+            endpointUrl: machine.endpointUrl,
+            securityMode: machine.securityMode,
+          },
+        },
+        getComplianceActor(req),
       );
       res.status(201).json(machine);
     },
@@ -117,15 +143,20 @@ router.put(
   "/:id",
   validateParams(machineIdParamSchema),
   validateBody(machineSchema),
+  optionalComplianceFields,
   asyncHandler(
     async (
       req: Request<MachineIdParams, unknown, MachineBody>,
       res: Response,
     ) => {
+      const existing = await machineService
+        .getMachineWithMappings(req.params.id)
+        .catch(() => null);
       const machine = await machineService.updateMachine(
         req.params.id,
         req.body,
       );
+      const actor = getAuditActor(req);
       await auditLogService.recordEvent(
         {
           action: "machine.updated",
@@ -140,7 +171,31 @@ router.put(
             isActive: machine.isActive,
           },
         },
-        getAuditActor(req),
+        actor,
+      );
+      await complianceService.recordComplianceEvent(
+        {
+          action: "machine.updated",
+          entityType: "machine",
+          entityId: machine.id,
+          entityName: machine.name,
+          message: `Updated machine "${machine.name}"`,
+          reasonForChange: req.body.reasonForChange ?? null,
+          electronicSignature: req.body.electronicSignature ?? null,
+          snapshotBefore: existing
+            ? {
+                name: existing.name,
+                endpointUrl: existing.endpointUrl,
+                securityMode: existing.securityMode,
+              }
+            : null,
+          snapshotAfter: {
+            name: machine.name,
+            endpointUrl: machine.endpointUrl,
+            securityMode: machine.securityMode,
+          },
+        },
+        getComplianceActor(req),
       );
       res.json(machine);
     },
@@ -151,7 +206,11 @@ router.delete(
   "/:id",
   validateParams(machineIdParamSchema),
   asyncHandler(async (req: Request<MachineIdParams>, res: Response) => {
+    const existing = await machineService
+      .getMachineWithMappings(req.params.id)
+      .catch(() => null);
     const machine = await machineService.deleteMachine(req.params.id);
+    const actor = getAuditActor(req);
     await auditLogService.recordEvent(
       {
         action: "machine.deleted",
@@ -160,7 +219,24 @@ router.delete(
         entityName: machine.name,
         message: `Deleted machine "${machine.name}"`,
       },
-      getAuditActor(req),
+      actor,
+    );
+    await complianceService.recordComplianceEvent(
+      {
+        action: "machine.deleted",
+        entityType: "machine",
+        entityId: machine.id,
+        entityName: machine.name,
+        message: `Deleted machine "${machine.name}"`,
+        snapshotBefore: existing
+          ? {
+              name: existing.name,
+              endpointUrl: existing.endpointUrl,
+              securityMode: existing.securityMode,
+            }
+          : null,
+      },
+      getComplianceActor(req),
     );
     res.json({ message: "Machine deleted", machine });
   }),

@@ -46,7 +46,7 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const annotation = await annotationRepository.create({
       ...req.body,
-      userId: (req as any).session?.userId ?? null,
+      userId: req.session?.userId ?? null,
     });
     res.status(201).json(annotation);
   }),

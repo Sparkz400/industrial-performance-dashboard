@@ -21,7 +21,7 @@ const pgSession = connectPgSimple(session);
 
 export interface MiddlewareContext {
   sessionStore: InstanceType<typeof pgSession>;
-  invalidCsrfTokenError: any;
+  invalidCsrfTokenError: unknown;
 }
 
 export function setupMiddleware(app: express.Application): MiddlewareContext {
@@ -110,10 +110,10 @@ export function setupMiddleware(app: express.Application): MiddlewareContext {
         return (req.headers[CSRF_HEADER_NAME] as string) || req.body?._csrf;
       },
       getTokenFromState: (req) => {
-        return (req as any).session?.csrfToken;
+        return req.session?.csrfToken;
       },
       storeTokenInState: (req, token) => {
-        (req as any).session.csrfToken = token;
+        req.session.csrfToken = token;
       },
       size: 64,
     });
@@ -126,12 +126,20 @@ export function setupMiddleware(app: express.Application): MiddlewareContext {
   });
 
   app.get("/api/v1/csrf-token", (req: Request, res: Response) => {
-    let token = (req.session as any).csrfToken;
+    let token = req.session.csrfToken;
     if (!token) {
       token = generateToken(req);
       logger.info(`[CSRF Token Gen] New token for session ${req.sessionID}`);
     }
-    res.json({ csrfToken: token });
+    // Explicitly save session before responding so the token is persisted
+    // to the store before the client can fire a POST with it.
+    req.session.save((err) => {
+      if (err) {
+        logger.error("[CSRF] Failed to save session:", err);
+        return res.status(500).json({ error: "Session save failed" });
+      }
+      res.json({ csrfToken: token });
+    });
   });
 
   return { sessionStore, invalidCsrfTokenError };

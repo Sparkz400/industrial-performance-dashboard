@@ -16,7 +16,9 @@ interface OperationModeWidgetProps {
  */
 const OperationModeWidget: React.FC<OperationModeWidgetProps> = ({ config = {}, onError }) => {
   // Extract configuration values with defaults
-  const { maxPoints = 120, showBrush = true, machineId } = config;
+  const maxPoints = (config.maxPoints as number) ?? 120;
+  const showBrush = (config.showBrush as boolean) ?? true;
+  const machineId = config.machineId as number | undefined;
 
   // Use custom hook for data fetching and state management
   const { data, loading, error, lastUpdated, refresh } = useOperationModeData({

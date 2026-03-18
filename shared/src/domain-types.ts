@@ -409,6 +409,7 @@ export interface SpcProfile {
 export interface SpcAlert {
   id: number;
   profileId: number;
+  profileName?: string;
   machineId: number | null;
   nodeKey: string;
   alertType: 'ucl_breach' | 'lcl_breach' | 'trend' | 'shift';

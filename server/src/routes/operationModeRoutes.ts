@@ -20,7 +20,12 @@ router.get(
   "/",
   validateQuery(operationModeSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const { limit, offset, startDate, endDate } = req.query as any;
+    const { limit, offset, startDate, endDate } = req.query as unknown as {
+      limit: number;
+      offset: number;
+      startDate?: string;
+      endDate?: string;
+    };
     const readDb = getReadDb();
 
     const conditions = [eq(opcuaData.nodeKey, "OperationMode")];

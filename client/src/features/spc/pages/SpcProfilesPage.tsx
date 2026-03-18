@@ -41,20 +41,19 @@ import {
 import SpcAlertsList from '../components/SpcAlertsList';
 
 const SPC_METHODS = [
-  { value: 'xbar-r', label: 'X-bar & R' },
-  { value: 'xbar-s', label: 'X-bar & S' },
-  { value: 'individuals', label: 'Individuals (I-MR)' },
-  { value: 'p-chart', label: 'P-Chart' },
-  { value: 'c-chart', label: 'C-Chart' },
+  { value: 'zscore', label: 'Z-Score' },
+  { value: 'moving_avg', label: 'Moving Average' },
+  { value: 'std_bands', label: 'Standard Bands (Western Electric)' },
+  { value: 'cusum', label: 'CUSUM' },
 ];
 
 const emptyForm: CreateSpcProfileRequest = {
   name: '',
   machineId: 0,
   nodeKey: '',
-  method: 'xbar-r',
+  method: 'zscore',
   sensitivity: 3,
-  subgroupSize: 5,
+  windowSize: 100,
 };
 
 const SpcProfilesPage: React.FC = () => {
@@ -81,11 +80,11 @@ const SpcProfilesPage: React.FC = () => {
     setEditingProfile(profile);
     setForm({
       name: profile.name,
-      machineId: profile.machineId,
+      machineId: profile.machineId ?? 0,
       nodeKey: profile.nodeKey,
       method: profile.method,
       sensitivity: profile.sensitivity,
-      subgroupSize: profile.subgroupSize,
+      windowSize: profile.windowSize,
     });
     setDialogOpen(true);
   };
@@ -190,7 +189,7 @@ const SpcProfilesPage: React.FC = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    {profile.baselineComputedAt ? (
+                    {profile.lastComputedAt ? (
                       <Chip label="Computed" size="small" color="success" variant="outlined" />
                     ) : (
                       <Chip label="Not computed" size="small" color="warning" variant="outlined" />
@@ -275,7 +274,12 @@ const SpcProfilesPage: React.FC = () => {
               select
               label="Control Chart Method"
               value={form.method}
-              onChange={(e) => setForm((f) => ({ ...f, method: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  method: e.target.value as CreateSpcProfileRequest['method'],
+                }))
+              }
               fullWidth
             >
               {SPC_METHODS.map((m) => (
@@ -295,14 +299,14 @@ const SpcProfilesPage: React.FC = () => {
               slotProps={{ htmlInput: { min: 1, max: 6, step: 0.5 } }}
             />
             <TextField
-              label="Subgroup Size"
+              label="Window Size"
               type="number"
-              value={form.subgroupSize || 5}
+              value={form.windowSize || 100}
               onChange={(e) =>
-                setForm((f) => ({ ...f, subgroupSize: parseInt(e.target.value, 10) || 5 }))
+                setForm((f) => ({ ...f, windowSize: parseInt(e.target.value, 10) || 100 }))
               }
               fullWidth
-              slotProps={{ htmlInput: { min: 1, max: 50 } }}
+              slotProps={{ htmlInput: { min: 10, max: 10000 } }}
             />
           </Stack>
         </DialogContent>

@@ -9,10 +9,18 @@ import statusManager from "../utils/status.js";
 import certificateManager from "./services/certificateManager.js";
 import config from "../config/config.js";
 
+/**
+ * node-opcua's ClientSession implementation exposes `isOpen` as a runtime
+ * getter, but it is missing from the published type declarations.
+ */
+export interface OpcuaClientSession extends opcua.ClientSession {
+  readonly isOpen?: boolean;
+}
+
 export interface OpcuaNodeData {
   key: string;
   label: string;
-  value: any;
+  value: number | string | boolean | null;
   timestamp: Date;
   dataType: string;
   statusCode: string;
@@ -20,9 +28,9 @@ export interface OpcuaNodeData {
 }
 
 export interface OpcuaConnectionResult {
-  client: any;
-  session: any;
-  subscription: any;
+  client: opcua.OPCUAClient;
+  session: OpcuaClientSession;
+  subscription: opcua.ClientSubscription;
   securityMode: string;
   securityPolicy: string;
 }
@@ -134,7 +142,7 @@ export async function connectAndSubscribe(
     securityOptions.securityPolicy || config.OPCUA_SECURITY_POLICY;
 
   while (retryCount < MAX_RETRIES) {
-    let client: any = null;
+    let client: opcua.OPCUAClient | null = null;
     try {
       logger.info(
         `[ConnectAndSub Attempt ${retryCount + 1}] Getting client options... Mode: ${securityMode}, Policy: ${securityPolicy}`,
@@ -213,7 +221,7 @@ export async function connectAndSubscribe(
             opcua.TimestampsToReturn.Both,
           );
 
-          monitoredItem.on("changed", (dataValue: any) => {
+          monitoredItem.on("changed", (dataValue: opcua.DataValue) => {
             opcuaEmitter.emit("nodeChanged", {
               key,
               label: nodeConfig.label,

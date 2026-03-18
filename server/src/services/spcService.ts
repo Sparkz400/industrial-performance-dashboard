@@ -1,3 +1,4 @@
+import { EventEmitter } from "events";
 import { sql } from "drizzle-orm";
 import db, { getReadDb } from "../database/db.js";
 import { opcuaData } from "../database/schema.js";
@@ -15,6 +16,9 @@ import {
 } from "./spcEvaluator.js";
 import logger from "../utils/logger.js";
 import { NotFoundError, ValidationError } from "../utils/errors.js";
+
+/** EventEmitter for SPC alert events — consumed by opcuaBridge to broadcast via Socket.IO */
+export const spcEvents = new EventEmitter();
 
 // ---------------------------------------------------------------------------
 // Ring-buffer: in-memory recent values per nodeKey, capped at windowSize
@@ -92,7 +96,7 @@ export const spcService = {
             AND timestamp > now() - interval '7 days'`,
     );
 
-    const row = (result as any).rows?.[0] ?? (result as any)[0];
+    const row = result.rows[0] as { mean: string | null; stddev: string | null } | undefined;
     const mean = row?.mean != null ? Number(row.mean) : null;
     const stddev = row?.stddev != null ? Number(row.stddev) : null;
 
@@ -320,4 +324,21 @@ async function evaluateAgainstProfile(
   logger.warn(
     `[SPC] Alert created (id=${alert.id}): ${alertType} on profile ${profile.id}, value=${value}`,
   );
+
+  // Emit event for socket broadcasting
+  spcEvents.emit("spcAlert", {
+    id: alert.id,
+    profileId: alert.profileId,
+    machineId: alert.machineId,
+    nodeKey: alert.nodeKey,
+    alertType: alert.alertType,
+    value: alert.value,
+    threshold: alert.threshold,
+    message: alert.message,
+    severity: alert.severity,
+    createdAt:
+      alert.createdAt instanceof Date
+        ? alert.createdAt.toISOString()
+        : new Date().toISOString(),
+  });
 }

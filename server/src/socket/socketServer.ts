@@ -1,4 +1,5 @@
 import http from "http";
+import type { Request, Response } from "express";
 import session from "express-session";
 import cookieParser from "cookie-parser";
 import { Server as SocketIOServer } from "socket.io";
@@ -19,6 +20,7 @@ import { OpcuaSocketService } from "./services/OpcuaSocketService.js";
 import { CertificateSocketService } from "./services/CertificateSocketService.js";
 import { MachineSocketService } from "./services/MachineSocketService.js";
 import { AlarmSocketService } from "./services/AlarmSocketService.js";
+import { SpcSocketService } from "./services/SpcSocketService.js";
 
 import type connectPgSimple from "connect-pg-simple";
 
@@ -37,6 +39,7 @@ export interface SocketServices {
   certificateService: CertificateSocketService;
   machineService: MachineSocketService;
   alarmService: AlarmSocketService;
+  spcService: SpcSocketService;
 }
 
 export function createSocketServer(
@@ -61,16 +64,18 @@ export function createSocketServer(
   const certificateService = new CertificateSocketService();
   const machineService = new MachineSocketService(io);
   const alarmService = new AlarmSocketService(io);
+  const spcSocketService = new SpcSocketService(io);
 
   // Register global status broadcasting
   statusService.register();
 
   // --- Socket.IO Authentication Middleware ---
   io.use((socket, next) => {
-    const req = socket.request as any;
-    const res = {} as any;
+    // Socket.IO passes an IncomingMessage; Express middleware expects Request/Response
+    const req = socket.request as unknown as Request;
+    const res = Object.create(null) as Response;
 
-    cookieParser(config.COOKIE_SECRET)(req, res, (cookieErr?: any) => {
+    cookieParser(config.COOKIE_SECRET)(req, res, (cookieErr?: unknown) => {
       if (cookieErr) {
         logger.error("Socket.IO Cookie parsing error:", cookieErr);
         return next(new Error("Authentication error: Invalid cookies"));
@@ -83,7 +88,7 @@ export function createSocketServer(
         saveUninitialized: false,
       });
 
-      sessionMiddleware(req, res, (sessionErr?: any) => {
+      sessionMiddleware(req, res, (sessionErr?: unknown) => {
         if (sessionErr) {
           logger.error("Socket.IO Session parsing error:", sessionErr);
           return next(new Error("Authentication error: Invalid session"));
@@ -99,8 +104,8 @@ export function createSocketServer(
         socket.data.user = {
           authenticated: true,
           id: req.session.userId,
-          username: req.session.username,
-          role: req.session.userRole,
+          username: req.session.username ?? "",
+          role: req.session.userRole ?? "",
         };
 
         logger.info(
@@ -161,5 +166,6 @@ export function createSocketServer(
     certificateService,
     machineService,
     alarmService,
+    spcService: spcSocketService,
   };
 }

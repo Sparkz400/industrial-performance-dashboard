@@ -18,7 +18,7 @@ function AlarmDashboardWidgetSettings({
   config,
   onConfigChange,
 }: AlarmDashboardWidgetSettingsProps): React.ReactElement {
-  const { rowsPerPage = 5 } = config || {};
+  const rowsPerPage = ((config || {}).rowsPerPage as number) ?? 5;
 
   const handleRowsChange = (_event: Event, newValue: number | number[]) => {
     onConfigChange({

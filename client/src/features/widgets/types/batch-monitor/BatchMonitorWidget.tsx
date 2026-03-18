@@ -27,7 +27,7 @@ const BatchMonitorWidget: React.FC<BatchMonitorWidgetProps> = ({ config = {}, on
     isLoading: batchLoading,
     error: batchError,
   } = useActiveBatch(machineId || undefined);
-  const { data: batchData, isLoading: dataLoading } = useBatchData(activeBatch?.id ?? 0);
+  const { data: seriesData, isLoading: dataLoading } = useBatchData(activeBatch?.id ?? 0);
 
   useEffect(() => {
     if (batchError && onError) {
@@ -110,19 +110,19 @@ const BatchMonitorWidget: React.FC<BatchMonitorWidgetProps> = ({ config = {}, on
           <Chip label={activeBatch.status} size="small" color="warning" />
         </Stack>
         <Typography variant="caption" color="text.secondary">
-          Recipe: {activeBatch.recipeName} (v{activeBatch.recipeVersion})
+          Recipe: {activeBatch.recipeName ?? '-'} (v{activeBatch.recipeVersion ?? '?'})
         </Typography>
         <Typography variant="caption" color="text.secondary">
           Elapsed: {elapsedTime}
         </Typography>
       </Stack>
 
-      {/* Parameter table */}
+      {/* Parameter table - derived from time-series data */}
       {dataLoading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
           <CircularProgress size={20} />
         </Box>
-      ) : batchData && batchData.parameters.length > 0 ? (
+      ) : seriesData && seriesData.length > 0 ? (
         <TableContainer>
           <Table size="small">
             <TableHead>
@@ -134,17 +134,23 @@ const BatchMonitorWidget: React.FC<BatchMonitorWidgetProps> = ({ config = {}, on
                 <TableCell sx={{ py: 0.5, fontSize: '0.75rem' }} align="right">
                   Current
                 </TableCell>
-                <TableCell sx={{ py: 0.5, fontSize: '0.75rem' }}>Unit</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {batchData.parameters.map((param) => {
-                const inRange = param.currentValue >= param.min && param.currentValue <= param.max;
+              {seriesData.map((series) => {
+                const values = series.dataPoints.map((dp) => dp.value);
+                const current = values.length > 0 ? values[values.length - 1] : null;
+                const inRange =
+                  series.setpoint != null && current != null
+                    ? Math.abs(current - series.setpoint) <= series.setpoint * 0.1
+                    : true;
                 return (
-                  <TableRow key={param.name}>
-                    <TableCell sx={{ py: 0.3, fontSize: '0.75rem' }}>{param.name}</TableCell>
+                  <TableRow key={series.nodeKey}>
+                    <TableCell sx={{ py: 0.3, fontSize: '0.75rem' }}>
+                      {series.displayName}
+                    </TableCell>
                     <TableCell sx={{ py: 0.3, fontSize: '0.75rem' }} align="right">
-                      {param.setpoint}
+                      {series.setpoint != null ? series.setpoint : '-'}
                     </TableCell>
                     <TableCell
                       sx={{
@@ -155,9 +161,8 @@ const BatchMonitorWidget: React.FC<BatchMonitorWidgetProps> = ({ config = {}, on
                       }}
                       align="right"
                     >
-                      {param.currentValue}
+                      {current != null ? current.toFixed(2) : '-'}
                     </TableCell>
-                    <TableCell sx={{ py: 0.3, fontSize: '0.75rem' }}>{param.unit}</TableCell>
                   </TableRow>
                 );
               })}

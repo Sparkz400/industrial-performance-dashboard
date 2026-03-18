@@ -114,9 +114,3 @@ export const validateQuery = (schema: Joi.ObjectSchema) => {
     next();
   };
 };
-
-export const schemas = {
-  dashboardSchema,
-  opcuaConnectionSchema,
-  dbTestSchema,
-};

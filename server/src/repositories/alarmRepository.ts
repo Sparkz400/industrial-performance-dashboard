@@ -1,6 +1,6 @@
 import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
 import db, { getReadDb } from "../database/db.js";
-import { alertRules, alertHistory } from "../database/schema.js";
+import { alertRules, alertHistory, type AlertHistoryRow } from "../database/schema.js";
 
 export const alarmRepository = {
   // ===== Alert Rules =====
@@ -85,9 +85,9 @@ export const alarmRepository = {
     const conditions = [];
 
     if (filters?.severity)
-      conditions.push(eq(alertHistory.severity, filters.severity as any));
+      conditions.push(sql`${alertHistory.severity} = ${filters.severity}`);
     if (filters?.status)
-      conditions.push(eq(alertHistory.status, filters.status as any));
+      conditions.push(sql`${alertHistory.status} = ${filters.status}`);
     if (filters?.machineId != null)
       conditions.push(eq(alertHistory.machineId, filters.machineId));
     if (filters?.startDate)
@@ -117,14 +117,14 @@ export const alarmRepository = {
     return created;
   },
 
-  async acknowledgeAlarm(id: number, userId: number) {
+  async acknowledgeAlarm(id: number, userId: number | null) {
     const [updated] = await db
       .update(alertHistory)
       .set({
-        status: "acknowledged",
+        status: "acknowledged" as typeof alertHistory.status.enumValues[number],
         acknowledgedBy: userId,
         acknowledgedAt: new Date(),
-      } as any)
+      })
       .where(eq(alertHistory.id, id))
       .returning();
     return updated ?? null;
@@ -134,9 +134,9 @@ export const alarmRepository = {
     const [updated] = await db
       .update(alertHistory)
       .set({
-        status: "resolved",
+        status: "resolved" as typeof alertHistory.status.enumValues[number],
         resolvedAt: new Date(),
-      } as any)
+      })
       .where(eq(alertHistory.id, id))
       .returning();
     return updated ?? null;
@@ -149,7 +149,7 @@ export const alarmRepository = {
       .where(
         and(
           eq(alertHistory.ruleId, ruleId),
-          eq(alertHistory.status, "active" as any),
+          sql`${alertHistory.status} = 'active'`,
         ),
       );
     return result[0]?.count ?? 0;

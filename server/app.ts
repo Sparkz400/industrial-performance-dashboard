@@ -22,6 +22,7 @@ import { setupOpcuaBridge, startOpcuaServices, createShutdown } from './src/opcu
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { appRouter, createContext } from './src/trpc/index.js';
 import { edgeSyncService } from './src/services/edgeSyncService.js';
+import { reportSchedulerService } from './src/services/reportSchedulerService.js';
 
 // --- Route modules ---
 import authRoutes from './src/routes/authRoutes.js';
@@ -103,8 +104,10 @@ export function createApp() {
     // --- Tier 2: Premium Features ---
     app.use('/api/v1/compliance', requireAuth, requireRole('admin'), complianceRoutes);
     app.use('/api/v1/spc', requireAuth, spcRoutes);
-    app.use('/api/v1/recipes', requireAuth, recipeRoutes);
-    app.use('/api/v1/batches', requireAuth, batchRoutes);
+    if (config.COMPLIANCE_MODE_ENABLED) {
+        app.use('/api/v1/recipes', requireAuth, requireRole('admin'), recipeRoutes);
+        app.use('/api/v1/batches', requireAuth, requireRole('admin'), batchRoutes);
+    }
     app.use('/api/v1/digital-twins', requireAuth, digitalTwinRoutes);
     app.use('/api/v1/edge', requireAuth, edgeRoutes);
 
@@ -131,6 +134,9 @@ function bootstrap() {
 
     // Start edge sync loop if in edge mode
     edgeSyncService.startSyncLoop();
+
+    // Activate persisted report schedules
+    reportSchedulerService.init();
 
     const shutdown = createShutdown(server, services.io);
     process.on('SIGINT', () => shutdown('SIGINT'));

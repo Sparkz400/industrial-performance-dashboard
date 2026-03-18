@@ -32,61 +32,12 @@ export const httpRequestsInFlight = new client.Gauge({
   registers: [metricsRegistry],
 });
 
-// --- WebSocket metrics ---
-
-export const websocketConnectionsActive = new client.Gauge({
-  name: "websocket_connections_active",
-  help: "Number of active WebSocket connections",
-  registers: [metricsRegistry],
-});
-
 // --- OPC UA metrics ---
-
-export const opcuaConnectionStatus = new client.Gauge({
-  name: "opcua_connection_status",
-  help: "OPC UA connection status (1=connected, 0=disconnected)",
-  labelNames: ["machine_id"] as const,
-  registers: [metricsRegistry],
-});
 
 export const opcuaDataPointsReceived = new client.Counter({
   name: "opcua_data_points_received_total",
   help: "Total OPC UA data points received",
   labelNames: ["machine_id"] as const,
-  registers: [metricsRegistry],
-});
-
-export const opcuaQueueSize = new client.Gauge({
-  name: "opcua_queue_size",
-  help: "Current OPC UA data queue size",
-  registers: [metricsRegistry],
-});
-
-// --- Database metrics ---
-
-export const dbPoolTotal = new client.Gauge({
-  name: "db_pool_connections_total",
-  help: "Total number of connections in the database pool",
-  registers: [metricsRegistry],
-});
-
-export const dbPoolIdle = new client.Gauge({
-  name: "db_pool_connections_idle",
-  help: "Number of idle connections in the database pool",
-  registers: [metricsRegistry],
-});
-
-export const dbPoolWaiting = new client.Gauge({
-  name: "db_pool_connections_waiting",
-  help: "Number of clients waiting for a database connection",
-  registers: [metricsRegistry],
-});
-
-export const dbQueryDuration = new client.Histogram({
-  name: "db_query_duration_seconds",
-  help: "Duration of database queries in seconds",
-  labelNames: ["query_type"] as const,
-  buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5],
   registers: [metricsRegistry],
 });
 

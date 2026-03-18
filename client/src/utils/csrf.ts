@@ -158,22 +158,11 @@ export const isCsrfError = async (response: Response): Promise<boolean> => {
       try {
         const text = await response.clone().text();
         return text.includes('CSRF') || text.includes('csrf');
-      } catch (_err) {
-        // Can't check response content
+      } catch (err) {
+        console.warn('CSRF error check: unable to read response body', err);
         return false;
       }
     }
   }
   return false;
-};
-
-export default {
-  getStoredCsrfToken,
-  storeCsrfToken,
-  clearCsrfToken,
-  fetchCsrfToken,
-  getCsrfToken,
-  addCsrfHeader,
-  isCsrfError,
-  CSRF_HEADER_NAME,
 };

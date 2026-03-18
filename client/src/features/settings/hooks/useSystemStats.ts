@@ -29,6 +29,7 @@ export interface SystemStats {
   cpuInfo?: CpuInfo;
   activeConnections: number;
   lastRestart: string | null;
+  nodeVersion?: string;
   processMemory?: ProcessMemory;
   platform?: PlatformInfo;
 }
@@ -71,7 +72,7 @@ export const useSystemStats = (): SystemStatsReturn => {
   const fetchSystemStats = useCallback(async (): Promise<void> => {
     setLoading(true);
     try {
-      const response = await fetch(API_ENDPOINTS.system.stats);
+      const response = await fetch(API_ENDPOINTS.system.stats, { credentials: 'include' });
 
       if (!response.ok) {
         throw new Error(`HTTP error: ${response.status}`);
@@ -86,24 +87,6 @@ export const useSystemStats = (): SystemStatsReturn => {
     } catch (err) {
       console.error('Error fetching system stats:', err);
       setError(`Failed to fetch system statistics: ${(err as Error).message}`);
-
-      // Only set mock data if we don't have any stats yet
-      setSystemStats((prev: SystemStats | null) => {
-        if (!prev) {
-          return {
-            uptime: 0,
-            memoryUsage: {
-              total: 0,
-              used: 0,
-              percentUsed: 0,
-            },
-            cpuUsage: 0,
-            activeConnections: 0,
-            lastRestart: null,
-          };
-        }
-        return prev;
-      });
     } finally {
       setLoading(false);
     }

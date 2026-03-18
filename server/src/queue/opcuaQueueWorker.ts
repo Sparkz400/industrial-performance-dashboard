@@ -8,8 +8,8 @@ import config from "../config/config.js";
 export interface OpcuaDataItem {
   key: string;
   label: string;
-  timestamp: any;
-  value: any;
+  timestamp: Date | string | number;
+  value: number | string | boolean | null;
   machineId?: number;
 }
 

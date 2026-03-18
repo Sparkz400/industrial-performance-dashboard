@@ -19,7 +19,8 @@ const OeeTrendWidgetSettings: React.FC<OeeTrendWidgetSettingsProps> = ({
   config,
   onConfigChange,
 }) => {
-  const { machineId = '', granularity = 'day' } = config || {};
+  const machineId = String((config || {}).machineId ?? '');
+  const granularity = ((config || {}).granularity as string) ?? 'day';
   const machines = useMachineStore((s) => s.machines);
   const fetchMachines = useMachineStore((s) => s.fetchMachines);
 

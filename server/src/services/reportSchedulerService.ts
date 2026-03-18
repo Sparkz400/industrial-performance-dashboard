@@ -1,4 +1,5 @@
 import cron from "node-cron";
+import cronParser from "cron-parser";
 import { reportRepository } from "../repositories/reportRepository.js";
 import { reportGeneratorService } from "./reportGeneratorService.js";
 import logger from "../utils/logger.js";
@@ -92,23 +93,14 @@ class ReportSchedulerService {
    * Compute the next run time for a cron expression relative to now.
    * Returns an ISO string or null if the expression is invalid.
    */
-  calculateNextRun(cronExpression: string, _timezone?: string): string | null {
+  calculateNextRun(cronExpression: string, timezone?: string): string | null {
     if (!cron.validate(cronExpression)) return null;
 
-    // node-cron does not expose a "next run" utility, so we do a simple
-    // approximation: parse the cron fields and calculate the next matching
-    // minute. For production use a dedicated library like cron-parser would
-    // be more precise, but this covers the common case.
     try {
-      // Use cron-parser-style logic via a lightweight helper.
-      // We schedule a one-shot task that records the invocation time.
-      const now = new Date();
-      // Return a rough estimate: next minute boundary as a placeholder.
-      // A more accurate implementation would use the `cron-parser` package.
-      const next = new Date(now);
-      next.setSeconds(0, 0);
-      next.setMinutes(next.getMinutes() + 1);
-      return next.toISOString();
+      const options: { tz?: string } = {};
+      if (timezone) options.tz = timezone;
+      const interval = cronParser.CronExpressionParser.parse(cronExpression, options);
+      return interval.next().toISOString();
     } catch {
       return null;
     }

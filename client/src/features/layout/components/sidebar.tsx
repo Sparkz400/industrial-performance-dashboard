@@ -38,8 +38,6 @@ import PersonIcon from '@mui/icons-material/Person';
 import InstallMobileIcon from '@mui/icons-material/InstallMobile';
 import GavelIcon from '@mui/icons-material/Gavel';
 import TimelineIcon from '@mui/icons-material/Timeline';
-import ScienceIcon from '@mui/icons-material/Science';
-import MenuBookIcon from '@mui/icons-material/MenuBook';
 import ViewInArIcon from '@mui/icons-material/ViewInAr';
 import BurgerButton from './burgerButton';
 import { useThemeStore } from '@/stores/useThemeStore';
@@ -483,64 +481,6 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ open, onToggle, o
                 </Badge>
               </ListItemIcon>
               {open && <ListItemText primary="SPC Profiles" />}
-            </ListItemButton>
-          </ListItem>
-
-          {/* Recipes */}
-          <ListItem disablePadding>
-            <ListItemButton
-              component={Link}
-              to="/recipes"
-              selected={location.pathname === '/recipes'}
-              sx={{
-                py: 1.5,
-                justifyContent: open ? 'flex-start' : 'center',
-                '&.Mui-selected': {
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
-                  '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
-                  '& .MuiListItemText-primary': {
-                    fontWeight: 'bold',
-                    color: theme.palette.primary.main,
-                  },
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
-              >
-                <MenuBookIcon />
-              </ListItemIcon>
-              {open && <ListItemText primary="Recipes" />}
-            </ListItemButton>
-          </ListItem>
-
-          {/* Batches */}
-          <ListItem disablePadding>
-            <ListItemButton
-              component={Link}
-              to="/batches"
-              selected={location.pathname === '/batches'}
-              sx={{
-                py: 1.5,
-                justifyContent: open ? 'flex-start' : 'center',
-                '&.Mui-selected': {
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
-                  '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
-                  '& .MuiListItemText-primary': {
-                    fontWeight: 'bold',
-                    color: theme.palette.primary.main,
-                  },
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
-              >
-                <ScienceIcon />
-              </ListItemIcon>
-              {open && <ListItemText primary="Batches" />}
             </ListItemButton>
           </ListItem>
 

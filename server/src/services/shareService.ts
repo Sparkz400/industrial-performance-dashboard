@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { eq, and } from "drizzle-orm";
 import db from "../database/db.js";
 import { shareTokens, dashboards } from "../database/schema.js";
-import type { ShareTokenRow } from "../database/schema.js";
+import type { ShareTokenRow, Dashboard } from "../database/schema.js";
 import { NotFoundError, AppError } from "../utils/errors.js";
 import config from "../config/config.js";
 
@@ -66,7 +66,7 @@ export const shareService = {
     if (result.length === 0) throw new NotFoundError("Share token");
   },
 
-  async getDashboardByToken(token: string): Promise<{ dashboard: any }> {
+  async getDashboardByToken(token: string): Promise<{ dashboard: Dashboard }> {
     const [shareToken] = await db
       .select()
       .from(shareTokens)
@@ -90,7 +90,7 @@ export const shareService = {
     return { dashboard };
   },
 
-  async getEmbedDashboard(token: string): Promise<{ dashboard: any }> {
+  async getEmbedDashboard(token: string): Promise<{ dashboard: Dashboard }> {
     const [shareToken] = await db
       .select()
       .from(shareTokens)

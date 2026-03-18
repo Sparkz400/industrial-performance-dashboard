@@ -9,6 +9,8 @@ import {
   type NewNotificationChannel,
 } from "../database/schema.js";
 
+export type AlertSeverityValue = "critical" | "high" | "medium" | "low" | "info";
+
 export interface AlertRuleInput {
   name: string;
   description?: string | null;
@@ -19,7 +21,7 @@ export interface AlertRuleInput {
   threshold?: number | null;
   thresholdHigh?: number | null;
   rateWindowSeconds?: number | null;
-  severity?: string;
+  severity?: AlertSeverityValue;
   channels?: unknown[];
   cooldownSeconds?: number;
   isActive?: boolean;
@@ -151,10 +153,10 @@ export const alertRepository = {
       conditions.push(eq(alertHistory.ruleId, filters.ruleId));
     }
     if (filters.severity) {
-      conditions.push(eq(alertHistory.severity, filters.severity as any));
+      conditions.push(sql`${alertHistory.severity} = ${filters.severity}`);
     }
     if (filters.status) {
-      conditions.push(eq(alertHistory.status, filters.status as any));
+      conditions.push(sql`${alertHistory.status} = ${filters.status}`);
     }
     if (filters.machineId) {
       conditions.push(eq(alertHistory.machineId, filters.machineId));

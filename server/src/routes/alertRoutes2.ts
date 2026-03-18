@@ -7,7 +7,7 @@ import {
 } from "../middleware/validation.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { alertRepository } from "../repositories/alertRepository.js";
+import { alertRepository, type AlertHistoryFilters } from "../repositories/alertRepository.js";
 import alertEvaluationService from "../services/alertEvaluationService.js";
 
 const router = Router();
@@ -65,7 +65,10 @@ router.get(
   "/rules",
   validateQuery(rulesQuerySchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const rules = await alertRepository.listRules(req.query as any);
+    const rules = await alertRepository.listRules(req.query as {
+      machineId?: number;
+      isActive?: boolean;
+    });
     res.json(rules);
   }),
 );
@@ -155,7 +158,7 @@ router.get(
   "/history",
   validateQuery(historyQuerySchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const history = await alertRepository.listAlertHistory(req.query as any);
+    const history = await alertRepository.listAlertHistory(req.query as AlertHistoryFilters);
     res.json(history);
   }),
 );

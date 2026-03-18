@@ -38,17 +38,24 @@ router.get(
       endDate,
       downsampleBucketSeconds,
       aggregation,
-    } = req.query as any;
+    } = req.query as {
+      nodeKeys: string;
+      machineId?: string;
+      startDate: string;
+      endDate: string;
+      downsampleBucketSeconds?: string;
+      aggregation?: "avg" | "min" | "max" | "last";
+    };
 
     const result = await trendingDataService.queryTrendingData({
-      nodeKeys: (nodeKeys as string).split(",").map((k: string) => k.trim()),
+      nodeKeys: nodeKeys.split(",").map((k) => k.trim()),
       machineId: machineId != null ? Number(machineId) : undefined,
-      startDate: new Date(startDate as string),
-      endDate: new Date(endDate as string),
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
       downsampleBucketSeconds: downsampleBucketSeconds
         ? Number(downsampleBucketSeconds)
         : undefined,
-      aggregation: aggregation as any,
+      aggregation,
     });
 
     res.json(result);
@@ -68,17 +75,24 @@ router.get(
       endDate,
       downsampleBucketSeconds,
       aggregation,
-    } = req.query as any;
+    } = req.query as {
+      nodeKeys: string;
+      machineId?: string;
+      startDate: string;
+      endDate: string;
+      downsampleBucketSeconds?: string;
+      aggregation?: "avg" | "min" | "max" | "last";
+    };
 
     const csv = await trendingDataService.exportCsv({
-      nodeKeys: (nodeKeys as string).split(",").map((k: string) => k.trim()),
+      nodeKeys: nodeKeys.split(",").map((k) => k.trim()),
       machineId: machineId != null ? Number(machineId) : undefined,
-      startDate: new Date(startDate as string),
-      endDate: new Date(endDate as string),
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
       downsampleBucketSeconds: downsampleBucketSeconds
         ? Number(downsampleBucketSeconds)
         : undefined,
-      aggregation: aggregation as any,
+      aggregation,
     });
 
     const filename = `trending-export-${new Date().toISOString().slice(0, 10)}.csv`;

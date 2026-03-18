@@ -55,7 +55,7 @@ export function useOperationModeData(
   const fetchHistoricalData = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(API_ENDPOINTS.operationModeData);
+      const response = await fetch(API_ENDPOINTS.operationModeData, { credentials: 'include' });
 
       if (!response.ok) {
         throw new Error(`HTTP error ${response.status}`);

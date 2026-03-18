@@ -56,7 +56,89 @@ interface RecipeParameter {
 }
 
 export const batchService = {
+  /** Enrich a single batch with recipe name/version and extracted abort reason */
+  async _enrichBatch(batch: Record<string, unknown> | null) {
+    if (!batch) return batch;
+    let recipeName: string | null = null;
+    let recipeVersion: number | null = null;
+    if (batch.recipeId) {
+      try {
+        const recipe = await recipeRepository.findById(
+          batch.recipeId as number,
+        );
+        if (recipe) {
+          recipeName = recipe.name;
+          recipeVersion = recipe.version;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    let abortReason: string | null = null;
+    if (
+      batch.status === "aborted" &&
+      typeof batch.notes === "string" &&
+      batch.notes
+    ) {
+      const match = batch.notes.match(/\[ABORTED\]\s*([\s\S]*)/);
+      if (match) abortReason = match[1].trim();
+    }
+    return { ...batch, recipeName, recipeVersion, abortReason };
+  },
+
+  /** Enrich multiple batches efficiently (batch recipe lookups) */
+  async _enrichBatches(batchList: Record<string, unknown>[]) {
+    const recipeIds = [
+      ...new Set(
+        batchList.filter((b) => b.recipeId).map((b) => b.recipeId as number),
+      ),
+    ];
+    const recipeMap = new Map<
+      number,
+      { name: string; version: number }
+    >();
+    await Promise.all(
+      recipeIds.map(async (id) => {
+        try {
+          const recipe = await recipeRepository.findById(id);
+          if (recipe)
+            recipeMap.set(id, {
+              name: recipe.name,
+              version: recipe.version,
+            });
+        } catch {
+          /* ignore */
+        }
+      }),
+    );
+    return batchList.map((batch) => {
+      const recipe = batch.recipeId
+        ? recipeMap.get(batch.recipeId as number) ?? null
+        : null;
+      let abortReason: string | null = null;
+      if (
+        batch.status === "aborted" &&
+        typeof batch.notes === "string" &&
+        batch.notes
+      ) {
+        const match = batch.notes.match(/\[ABORTED\]\s*([\s\S]*)/);
+        if (match) abortReason = match[1].trim();
+      }
+      return {
+        ...batch,
+        recipeName: recipe?.name ?? null,
+        recipeVersion: recipe?.version ?? null,
+        abortReason,
+      };
+    });
+  },
+
   async createBatch(input: BatchCreateInput, actor?: AuditActor) {
+    // Auto-generate batch number if not provided
+    if (!input.batchNumber) {
+      input.batchNumber = `BATCH-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    }
+
     const batch = await batchRepository.create(input);
 
     logger.info(
@@ -78,7 +160,7 @@ export const batchService = {
       actor,
     );
 
-    return batch;
+    return this._enrichBatch(batch);
   },
 
   async getBatch(id: number) {
@@ -86,11 +168,12 @@ export const batchService = {
     if (!batch) {
       throw new NotFoundError("Batch");
     }
-    return batch;
+    return this._enrichBatch(batch);
   },
 
   async listBatches(filters: BatchListFilters = {}) {
-    return batchRepository.list(filters);
+    const batches = await batchRepository.list(filters);
+    return this._enrichBatches(batches);
   },
 
   async updateBatch(id: number, data: BatchUpdateInput, actor?: AuditActor) {
@@ -146,7 +229,7 @@ export const batchService = {
       actor,
     );
 
-    return updated;
+    return this._enrichBatch(updated);
   },
 
   async completeBatch(id: number, userId: number, actor?: AuditActor) {
@@ -194,7 +277,7 @@ export const batchService = {
       actor,
     );
 
-    return updated;
+    return this._enrichBatch(updated);
   },
 
   async abortBatch(
@@ -243,7 +326,7 @@ export const batchService = {
       actor,
     );
 
-    return updated;
+    return this._enrichBatch(updated);
   },
 
   async computeBatchSummary(batchId: number) {
@@ -293,7 +376,7 @@ export const batchService = {
       string,
       { avg: number; min: number; max: number }
     >();
-    for (const row of result.rows as any[]) {
+    for (const row of result.rows as { node_key: string; avg_value: string; min_value: string; max_value: string }[]) {
       statsMap.set(row.node_key, {
         avg: parseFloat(row.avg_value) || 0,
         min: parseFloat(row.min_value) || 0,
@@ -381,12 +464,11 @@ export const batchService = {
     );
 
     const seriesMap = new Map<string, DataPoint[]>();
-    for (const row of result.rows as any[]) {
-      const nodeKey = row.node_key as string;
-      if (!seriesMap.has(nodeKey)) {
-        seriesMap.set(nodeKey, []);
+    for (const row of result.rows as { node_key: string; timestamp: string; value: string }[]) {
+      if (!seriesMap.has(row.node_key)) {
+        seriesMap.set(row.node_key, []);
       }
-      seriesMap.get(nodeKey)!.push({
+      seriesMap.get(row.node_key)!.push({
         timestamp: row.timestamp,
         value: parseFloat(row.value) || 0,
       });
@@ -438,6 +520,7 @@ export const batchService = {
   },
 
   async findActiveBatch(machineId: number) {
-    return batchRepository.findActiveBatch(machineId);
+    const batch = await batchRepository.findActiveBatch(machineId);
+    return this._enrichBatch(batch);
   },
 };

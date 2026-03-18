@@ -63,7 +63,7 @@ export const useConnectionStats = (
   const fetchConnectionStats = useCallback(async (): Promise<void> => {
     setLoadingConnections(true);
     try {
-      const response = await fetch(API_ENDPOINTS.system.connections);
+      const response = await fetch(API_ENDPOINTS.system.connections, { credentials: 'include' });
 
       if (!response.ok) {
         throw new Error(`HTTP error: ${response.status}`);
