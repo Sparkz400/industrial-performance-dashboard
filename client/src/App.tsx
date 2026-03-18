@@ -42,6 +42,10 @@ const SpcProfilesPage = React.lazy(() => import('./features/spc/pages/SpcProfile
 const SpcChartPage = React.lazy(() => import('./features/spc/pages/SpcChartPage'));
 const RecipesPage = React.lazy(() => import('./features/recipes/pages/RecipesPage'));
 const BatchesPage = React.lazy(() => import('./features/recipes/pages/BatchesPage'));
+const DigitalTwinsPage = React.lazy(() => import('./features/digital-twin/pages/DigitalTwinsPage'));
+const DigitalTwinDetailPage = React.lazy(
+  () => import('./features/digital-twin/pages/DigitalTwinDetailPage'),
+);
 
 // Modern loading component with skeleton
 const PageLoader = () => (
@@ -382,6 +386,27 @@ function App() {
                         <PageTransition>
                           <SpcChartPage />
                         </PageTransition>
+                      }
+                    />
+                    {/* Tier 2: Digital Twins */}
+                    <Route
+                      path="/digital-twins"
+                      element={
+                        <PrivateRoute requiredRole="admin">
+                          <PageTransition>
+                            <DigitalTwinsPage />
+                          </PageTransition>
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="/digital-twins/:id"
+                      element={
+                        <PrivateRoute requiredRole="admin">
+                          <PageTransition>
+                            <DigitalTwinDetailPage />
+                          </PageTransition>
+                        </PrivateRoute>
                       }
                     />
                     {/* Tier 2: Recipes & Batches */}

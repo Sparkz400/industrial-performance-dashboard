@@ -177,6 +177,35 @@ export const alertRepository = {
       .offset(filters.offset ?? 0);
   },
 
+  async countAlertHistory(filters: AlertHistoryFilters) {
+    const conditions = [];
+
+    if (filters.ruleId) {
+      conditions.push(eq(alertHistory.ruleId, filters.ruleId));
+    }
+    if (filters.severity) {
+      conditions.push(sql`${alertHistory.severity} = ${filters.severity}`);
+    }
+    if (filters.status) {
+      conditions.push(sql`${alertHistory.status} = ${filters.status}`);
+    }
+    if (filters.machineId) {
+      conditions.push(eq(alertHistory.machineId, filters.machineId));
+    }
+    if (filters.startDate) {
+      conditions.push(gte(alertHistory.createdAt, new Date(filters.startDate)));
+    }
+    if (filters.endDate) {
+      conditions.push(lte(alertHistory.createdAt, new Date(filters.endDate)));
+    }
+
+    const result = await getReadDb()
+      .select({ count: sql<number>`count(*)` })
+      .from(alertHistory)
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
+    return Number(result[0]?.count ?? 0);
+  },
+
   async updateAlertStatus(
     id: number,
     status: string,

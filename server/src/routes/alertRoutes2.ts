@@ -158,8 +158,19 @@ router.get(
   "/history",
   validateQuery(historyQuerySchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const history = await alertRepository.listAlertHistory(req.query as AlertHistoryFilters);
-    res.json(history);
+    const filters = req.query as AlertHistoryFilters;
+    const limit = filters.limit ?? 100;
+    const offset = filters.offset ?? 0;
+    const [history, total] = await Promise.all([
+      alertRepository.listAlertHistory(filters),
+      alertRepository.countAlertHistory(filters),
+    ]);
+    res.json({
+      data: history,
+      total,
+      page: Math.floor(offset / limit) + 1,
+      limit,
+    });
   }),
 );
 

@@ -97,12 +97,12 @@ const AlertHistoryPage: React.FC = () => {
 
   const buildUrl = useCallback(() => {
     const params = new URLSearchParams();
-    params.set('page', String(page + 1));
+    params.set('offset', String(page * rowsPerPage));
     params.set('limit', String(rowsPerPage));
     if (severityFilter !== 'all') params.set('severity', severityFilter);
     if (statusFilter !== 'all') params.set('status', statusFilter);
-    if (dateFrom) params.set('dateFrom', dateFrom);
-    if (dateTo) params.set('dateTo', dateTo);
+    if (dateFrom) params.set('startDate', new Date(dateFrom).toISOString());
+    if (dateTo) params.set('endDate', new Date(dateTo).toISOString());
     return `${API_ENDPOINTS.alerts.history}?${params.toString()}`;
   }, [page, rowsPerPage, severityFilter, statusFilter, dateFrom, dateTo]);
 
@@ -119,7 +119,7 @@ const AlertHistoryPage: React.FC = () => {
   const acknowledgeMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await protectedFetch(API_ENDPOINTS.alerts.acknowledge(id), {
-        method: 'POST',
+        method: 'PUT',
       });
       if (!res.ok) throw new Error('Failed to acknowledge alert');
     },
@@ -131,7 +131,7 @@ const AlertHistoryPage: React.FC = () => {
   const resolveMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await protectedFetch(API_ENDPOINTS.alerts.resolve(id), {
-        method: 'POST',
+        method: 'PUT',
       });
       if (!res.ok) throw new Error('Failed to resolve alert');
     },

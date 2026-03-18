@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -29,6 +29,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CalculateIcon from '@mui/icons-material/Calculate';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import { useNavigate } from 'react-router-dom';
+import { useMachineStore } from '@/stores/useMachineStore';
 import {
   useSpcProfiles,
   useCreateSpcProfile,
@@ -49,7 +50,7 @@ const SPC_METHODS = [
 
 const emptyForm: CreateSpcProfileRequest = {
   name: '',
-  machineId: 0,
+  machineId: null,
   nodeKey: '',
   method: 'zscore',
   sensitivity: 3,
@@ -58,6 +59,8 @@ const emptyForm: CreateSpcProfileRequest = {
 
 const SpcProfilesPage: React.FC = () => {
   const navigate = useNavigate();
+  const machines = useMachineStore((s) => s.machines);
+  const fetchMachines = useMachineStore((s) => s.fetchMachines);
   const { data: profiles, isLoading, error } = useSpcProfiles();
   const createProfile = useCreateSpcProfile();
   const updateProfile = useUpdateSpcProfile();
@@ -70,6 +73,10 @@ const SpcProfilesPage: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<SpcProfile | null>(null);
   const [showAlerts, setShowAlerts] = useState(false);
 
+  useEffect(() => {
+    if (machines.length === 0) fetchMachines();
+  }, [machines.length, fetchMachines]);
+
   const handleOpenCreate = () => {
     setEditingProfile(null);
     setForm(emptyForm);
@@ -80,7 +87,7 @@ const SpcProfilesPage: React.FC = () => {
     setEditingProfile(profile);
     setForm({
       name: profile.name,
-      machineId: profile.machineId ?? 0,
+      machineId: profile.machineId ?? (null),
       nodeKey: profile.nodeKey,
       method: profile.method,
       sensitivity: profile.sensitivity,
@@ -253,15 +260,25 @@ const SpcProfilesPage: React.FC = () => {
               required
             />
             <TextField
-              label="Machine ID"
-              type="number"
-              value={form.machineId || ''}
+              select
+              label="Machine"
+              value={form.machineId ?? ''}
               onChange={(e) =>
-                setForm((f) => ({ ...f, machineId: parseInt(e.target.value, 10) || 0 }))
+                setForm((f) => ({
+                  ...f,
+                  machineId: e.target.value ? Number(e.target.value) : (null),
+                }))
               }
               fullWidth
               required
-            />
+            >
+              <MenuItem value="">Select a machine</MenuItem>
+              {machines.map((m) => (
+                <MenuItem key={m.id} value={m.id}>
+                  {m.name} (ID: {m.id})
+                </MenuItem>
+              ))}
+            </TextField>
             <TextField
               label="Node Key"
               value={form.nodeKey}

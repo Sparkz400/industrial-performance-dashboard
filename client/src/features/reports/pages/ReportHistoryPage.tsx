@@ -90,7 +90,7 @@ const ReportHistoryPage: React.FC = () => {
     queryKey: ['reportHistory', page, rowsPerPage, scheduleFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
-      params.set('page', String(page + 1));
+      params.set('offset', String(page * rowsPerPage));
       params.set('limit', String(rowsPerPage));
       if (scheduleFilter !== 'all') params.set('scheduleId', String(scheduleFilter));
       const res = await protectedFetch(`${API_ENDPOINTS.reports.history}?${params.toString()}`);

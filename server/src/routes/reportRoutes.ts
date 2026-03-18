@@ -219,15 +219,26 @@ router.get(
   "/history",
   validateQuery(historyQuerySchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const history = await reportRepository.listHistory(req.query as {
+    const filters = req.query as {
       scheduleId?: number;
       status?: string;
       startDate?: string;
       endDate?: string;
       limit?: number;
       offset?: number;
+    };
+    const limit = filters.limit ?? 50;
+    const offset = filters.offset ?? 0;
+    const [history, total] = await Promise.all([
+      reportRepository.listHistory(filters),
+      reportRepository.countHistory(filters),
+    ]);
+    res.json({
+      data: history,
+      total,
+      page: Math.floor(offset / limit) + 1,
+      limit,
     });
-    res.json(history);
   }),
 );
 

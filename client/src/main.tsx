@@ -11,6 +11,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { QueryProvider } from './providers/QueryProvider';
 import { useThemeStore } from './stores/useThemeStore';
 import { useStatusStore } from './stores/useStatusStore';
+import { useAuthStore } from './stores/useAuthStore';
 import { createModernTheme } from './theme/modernTheme';
 
 const notistackRef = React.createRef<SnackbarProvider>();
@@ -41,15 +42,19 @@ interface StatusInitializerProps {
   children: React.ReactNode;
 }
 
-// Status initializer
+// Status initializer — only connect when the user is authenticated
 const StatusInitializer = ({ children }: StatusInitializerProps) => {
   const initSocket = useStatusStore((s) => s.initSocket);
   const cleanup = useStatusStore((s) => s.cleanup);
+  const user = useAuthStore((s) => s.user);
+  const isInitialized = useAuthStore((s) => s.isInitialized);
 
   useEffect(() => {
-    initSocket();
-    return () => cleanup();
-  }, [initSocket, cleanup]);
+    if (isInitialized && user) {
+      initSocket();
+      return () => cleanup();
+    }
+  }, [initSocket, cleanup, user, isInitialized]);
 
   return children;
 };

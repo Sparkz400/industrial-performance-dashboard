@@ -43,7 +43,8 @@ const CertificateNotification: React.FC = () => {
   useEffect(() => {
     // Create socket connection with admin role
     const socketConnection: TypedSocket = io(WEBSOCKET_ADDR, {
-      query: { role: 'admin' },
+      transports: ['websocket'],
+      withCredentials: true,
     });
     setSocket(socketConnection);
     // Listen for certificate events

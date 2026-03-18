@@ -3,24 +3,16 @@ import { io, type Socket } from 'socket.io-client';
 import { WEBSOCKET_ADDR } from '@/config/config';
 import type { TwinNodeBinding } from './useDigitalTwinQueries';
 
-interface LiveDataValue {
+export interface LiveDataValue {
   value: number | string;
   timestamp: string;
 }
 
-/**
- *
- * @param bindings
- */
 export function useDigitalTwinLiveData(bindings: TwinNodeBinding[]): Record<string, LiveDataValue> {
   const [liveData, setLiveData] = useState<Record<string, LiveDataValue>>({});
   const socketRef = useRef<Socket | null>(null);
-  const bindingsRef = useRef(bindings);
-
-  // Keep bindings ref in sync
-  useEffect(() => {
-    bindingsRef.current = bindings;
-  }, [bindings]);
+  const pendingRef = useRef<Record<string, LiveDataValue>>({});
+  const rafRef = useRef(0);
 
   useEffect(() => {
     if (!bindings.length) return;
@@ -29,6 +21,7 @@ export function useDigitalTwinLiveData(bindings: TwinNodeBinding[]): Record<stri
 
     const socket = io(WEBSOCKET_ADDR, {
       transports: ['websocket'],
+      withCredentials: true,
       reconnection: true,
     });
     socketRef.current = socket;
@@ -38,19 +31,30 @@ export function useDigitalTwinLiveData(bindings: TwinNodeBinding[]): Record<stri
       (data: { nodeKey: string; value: number | string; timestamp: string }) => {
         if (!nodeKeys.has(data.nodeKey)) return;
 
-        setLiveData((prev) => ({
-          ...prev,
-          [data.nodeKey]: {
-            value: data.value,
-            timestamp: data.timestamp,
-          },
-        }));
+        pendingRef.current[data.nodeKey] = {
+          value: data.value,
+          timestamp: data.timestamp,
+        };
+
+        if (!rafRef.current) {
+          rafRef.current = requestAnimationFrame(() => {
+            const batch = pendingRef.current;
+            pendingRef.current = {};
+            rafRef.current = 0;
+            setLiveData((prev) => ({ ...prev, ...batch }));
+          });
+        }
       },
     );
 
     return () => {
       socket.disconnect();
       socketRef.current = null;
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
+      pendingRef.current = {};
     };
   }, [bindings]);
 

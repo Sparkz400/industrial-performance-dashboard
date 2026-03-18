@@ -14,7 +14,7 @@ export type { SpcProfile, SpcAlert, SpcChartData };
 
 export interface CreateSpcProfileRequest {
   name: string;
-  machineId: number;
+  machineId: number | null;
   nodeKey: string;
   method: 'zscore' | 'moving_avg' | 'std_bands' | 'cusum';
   sensitivity: number;

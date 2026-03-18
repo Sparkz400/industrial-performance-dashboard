@@ -83,10 +83,12 @@ export function errorHandler(invalidCsrfTokenError: unknown) {
     }
 
     // --- Unexpected (non-operational) errors ---
+    const cause = (err as Error & { cause?: Error }).cause;
     logger.error({
       message: "Unhandled error",
       requestId,
       error: err.message,
+      ...(cause ? { cause: cause.message ?? String(cause) } : {}),
       stack: err.stack,
       statusCode: err.statusCode || 500,
     });

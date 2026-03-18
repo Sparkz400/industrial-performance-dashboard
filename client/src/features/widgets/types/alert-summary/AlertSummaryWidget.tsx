@@ -28,7 +28,7 @@ function AlertSummaryWidget(): React.ReactElement {
   const { data, isLoading, error } = useQuery<AlertHistoryResponse>({
     queryKey: ['alertSummaryWidget'],
     queryFn: async () => {
-      const params = new URLSearchParams({ status: 'active', limit: '5', page: '1' });
+      const params = new URLSearchParams({ status: 'active', limit: '5', offset: '0' });
       const res = await protectedFetch(`${API_ENDPOINTS.alerts.history}?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to fetch alerts');
       return res.json();

@@ -18,6 +18,7 @@ export interface TwinTemplate {
   description: string;
   svgContent: string;
   elements: TwinElementDefinition[];
+  category: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -168,6 +169,34 @@ export function useCreateTwinInstance() {
 /**
  *
  */
+export function useUpdateTwinTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: Partial<CreateTwinTemplateRequest> & { id: number }) =>
+      api.put(API_ENDPOINTS.digitalTwins.templateById(id), data) as Promise<TwinTemplate>,
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: twinKeys.templates() });
+      queryClient.invalidateQueries({ queryKey: twinKeys.template(variables.id) });
+    },
+  });
+}
+
+/**
+ *
+ */
+export function useDeleteTwinTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.delete(API_ENDPOINTS.digitalTwins.templateById(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: twinKeys.templates() });
+    },
+  });
+}
+
+/**
+ *
+ */
 export function useUpdateTwinInstance() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -176,6 +205,19 @@ export function useUpdateTwinInstance() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: twinKeys.instances() });
       queryClient.invalidateQueries({ queryKey: twinKeys.instance(variables.id) });
+    },
+  });
+}
+
+/**
+ *
+ */
+export function useDeleteTwinInstance() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.delete(API_ENDPOINTS.digitalTwins.instanceById(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: twinKeys.instances() });
     },
   });
 }

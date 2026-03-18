@@ -148,10 +148,12 @@ export const isCsrfError = async (response: Response): Promise<boolean> => {
   if (response.status === 403 || response.status === 419) {
     try {
       const data = await response.clone().json();
+      const errorLower = (data.error || '').toLowerCase();
       return (
-        data.error === 'invalid_csrf_token' ||
-        data.message?.includes('CSRF') ||
-        data.error?.includes('csrf')
+        data.code === 'INVALID_CSRF_TOKEN' ||
+        errorLower === 'invalid_csrf_token' ||
+        errorLower.includes('csrf') ||
+        data.message?.toLowerCase().includes('csrf')
       );
     } catch (_e) {
       // Not a JSON response, check response text

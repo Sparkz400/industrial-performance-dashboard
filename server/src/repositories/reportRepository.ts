@@ -183,6 +183,39 @@ export const reportRepository = {
       .offset(filters?.offset ?? 0);
   },
 
+  async countHistory(filters?: {
+    scheduleId?: number;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+  }) {
+    const readDb = getReadDb();
+    const conditions = [];
+
+    if (filters?.scheduleId != null) {
+      conditions.push(eq(reportHistory.scheduleId, filters.scheduleId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(reportHistory.status, filters.status));
+    }
+    if (filters?.startDate) {
+      conditions.push(
+        gte(reportHistory.generatedAt, new Date(filters.startDate)),
+      );
+    }
+    if (filters?.endDate) {
+      conditions.push(
+        lte(reportHistory.generatedAt, new Date(filters.endDate)),
+      );
+    }
+
+    const result = await readDb
+      .select({ count: sql<number>`count(*)` })
+      .from(reportHistory)
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
+    return Number(result[0]?.count ?? 0);
+  },
+
   async findHistoryById(id: number) {
     const [entry] = await getReadDb()
       .select()

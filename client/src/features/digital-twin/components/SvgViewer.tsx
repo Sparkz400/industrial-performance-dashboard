@@ -1,5 +1,6 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Box, Paper, Typography } from '@mui/material';
+import DOMPurify from 'dompurify';
 import type { TwinNodeBinding } from '../hooks/useDigitalTwinQueries';
 
 interface LiveDataValue {
@@ -28,6 +29,11 @@ const SvgViewer: React.FC<SvgViewerProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<HTMLDivElement>(null);
+
+  const sanitizedSvg = useMemo(
+    () => DOMPurify.sanitize(svgContent, { USE_PROFILES: { svg: true, svgFilters: true } }),
+    [svgContent],
+  );
   const [overlays, setOverlays] = useState<OverlayPosition[]>([]);
 
   const updateOverlayPositions = useCallback(() => {
@@ -121,7 +127,7 @@ const SvgViewer: React.FC<SvgViewerProps> = ({
             height: '100%',
           },
         }}
-        dangerouslySetInnerHTML={{ __html: svgContent }}
+        dangerouslySetInnerHTML={{ __html: sanitizedSvg }}
       />
 
       {/* Data overlays */}
