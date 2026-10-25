@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { API_ENDPOINTS } from '@/config/config';
 import { protectedFetch } from '@/utils/protectedFetch';
 import { useTimeRangeStore } from '@/stores/useTimeRangeStore';
+import { toOeeDisplay, type OeeResponse } from '../oee-gauge/useOeeData';
 
 export type Granularity = 'hour' | 'day' | 'week';
 
@@ -11,6 +12,7 @@ export interface OeeTrendPoint {
   availability: number;
   performance: number;
   quality: number;
+  dataComplete: boolean;
 }
 
 /**
@@ -36,7 +38,8 @@ export function useOeeTrendData(machineId: number | null, granularity: Granulari
       if (timeRange.end) params.set('endDate', timeRange.end.toISOString());
       const res = await protectedFetch(`${API_ENDPOINTS.oee.history(machineId)}?${params}`);
       if (!res.ok) throw new Error('Failed to fetch OEE trend data');
-      return res.json();
+      const rows: (OeeResponse & { bucketStart: string })[] = await res.json();
+      return rows.map((row) => ({ ...toOeeDisplay(row), timestamp: row.bucketStart }));
     },
     enabled: !!machineId,
     staleTime: 30_000,

@@ -1,6 +1,6 @@
 import { EventEmitter } from "events";
 import { eq, and } from "drizzle-orm";
-import opcua from "node-opcua";
+import * as opcua from "node-opcua";
 import * as opcuaClient from "../opcuaClient.js";
 import logger from "../../utils/logger.js";
 import db from "../../database/db.js";
@@ -96,6 +96,7 @@ class MultiMachineManager extends EventEmitter {
         nodeId: m.nodeId,
         dataType: m.dataType ?? "Double",
         label: m.displayName,
+        samplingInterval: m.samplingInterval ?? 500,
       };
     }
 
@@ -165,7 +166,7 @@ class MultiMachineManager extends EventEmitter {
         if (entry.connection.subscription) {
           await entry.connection.subscription.terminate().catch(() => {});
         }
-        if (entry.connection.session?.isOpen) {
+        if (entry.connection.session) {
           await entry.connection.session.close(true).catch(() => {});
         }
         if (entry.connection.client) {
@@ -192,7 +193,7 @@ class MultiMachineManager extends EventEmitter {
 
   private async healthCheck(machineId: number): Promise<void> {
     const entry = this.connections.get(machineId);
-    if (!entry?.connection?.session?.isOpen) {
+    if (!entry?.connection?.session) {
       logger.warn(
         `[MultiMachine] Health check: Machine ${machineId} session not open.`,
       );
@@ -263,7 +264,7 @@ class MultiMachineManager extends EventEmitter {
     let tempClient: opcua.OPCUAClient | null = null;
     let useTempConnection = false;
 
-    if (entry?.connection?.session?.isOpen) {
+    if (entry?.connection?.session) {
       session = entry.connection.session;
     } else {
       // Create temp connection just for browsing
@@ -360,7 +361,9 @@ class MultiMachineManager extends EventEmitter {
   getConnectedMachineIds(): number[] {
     return Array.from(this.connections.keys()).filter((id) => {
       const entry = this.connections.get(id);
-      return entry?.connection?.session?.isOpen;
+      return (
+        entry?.connection?.session && !entry.connection.client.isReconnecting
+      );
     });
   }
 

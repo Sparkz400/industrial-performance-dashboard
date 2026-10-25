@@ -245,9 +245,7 @@ const ComplianceAuditTrailTab: React.FC = () => {
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">
-                      {entry.entityName || entry.entityType}
-                    </Typography>
+                    <Typography variant="body2">{entry.entityName || entry.entityType}</Typography>
                     <Typography variant="caption" color="text.secondary" fontFamily="monospace">
                       {entry.entityType}
                       {entry.entityId ? ` #${entry.entityId}` : ''}

@@ -2,6 +2,7 @@ export interface OpcuaNodeConfig {
   nodeId: string;
   dataType: string;
   label: string;
+  samplingInterval?: number;
 }
 
 export interface OpcuaMappingConfig {

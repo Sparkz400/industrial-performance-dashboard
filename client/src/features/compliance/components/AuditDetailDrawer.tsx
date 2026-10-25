@@ -1,14 +1,5 @@
 import React from 'react';
-import {
-  Box,
-  Chip,
-  Divider,
-  Drawer,
-  IconButton,
-  Stack,
-  Tooltip,
-  Typography,
-} from '@mui/material';
+import { Box, Chip, Divider, Drawer, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import WarningIcon from '@mui/icons-material/Warning';
@@ -110,9 +101,7 @@ const AuditDetailDrawer: React.FC<AuditDetailDrawerProps> = ({ entry, open, onCl
             <Typography variant="body2">{entry.message}</Typography>
           </FieldRow>
           <FieldRow label="Timestamp">
-            <Typography variant="body2">
-              {new Date(entry.createdAt).toLocaleString()}
-            </Typography>
+            <Typography variant="body2">{new Date(entry.createdAt).toLocaleString()}</Typography>
           </FieldRow>
 
           <Divider sx={{ mt: 1 }} />

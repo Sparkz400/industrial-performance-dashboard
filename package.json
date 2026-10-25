@@ -8,13 +8,14 @@
     "server"
   ],
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
     "build:shared": "npm run build -w shared",
-    "start:server": "cd server && npx tsx app.ts",
+    "start:server": "npm run build:server && npm run start -w server",
     "start:client": "npm run dev -w client",
-    "start": "concurrently \"npm run start:server\" \"npm run start:client\"",
+    "start": "npm run build:shared && concurrently \"npm run start:server\" \"npm run start:client\"",
+    "simulate": "npm run simulate -w server",
     "build": "npm run build:shared && concurrently \"npm run build -w client\" \"npm run build -w server\"",
     "build:client": "npm run build:shared && npm run build -w client",
     "build:server": "npm run build:shared && npm run build -w server",
@@ -22,7 +23,7 @@
     "test:client": "npm run build:shared && npm run test -w client",
     "test:server": "npm run build:shared && npm run test -w server",
     "test:e2e": "npx playwright test",
-    "test:coverage": "concurrently \"npm run test:coverage -w client\" \"npx vitest run --coverage -w server\"",
+    "test:coverage": "npm run build:shared && concurrently \"npm run test:coverage -w client\" \"npm run test:coverage -w server\"",
     "lint": "npm run lint -w client",
     "prepare": "husky"
   },
@@ -43,7 +44,5 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0"
   },
-  "dependencies": {
-    "cron-parser": "^5.5.0"
-  }
+  "license": "Apache-2.0"
 }

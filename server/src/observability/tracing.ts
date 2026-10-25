@@ -8,7 +8,6 @@ import {
   ATTR_SERVICE_NAME,
   SEMRESATTRS_DEPLOYMENT_ENVIRONMENT,
 } from "@opentelemetry/semantic-conventions";
-import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-node";
 
 const OTEL_ENABLED = process.env.OTEL_ENABLED === "true";
 const OTEL_ENDPOINT =
@@ -37,7 +36,7 @@ export function initTracing(): void {
       [SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]:
         process.env.NODE_ENV || "development",
     }),
-    spanProcessors: [new BatchSpanProcessor(traceExporter)],
+    traceExporter,
     instrumentations: [
       new HttpInstrumentation({
         ignoreIncomingRequestHook: (req) => {

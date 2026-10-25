@@ -7,6 +7,7 @@ const envVarsSchema = Joi.object({
     .valid("development", "production", "test")
     .default("development"),
   PORT: Joi.number().port().default(3000),
+  HOST: Joi.string().default("127.0.0.1"),
 
   // Client Configuration
   CLIENT_URL: Joi.string()
@@ -122,6 +123,7 @@ const envVarsSchema = Joi.object({
     .description("OPC UA health check interval (ms, 0 to disable)"),
 
   // Application Configuration
+  OPCUA_SPOOL_PATH: Joi.string().default("data/measurements.sqlite"),
   LOG_LEVEL: Joi.string()
     .valid("error", "warn", "info", "http", "verbose", "debug", "silly")
     .default("info"),
@@ -260,6 +262,7 @@ if (error) {
 export interface AppConfig {
   NODE_ENV: string;
   PORT: number;
+  HOST: string;
   CLIENT_URL: string;
   DB_HOST: string;
   DB_PORT: number;
@@ -293,6 +296,7 @@ export interface AppConfig {
   LOG_LEVEL: string;
   ADMIN_API_KEY?: string;
   OPCUA_BATCH_SIZE: number;
+  OPCUA_SPOOL_PATH: string;
   OPCUA_QUEUE_DELAY: number;
   OPCUA_QUEUE_WARN_THRESHOLD: number;
   MAX_QUEUE_SIZE: number;

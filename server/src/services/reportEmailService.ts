@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import nodemailer, { type Transporter } from "nodemailer";
 import path from "path";
 import logger from "../utils/logger.js";
 import config from "../config/config.js";
@@ -8,13 +8,13 @@ import config from "../config/config.js";
 // ---------------------------------------------------------------------------
 
 class ReportEmailService {
-  private transporter: nodemailer.Transporter | null = null;
+  private transporter: Transporter | null = null;
 
   /**
    * Lazily create the nodemailer transport from environment configuration.
    * Returns null if SMTP is not configured.
    */
-  private getTransporter(): nodemailer.Transporter | null {
+  private getTransporter(): Transporter | null {
     if (this.transporter) return this.transporter;
 
     const host = config.SMTP_HOST;

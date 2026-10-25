@@ -1,44 +1,32 @@
-# Stage 1: Build client
-FROM node:20-alpine AS client-build
-WORKDIR /app/client
-COPY client/package.json client/package-lock.json ./
-RUN npm ci
-COPY client/ ./
+FROM node:24-bookworm-slim AS build
+WORKDIR /app
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+COPY package.json package-lock.json ./
+COPY shared/package.json shared/package.json
+COPY client/package.json client/package.json
+COPY server/package.json server/package.json
+RUN npm ci --ignore-scripts
+COPY shared/ shared/
+COPY client/ client/
+COPY server/ server/
 RUN npm run build
 
-# Stage 2: Build server
-FROM node:20-alpine AS server-build
+FROM node:24-bookworm-slim AS production
+WORKDIR /app
+ENV NODE_ENV=production PUPPETEER_SKIP_DOWNLOAD=true PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+RUN apt-get update && apt-get install -y --no-install-recommends chromium ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY package.json package-lock.json ./
+COPY shared/package.json shared/package.json
+COPY client/package.json client/package.json
+COPY server/package.json server/package.json
+RUN npm ci --omit=dev --workspace=server --workspace=shared --ignore-scripts
+COPY --from=build --chown=node:node /app/shared/dist shared/dist
+COPY --from=build --chown=node:node /app/server/dist server/dist
+COPY --from=build --chown=node:node /app/server/drizzle server/drizzle
+COPY --from=build --chown=node:node /app/client/dist server/public
+COPY --chown=node:node scripts/test-runtime.mjs scripts/test-runtime.mjs
+RUN mkdir -p server/data server/certificates server/logs server/reports && chown -R node:node server
 WORKDIR /app/server
-COPY server/package.json server/package-lock.json ./
-RUN npm ci
-COPY server/ ./
-RUN npm run build
-
-# Stage 3: Install production server dependencies
-FROM node:20-alpine AS server-production-deps
-WORKDIR /app/server
-COPY server/package.json server/package-lock.json ./
-RUN npm ci --omit=dev
-
-# Stage 4: Production
-FROM node:20-alpine AS production
-WORKDIR /app/server
-
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-
-COPY --chown=appuser:appgroup --from=server-production-deps /app/server/node_modules ./node_modules
-COPY --chown=appuser:appgroup --from=server-build /app/server/dist ./dist
-COPY --chown=appuser:appgroup --from=server-build /app/server/package.json ./package.json
-COPY --chown=appuser:appgroup --from=server-build /app/server/knexfile.js ./knexfile.js
-COPY --chown=appuser:appgroup --from=server-build /app/server/migrations ./migrations
-COPY --chown=appuser:appgroup --from=server-build /app/server/certificates ./certificates
-COPY --chown=appuser:appgroup --from=client-build /app/client/dist ./public
-
-ENV NODE_ENV=production
-ENV PORT=3000
-
+USER node
 EXPOSE 3000
-
-USER appuser
-
-CMD ["node", "dist/app.js"]
+CMD ["sh", "-c", "node dist/src/database/migrate.js && exec node dist/app.js"]

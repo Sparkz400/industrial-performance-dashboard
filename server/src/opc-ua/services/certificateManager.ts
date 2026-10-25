@@ -2,10 +2,10 @@ import fs from "fs";
 import path from "path";
 import { promisify } from "util";
 import { OPCUACertificateManager } from "node-opcua-certificate-manager";
-import opcua from "node-opcua";
+import * as opcua from "node-opcua";
 import logger from "../../utils/logger.js";
 import os from "os";
-import crypto from "crypto";
+
 import config from "../../config/config.js";
 
 const { SecurityPolicy, MessageSecurityMode } = opcua;
@@ -126,7 +126,7 @@ class CertificateManagerService {
           logger.info(
             "Client certificate or private key missing, creating new ones...",
           );
-          await this.createClientCertificate();
+          await this.generateClientCertificate();
         } else {
           logger.info(`Client certificate found: ${this.certificateFile}`);
           logger.info(`Client private key found: ${this.privateKeyFile}`);
@@ -227,104 +227,39 @@ class CertificateManagerService {
 
   async createClientCertificate(): Promise<ClientCertificateResult> {
     await this.ensureInitialized();
-
-    logger.info("[CertMgr:createClientCert] Starting creation...");
-    const creationPromise = (async (): Promise<ClientCertificateResult> => {
-      try {
-        const { pki, md } = await import("node-forge");
-
-        const keys = pki.rsa.generateKeyPair(2048);
-        const cert = pki.createCertificate();
-
-        cert.publicKey = keys.publicKey;
-        cert.serialNumber = crypto.randomBytes(16).toString("hex");
-        cert.validity.notBefore = new Date();
-        cert.validity.notAfter = new Date();
-        cert.validity.notAfter.setFullYear(
-          cert.validity.notBefore.getFullYear() + 5,
-        );
-
-        const subjectAttrs = [
-          { name: "commonName", value: this.applicationName },
-          { name: "organizationName", value: this.organizationName },
-          { name: "localityName", value: this.localityName },
-          { name: "stateOrProvinceName", value: this.stateName },
-          { name: "countryName", value: this.countryName },
-        ];
-        cert.setSubject(subjectAttrs);
-        cert.setIssuer(subjectAttrs);
-
-        const hostname = os.hostname();
-        const ipAddresses = this.getIpAddresses();
-        const altNames: Array<{ type: number; value?: string; ip?: string }> = [
-          { type: 6, value: this.applicationUri! },
-          { type: 2, value: hostname },
-          { type: 2, value: "localhost" },
-        ];
-        ipAddresses.forEach((ip) => {
-          altNames.push({ type: 7, ip: ip });
-        });
-
-        cert.setExtensions([
-          { name: "basicConstraints", cA: false },
-          {
-            name: "keyUsage",
-            digitalSignature: true,
-            keyEncipherment: true,
-            dataEncipherment: true,
-          },
-          { name: "extKeyUsage", serverAuth: true, clientAuth: true },
-          { name: "subjectAltName", altNames: altNames },
-          { name: "subjectKeyIdentifier" },
-        ]);
-
-        cert.sign(keys.privateKey, md.sha256.create());
-
-        const certPem = pki.certificateToPem(cert);
-        const privateKeyPem = pki.privateKeyToPem(keys.privateKey);
-
-        await Promise.all([
-          writeFile(this.certificateFile!, certPem),
-          writeFile(this.privateKeyFile!, privateKeyPem),
-        ]);
-
-        logger.info("[CertMgr:createClientCert] Files written successfully.");
-        return {
-          certificateFile: this.certificateFile!,
-          privateKeyFile: this.privateKeyFile!,
-          applicationUri: this.applicationUri!,
-        };
-      } catch (error: any) {
-        logger.error(
-          `[CertMgr:createClientCert] Failed during generation/write: ${error.message}`,
-          { stack: error.stack },
-        );
-        throw error;
-      }
-    })();
-
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(
-        () =>
-          reject(new Error("Certificate creation timed out after 45 seconds")),
-        45000,
-      );
-    });
-
-    try {
-      const result = await Promise.race([creationPromise, timeoutPromise]);
-      logger.info(
-        "[CertMgr:createClientCert] Completed successfully (within timeout).",
-      );
-      return result;
-    } catch (error: any) {
-      logger.error(
-        `[CertMgr:createClientCert] Failed or timed out: ${error.message}`,
-      );
-      throw error;
-    }
+    return this.generateClientCertificate();
   }
 
+  private async generateClientCertificate(): Promise<ClientCertificateResult> {
+    if (
+      !this.certManager ||
+      !this.certificateFile ||
+      !this.privateKeyFile ||
+      !this.applicationUri
+    ) {
+      throw new Error("Certificate storage is not initialized");
+    }
+    await this.certManager.createSelfSignedCertificate({
+      outputFile: this.certificateFile,
+      applicationUri: this.applicationUri,
+      subject: {
+        commonName: this.applicationName,
+        organization: this.organizationName,
+        locality: this.localityName,
+        state: this.stateName,
+        country: this.countryName,
+      },
+      dns: [os.hostname(), "localhost"],
+      ip: this.getIpAddresses(),
+      startDate: new Date(),
+      validity: 365,
+    });
+    return {
+      certificateFile: this.certificateFile,
+      privateKeyFile: this.privateKeyFile,
+      applicationUri: this.applicationUri,
+    };
+  }
   getIpAddresses(): string[] {
     const ipAddresses: string[] = [];
     try {
@@ -585,15 +520,13 @@ class CertificateManagerService {
 
   getAvailableSecurityPolicies(): string[] {
     return Object.keys(SecurityPolicy).filter(
-      (policy) =>
-        policy !== "Invalid" && policy !== "PubSub_Aes128_CTR",
+      (policy) => policy !== "Invalid" && policy !== "PubSub_Aes128_CTR",
     );
   }
 
   getAvailableSecurityModes(): string[] {
     return Object.keys(MessageSecurityMode).filter(
-      (mode) =>
-        mode !== "Invalid" && isNaN(Number(mode)),
+      (mode) => mode !== "Invalid" && isNaN(Number(mode)),
     );
   }
 }

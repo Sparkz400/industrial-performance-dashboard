@@ -198,7 +198,9 @@ const ComplianceReportsTab: React.FC = () => {
               onClick={() => setReportType(rt.type)}
             >
               <CardContent sx={{ textAlign: 'center' }}>
-                <Box sx={{ color: reportType === rt.type ? 'primary.main' : 'text.secondary', mb: 1 }}>
+                <Box
+                  sx={{ color: reportType === rt.type ? 'primary.main' : 'text.secondary', mb: 1 }}
+                >
                   {rt.icon}
                 </Box>
                 <Typography variant="subtitle1" gutterBottom>
@@ -248,7 +250,9 @@ const ComplianceReportsTab: React.FC = () => {
           </TextField>
           <Button
             variant="contained"
-            startIcon={isPending ? <CircularProgress size={18} color="inherit" /> : <AssessmentIcon />}
+            startIcon={
+              isPending ? <CircularProgress size={18} color="inherit" /> : <AssessmentIcon />
+            }
             onClick={handleGenerate}
             disabled={!reportType || isPending}
           >

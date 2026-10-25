@@ -52,7 +52,7 @@ const OeeTrendWidgetView: React.FC<OeeTrendWidgetViewProps> = ({ data, isLoading
           hour: '2-digit',
           minute: '2-digit',
         }),
-        y: point[series.key],
+        y: point.dataComplete ? point[series.key] : null,
       })),
     }));
   }, [data]);
@@ -83,6 +83,11 @@ const OeeTrendWidgetView: React.FC<OeeTrendWidgetViewProps> = ({ data, isLoading
         <Typography variant="h6">OEE Trend</Typography>
         {isLoading && <CircularProgress size={20} sx={{ ml: 1 }} />}
       </Box>
+      {data.some((point) => !point.dataComplete) && (
+        <Typography role="status" variant="caption">
+          Gaps indicate incomplete measurement coverage.
+        </Typography>
+      )}
 
       <Box sx={{ flexGrow: 1, width: '100%', minHeight: 0, position: 'relative' }}>
         {chartData.length > 0 ? (

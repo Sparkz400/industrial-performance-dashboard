@@ -61,7 +61,9 @@ export function useAlarmData(): UseAlarmDataReturn {
   const fetchAlarms = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_ENDPOINTS.alarms.base}?limit=200`, { credentials: 'include' });
+      const response = await fetch(`${API_ENDPOINTS.alarms.base}?limit=200`, {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error(`HTTP error ${response.status}`);
       const alarms: Alarm[] = await response.json();
       setData(alarms);

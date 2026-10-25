@@ -44,6 +44,18 @@ const OeeGaugeWidget: React.FC<OeeGaugeWidgetProps> = ({ config = {}, onError })
     );
   }
 
+  if (error || (data && !data.dataComplete)) {
+    return (
+      <Box sx={{ p: 2 }}>
+        <Typography role="status">
+          {error
+            ? 'OEE data unavailable'
+            : 'Incomplete measurement coverage — OEE is unavailable for this period.'}
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
     <OeeGaugeWidgetView
       oee={data?.oee ?? 0}

@@ -6,6 +6,8 @@ initTracing();
 
 import express, { type Request, type Response } from 'express';
 import http from 'http';
+import path from 'node:path';
+import { existsSync } from 'node:fs';
 
 import config from './src/config/config.js';
 import logger from './src/utils/logger.js';
@@ -117,6 +119,15 @@ export function createApp() {
       createExpressMiddleware({ router: appRouter, createContext }),
     );
 
+    const publicDir = path.resolve('public');
+    if (existsSync(path.join(publicDir, 'index.html'))) {
+        app.use(express.static(publicDir));
+        app.get('/{*path}', (req, res, next) => {
+            if (req.path.startsWith('/api/')) return next();
+            res.sendFile(path.join(publicDir, 'index.html'));
+        });
+    }
+
     // --- Centralized Error Handling ---
     app.use(errorHandler(invalidCsrfTokenError));
 
@@ -143,7 +154,7 @@ function bootstrap() {
     process.on('SIGTERM', () => shutdown('SIGTERM'));
 
     const PORT = config.PORT;
-    server.listen(PORT, () => {
+    server.listen(PORT, config.HOST, () => {
         logger.info(`Server is running on http://localhost:${PORT}`);
         if (statusManager.getServiceStatus(StatusConstants.DATABASE) === StatusConstants.UNKNOWN) {
             logger.info("Server listening. Database status managed by connection attempts.");

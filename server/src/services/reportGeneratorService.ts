@@ -15,7 +15,7 @@ import logger from "../utils/logger.js";
 // Constants
 // ---------------------------------------------------------------------------
 
-const REPORTS_DIR = path.resolve("server/reports");
+const REPORTS_DIR = path.resolve("reports");
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -204,6 +204,7 @@ async function renderOeeSection(
 
     return `<h2>${escapeHtml(title)}</h2>
 <div class="summary-box">
+  ${result.dataComplete ? "" : "<p><strong>Incomplete measurement coverage. These figures are provisional.</strong></p>"}
   <p><strong>OEE:</strong> ${pct(result.oee)}</p>
 </div>
 <table>
@@ -228,7 +229,9 @@ async function renderOeeSection(
 </table>`;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    logger.warn(`[ReportGenerator] OEE section failed for machine ${machineId}: ${msg}`);
+    logger.warn(
+      `[ReportGenerator] OEE section failed for machine ${machineId}: ${msg}`,
+    );
     return `<h2>${escapeHtml(title)}</h2>
 <div class="summary-box"><p>OEE data unavailable: ${escapeHtml(msg)}</p></div>`;
   }
@@ -350,7 +353,7 @@ class ReportGeneratorService {
 
       try {
         const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: "networkidle0" });
+        await page.setContent(html, { waitUntil: "load" });
         await page.pdf({
           path: pdfPath,
           format: "A4",

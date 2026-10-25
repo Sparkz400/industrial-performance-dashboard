@@ -215,7 +215,8 @@ const RecipesPage: React.FC = () => {
               <TableRow>
                 <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                   <Typography variant="body2" color="text.secondary">
-                    No process specifications found. Create one to define compliance reference values.
+                    No process specifications found. Create one to define compliance reference
+                    values.
                   </Typography>
                 </TableCell>
               </TableRow>

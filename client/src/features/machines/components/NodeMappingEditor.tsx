@@ -40,12 +40,12 @@ interface NodeMappingEditorProps {
 
 interface EditableMapping {
   id?: number;
-  node_id: string;
-  node_key: string;
-  display_name: string;
-  data_type: string;
-  sampling_interval: number;
-  is_active: boolean;
+  nodeId: string;
+  nodeKey: string;
+  displayName: string;
+  dataType: string;
+  samplingInterval: number;
+  isActive: boolean;
   isNew?: boolean;
 }
 
@@ -92,14 +92,14 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
 
   const handleAddSelectedNodes = () => {
     const newMappings: EditableMapping[] = selectedBrowseNodes
-      .filter((node) => !mappings.some((m) => m.node_id === node.nodeId))
+      .filter((node) => !mappings.some((m) => m.nodeId === node.nodeId))
       .map((node) => ({
-        node_id: node.nodeId,
-        node_key: node.displayName.replace(/[^a-zA-Z0-9_]/g, ''),
-        display_name: node.displayName,
-        data_type: 'Double',
-        sampling_interval: 500,
-        is_active: true,
+        nodeId: node.nodeId,
+        nodeKey: node.displayName.replace(/[^a-zA-Z0-9_]/g, ''),
+        displayName: node.displayName,
+        dataType: 'Double',
+        samplingInterval: 500,
+        isActive: true,
         isNew: true,
       }));
 
@@ -158,12 +158,12 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
     setMappings((prev) => [
       ...prev,
       {
-        node_id: '',
-        node_key: '',
-        display_name: '',
-        data_type: 'Double',
-        sampling_interval: 500,
-        is_active: true,
+        nodeId: '',
+        nodeKey: '',
+        displayName: '',
+        dataType: 'Double',
+        samplingInterval: 500,
+        isActive: true,
         isNew: true,
       },
     ]);
@@ -176,7 +176,7 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
       <DialogTitle>
         Node Mappings — {machine.name}
         <Typography variant="body2" color="text.secondary">
-          {machine.endpoint_url}
+          {machine.endpointUrl}
         </Typography>
       </DialogTitle>
 
@@ -232,8 +232,8 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
                       <TableRow key={mapping.id || `new-${index}`}>
                         <TableCell>
                           <TextField
-                            value={mapping.node_id}
-                            onChange={(e) => handleUpdateMapping(index, 'node_id', e.target.value)}
+                            value={mapping.nodeId}
+                            onChange={(e) => handleUpdateMapping(index, 'nodeId', e.target.value)}
                             size="small"
                             variant="standard"
                             fullWidth
@@ -242,8 +242,8 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
                         </TableCell>
                         <TableCell>
                           <TextField
-                            value={mapping.node_key}
-                            onChange={(e) => handleUpdateMapping(index, 'node_key', e.target.value)}
+                            value={mapping.nodeKey}
+                            onChange={(e) => handleUpdateMapping(index, 'nodeKey', e.target.value)}
                             size="small"
                             variant="standard"
                             fullWidth
@@ -252,9 +252,9 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
                         </TableCell>
                         <TableCell>
                           <TextField
-                            value={mapping.display_name}
+                            value={mapping.displayName}
                             onChange={(e) =>
-                              handleUpdateMapping(index, 'display_name', e.target.value)
+                              handleUpdateMapping(index, 'displayName', e.target.value)
                             }
                             size="small"
                             variant="standard"
@@ -265,9 +265,9 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
                         <TableCell>
                           <FormControl size="small" variant="standard" fullWidth>
                             <Select
-                              value={mapping.data_type}
+                              value={mapping.dataType}
                               onChange={(e) =>
-                                handleUpdateMapping(index, 'data_type', e.target.value)
+                                handleUpdateMapping(index, 'dataType', e.target.value)
                               }
                             >
                               <MenuItem value="Double">Double</MenuItem>
@@ -283,11 +283,11 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
                         <TableCell>
                           <TextField
                             type="number"
-                            value={mapping.sampling_interval}
+                            value={mapping.samplingInterval}
                             onChange={(e) =>
                               handleUpdateMapping(
                                 index,
-                                'sampling_interval',
+                                'samplingInterval',
                                 parseInt(e.target.value, 10),
                               )
                             }
@@ -298,9 +298,9 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
                         </TableCell>
                         <TableCell>
                           <Switch
-                            checked={mapping.is_active}
+                            checked={mapping.isActive}
                             onChange={(e) =>
-                              handleUpdateMapping(index, 'is_active', e.target.checked)
+                              handleUpdateMapping(index, 'isActive', e.target.checked)
                             }
                             size="small"
                           />

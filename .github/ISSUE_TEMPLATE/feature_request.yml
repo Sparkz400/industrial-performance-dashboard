@@ -1,0 +1,18 @@
+name: Feature request
+description: Propose a concrete industrial monitoring workflow.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Who needs this and what cannot they accomplish today?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Smallest useful outcome and validation
+      description: Include protocol or machine requirements and a way to test without production equipment.
+    validations:
+      required: true

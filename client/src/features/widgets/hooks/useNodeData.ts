@@ -57,7 +57,9 @@ export function useNodeData(options: UseNodeDataOptions): UseNodeDataReturn {
       const params = new URLSearchParams({ nodeKey, limit: String(maxPoints) });
       if (machineId != null) params.set('machineId', String(machineId));
 
-      const response = await fetch(`${API_ENDPOINTS.nodeData}?${params}`, { credentials: 'include' });
+      const response = await fetch(`${API_ENDPOINTS.nodeData}?${params}`, {
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error(`HTTP error ${response.status}`);
 
       const historicalData: NodeDataPoint[] = await response.json();
@@ -86,7 +88,10 @@ export function useNodeData(options: UseNodeDataOptions): UseNodeDataReturn {
     const handleOpcuaUpdate = (nodeData: OpcuaNodeData) => {
       const now = new Date();
       const newPoint: NodeDataPoint = {
-        timestamp: typeof nodeData.timestamp === 'string' ? nodeData.timestamp : nodeData.timestamp.toISOString(),
+        timestamp:
+          typeof nodeData.timestamp === 'string'
+            ? nodeData.timestamp
+            : nodeData.timestamp.toISOString(),
         time: now.toLocaleTimeString([], {
           hour: '2-digit',
           minute: '2-digit',

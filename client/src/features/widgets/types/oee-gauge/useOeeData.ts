@@ -8,6 +8,26 @@ export interface OeeData {
   availability: number;
   performance: number;
   quality: number;
+  dataComplete: boolean;
+}
+
+export interface OeeResponse {
+  oee: number;
+  availability: { availability: number };
+  performance: { performance: number };
+  quality: { quality: number };
+  dataComplete: boolean;
+}
+
+/** Convert API ratios and nested metrics into display percentages. */
+export function toOeeDisplay(result: OeeResponse): OeeData {
+  return {
+    oee: result.oee * 100,
+    availability: result.availability.availability * 100,
+    performance: result.performance.performance * 100,
+    quality: result.quality.quality * 100,
+    dataComplete: result.dataComplete,
+  };
 }
 
 /**
@@ -26,7 +46,7 @@ export function useOeeData(machineId: number | null) {
       if (timeRange.end) params.set('endDate', timeRange.end.toISOString());
       const res = await protectedFetch(`${API_ENDPOINTS.oee.current(machineId)}?${params}`);
       if (!res.ok) throw new Error('Failed to fetch OEE');
-      return res.json();
+      return toOeeDisplay(await res.json());
     },
     enabled: !!machineId,
     staleTime: 30_000,

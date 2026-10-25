@@ -1,10 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
-import {
-  ResponsiveLine,
-  type LineSeries,
-  type LineCustomSvgLayerProps,
-} from '@nivo/line';
+import { ResponsiveLine, type LineSeries, type LineCustomSvgLayerProps } from '@nivo/line';
 import { useSpcChartData } from '@/features/spc/hooks/useSpcQueries';
 import type { WidgetConfig } from '@/types';
 

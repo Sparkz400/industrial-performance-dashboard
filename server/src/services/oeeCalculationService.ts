@@ -13,17 +13,20 @@ export interface AvailabilityResult {
   runningTimeMinutes: number;
   plannedStopTimeMinutes: number;
   totalTimeMinutes: number;
+  unknownTimeMinutes: number;
 }
 
 export interface PerformanceResult {
   performance: number;
   totalCount: number;
+  dataComplete: boolean;
 }
 
 export interface QualityResult {
   quality: number;
   goodCount: number;
   rejectCount: number;
+  dataComplete: boolean;
 }
 
 export interface OeeResult {
@@ -33,6 +36,7 @@ export interface OeeResult {
   quality: QualityResult;
   startDate: string;
   endDate: string;
+  dataComplete: boolean;
 }
 
 export interface OeeHistoryEntry extends OeeResult {
@@ -59,7 +63,14 @@ function asNumberArray(value: unknown): number[] {
 function classifyDataPoints(
   dataPoints: { timestamp: Date; value: number | null }[],
   config: OeeConfigRow,
-): { runningMs: number; plannedStopMs: number; totalMs: number } {
+  startDate: Date,
+  endDate: Date,
+): {
+  runningMs: number;
+  plannedStopMs: number;
+  totalMs: number;
+  unknownMs: number;
+} {
   const runningValues = new Set(asNumberArray(config.runningModeValues));
   const plannedStopValues = new Set(
     asNumberArray(config.plannedStopModeValues),
@@ -67,19 +78,29 @@ function classifyDataPoints(
 
   let runningMs = 0;
   let plannedStopMs = 0;
-  let totalMs = 0;
+  const totalMs = endDate.getTime() - startDate.getTime();
+  let knownMs = 0;
+  const knownValues = new Set([
+    ...runningValues,
+    ...plannedStopValues,
+    ...asNumberArray(config.idleModeValues),
+    ...asNumberArray(config.unplannedStopModeValues),
+  ]);
 
-  for (let i = 0; i < dataPoints.length - 1; i++) {
+  for (let i = 0; i < dataPoints.length; i++) {
     const current = dataPoints[i];
     const next = dataPoints[i + 1];
     const gapMs =
-      new Date(next.timestamp).getTime() -
-      new Date(current.timestamp).getTime();
+      Math.min(
+        next ? new Date(next.timestamp).getTime() : endDate.getTime(),
+        endDate.getTime(),
+      ) - Math.max(new Date(current.timestamp).getTime(), startDate.getTime());
 
     if (gapMs <= 0) continue;
 
-    totalMs += gapMs;
     const modeValue = current.value;
+    if (modeValue === null || !knownValues.has(modeValue)) continue;
+    knownMs += gapMs;
 
     if (modeValue !== null && runningValues.has(modeValue)) {
       runningMs += gapMs;
@@ -89,18 +110,52 @@ function classifyDataPoints(
     // idle and unplanned stop time is implicitly totalMs - runningMs - plannedStopMs
   }
 
-  return { runningMs, plannedStopMs, totalMs };
+  return { runningMs, plannedStopMs, totalMs, unknownMs: totalMs - knownMs };
 }
 
 function getCountFromDataPoints(
   dataPoints: { timestamp: Date; value: number | null }[],
 ): number {
-  if (dataPoints.length < 2) return 0;
+  let count = 0;
+  let previous: number | null = null;
+  for (const { value } of dataPoints) {
+    if (value === null || !Number.isFinite(value) || value < 0) {
+      previous = null;
+      continue;
+    }
+    if (previous !== null) {
+      // shortcut: a decrease means reset to zero; modulus rollover needs machine-specific configuration.
+      count += value >= previous ? value - previous : value;
+    }
+    previous = value;
+  }
+  return count;
+}
 
-  const earliest = dataPoints[0].value ?? 0;
-  const latest = dataPoints[dataPoints.length - 1].value ?? 0;
+function hasCounterCoverage(
+  data: { timestamp: Date; value: number | null }[],
+  startDate: Date,
+) {
+  return (
+    data.length > 0 &&
+    new Date(data[0].timestamp) <= startDate &&
+    data.every(
+      (point) =>
+        point.value !== null &&
+        Number.isFinite(point.value) &&
+        point.value >= 0,
+    )
+  );
+}
 
-  return Math.max(0, latest - earliest);
+function validateRange(startDate: Date, endDate: Date) {
+  if (
+    !Number.isFinite(startDate.getTime()) ||
+    !Number.isFinite(endDate.getTime()) ||
+    endDate <= startDate
+  ) {
+    throw new ValidationError("endDate must be after startDate");
+  }
 }
 
 function generateBuckets(
@@ -149,6 +204,7 @@ export const oeeCalculationService = {
     startDate: Date,
     endDate: Date,
   ): Promise<AvailabilityResult> {
+    validateRange(startDate, endDate);
     const config = ensureConfig(await oeeRepository.getConfig(machineId));
 
     const dataPoints = await oeeRepository.getOperationModeData(
@@ -157,21 +213,11 @@ export const oeeCalculationService = {
       endDate,
     );
 
-    if (dataPoints.length < 2) {
-      logger.debug(
-        `[OEE] No sufficient OperationMode data for machine ${machineId}`,
-      );
-      return {
-        availability: 0,
-        runningTimeMinutes: 0,
-        plannedStopTimeMinutes: 0,
-        totalTimeMinutes: 0,
-      };
-    }
-
-    const { runningMs, plannedStopMs, totalMs } = classifyDataPoints(
+    const { runningMs, plannedStopMs, totalMs, unknownMs } = classifyDataPoints(
       dataPoints,
       config,
+      startDate,
+      endDate,
     );
 
     const scheduledMs = totalMs - plannedStopMs;
@@ -182,6 +228,7 @@ export const oeeCalculationService = {
       runningTimeMinutes: runningMs / 60_000,
       plannedStopTimeMinutes: plannedStopMs / 60_000,
       totalTimeMinutes: totalMs / 60_000,
+      unknownTimeMinutes: unknownMs / 60_000,
     };
   },
 
@@ -191,9 +238,11 @@ export const oeeCalculationService = {
     endDate: Date,
     runningTimeMinutes?: number,
   ): Promise<PerformanceResult> {
+    validateRange(startDate, endDate);
     const config = ensureConfig(await oeeRepository.getConfig(machineId));
 
     let totalCount = 0;
+    let dataComplete = false;
 
     // Try to get count from OPC-UA data first
     if (config.productionCountNodeKey) {
@@ -204,6 +253,7 @@ export const oeeCalculationService = {
         endDate,
       );
       totalCount = getCountFromDataPoints(countData);
+      dataComplete = hasCounterCoverage(countData, startDate);
     } else if (config.manualEntryEnabled) {
       // Fall back to manual entries
       const startStr = startDate.toISOString().split("T")[0];
@@ -218,6 +268,8 @@ export const oeeCalculationService = {
           sum + (e.productionCount ?? 0),
         0,
       );
+      dataComplete =
+        entries.length > 0 && entries.every((e) => e.productionCount !== null);
     }
 
     let performance = 0;
@@ -244,6 +296,7 @@ export const oeeCalculationService = {
     return {
       performance: Math.min(1, Math.max(0, performance)),
       totalCount,
+      dataComplete,
     };
   },
 
@@ -252,10 +305,12 @@ export const oeeCalculationService = {
     startDate: Date,
     endDate: Date,
   ): Promise<QualityResult> {
+    validateRange(startDate, endDate);
     const config = ensureConfig(await oeeRepository.getConfig(machineId));
 
     let goodCount = 0;
     let rejectCount = 0;
+    let dataComplete = false;
 
     if (config.goodCountNodeKey && config.rejectCountNodeKey) {
       // Get counts from OPC-UA data
@@ -276,6 +331,9 @@ export const oeeCalculationService = {
 
       goodCount = getCountFromDataPoints(goodData);
       rejectCount = getCountFromDataPoints(rejectData);
+      dataComplete =
+        hasCounterCoverage(goodData, startDate) &&
+        hasCounterCoverage(rejectData, startDate);
     } else if (config.manualEntryEnabled) {
       const startStr = startDate.toISOString().split("T")[0];
       const endStr = endDate.toISOString().split("T")[0];
@@ -294,15 +352,19 @@ export const oeeCalculationService = {
           sum + (e.rejectCount ?? 0),
         0,
       );
+      dataComplete =
+        entries.length > 0 &&
+        entries.every((e) => e.goodCount !== null && e.rejectCount !== null);
     }
 
     const totalCount = goodCount + rejectCount;
-    const quality = totalCount > 0 ? goodCount / totalCount : 1.0;
+    const quality = totalCount > 0 ? goodCount / totalCount : 0;
 
     return {
       quality: Math.min(1, Math.max(0, quality)),
       goodCount,
       rejectCount,
+      dataComplete: dataComplete && totalCount > 0,
     };
   },
 
@@ -342,6 +404,10 @@ export const oeeCalculationService = {
       quality,
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
+      dataComplete:
+        availability.unknownTimeMinutes === 0 &&
+        performance.dataComplete &&
+        quality.dataComplete,
     };
   },
 
@@ -351,6 +417,7 @@ export const oeeCalculationService = {
     endDate: Date,
     granularity: Granularity,
   ): Promise<OeeHistoryEntry[]> {
+    validateRange(startDate, endDate);
     // Validate config exists before iterating buckets
     ensureConfig(await oeeRepository.getConfig(machineId));
 

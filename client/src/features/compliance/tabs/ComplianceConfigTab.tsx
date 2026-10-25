@@ -23,10 +23,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import DrawIcon from '@mui/icons-material/Draw';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import GavelIcon from '@mui/icons-material/Gavel';
-import {
-  useComplianceConfig,
-  useUpdateComplianceConfig,
-} from '../hooks/useComplianceQueries';
+import { useComplianceConfig, useUpdateComplianceConfig } from '../hooks/useComplianceQueries';
 
 const ComplianceConfigTab: React.FC = () => {
   const { data: config, isLoading, isError, error } = useComplianceConfig();
@@ -67,12 +64,7 @@ const ComplianceConfigTab: React.FC = () => {
           <CardContent>
             <Stack spacing={2}>
               <FormControlLabel
-                control={
-                  <Switch
-                    checked={config?.complianceModeEnabled ?? false}
-                    disabled
-                  />
-                }
+                control={<Switch checked={config?.complianceModeEnabled ?? false} disabled />}
                 label={
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography>Compliance Mode</Typography>
@@ -85,10 +77,9 @@ const ComplianceConfigTab: React.FC = () => {
                 }
               />
               <Alert severity="info">
-                Compliance mode is configured via the{' '}
-                <strong>COMPLIANCE_MODE_ENABLED</strong> environment variable. When
-                enabled, critical actions are recorded with SHA-256 checksums,
-                electronic signatures, and reason-for-change fields.
+                Compliance mode is configured via the <strong>COMPLIANCE_MODE_ENABLED</strong>{' '}
+                environment variable. When enabled, critical actions are recorded with SHA-256
+                checksums, electronic signatures, and reason-for-change fields.
               </Alert>
             </Stack>
           </CardContent>
@@ -113,16 +104,15 @@ const ComplianceConfigTab: React.FC = () => {
                   <ListItemText primary={action} />
                 </ListItem>
               ))}
-              {(!config?.requireSignatureFor ||
-                config.requireSignatureFor.length === 0) && (
+              {(!config?.requireSignatureFor || config.requireSignatureFor.length === 0) && (
                 <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
                   No actions configured.
                 </Typography>
               )}
             </List>
             <Alert severity="info" sx={{ mt: 2 }}>
-              These actions require the user to re-enter their password to create an
-              electronic signature (21 CFR Part 11).
+              These actions require the user to re-enter their password to create an electronic
+              signature (21 CFR Part 11).
             </Alert>
           </CardContent>
         </Card>
@@ -146,8 +136,7 @@ const ComplianceConfigTab: React.FC = () => {
                   <ListItemText primary={action} />
                 </ListItem>
               ))}
-              {(!config?.requireReasonFor ||
-                config.requireReasonFor.length === 0) && (
+              {(!config?.requireReasonFor || config.requireReasonFor.length === 0) && (
                 <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
                   No actions configured.
                 </Typography>

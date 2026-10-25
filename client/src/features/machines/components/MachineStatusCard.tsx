@@ -66,18 +66,18 @@ const MachineStatusCard: React.FC<MachineStatusCardProps> = ({
         </Box>
 
         <Typography variant="body2" color="text.secondary" gutterBottom>
-          {machine.endpoint_url}
+          {machine.endpointUrl}
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-          <Chip label={`Security: ${machine.security_mode}`} size="small" variant="outlined" />
+          <Chip label={`Security: ${machine.securityMode}`} size="small" variant="outlined" />
           <Chip
             label={`${machine.mappingCount ?? 0} mappings`}
             size="small"
             variant="outlined"
             icon={<AccountTreeIcon />}
           />
-          {!machine.is_active && (
+          {!machine.isActive && (
             <Chip label="Inactive" size="small" color="warning" variant="outlined" />
           )}
         </Box>

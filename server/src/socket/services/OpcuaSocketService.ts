@@ -31,7 +31,7 @@ type TypedSocket = Socket<
  */
 export class OpcuaSocketService {
   private io: TypedServer;
-  private lastValues = new Map<string, unknown>();
+  private lastValues = new Map<string, OpcuaNodeData>();
 
   constructor(io: TypedServer) {
     this.io = io;
@@ -68,10 +68,16 @@ export class OpcuaSocketService {
       ? `${data.machineId}-${data.key}`
       : data.key;
 
-    const lastValue = this.lastValues.get(cacheKey);
+    const previous = this.lastValues.get(cacheKey);
+    const lastValue = previous?.value;
 
-    // Deduplicate: skip broadcast if value hasn't changed
-    if (lastValue !== undefined && lastValue === data.value) {
+    // Quality changes must reach clients even when the raw value is unchanged.
+    if (
+      previous &&
+      lastValue === data.value &&
+      previous.statusCode === data.statusCode &&
+      previous.dataType === data.dataType
+    ) {
       return;
     }
 
@@ -81,7 +87,7 @@ export class OpcuaSocketService {
       delta = data.value - lastValue;
     }
 
-    this.lastValues.set(cacheKey, data.value);
+    this.lastValues.set(cacheKey, data);
 
     const payload: OpcuaNodeData = { ...data, delta };
 

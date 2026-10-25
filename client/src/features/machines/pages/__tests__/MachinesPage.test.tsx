@@ -76,7 +76,12 @@ vi.mock('../../components/MachineStatusCard', () => ({
 }));
 
 vi.mock('../../components/MachineForm', () => ({
-  default: ({ open, onClose, onSubmit, machine }: {
+  default: ({
+    open,
+    onClose,
+    onSubmit,
+    machine,
+  }: {
     open: boolean;
     onClose: () => void;
     onSubmit: (data: { name: string; ip: string; port: number }) => void;

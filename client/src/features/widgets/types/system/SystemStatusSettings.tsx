@@ -14,7 +14,7 @@ const SystemStatusSettings = memo<SystemStatusSettingsProps>(({ config = {}, onC
   // Get the current settings, defaulting to sensible values if not provided
   const autoRefresh = (config.autoRefresh !== undefined ? config.autoRefresh : true) as boolean;
   const showDetails = (config.showDetails !== undefined ? config.showDetails : true) as boolean;
-  const refreshInterval = ((config.refreshInterval as number) || 20000);
+  const refreshInterval = (config.refreshInterval as number) || 20000;
 
   // Event handlers for configuration changes
   const handleAutoRefreshChange = (event: React.ChangeEvent<HTMLInputElement>) => {

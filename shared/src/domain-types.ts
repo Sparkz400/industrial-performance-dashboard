@@ -36,16 +36,16 @@ export interface UserInfo {
 export interface Machine {
   id: number;
   name: string;
-  endpoint_url: string;
+  endpointUrl: string;
   ip: string;
   port: number;
-  resource_path: string;
-  security_mode: string;
-  security_policy: string;
-  is_active: boolean;
+  resourcePath: string;
+  securityMode: string;
+  securityPolicy: string;
+  isActive: boolean;
   status: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
   mappingCount?: number;
 }
 
@@ -61,15 +61,15 @@ export interface MachineFormData {
 
 export interface NodeMapping {
   id: number;
-  machine_id: number;
-  node_id: string;
-  node_key: string;
-  display_name: string;
-  data_type: string;
-  sampling_interval: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  machineId: number;
+  nodeId: string;
+  nodeKey: string;
+  displayName: string;
+  dataType: string;
+  samplingInterval: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface BrowsedNode {

@@ -55,17 +55,17 @@ export function setupOpcuaBridge({
 
   opcuaEmitter.on("nodeChanged", (data: OpcuaNodeData) => {
     if (data && data.key && data.timestamp && data.value !== undefined) {
-      opcuaService.broadcastNodeChange(data);
       opcuaQueueWorker.enqueue({ ...data, machineId: data.machineId });
+      opcuaService.broadcastNodeChange(data);
       opcuaDataPointsReceived.inc({
         machine_id: String(data.machineId || "default"),
       });
 
       // Evaluate alarm rules against incoming data
-      alarmEvaluator.evaluate(data);
+      if (data.statusCode?.startsWith("Good")) alarmEvaluator.evaluate(data);
 
       // SPC: fire-and-forget anomaly detection
-      if (typeof data.value === "number") {
+      if (data.statusCode?.startsWith("Good") && typeof data.value === "number") {
         spcService
           .evaluateDataPoint(data.key, data.value, data.machineId ?? undefined)
           .catch((err) => {
@@ -86,6 +86,8 @@ export function setupOpcuaBridge({
               timestamp: data.timestamp,
               value: data.value,
               machineId: data.machineId,
+              statusCode: data.statusCode,
+              dataType: data.dataType,
             },
           )
           .catch((err) => {
@@ -194,6 +196,8 @@ export function createShutdown(
       logger.info("[Shutdown] Disconnecting OPC UA connections...");
       await multiMachineManager.disconnectAll();
       await opcuaConnectionManager.disconnectConnection();
+      await opcuaQueueWorker.stop();
+      edgeSyncService.stopSyncLoop();
 
       logger.info("[Shutdown] Closing Database pool...");
       await dbClient.end();

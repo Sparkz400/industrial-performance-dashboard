@@ -21,6 +21,7 @@ export interface OpcuaNodeData {
   label: string;
   value: number | string | boolean | null;
   timestamp: Date | string;
+  sourceTimestamp?: Date | string | null;
   dataType: string;
   statusCode: string;
   machineId?: number;

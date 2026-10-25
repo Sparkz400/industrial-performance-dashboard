@@ -104,9 +104,7 @@ export const useStatusStore = create<StatusState>((set, get) => {
           }
           // Wire up SPC alert count listeners on connect
           if (socketInstance && !cleanupSpcListeners) {
-            cleanupSpcListeners = useSpcStore
-              .getState()
-              .initSocketListeners(socketInstance);
+            cleanupSpcListeners = useSpcStore.getState().initSocketListeners(socketInstance);
           }
         });
 

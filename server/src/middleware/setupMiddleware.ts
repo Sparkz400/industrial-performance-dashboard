@@ -85,7 +85,7 @@ export function setupMiddleware(app: express.Application): MiddlewareContext {
       resave: false,
       saveUninitialized: false,
       cookie: {
-        secure: process.env.NODE_ENV === "production",
+        secure: new URL(config.CLIENT_URL).protocol === "https:",
         httpOnly: true,
         sameSite: "lax",
         path: "/",

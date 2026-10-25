@@ -69,7 +69,11 @@ const DigitalTwinDetailPage: React.FC = () => {
           <Typography variant="h5" sx={{ flex: 1 }}>
             {instance.name}
           </Typography>
-          <Chip label={instance.templateName || `Template #${instance.templateId}`} size="small" variant="outlined" />
+          <Chip
+            label={instance.templateName || `Template #${instance.templateId}`}
+            size="small"
+            variant="outlined"
+          />
           {instance.machineName && (
             <Chip label={instance.machineName} size="small" color="primary" variant="outlined" />
           )}

@@ -12,11 +12,7 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  ResponsiveLine,
-  type LineSeries,
-  type LineCustomSvgLayerProps,
-} from '@nivo/line';
+import { ResponsiveLine, type LineSeries, type LineCustomSvgLayerProps } from '@nivo/line';
 import { useSpcProfile, useSpcChartData } from '../hooks/useSpcQueries';
 import SpcAlertsList from '../components/SpcAlertsList';
 
@@ -31,7 +27,11 @@ const SpcChartPage: React.FC = () => {
   const [startDate, setStartDate] = useState(oneDayAgo.toISOString().slice(0, 16));
   const [endDate, setEndDate] = useState(now.toISOString().slice(0, 16));
 
-  const { data: profile, isLoading: profileLoading, error: profileError } = useSpcProfile(profileId);
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    error: profileError,
+  } = useSpcProfile(profileId);
   const {
     data: chartData,
     isLoading: chartLoading,
@@ -122,12 +122,14 @@ const SpcChartPage: React.FC = () => {
         <IconButton onClick={() => navigate('/spc')}>
           <ArrowBackIcon />
         </IconButton>
-        <Typography variant="h4">
-          {profile?.name ?? 'SPC Chart'}
-        </Typography>
+        <Typography variant="h4">{profile?.name ?? 'SPC Chart'}</Typography>
         {profile && (
           <Stack direction="row" spacing={1}>
-            <Chip label={METHOD_LABELS[profile.method] ?? profile.method} size="small" variant="outlined" />
+            <Chip
+              label={METHOD_LABELS[profile.method] ?? profile.method}
+              size="small"
+              variant="outlined"
+            />
             <Chip label={`${profile.sensitivity}σ`} size="small" variant="outlined" />
             {profile.lastComputedAt ? (
               <Chip label="Baseline computed" size="small" color="success" variant="outlined" />
@@ -190,12 +192,14 @@ const SpcChartPage: React.FC = () => {
               xFormat="time:%Y-%m-%d %H:%M"
               yScale={{
                 type: 'linear',
-                min: chartData.lcl != null && chartData.ucl != null
-                  ? chartData.lcl - (chartData.ucl - chartData.lcl) * 0.2
-                  : 'auto',
-                max: chartData.ucl != null && chartData.lcl != null
-                  ? chartData.ucl + (chartData.ucl - chartData.lcl) * 0.2
-                  : 'auto',
+                min:
+                  chartData.lcl != null && chartData.ucl != null
+                    ? chartData.lcl - (chartData.ucl - chartData.lcl) * 0.2
+                    : 'auto',
+                max:
+                  chartData.ucl != null && chartData.lcl != null
+                    ? chartData.ucl + (chartData.ucl - chartData.lcl) * 0.2
+                    : 'auto',
               }}
               axisBottom={{
                 format: '%H:%M',

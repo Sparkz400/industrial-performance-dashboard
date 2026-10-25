@@ -87,7 +87,7 @@ const SpcProfilesPage: React.FC = () => {
     setEditingProfile(profile);
     setForm({
       name: profile.name,
-      machineId: profile.machineId ?? (null),
+      machineId: profile.machineId ?? null,
       nodeKey: profile.nodeKey,
       method: profile.method,
       sensitivity: profile.sensitivity,
@@ -266,7 +266,7 @@ const SpcProfilesPage: React.FC = () => {
               onChange={(e) =>
                 setForm((f) => ({
                   ...f,
-                  machineId: e.target.value ? Number(e.target.value) : (null),
+                  machineId: e.target.value ? Number(e.target.value) : null,
                 }))
               }
               fullWidth

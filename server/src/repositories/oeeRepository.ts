@@ -1,4 +1,4 @@
-import { and, eq, gte, lte, desc, asc, sql } from "drizzle-orm";
+import { and, eq, gt, gte, lte, desc, asc } from "drizzle-orm";
 import db from "../database/db.js";
 import { getReadDb } from "../database/db.js";
 import { oeeConfig, oeeManualEntries, opcuaData } from "../database/schema.js";
@@ -127,21 +127,7 @@ export const oeeRepository = {
     startDate: Date,
     endDate: Date,
   ) {
-    return getReadDb()
-      .select({
-        timestamp: opcuaData.timestamp,
-        value: opcuaData.value,
-      })
-      .from(opcuaData)
-      .where(
-        and(
-          eq(opcuaData.nodeKey, "OperationMode"),
-          eq(opcuaData.machineId, machineId),
-          gte(opcuaData.timestamp, startDate),
-          lte(opcuaData.timestamp, endDate),
-        ),
-      )
-      .orderBy(asc(opcuaData.timestamp));
+    return this.getNodeData("OperationMode", machineId, startDate, endDate);
   },
 
   async getNodeData(
@@ -150,7 +136,20 @@ export const oeeRepository = {
     startDate: Date,
     endDate: Date,
   ) {
-    return getReadDb()
+    const readDb = getReadDb();
+    const previous = await readDb
+      .select({ timestamp: opcuaData.timestamp, value: opcuaData.value })
+      .from(opcuaData)
+      .where(
+        and(
+          eq(opcuaData.nodeKey, nodeKey),
+          eq(opcuaData.machineId, machineId),
+          lte(opcuaData.timestamp, startDate),
+        ),
+      )
+      .orderBy(desc(opcuaData.timestamp), desc(opcuaData.id))
+      .limit(1);
+    const samples = await readDb
       .select({
         timestamp: opcuaData.timestamp,
         value: opcuaData.value,
@@ -160,10 +159,11 @@ export const oeeRepository = {
         and(
           eq(opcuaData.nodeKey, nodeKey),
           eq(opcuaData.machineId, machineId),
-          gte(opcuaData.timestamp, startDate),
+          gt(opcuaData.timestamp, startDate),
           lte(opcuaData.timestamp, endDate),
         ),
       )
-      .orderBy(asc(opcuaData.timestamp));
+      .orderBy(asc(opcuaData.timestamp), asc(opcuaData.id));
+    return [...previous, ...samples];
   },
 };

@@ -159,7 +159,11 @@ const ComplianceOverviewTab: React.FC = () => {
         <Grid size={{ xs: 12, md: 6 }}>
           <Card sx={{ height: '100%' }}>
             <CardHeader
-              avatar={<WarningAmberIcon color={stats.unsignedEventsLast30Days > 0 ? 'warning' : 'success'} />}
+              avatar={
+                <WarningAmberIcon
+                  color={stats.unsignedEventsLast30Days > 0 ? 'warning' : 'success'}
+                />
+              }
               title="Unsigned Actions (30d)"
               titleTypographyProps={{ variant: 'subtitle2', color: 'text.secondary' }}
             />
@@ -167,7 +171,9 @@ const ComplianceOverviewTab: React.FC = () => {
               <Typography variant="h4">{stats.unsignedEventsLast30Days}</Typography>
               {stats.unsignedEventsLast30Days > 0 && (
                 <Alert severity="warning" sx={{ mt: 1 }}>
-                  {stats.unsignedEventsLast30Days} event{stats.unsignedEventsLast30Days !== 1 ? 's' : ''} without electronic signature in the last 30 days.
+                  {stats.unsignedEventsLast30Days} event
+                  {stats.unsignedEventsLast30Days !== 1 ? 's' : ''} without electronic signature in
+                  the last 30 days.
                 </Alert>
               )}
             </CardContent>
@@ -177,7 +183,11 @@ const ComplianceOverviewTab: React.FC = () => {
         <Grid size={{ xs: 12, md: 6 }}>
           <Card sx={{ height: '100%' }}>
             <CardHeader
-              avatar={<WarningAmberIcon color={stats.eventsWithoutReasonLast30Days > 0 ? 'warning' : 'success'} />}
+              avatar={
+                <WarningAmberIcon
+                  color={stats.eventsWithoutReasonLast30Days > 0 ? 'warning' : 'success'}
+                />
+              }
               title="Missing Reasons (30d)"
               titleTypographyProps={{ variant: 'subtitle2', color: 'text.secondary' }}
             />
@@ -185,7 +195,9 @@ const ComplianceOverviewTab: React.FC = () => {
               <Typography variant="h4">{stats.eventsWithoutReasonLast30Days}</Typography>
               {stats.eventsWithoutReasonLast30Days > 0 && (
                 <Alert severity="warning" sx={{ mt: 1 }}>
-                  {stats.eventsWithoutReasonLast30Days} event{stats.eventsWithoutReasonLast30Days !== 1 ? 's' : ''} without a reason for change in the last 30 days.
+                  {stats.eventsWithoutReasonLast30Days} event
+                  {stats.eventsWithoutReasonLast30Days !== 1 ? 's' : ''} without a reason for change
+                  in the last 30 days.
                 </Alert>
               )}
             </CardContent>

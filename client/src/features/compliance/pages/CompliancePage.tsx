@@ -23,11 +23,7 @@ interface TabPanelProps {
 }
 
 const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
-  <Box
-    role="tabpanel"
-    hidden={value !== index}
-    sx={{ p: 3, flexGrow: 1, overflow: 'auto' }}
-  >
+  <Box role="tabpanel" hidden={value !== index} sx={{ p: 3, flexGrow: 1, overflow: 'auto' }}>
     {value === index && children}
   </Box>
 );

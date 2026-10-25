@@ -1,8 +1,10 @@
 // The base URL for the API; this can be overridden by an environment variable.
 export const API_BASE_URL: string =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.PROD ? `${window.location.origin}/api/v1` : 'http://localhost:3001/api/v1');
 export const WEBSOCKET_ADDR: string =
-  import.meta.env.VITE_WEBSOCKET_ADDR || 'http://localhost:3000';
+  import.meta.env.VITE_WEBSOCKET_ADDR ||
+  (import.meta.env.PROD ? window.location.origin : 'http://localhost:3001');
 
 // Centralized API endpoints.
 export const API_ENDPOINTS = {

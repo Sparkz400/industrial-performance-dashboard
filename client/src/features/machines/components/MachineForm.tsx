@@ -45,10 +45,10 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
         name: machine.name,
         ip: machine.ip,
         port: machine.port,
-        resourcePath: machine.resource_path,
-        securityMode: machine.security_mode,
-        securityPolicy: machine.security_policy,
-        isActive: machine.is_active,
+        resourcePath: machine.resourcePath,
+        securityMode: machine.securityMode,
+        securityPolicy: machine.securityPolicy,
+        isActive: machine.isActive,
       });
     } else {
       setFormData(defaultFormData);

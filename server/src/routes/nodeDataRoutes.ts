@@ -40,7 +40,9 @@ router.get(
     if (endDate) conditions.push(lte(opcuaData.timestamp, new Date(endDate)));
 
     const result = await readDb
-      .select({ timestamp: opcuaData.timestamp, value: opcuaData.value })
+      .select({ timestamp: opcuaData.timestamp, value: opcuaData.value,
+        rawValue: opcuaData.rawValue, statusCode: opcuaData.statusCode,
+        sourceTimestamp: opcuaData.sourceTimestamp, dataType: opcuaData.dataType })
       .from(opcuaData)
       .where(and(...conditions))
       .orderBy(asc(opcuaData.timestamp))
@@ -48,7 +50,8 @@ router.get(
       .offset(offset);
 
     const data = result.map(
-      (row: { timestamp: Date; value: number | null }) => ({
+      (row) => ({
+        ...row,
         timestamp: row.timestamp.toISOString(),
         time: new Date(row.timestamp).toLocaleTimeString([], {
           hour: "2-digit",

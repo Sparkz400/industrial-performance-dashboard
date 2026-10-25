@@ -1,0 +1,16 @@
+name: Documentation problem
+description: Report unclear or incorrect setup and support information.
+labels: [documentation]
+body:
+  - type: input
+    id: page
+    attributes:
+      label: Page or section
+    validations:
+      required: true
+  - type: textarea
+    id: correction
+    attributes:
+      label: Problem and suggested correction
+    validations:
+      required: true

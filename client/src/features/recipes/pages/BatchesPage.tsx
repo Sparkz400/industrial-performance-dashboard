@@ -146,9 +146,7 @@ const BatchesPage: React.FC = () => {
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    {batch.recipeName
-                      ? `${batch.recipeName} (v${batch.recipeVersion})`
-                      : '-'}
+                    {batch.recipeName ? `${batch.recipeName} (v${batch.recipeVersion})` : '-'}
                   </TableCell>
                   <TableCell>{batch.machineId ?? '-'}</TableCell>
                   <TableCell>
@@ -164,9 +162,7 @@ const BatchesPage: React.FC = () => {
                   <TableCell>
                     {batch.completedAt ? new Date(batch.completedAt).toLocaleString() : '-'}
                   </TableCell>
-                  <TableCell>
-                    {formatDuration(batch.startedAt, batch.completedAt)}
-                  </TableCell>
+                  <TableCell>{formatDuration(batch.startedAt, batch.completedAt)}</TableCell>
                   <TableCell align="right">
                     {batch.status === 'planned' && (
                       <Tooltip title="Start Batch">
@@ -430,12 +426,8 @@ const BatchDetailDialog: React.FC<BatchDetailDialogProps> = ({ batchId, onClose 
                       >
                         {current != null ? current.toFixed(2) : '-'}
                       </TableCell>
-                      <TableCell align="right">
-                        {min != null ? min.toFixed(2) : '-'}
-                      </TableCell>
-                      <TableCell align="right">
-                        {max != null ? max.toFixed(2) : '-'}
-                      </TableCell>
+                      <TableCell align="right">{min != null ? min.toFixed(2) : '-'}</TableCell>
+                      <TableCell align="right">{max != null ? max.toFixed(2) : '-'}</TableCell>
                       <TableCell>{values.length}</TableCell>
                     </TableRow>
                   );

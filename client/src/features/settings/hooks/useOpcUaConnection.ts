@@ -152,7 +152,7 @@ export const useOpcUaConnection = (): OpcUaConnectionReturn => {
   const handleDisconnect = async (): Promise<void> => {
     setLoading(true);
     try {
-      const data = await api.post(API_ENDPOINTS.opcua.disconnect, {}) as { message?: string };
+      const data = (await api.post(API_ENDPOINTS.opcua.disconnect, {})) as { message?: string };
 
       // If we reach here, the request was successful
       setOpcuaConnected(false);

@@ -3,7 +3,7 @@ import statusManager from "../../utils/status.js";
 import StatusConstants from "../../utils/statusConstants.js";
 import logger from "../../utils/logger.js";
 import { EventEmitter } from "events";
-import opcua from "node-opcua";
+import * as opcua from "node-opcua";
 import config from "../../config/config.js";
 import type { OpcuaConnectionResult } from "../opcuaClient.js";
 
@@ -299,11 +299,7 @@ class OpcuaConnectionManager extends EventEmitter {
     const healthCheckIntervalMs = config.OPCUA_HEALTH_CHECK_INTERVAL;
 
     this.healthCheckInterval = setInterval(async () => {
-      if (
-        !this.currentConnection ||
-        !this.currentConnection.session ||
-        !this.currentConnection.session.isOpen
-      ) {
+      if (!this.currentConnection || !this.currentConnection.session) {
         logger.warn("Health check skipped: No active or open session.");
         if (
           statusManager.getServiceStatus(StatusConstants.OPCUA) ===
@@ -424,7 +420,7 @@ class OpcuaConnectionManager extends EventEmitter {
       }
 
       try {
-        if (session && typeof session.isOpen === "boolean" && session.isOpen) {
+        if (session) {
           logger.debug("[Manager Shutdown] Closing OPC UA session...");
           await Promise.race([
             session.close(true),

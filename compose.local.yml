@@ -1,0 +1,22 @@
+name: performance-dashboard-local
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: performance-dashboard-db
+    ports:
+      - "127.0.0.1:55432:5432"
+    environment:
+      POSTGRES_USER: dashboard
+      POSTGRES_PASSWORD: dashboard-local
+      POSTGRES_DB: performance_dashboard
+    volumes:
+      - local-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dashboard -d performance_dashboard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+volumes:
+  local-db:
+    name: performance-dashboard-local-db

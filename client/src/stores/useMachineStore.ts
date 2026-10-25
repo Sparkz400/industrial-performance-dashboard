@@ -33,7 +33,7 @@ export const useMachineStore = create<MachineState>((set) => ({
   fetchMachines: async () => {
     set({ loading: true, error: null });
     try {
-      const machines = await api.get(API_ENDPOINTS.machines.base) as Machine[];
+      const machines = (await api.get(API_ENDPOINTS.machines.base)) as Machine[];
       set({ machines, loading: false });
     } catch (err: unknown) {
       set({ error: err instanceof Error ? err.message : String(err), loading: false });
@@ -41,13 +41,13 @@ export const useMachineStore = create<MachineState>((set) => ({
   },
 
   addMachine: async (data: MachineFormData) => {
-    const machine = await api.post(API_ENDPOINTS.machines.base, data) as Machine;
+    const machine = (await api.post(API_ENDPOINTS.machines.base, data)) as Machine;
     set((state) => ({ machines: [...state.machines, machine] }));
     return machine;
   },
 
   updateMachine: async (id: number, data: MachineFormData) => {
-    const machine = await api.put(API_ENDPOINTS.machines.byId(id), data) as Machine;
+    const machine = (await api.put(API_ENDPOINTS.machines.byId(id), data)) as Machine;
     set((state) => ({
       machines: state.machines.map((m) => (m.id === id ? { ...m, ...machine } : m)),
     }));
@@ -81,18 +81,20 @@ export const useMachineStore = create<MachineState>((set) => ({
   },
 
   getMappings: async (machineId: number) =>
-    await api.get(API_ENDPOINTS.machines.mappings(machineId)) as NodeMapping[],
+    (await api.get(API_ENDPOINTS.machines.mappings(machineId))) as NodeMapping[],
 
   saveMappings: async (machineId: number, mappings: Partial<NodeMapping>[]) => {
     const formatted = mappings.map((m) => ({
-      nodeId: m.node_id,
-      nodeKey: m.node_key,
-      displayName: m.display_name,
-      dataType: m.data_type || 'Double',
-      samplingInterval: m.sampling_interval || 500,
-      isActive: m.is_active !== false,
+      nodeId: m.nodeId,
+      nodeKey: m.nodeKey,
+      displayName: m.displayName,
+      dataType: m.dataType || 'Double',
+      samplingInterval: m.samplingInterval || 500,
+      isActive: m.isActive !== false,
     }));
-    return await api.post(API_ENDPOINTS.machines.mappings(machineId), { mappings: formatted }) as NodeMapping[];
+    return (await api.post(API_ENDPOINTS.machines.mappings(machineId), {
+      mappings: formatted,
+    })) as NodeMapping[];
   },
 
   deleteMapping: async (machineId: number, mappingId: number) => {
@@ -100,9 +102,9 @@ export const useMachineStore = create<MachineState>((set) => ({
   },
 
   browseNodes: async (machineId: number, parentNodeId?: string) =>
-    await api.post(API_ENDPOINTS.machines.browseNodes(machineId), {
+    (await api.post(API_ENDPOINTS.machines.browseNodes(machineId), {
       parentNodeId: parentNodeId || '',
-    }) as BrowsedNode[],
+    })) as BrowsedNode[],
 
   updateMachineStatus: (machineId: number, status: string) => {
     set((state) => ({

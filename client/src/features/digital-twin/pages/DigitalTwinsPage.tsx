@@ -117,7 +117,11 @@ const DigitalTwinsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
 
   // ── Template state ──────────────────────────────────────────────────────
-  const { data: templates, isLoading: templatesLoading, error: templatesError } = useTwinTemplates();
+  const {
+    data: templates,
+    isLoading: templatesLoading,
+    error: templatesError,
+  } = useTwinTemplates();
   const createTemplate = useCreateTwinTemplate();
   const updateTemplate = useUpdateTwinTemplate();
   const deleteTemplate = useDeleteTwinTemplate();
@@ -147,7 +151,11 @@ const DigitalTwinsPage: React.FC = () => {
   }, [fullTemplate, loadingTemplateId]);
 
   // ── Instance state ──────────────────────────────────────────────────────
-  const { data: instances, isLoading: instancesLoading, error: instancesError } = useTwinInstances();
+  const {
+    data: instances,
+    isLoading: instancesLoading,
+    error: instancesError,
+  } = useTwinInstances();
   const createInstance = useCreateTwinInstance();
   const updateInstance = useUpdateTwinInstance();
   const deleteInstance = useDeleteTwinInstance();
@@ -213,7 +221,11 @@ const DigitalTwinsPage: React.FC = () => {
     }));
   };
 
-  const handleElementChange = (index: number, field: keyof TwinElementDefinition, value: string) => {
+  const handleElementChange = (
+    index: number,
+    field: keyof TwinElementDefinition,
+    value: string,
+  ) => {
     setTemplateForm((f) => ({
       ...f,
       elements: f.elements.map((el, i) => (i === index ? { ...el, [field]: value } : el)),
@@ -374,7 +386,12 @@ const DigitalTwinsPage: React.FC = () => {
                         <Chip label={tpl.category || 'general'} size="small" variant="outlined" />
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 300 }}>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          noWrap
+                          sx={{ maxWidth: 300 }}
+                        >
                           {tpl.description || '-'}
                         </Typography>
                       </TableCell>
@@ -445,7 +462,12 @@ const DigitalTwinsPage: React.FC = () => {
                   </TableRow>
                 ) : instances && instances.length > 0 ? (
                   instances.map((inst) => (
-                    <TableRow key={inst.id} hover sx={{ cursor: 'pointer' }} onClick={() => navigate(`/digital-twins/${inst.id}`)}>
+                    <TableRow
+                      key={inst.id}
+                      hover
+                      sx={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/digital-twins/${inst.id}`)}
+                    >
                       <TableCell>
                         <Typography fontWeight={500}>{inst.name}</Typography>
                       </TableCell>
@@ -458,7 +480,10 @@ const DigitalTwinsPage: React.FC = () => {
                       <TableCell>{inst.bindings?.length ?? 0}</TableCell>
                       <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                         <Tooltip title="Live View">
-                          <IconButton size="small" onClick={() => navigate(`/digital-twins/${inst.id}`)}>
+                          <IconButton
+                            size="small"
+                            onClick={() => navigate(`/digital-twins/${inst.id}`)}
+                          >
                             <VisibilityIcon />
                           </IconButton>
                         </Tooltip>
@@ -568,7 +593,12 @@ const DigitalTwinsPage: React.FC = () => {
 
             {/* Element Mappings */}
             <Box>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{ mb: 1 }}
+              >
                 <Typography variant="subtitle2">Element Mappings</Typography>
                 <Button size="small" startIcon={<AddIcon />} onClick={handleAddElement}>
                   Add Element
@@ -647,8 +677,8 @@ const DigitalTwinsPage: React.FC = () => {
         <DialogContent>
           <Typography>
             Are you sure you want to delete the template{' '}
-            <strong>{deleteTemplateTarget?.name}</strong>? All instances using this template will also
-            be deleted. This action cannot be undone.
+            <strong>{deleteTemplateTarget?.name}</strong>? All instances using this template will
+            also be deleted. This action cannot be undone.
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -720,7 +750,12 @@ const DigitalTwinsPage: React.FC = () => {
 
             {/* Node Bindings */}
             <Box>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{ mb: 1 }}
+              >
                 <Typography variant="subtitle2">Node Bindings</Typography>
                 <Button size="small" startIcon={<AddIcon />} onClick={handleAddBinding}>
                   Add Binding

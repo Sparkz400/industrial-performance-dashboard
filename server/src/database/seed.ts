@@ -30,14 +30,16 @@ async function seed() {
     .limit(1);
 
   if (existingAdmin.length === 0) {
-    const hash = await bcrypt.hash("admin", SALT_ROUNDS);
+    const password = process.env.SEED_ADMIN_PASSWORD;
+    if (!password || password.length < 12) throw new Error("Set SEED_ADMIN_PASSWORD to at least 12 characters before seeding");
+    const hash = await bcrypt.hash(password, SALT_ROUNDS);
     await db.insert(schema.users).values({
       username: "admin",
       email: "admin@localhost",
       passwordHash: hash,
       role: "admin",
     });
-    console.log("  Created default admin user (admin/admin)");
+    console.log("  Created admin user using SEED_ADMIN_PASSWORD");
   } else {
     console.log("  Admin user already exists, skipping");
   }
@@ -64,10 +66,10 @@ async function seed() {
     if (existingMachine.length === 0) {
       await db.insert(schema.machines).values({
         name: "Local OPC-UA Simulator",
-        endpointUrl: "opc.tcp://localhost:4840",
+        endpointUrl: `opc.tcp://localhost:${process.env.OPCUA_PORT || '4841'}/UA/MyLittleServer`,
         ip: "localhost",
-        port: 4840,
-        resourcePath: "",
+        port: Number(process.env.OPCUA_PORT || 4841),
+        resourcePath: "/UA/MyLittleServer",
         securityMode: "None",
         securityPolicy: "None",
         isActive: false,

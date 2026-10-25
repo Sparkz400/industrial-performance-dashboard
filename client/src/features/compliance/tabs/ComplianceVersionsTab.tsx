@@ -67,9 +67,7 @@ const ComplianceVersionsTab: React.FC = () => {
         )}
 
         {error && (
-          <Alert severity="error">
-            Failed to load dashboards: {(error as Error).message}
-          </Alert>
+          <Alert severity="error">Failed to load dashboards: {(error as Error).message}</Alert>
         )}
 
         {selectedDashboard && <DashboardVersionHistory dashboardId={selectedDashboard} />}

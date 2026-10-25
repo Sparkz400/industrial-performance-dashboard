@@ -1,11 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/utils/api';
 import { API_ENDPOINTS } from '@/config/config';
-import type {
-  SpcProfile,
-  SpcAlert,
-  SpcChartData,
-} from '@performance-dashboard/shared';
+import type { SpcProfile, SpcAlert, SpcChartData } from '@performance-dashboard/shared';
 
 // Re-export shared types for convenience
 export type { SpcProfile, SpcAlert, SpcChartData };

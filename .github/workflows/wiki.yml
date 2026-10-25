@@ -1,0 +1,32 @@
+name: Wiki sync
+on:
+  push:
+    branches: [main]
+    paths: ['docs/wiki/**', '.github/workflows/wiki.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Publish repository wiki sources
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          if ! git ls-remote "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" HEAD > /dev/null 2>&1; then
+            echo '::notice::Create the first wiki page in GitHub, then run this workflow to publish docs/wiki.'
+            echo 'Wiki publication pending: initialize the first page in GitHub, then run this workflow.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git clone --depth 1 "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" "$RUNNER_TEMP/wiki"
+          rsync -a --delete --exclude .git docs/wiki/ "$RUNNER_TEMP/wiki/"
+          cd "$RUNNER_TEMP/wiki"
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "Sync from ${GITHUB_SHA}"
+          git push

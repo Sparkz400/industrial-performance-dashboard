@@ -1,4 +1,4 @@
-import opcua from "node-opcua";
+import * as opcua from "node-opcua";
 import { EventEmitter } from "events";
 import crypto from "crypto";
 import opcuaMapping from "./config/opcuaMapping.js";
@@ -9,19 +9,12 @@ import statusManager from "../utils/status.js";
 import certificateManager from "./services/certificateManager.js";
 import config from "../config/config.js";
 
-/**
- * node-opcua's ClientSession implementation exposes `isOpen` as a runtime
- * getter, but it is missing from the published type declarations.
- */
-export interface OpcuaClientSession extends opcua.ClientSession {
-  readonly isOpen?: boolean;
-}
-
 export interface OpcuaNodeData {
   key: string;
   label: string;
   value: number | string | boolean | null;
   timestamp: Date;
+  sourceTimestamp?: Date | null;
   dataType: string;
   statusCode: string;
   machineId?: number;
@@ -29,7 +22,7 @@ export interface OpcuaNodeData {
 
 export interface OpcuaConnectionResult {
   client: opcua.OPCUAClient;
-  session: OpcuaClientSession;
+  session: opcua.ClientSession;
   subscription: opcua.ClientSubscription;
   securityMode: string;
   securityPolicy: string;
@@ -157,6 +150,21 @@ export async function connectAndSubscribe(
       );
 
       client = opcua.OPCUAClient.create(clientOptions);
+      client.on("connection_lost", () => {
+        for (const [key, node] of Object.entries(
+          dynamicMapping || opcuaMapping,
+        )) {
+          opcuaEmitter.emit("nodeChanged", {
+            key,
+            label: node.label,
+            value: null,
+            timestamp: new Date(),
+            dataType: node.dataType,
+            statusCode: "BadCommunicationError",
+            machineId,
+          });
+        }
+      });
       logger.info(
         `[ConnectAndSub Attempt ${retryCount + 1}] Client created. Connecting to ${endpointUrl}...`,
       );
@@ -214,7 +222,7 @@ export async function connectAndSubscribe(
               attributeId: opcua.AttributeIds.Value,
             },
             {
-              samplingInterval: 500,
+              samplingInterval: nodeConfig.samplingInterval ?? 500,
               discardOldest: true,
               queueSize: 10,
             },
@@ -227,6 +235,7 @@ export async function connectAndSubscribe(
               label: nodeConfig.label,
               value: dataValue.value.value,
               timestamp: dataValue.serverTimestamp || new Date(),
+              sourceTimestamp: dataValue.sourceTimestamp,
               dataType: nodeConfig.dataType,
               statusCode: dataValue.statusCode.toString(),
               machineId,

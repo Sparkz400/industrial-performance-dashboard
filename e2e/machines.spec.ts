@@ -1,109 +1,50 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
+import { login } from "./login";
 
-/**
- * Machine management E2E tests.
- *
- * These tests require:
- *   - Running server + client
- *   - A test admin user in the database
- *   - Set E2E_USERNAME and E2E_PASSWORD env vars
- */
-
-async function loginAsAdmin(page: any) {
-  await page.goto('/');
-  await page.getByLabel(/username/i).fill(process.env.E2E_USERNAME || 'admin');
-  await page.getByLabel(/password/i).fill(process.env.E2E_PASSWORD || 'admin123');
-  await page.getByRole('button', { name: /login|sign in/i }).click();
-  await page.waitForURL('**/*', { timeout: 10_000 });
-}
-
-test.describe('Machine Management', () => {
-  test.skip(
-    !process.env.E2E_USERNAME,
-    'Skipping machine tests — set E2E_USERNAME and E2E_PASSWORD env vars to run',
-  );
-
-  test('should navigate to machines page', async ({ page }) => {
-    await loginAsAdmin(page);
-
-    // Look for Machines link in sidebar/navigation
-    const machinesLink = page.getByRole('link', { name: /machines/i }).or(
-      page.getByText(/machines/i).first(),
-    );
-
-    if (await machinesLink.isVisible()) {
-      await machinesLink.click();
-      await expect(page.getByText(/Machines/)).toBeVisible({ timeout: 10_000 });
-    }
-  });
-
-  test('should show empty state or machine list', async ({ page }) => {
-    await loginAsAdmin(page);
-
-    // Navigate to machines
-    const machinesLink = page.getByRole('link', { name: /machines/i }).or(
-      page.getByText(/machines/i).first(),
-    );
-
-    if (await machinesLink.isVisible()) {
-      await machinesLink.click();
-
-      // Should show either "No machines" or a list of machines
-      await expect(
-        page
-          .getByText(/no machines/i)
-          .or(page.getByText(/Add Machine/i))
-          .or(page.locator('[data-testid*="machine"]').first()),
-      ).toBeVisible({ timeout: 10_000 });
-    }
-  });
-
-  test('should open add machine dialog', async ({ page }) => {
-    await loginAsAdmin(page);
-
-    const machinesLink = page.getByRole('link', { name: /machines/i }).or(
-      page.getByText(/machines/i).first(),
-    );
-
-    if (await machinesLink.isVisible()) {
-      await machinesLink.click();
-
-      const addButton = page.getByRole('button', { name: /add machine/i });
-      await expect(addButton).toBeVisible({ timeout: 10_000 });
-      await addButton.click();
-
-      // Should open a form/dialog with machine fields
-      await expect(
-        page.getByLabel(/name/i).or(page.getByLabel(/ip/i)).or(page.getByLabel(/port/i)),
-      ).toBeVisible({ timeout: 5_000 });
-    }
-  });
-
-  test('should validate machine form fields', async ({ page }) => {
-    await loginAsAdmin(page);
-
-    const machinesLink = page.getByRole('link', { name: /machines/i }).or(
-      page.getByText(/machines/i).first(),
-    );
-
-    if (await machinesLink.isVisible()) {
-      await machinesLink.click();
-
-      const addButton = page.getByRole('button', { name: /add machine/i });
-      if (await addButton.isVisible()) {
-        await addButton.click();
-
-        // Try to submit without filling required fields
-        const submitButton = page.getByRole('button', { name: /save|add|submit|create/i });
-        if (await submitButton.isVisible()) {
-          await submitButton.click();
-
-          // Should show validation errors
-          await expect(
-            page.getByText(/required|invalid|error/i).first(),
-          ).toBeVisible({ timeout: 5_000 });
-        }
-      }
-    }
-  });
+test("machine settings survive create, edit and reload, and can be deleted", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/machines");
+  await expect(
+    page.getByRole("heading", { name: "Machines", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Add Machine", exact: true }).click();
+  const form = page.getByRole("dialog");
+  await form.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(form.getByText("Name and IP are required")).toBeVisible();
+  const name = `E2E machine ${Date.now()}`;
+  await form.getByLabel("Machine Name").fill(name);
+  await form.getByLabel("IP Address").fill("localhost");
+  await form.getByLabel(/^Port/).fill("4841");
+  await form.getByLabel("Resource Path").fill("/UA/Test");
+  await form.getByRole("checkbox", { name: "Active" }).uncheck();
+  await form.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(form).not.toBeVisible();
+  await page.reload();
+  const card = page.locator(".MuiCard-root").filter({ hasText: name });
+  await expect(
+    card.getByText("opc.tcp://localhost:4841/UA/Test"),
+  ).toBeVisible();
+  await expect(card.getByText("Inactive")).toBeVisible();
+  await card.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(form.getByLabel(/^Port/)).toHaveValue("4841");
+  await expect(
+    form.getByRole("checkbox", { name: "Active" }),
+  ).not.toBeChecked();
+  await form.getByLabel("Resource Path").fill("/UA/Updated");
+  await form.getByRole("button", { name: "Update", exact: true }).click();
+  await expect(form).not.toBeVisible();
+  await page.reload();
+  await expect(
+    card.getByText("opc.tcp://localhost:4841/UA/Updated"),
+  ).toBeVisible();
+  await card.getByRole("button", { name: "Delete", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Delete", exact: true })
+    .click();
+  await expect(card).toHaveCount(0);
+  await page.reload();
+  await expect(card).toHaveCount(0);
 });

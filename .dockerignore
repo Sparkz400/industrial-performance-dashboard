@@ -18,3 +18,11 @@ client/dist
 server/dist
 
 *.md
+.local
+server/data
+server/reports
+server/public
+server/certificates
+**/coverage
+test-results
+playwright-report

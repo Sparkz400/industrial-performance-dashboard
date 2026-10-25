@@ -68,9 +68,7 @@ const SystemInfoTab: React.FC = () => {
                   <Typography variant="body2" color="text.secondary">
                     Node.js Version
                   </Typography>
-                  <Typography variant="body1">
-                    {systemStats?.nodeVersion || 'Unknown'}
-                  </Typography>
+                  <Typography variant="body1">{systemStats?.nodeVersion || 'Unknown'}</Typography>
                 </Box>
               </Card>
 

@@ -9,6 +9,8 @@ server/dist/
 *.iml
 server/.env
 .env.*
+.env
+*.log
 !.env.example
 # Per-workspace lockfiles (root package-lock.json is tracked)
 client/package-lock.json
@@ -24,3 +26,12 @@ test-results/
 coverage/
 client/coverage/
 server/coverage/
+server/data/
+server/reports/
+server/public/
+client/dist/
+.local/
+client/.env.local
+shared/dist/
+server/certificates/
+logs/
