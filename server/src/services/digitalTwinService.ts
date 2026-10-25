@@ -11,13 +11,7 @@ import db from "../database/db.js";
 import { opcuaData } from "../database/schema.js";
 import { NotFoundError, ValidationError } from "../utils/errors.js";
 import logger from "../utils/logger.js";
-
-/** Strip <script> tags and event handler attributes from SVG content. */
-function sanitizeSvg(svgContent: string): string {
-  let sanitized = svgContent.replace(/<script[\s\S]*?<\/script>/gi, "");
-  sanitized = sanitized.replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, "");
-  return sanitized;
-}
+import { sanitizeSvg } from "../utils/sanitizeSvg.js";
 
 export const digitalTwinService = {
   // --- Templates ---
@@ -109,7 +103,11 @@ export const digitalTwinService = {
             ORDER BY node_key, timestamp DESC`,
       );
       const values: Record<string, { value: unknown; timestamp: string }> = {};
-      for (const row of result.rows as { node_key: string; value: unknown; timestamp: string }[]) {
+      for (const row of result.rows as {
+        node_key: string;
+        value: unknown;
+        timestamp: string;
+      }[]) {
         values[row.node_key] = {
           value: row.value,
           timestamp: new Date(row.timestamp).toISOString(),
@@ -154,10 +152,12 @@ export const digitalTwinService = {
     return {
       svgElementId,
       nodeKey: binding.nodeKey,
-      dataPoints: (result.rows as { timestamp: string; value: unknown }[]).map((row) => ({
-        timestamp: new Date(row.timestamp).toISOString(),
-        value: row.value,
-      })),
+      dataPoints: (result.rows as { timestamp: string; value: unknown }[]).map(
+        (row) => ({
+          timestamp: new Date(row.timestamp).toISOString(),
+          value: row.value,
+        }),
+      ),
     };
   },
 };

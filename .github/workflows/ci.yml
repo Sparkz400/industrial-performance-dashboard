@@ -42,7 +42,7 @@ jobs:
           retention-days: 7
   browser:
     name: Browser and database
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:16-alpine

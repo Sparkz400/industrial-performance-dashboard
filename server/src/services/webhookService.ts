@@ -6,7 +6,10 @@ import type { NewWebhook, WebhookRow } from "../database/schema.js";
 import logger from "../utils/logger.js";
 import { NotFoundError } from "../utils/errors.js";
 import type { WebhookEvent } from "@performance-dashboard/shared";
-import { assertSafeOutboundUrl } from "../utils/outboundUrlSafety.js";
+import {
+  assertSafeOutboundUrl,
+  fetchSafeOutbound,
+} from "../utils/outboundUrlSafety.js";
 
 function generateSecret(): string {
   return "whsec_" + crypto.randomBytes(24).toString("hex");
@@ -135,7 +138,7 @@ async function deliverWebhook(
   const signature = signPayload(body, webhook.secret);
 
   try {
-    const response = await fetch(safeUrl, {
+    const response = await fetchSafeOutbound(safeUrl.toString(), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

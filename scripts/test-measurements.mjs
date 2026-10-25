@@ -16,6 +16,9 @@ const { default: certificates } = await import('../server/dist/src/opc-ua/servic
 let worker = new OpcuaQueueWorker();
 let machineId;
 try {
+  for (const filename of ['../private_key.pem', '..\\private_key.pem', '/tmp/test.pem', 'C:\\test.pem']) {
+    await assert.rejects(certificates.acceptRejectedCertificate(filename), /Invalid certificate filename/);
+  }
   const endpoint = `opc.tcp://test-${randomUUID()}:4841`;
   const created = await manager.pool.query("INSERT INTO machines(name,endpoint_url,ip,is_active) VALUES ('Persistence regression',$1,'localhost',false) RETURNING id", [endpoint]);
   machineId = created.rows[0].id;

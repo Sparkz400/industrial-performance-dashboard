@@ -86,6 +86,12 @@ export function createSocketServer(
         secret: process.env.SESSION_SECRET || "fallback-insecure-secret",
         resave: false,
         saveUninitialized: false,
+        cookie: {
+          secure: new URL(config.CLIENT_URL).protocol === "https:",
+          httpOnly: true,
+          sameSite: "lax",
+          path: "/",
+        },
       });
 
       sessionMiddleware(req, res, (sessionErr?: unknown) => {

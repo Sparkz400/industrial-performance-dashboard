@@ -5,7 +5,10 @@ import type { CustomWidgetRow } from "../database/schema.js";
 import { NotFoundError, ValidationError, AppError } from "../utils/errors.js";
 import logger from "../utils/logger.js";
 import type { CustomWidgetManifest } from "@performance-dashboard/shared";
-import { assertSafeOutboundUrl } from "../utils/outboundUrlSafety.js";
+import {
+  assertSafeOutboundUrl,
+  fetchSafeOutbound,
+} from "../utils/outboundUrlSafety.js";
 
 const REQUIRED_MANIFEST_FIELDS = [
   "id",
@@ -42,9 +45,7 @@ export const customWidgetService = {
     // Fetch the manifest from the URL
     let manifest: CustomWidgetManifest;
     try {
-      const response = await fetch(safeManifestUrl, {
-        signal: AbortSignal.timeout(10000),
-      });
+      const response = await fetchSafeOutbound(safeManifestUrl.toString());
       if (!response.ok) {
         throw new AppError(
           `Failed to fetch widget manifest: HTTP ${response.status}`,

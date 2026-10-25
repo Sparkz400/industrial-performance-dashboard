@@ -22,3 +22,7 @@ percentage. The simple simulator does not include production counters.
 Use [Discussions](https://github.com/Sparkz400/performance_dashboard/discussions)
 for setup help and the [security policy](https://github.com/Sparkz400/performance_dashboard/blob/main/SECURITY.md)
 for private vulnerability reporting.
+## Does passing CI mean production-ready?
+
+No. Functional tests, dependency audits and container security reports are separate
+evidence. Review [current status and limits](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/STATUS.md), including image advisories and physical-machine qualification.

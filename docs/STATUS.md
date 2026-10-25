@@ -29,6 +29,9 @@ simulator evidence do not establish physical-machine acceptance or release readi
 - Dependency auditing still reports moderate advisories. Security CI blocks high
   and critical runtime advisories and uploads the complete audit report; inspect
   it alongside the functional checks.
+- Container scans also report operating-system and Chromium advisories in GitHub
+  code scanning. These are reported, not suppressed or treated as passing release
+  acceptance; review the exact image before deployment.
 
 ## Next acceptance milestone
 

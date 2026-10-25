@@ -381,12 +381,19 @@ class CertificateManagerService {
   }
 
   async acceptRejectedCertificate(filename: string): Promise<string> {
+    const safeFilename = path.basename(filename);
+    if (
+      safeFilename !== filename ||
+      !/^[a-zA-Z0-9_][a-zA-Z0-9_.-]*\.(pem|der)$/i.test(safeFilename)
+    ) {
+      throw new Error("Invalid certificate filename");
+    }
     await this.ensureInitialized();
     try {
       if (!this.certManager) await this.ensureInitialized();
 
-      const rejectedPath = path.join(this.rejectedDir!, filename);
-      const trustedPath = path.join(this.trustedDir!, filename);
+      const rejectedPath = path.join(this.rejectedDir!, safeFilename);
+      const trustedPath = path.join(this.trustedDir!, safeFilename);
 
       if (!(await exists(rejectedPath))) {
         throw new Error(`Rejected certificate not found: ${filename}`);
