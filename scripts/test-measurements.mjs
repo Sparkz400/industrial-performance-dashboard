@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import dotenv from 'dotenv';
 dotenv.config({ path: 'server/.env', quiet: true });
@@ -50,6 +50,8 @@ try {
   assert.equal(certificates.isInitialized, true);
   const loaded = await certificates.loadCertificates();
   assert.ok(loaded.certificate.length > 0 && loaded.privateKey.length > 0);
+  const trusted = await certificates.trustCertificate(loaded.certificate, '../../outside');
+  assert.equal(dirname(trusted), certificates.trustedDir);
   console.log('PASS: PostgreSQL scalar/quality persistence, counter precision, replay deduplication, OEE boundaries and fresh certificate initialization');
 } finally {
   await worker.stop();

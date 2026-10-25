@@ -1,6 +1,5 @@
 import express, { type Request, type Response } from "express";
 import fs from "fs";
-import path from "path";
 import { promisify } from "util";
 import logger from "../../utils/logger.js";
 import certificateManager from "../services/certificateManager.js";
@@ -92,14 +91,8 @@ router.post(
 router.get(
   "/client",
   asyncHandler(async (req: Request, res: Response) => {
-    const certificateFile = path.join(
-      certificateManager.certificatesDir!,
-      "client_certificate.pem",
-    );
-    const privateKeyFile = path.join(
-      certificateManager.certificatesDir!,
-      "client_private_key.pem",
-    );
+    const certificateFile = certificateManager.certificateFile!;
+    const privateKeyFile = certificateManager.privateKeyFile!;
 
     const [certExists, keyExists] = await Promise.all([
       fs.promises.access(certificateFile).then(

@@ -19,7 +19,9 @@ COPY package.json package-lock.json ./
 COPY shared/package.json shared/package.json
 COPY client/package.json client/package.json
 COPY server/package.json server/package.json
-RUN npm ci --omit=dev --workspace=server --workspace=shared --ignore-scripts
+RUN npm ci --omit=dev --workspace=server --workspace=shared --ignore-scripts \
+    && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 COPY --from=build --chown=node:node /app/shared/dist shared/dist
 COPY --from=build --chown=node:node /app/server/dist server/dist
 COPY --from=build --chown=node:node /app/server/drizzle server/drizzle

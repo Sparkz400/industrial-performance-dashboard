@@ -8,7 +8,7 @@ test("creates a dashboard that survives reload", async ({ page }) => {
   await page.getByRole("button", { name: "New", exact: true }).click();
   await expect(tabs.getByRole("tab")).toHaveCount(originalCount + 1);
   await expect(
-    page.getByText("New dashboard created", { exact: true }),
+    page.getByText("Dashboard saved successfully", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "New", exact: true }),
@@ -22,6 +22,9 @@ test("creates a dashboard that survives reload", async ({ page }) => {
     .getByRole("button", { name: /delete/i })
     .click();
   await expect(tabs.getByRole("tab")).toHaveCount(originalCount);
+  await expect(
+    page.getByText("Dashboard deleted successfully", { exact: true }),
+  ).toBeVisible();
   await page.reload();
   await expect(tabs.getByRole("tab")).toHaveCount(originalCount);
 });

@@ -316,7 +316,7 @@ class CertificateManagerService {
       const sanitizedName = name.replace(/[^a-z0-9._-]/gi, "_");
       const timestamp = Date.now();
       const filename = `${sanitizedName}_${timestamp}.pem`;
-      const filepath = path.join(this.trustedDir!, filename);
+      const filepath = path.join(this.trustedDir!, path.basename(filename));
 
       await writeFile(filepath, certificate);
       logger.info(`Added certificate to trusted list: ${filepath}`);
