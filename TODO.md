@@ -66,7 +66,7 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Done: trace a simulator event through the UI-created rule, evaluator, persisted history
   and configured delivery; identify one supported engine, and disable or migrate unwired
   alternatives. Verify real event wiring separately from webhook test delivery.
-  Validation: production-workflow change; [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
+  Completed: [PR #51](https://github.com/Sparkz400/performance_dashboard/pull/51); [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
 
 - [x] **F04 — Make edge status honest** · P0 · M0 · Improve · S. Depends: F01.
   Done: UI/API/docs distinguish queued, transferred and queryable-in-history states;
@@ -84,7 +84,7 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Done: test process termination, database outage, spool reopen, disk-full and replay
   interruption; account for every durably accepted event and expose unreceived/unknown
   intervals. Define behavior before storage exhaustion rather than silently dropping data.
-  Validation: production-workflow change; [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
+  Completed: [PR #51](https://github.com/Sparkz400/performance_dashboard/pull/51); [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
 
 - [ ] **F07 — Audit every data-access boundary** · P0 · M0 · Improve · L. Depends: F01.
   Done: negative tests cover admin/viewer, REST, tRPC, sockets, reports, shares and exports;
@@ -121,7 +121,7 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   harness issues; [feature evidence](docs/P0_ACCEPTANCE.md) names remaining negative tests.
 
 Implemented and locally validated on `codex/production-shift-workflow`; integration
-and current-head CI are tracked by the accompanying PR. The application is running
+and current-head CI are tracked by [PR #51](https://github.com/Sparkz400/performance_dashboard/pull/51). The application is running
 locally with additive migrations and existing data preserved. Wider backlog items
 below retain their unfulfilled acceptance criteria.
 
@@ -235,13 +235,13 @@ below retain their unfulfilled acceptance criteria.
   Done: detected stops can be categorized, split or corrected with actor/reason/history;
   planned/unplanned/unknown are distinct, overlaps are rejected, and corrected results
   can be reproduced without destroying the original machine timeline.
-  Validation: production-workflow change; [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
+  Completed: [PR #51](https://github.com/Sparkz400/performance_dashboard/pull/51); [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
 
 - [x] **O03 — Make OEE explainable down to its inputs** · P1 · M1 · Improve · M. Depends: O02.
   Done: drill from availability/performance/quality to mapped signals, production window,
   excluded periods and counts; identify suspicious values above 100% without silently
   clamping them. Show missing prerequisites and the calculation revision.
-  Validation: production-workflow change; [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
+  Completed: [PR #51](https://github.com/Sparkz400/performance_dashboard/pull/51); [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
 
 - [ ] **O04 — Add product and work-order context** · P1 · M1 · New · L. Depends: O01, C04.
   Done: jobs have stable IDs, product, target quantity, ideal cycle and effective periods;
@@ -331,7 +331,7 @@ below retain their unfulfilled acceptance criteria.
   Done: one documented rule/event model connects configuration, evaluation, history and
   subscriptions; migrate existing rules without duplicate notifications. Active, cleared,
   acknowledged and unknown states have consistent semantics across API and UI.
-  Validation: production-workflow change; [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
+  Completed: [PR #51](https://github.com/Sparkz400/performance_dashboard/pull/51); [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
 
 - [ ] **A02 — Add debounce, hysteresis and minimum duration** · P1 · M1 · Improve · M. Depends: A01.
   Done: noisy thresholds do not flood history; boundaries and clear conditions are
@@ -371,7 +371,7 @@ below retain their unfulfilled acceptance criteria.
   Done: report planned time, quantities, loss reasons, OEE inputs and coverage for the
   exact shift/product scope; match the dashboard and independent fixture. Missing data
   and unresolved reconciliation prevent an unqualified verified label.
-  Validation: production-workflow change; [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
+  Completed: [PR #51](https://github.com/Sparkz400/performance_dashboard/pull/51); [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
 
 - [ ] **R02 — Make reports useful for daily decisions** · P1 · M1 · Improve · M. Depends: R01, U02.
   Done: include the largest losses, unresolved actions, data freshness and drill-through
