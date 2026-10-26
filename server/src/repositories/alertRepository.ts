@@ -1,4 +1,5 @@
 import { and, eq, desc, gte, lte, sql } from "drizzle-orm";
+import { validateAlarmRule } from "../services/alarmRuleValidation.js";
 import db, { getReadDb } from "../database/db.js";
 import {
   alertRules,
@@ -9,7 +10,8 @@ import {
   type NewNotificationChannel,
 } from "../database/schema.js";
 
-export type AlertSeverityValue = "critical" | "high" | "medium" | "low" | "info";
+export type AlertSeverityValue =
+  "critical" | "high" | "medium" | "low" | "info";
 
 export interface AlertRuleInput {
   name: string;
@@ -89,6 +91,7 @@ export const alertRepository = {
   },
 
   async createRule(input: AlertRuleInput) {
+    validateAlarmRule(input);
     const [created] = await db
       .insert(alertRules)
       .values(input as NewAlertRule)
@@ -97,6 +100,9 @@ export const alertRepository = {
   },
 
   async updateRule(id: number, input: Partial<AlertRuleInput>) {
+    const current = await this.findRuleById(id);
+    if (!current) return null;
+    validateAlarmRule({ ...current, ...input });
     const result = await db
       .update(alertRules)
       .set({

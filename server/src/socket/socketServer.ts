@@ -14,6 +14,8 @@ import type {
 import logger from "../utils/logger.js";
 import connectionTracker from "../utils/connectionTracker.js";
 import config from "../config/config.js";
+import { getSessionUser, sessionEvents } from "../services/sessionAccess.js";
+import alarmEvaluator from "../services/alarmService.js";
 
 import { StatusSocketService } from "./services/StatusSocketService.js";
 import { OpcuaSocketService } from "./services/OpcuaSocketService.js";
@@ -45,8 +47,17 @@ export interface SocketServices {
 export function createSocketServer(
   server: http.Server,
   sessionStore: PgSessionStore,
+  sharedSessionMiddleware?: ReturnType<typeof session>,
 ): SocketServices {
   const io: TypedServer = new SocketIOServer(server, {
+    // WebSocket handshakes are not protected by browser CORS enforcement.
+    allowRequest: (request, callback) => {
+      callback(
+        null,
+        request.headers.origin === undefined ||
+          request.headers.origin === new URL(config.CLIENT_URL).origin,
+      );
+    },
     cors: {
       origin: config.CLIENT_URL,
       methods: ["GET", "POST"],
@@ -71,18 +82,21 @@ export function createSocketServer(
 
   // --- Socket.IO Authentication Middleware ---
   // One middleware instance per server; constructing it per handshake leaks store listeners.
-  const sessionMiddleware = session({
-    store: sessionStore,
-    secret: config.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: new URL(config.CLIENT_URL).protocol === "https:",
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-    },
-  });
+  const sessionMiddleware =
+    sharedSessionMiddleware ??
+    session({
+      store: sessionStore,
+      secret: config.SESSION_SECRET,
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        maxAge: 2 * 60 * 60 * 1000,
+        secure: new URL(config.CLIENT_URL).protocol === "https:",
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+      },
+    });
   io.use((socket, next) => {
     // Socket.IO passes an IncomingMessage; Express middleware expects Request/Response
     const req = socket.request as unknown as Request;
@@ -107,23 +121,94 @@ export function createSocketServer(
           return next(new Error("Authentication required"));
         }
 
-        socket.data.user = {
-          authenticated: true,
-          id: req.session.userId,
-          username: req.session.username ?? "",
-          role: req.session.userRole ?? "",
-        };
+        void getSessionUser(req.session)
+          .then((user) => {
+            if (
+              !user ||
+              !req.session.cookie.expires ||
+              new Date(req.session.cookie.expires).getTime() <= Date.now()
+            )
+              return next(new Error("Authentication required"));
+            socket.data.user = {
+              authenticated: true,
+              id: user.id,
+              username: req.session.username ?? "",
+              role: user.role,
+            };
 
-        logger.info(
-          `Socket.IO: Authenticated user "${req.session.username}" (${socket.id}).`,
-        );
-        next();
+            logger.info(
+              `Socket.IO: Authenticated user "${req.session.username}" (${socket.id}).`,
+            );
+            next();
+          })
+          .catch(next);
       });
     });
   });
 
+  const revokeSession = (id: string) =>
+    io.in(`session:${id}`).disconnectSockets(true);
+  const revokeUser = (id: number) =>
+    io.in(`user:${id}`).disconnectSockets(true);
+  sessionEvents.on("sessionRevoked", revokeSession);
+  sessionEvents.on("userRevoked", revokeUser);
+  io.engine.on("close", () => {
+    sessionEvents.off("sessionRevoked", revokeSession);
+    sessionEvents.off("userRevoked", revokeUser);
+  });
+
   // --- Connection Handler ---
   io.on("connection", (socket) => {
+    const req = socket.request as Request;
+    void socket.join(`session:${req.sessionID}`);
+    void socket.join(`user:${socket.data.user.id}`);
+    const expiresAt = new Date(req.session.cookie.expires!).getTime();
+    const expiry = setTimeout(
+      () => socket.disconnect(true),
+      Math.max(0, Math.min(2147483647, expiresAt - Date.now())),
+    );
+    const validate = async () => {
+      await new Promise<void>((resolve, reject) =>
+        req.session.reload((error) => (error ? reject(error) : resolve())),
+      );
+      const user = await getSessionUser(req.session);
+      if (
+        !user ||
+        user.role !== socket.data.user.role ||
+        Date.now() >= expiresAt
+      )
+        throw new Error("Session revoked");
+    };
+    let checking = false;
+    const check = setInterval(() => {
+      if (checking) return;
+      checking = true;
+      void validate()
+        .catch(() => socket.disconnect(true))
+        .finally(() => {
+          checking = false;
+        });
+    }, 1000);
+    socket.use((_packet, next) => {
+      void validate()
+        .then(() => next())
+        .catch(() => {
+          socket.disconnect(true);
+          next(new Error("Authentication required"));
+        });
+    });
+    socket.on("acknowledgeAlert", async ({ id }) => {
+      if (!Number.isSafeInteger(id) || id <= 0) return;
+      try {
+        await alarmEvaluator.acknowledge(id, socket.data.user.id);
+      } catch (error) {
+        logger.error("Alarm acknowledgment failed", error);
+      }
+    });
+    socket.on("disconnect", () => {
+      clearTimeout(expiry);
+      clearInterval(check);
+    });
     const clientIp =
       socket.handshake.headers["x-forwarded-for"] || socket.handshake.address;
     const clientInfo = {

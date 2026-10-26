@@ -44,16 +44,17 @@ export interface OpcuaNodeData {
 // ===== Alarm Socket Types =====
 
 export interface AlarmEvent {
+  conditionState?: "active" | "clear" | "unknown";
   id: number;
   ruleId: number;
-  machineId: number;
+  machineId: number | null;
   nodeKey: string;
   severity: string;
   status: string;
   message: string;
   source: string;
-  value: number;
-  threshold: number;
+  value: number | null;
+  threshold: number | null;
   triggeredAt: string;
   acknowledgedAt?: string | null;
   clearedAt?: string | null;
@@ -162,9 +163,11 @@ export interface ServerToClientEvents {
   alarmTriggered: (data: AlarmEvent) => void;
   alarmAcknowledged: (data: AlarmEvent) => void;
   alarmCleared: (data: AlarmEvent) => void;
+  alarmUpdated: (data: AlarmEvent) => void;
   alertTriggered: (data: AlertNotification) => void;
   activeAlerts: (data: AlertHistoryEntry[]) => void;
   alertAcknowledged: (data: AlertHistoryEntry) => void;
+  alertUpdated: (data: AlertHistoryEntry) => void;
   spcAlert: (data: SpcAlertEvent) => void;
   batchStatusUpdate: (data: BatchStatusEvent) => void;
   edgeSyncUpdate: (data: EdgeSyncStatusEvent) => void;

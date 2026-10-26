@@ -16,17 +16,29 @@ import StatusConstants from './src/utils/statusConstants.js';
 
 import { setupMiddleware } from './src/middleware/setupMiddleware.js';
 import { errorHandler } from './src/middleware/errorHandler.js';
-import { metricsMiddleware, metricsRegistry } from './src/observability/metrics.js';
-import { requireAuth, requireRole } from './src/middleware/auth.js';
+import {
+  metricsMiddleware,
+  metricsRegistry,
+} from './src/observability/metrics.js';
+import {
+  requireAuth,
+  requireRole,
+  requireMutationAccess,
+} from './src/middleware/auth.js';
 
 import { createSocketServer } from './src/socket/socketServer.js';
-import { setupOpcuaBridge, startOpcuaServices, createShutdown } from './src/opcuaBridge.js';
+import {
+  setupOpcuaBridge,
+  startOpcuaServices,
+  createShutdown,
+} from './src/opcuaBridge.js';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { appRouter, createContext } from './src/trpc/index.js';
 import { edgeSyncService } from './src/services/edgeSyncService.js';
 import { reportSchedulerService } from './src/services/reportSchedulerService.js';
 
 // --- Route modules ---
+import productionRoutes from './src/routes/productionRoutes.js';
 import authRoutes from './src/routes/authRoutes.js';
 import systemRoutes from './src/routes/systemRoutes.js';
 import dashboardRoutes from './src/routes/dashboardRoutes.js';
@@ -63,113 +75,145 @@ import reportRoutes from './src/routes/reportRoutes.js';
 
 // --- App Factory ---
 export function createApp() {
-    const app = express();
+  const app = express();
 
-    // --- Prometheus metrics endpoint (before auth/session middleware) ---
-    app.get('/metrics', async (_req: Request, res: Response) => {
-        res.set('Content-Type', metricsRegistry.contentType);
-        res.end(await metricsRegistry.metrics());
+  // --- Metrics collection middleware ---
+  app.use(metricsMiddleware);
+
+  const { sessionStore, sessionMiddleware, invalidCsrfTokenError } =
+    setupMiddleware(app);
+
+  app.get(
+    '/metrics',
+    requireAuth,
+    requireRole('admin'),
+    async (_req: Request, res: Response) => {
+      res.set('Content-Type', metricsRegistry.contentType);
+      res.end(await metricsRegistry.metrics());
+    },
+  );
+
+  // --- REST Routes ---
+  app.use('/api/v1/auth', authRoutes);
+  app.use('/api/v1/share', shareRoutes);
+  app.use('/api/v1', requireAuth, requireMutationAccess);
+  app.use('/api/v1/production', productionRoutes);
+  app.use('/api/v1/system', requireAuth, systemRoutes);
+  app.use('/api/v1/dashboards', requireAuth, dashboardRoutes);
+  app.use('/api/v1/opcua', requireAuth, opcuaRoutes);
+  app.use('/api/v1/db', requireAuth, dbRoutes);
+  app.use('/api/v1/certificates', requireAuth, certificateRoutes);
+  app.use('/api/v1/status', requireAuth, statusRoutes);
+  app.use('/api/v1/machines', requireAuth, requireRole('admin'), machineRoutes);
+  app.use('/api/v1/operation-mode-data', requireAuth, operationModeRoutes);
+  app.use(
+    '/api/v1/audit-logs',
+    requireAuth,
+    requireRole('admin'),
+    auditLogRoutes,
+  );
+  app.use('/api/v1/nl-query', requireAuth, nlQueryRoutes);
+  app.use('/api/v1/webhooks', requireAuth, requireRole('admin'), webhookRoutes);
+  app.use(
+    '/api/v1/custom-widgets',
+    requireAuth,
+    requireRole('admin'),
+    customWidgetRoutes,
+  );
+  app.use('/api/v1/alarms', requireAuth, alarmRoutes);
+  app.use('/api/v1/annotations', requireAuth, annotationRoutes);
+  app.use('/api/v1/node-data', requireAuth, nodeDataRoutes);
+  app.use('/api/v1/aggregates', requireAuth, aggregateRoutes);
+
+  // --- Tier 1: High-Value Features ---
+  app.use('/api/v1/plants', requireAuth, requireRole('admin'), plantRoutes);
+  app.use('/api/v1/oee', requireAuth, oeeRoutes);
+  app.use('/api/v1/alerts', requireAuth, alertEngineRoutes);
+  app.use('/api/v1/trending', requireAuth, trendingRoutes);
+  app.use('/api/v1/reports', requireAuth, reportRoutes);
+
+  // --- Tier 2: Premium Features ---
+  app.use(
+    '/api/v1/compliance',
+    requireAuth,
+    requireRole('admin'),
+    complianceRoutes,
+  );
+  app.use('/api/v1/spc', requireAuth, spcRoutes);
+  if (config.COMPLIANCE_MODE_ENABLED) {
+    app.use('/api/v1/recipes', requireAuth, requireRole('admin'), recipeRoutes);
+    app.use('/api/v1/batches', requireAuth, requireRole('admin'), batchRoutes);
+  }
+  app.use('/api/v1/digital-twins', requireAuth, digitalTwinRoutes);
+  app.use('/api/v1/edge', requireAuth, edgeRoutes);
+
+  // --- tRPC API ---
+  app.use(
+    '/api/trpc',
+    createExpressMiddleware({ router: appRouter, createContext }),
+  );
+
+  const publicDir = path.resolve('public');
+  if (existsSync(path.join(publicDir, 'index.html'))) {
+    app.use(express.static(publicDir));
+    app.get('/{*path}', (req, res, next) => {
+      if (req.path.startsWith('/api/')) return next();
+      res.sendFile(path.join(publicDir, 'index.html'));
     });
+  }
 
-    // --- Metrics collection middleware ---
-    app.use(metricsMiddleware);
+  // --- Centralized Error Handling ---
+  app.use(errorHandler(invalidCsrfTokenError));
 
-    const { sessionStore, invalidCsrfTokenError } = setupMiddleware(app);
-
-    // --- REST Routes ---
-    app.use('/api/v1/auth', authRoutes);
-    app.use('/api/v1/system', requireAuth, systemRoutes);
-    app.use('/api/v1/dashboards', requireAuth, dashboardRoutes);
-    app.use('/api/v1/opcua', requireAuth, opcuaRoutes);
-    app.use('/api/v1/db', requireAuth, dbRoutes);
-    app.use('/api/v1/certificates', requireAuth, certificateRoutes);
-    app.use('/api/v1/status', requireAuth, statusRoutes);
-    app.use('/api/v1/machines', requireAuth, requireRole('admin'), machineRoutes);
-    app.use('/api/v1/operation-mode-data', requireAuth, operationModeRoutes);
-    app.use('/api/v1/audit-logs', requireAuth, requireRole('admin'), auditLogRoutes);
-    app.use('/api/v1/nl-query', requireAuth, nlQueryRoutes);
-    app.use('/api/v1/webhooks', requireAuth, requireRole('admin'), webhookRoutes);
-    app.use('/api/v1/share', shareRoutes);  // Has both public and authenticated routes
-    app.use('/api/v1/custom-widgets', requireAuth, requireRole('admin'), customWidgetRoutes);
-    app.use('/api/v1/alarms', requireAuth, alarmRoutes);
-    app.use('/api/v1/annotations', requireAuth, annotationRoutes);
-    app.use('/api/v1/node-data', requireAuth, nodeDataRoutes);
-    app.use('/api/v1/aggregates', requireAuth, aggregateRoutes);
-
-    // --- Tier 1: High-Value Features ---
-    app.use('/api/v1/plants', requireAuth, requireRole('admin'), plantRoutes);
-    app.use('/api/v1/oee', requireAuth, oeeRoutes);
-    app.use('/api/v1/alerts', requireAuth, alertEngineRoutes);
-    app.use('/api/v1/trending', requireAuth, trendingRoutes);
-    app.use('/api/v1/reports', requireAuth, reportRoutes);
-
-    // --- Tier 2: Premium Features ---
-    app.use('/api/v1/compliance', requireAuth, requireRole('admin'), complianceRoutes);
-    app.use('/api/v1/spc', requireAuth, spcRoutes);
-    if (config.COMPLIANCE_MODE_ENABLED) {
-        app.use('/api/v1/recipes', requireAuth, requireRole('admin'), recipeRoutes);
-        app.use('/api/v1/batches', requireAuth, requireRole('admin'), batchRoutes);
-    }
-    app.use('/api/v1/digital-twins', requireAuth, digitalTwinRoutes);
-    app.use('/api/v1/edge', requireAuth, edgeRoutes);
-
-    // --- tRPC API ---
-    app.use(
-      '/api/trpc',
-      createExpressMiddleware({ router: appRouter, createContext }),
-    );
-
-    const publicDir = path.resolve('public');
-    if (existsSync(path.join(publicDir, 'index.html'))) {
-        app.use(express.static(publicDir));
-        app.get('/{*path}', (req, res, next) => {
-            if (req.path.startsWith('/api/')) return next();
-            res.sendFile(path.join(publicDir, 'index.html'));
-        });
-    }
-
-    // --- Centralized Error Handling ---
-    app.use(errorHandler(invalidCsrfTokenError));
-
-    return { app, sessionStore };
+  return { app, sessionStore, sessionMiddleware };
 }
 
 // --- Bootstrap ---
 function bootstrap() {
-    const { app, sessionStore } = createApp();
-    const server = http.createServer(app);
-    const services = createSocketServer(server, sessionStore);
+  const { app, sessionStore, sessionMiddleware } = createApp();
+  const server = http.createServer(app);
+  const services = createSocketServer(server, sessionStore, sessionMiddleware);
 
-    setupOpcuaBridge(services);
-    startOpcuaServices(services);
+  setupOpcuaBridge(services);
+  startOpcuaServices(services);
 
-    // Start edge sync loop if in edge mode
-    edgeSyncService.startSyncLoop();
+  // Start edge sync loop if in edge mode
+  edgeSyncService.startSyncLoop();
 
-    // Activate persisted report schedules
-    reportSchedulerService.init();
+  // Activate persisted report schedules
+  reportSchedulerService.init();
 
-    const shutdown = createShutdown(server, services.io);
-    process.on('SIGINT', () => shutdown('SIGINT'));
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
+  const shutdown = createShutdown(server, services.io);
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-    const PORT = config.PORT;
-    server.listen(PORT, config.HOST, () => {
-        logger.info(`Server is running on http://localhost:${PORT}`);
-        if (statusManager.getServiceStatus(StatusConstants.DATABASE) === StatusConstants.UNKNOWN) {
-            logger.info("Server listening. Database status managed by connection attempts.");
-        }
-        if (statusManager.getServiceStatus(StatusConstants.OPCUA) === StatusConstants.UNKNOWN) {
-            logger.info("Server listening. OPC UA status managed by connection attempts.");
-        }
-    });
+  const PORT = config.PORT;
+  server.listen(PORT, config.HOST, () => {
+    logger.info(`Server is running on http://localhost:${PORT}`);
+    if (
+      statusManager.getServiceStatus(StatusConstants.DATABASE) ===
+      StatusConstants.UNKNOWN
+    ) {
+      logger.info(
+        'Server listening. Database status managed by connection attempts.',
+      );
+    }
+    if (
+      statusManager.getServiceStatus(StatusConstants.OPCUA) ===
+      StatusConstants.UNKNOWN
+    ) {
+      logger.info(
+        'Server listening. OPC UA status managed by connection attempts.',
+      );
+    }
+  });
 }
 
 // Only start the server when this file is run directly (not imported by tests)
 const isMainModule =
-    process.argv[1]?.replace(/\\/g, '/').includes('app') &&
-    process.env.NODE_ENV !== 'test';
+  process.argv[1]?.replace(/\\/g, '/').includes('app') &&
+  process.env.NODE_ENV !== 'test';
 
 if (isMainModule) {
-    bootstrap();
+  bootstrap();
 }

@@ -1,6 +1,11 @@
-import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
+import { eq, and, desc, gte, lte, sql, isNull } from "drizzle-orm";
+import { validateAlarmRule } from "../services/alarmRuleValidation.js";
 import db, { getReadDb } from "../database/db.js";
-import { alertRules, alertHistory, type AlertHistoryRow } from "../database/schema.js";
+import {
+  alertRules,
+  alertHistory,
+  type AlertHistoryRow,
+} from "../database/schema.js";
 
 export const alarmRepository = {
   // ===== Alert Rules =====
@@ -29,11 +34,15 @@ export const alarmRepository = {
   },
 
   async createRule(input: typeof alertRules.$inferInsert) {
+    validateAlarmRule(input);
     const [created] = await db.insert(alertRules).values(input).returning();
     return created;
   },
 
   async updateRule(id: number, input: Partial<typeof alertRules.$inferInsert>) {
+    const current = await this.findRuleById(id);
+    if (!current) return null;
+    validateAlarmRule({ ...current, ...input });
     const [updated] = await db
       .update(alertRules)
       .set({ ...input, updatedAt: new Date() })
@@ -64,10 +73,7 @@ export const alarmRepository = {
   },
 
   async getAllActiveRules() {
-    return getReadDb()
-      .select()
-      .from(alertRules)
-      .where(eq(alertRules.isActive, true));
+    return db.select().from(alertRules).where(eq(alertRules.isActive, true));
   },
 
   // ===== Alert History (Alarms) =====
@@ -121,23 +127,18 @@ export const alarmRepository = {
     const [updated] = await db
       .update(alertHistory)
       .set({
-        status: "acknowledged" as typeof alertHistory.status.enumValues[number],
+        status:
+          "acknowledged" as (typeof alertHistory.status.enumValues)[number],
         acknowledgedBy: userId,
         acknowledgedAt: new Date(),
       })
-      .where(eq(alertHistory.id, id))
-      .returning();
-    return updated ?? null;
-  },
-
-  async clearAlarm(id: number) {
-    const [updated] = await db
-      .update(alertHistory)
-      .set({
-        status: "resolved" as typeof alertHistory.status.enumValues[number],
-        resolvedAt: new Date(),
-      })
-      .where(eq(alertHistory.id, id))
+      .where(
+        and(
+          eq(alertHistory.id, id),
+          isNull(alertHistory.resolvedAt),
+          isNull(alertHistory.acknowledgedAt),
+        ),
+      )
       .returning();
     return updated ?? null;
   },

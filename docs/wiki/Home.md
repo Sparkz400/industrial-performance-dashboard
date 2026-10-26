@@ -19,3 +19,12 @@ See [acceptance evidence](https://github.com/Sparkz400/performance_dashboard/blo
 - [Contributing](https://github.com/Sparkz400/performance_dashboard/blob/main/CONTRIBUTING.md)
 
 This wiki is published from `docs/wiki/` on `main`; direct edits are overwritten.
+
+The [production workflow](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/PRODUCTION_WORKFLOW.md)
+covers guided commissioning, immutable shift profiles, operator corrections,
+reconciled reports, durable alarm delivery and the single-company permission policy.
+Public sharing and legacy notification channels are disabled. Physical qualification
+and protected OPC UA identities remain open.
+
+The full npm audit is clear in this wave. Unfixed operating-system/browser findings
+remain an open release gate; see the [security review](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DEPENDENCY_REVIEW.md).

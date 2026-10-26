@@ -17,7 +17,9 @@ import type {
   AlarmEvent,
   SpcAlertEvent,
 } from "@performance-dashboard/shared";
-import alarmEvaluator from "./services/alarmService.js";
+import alarmEvaluator, { toAlarmEvent } from "./services/alarmService.js";
+import type { AlertHistoryRow } from "./database/schema.js";
+import { webhookService } from "./services/webhookService.js";
 import { spcService, spcEvents } from "./services/spcService.js";
 import { edgeSyncService } from "./services/edgeSyncService.js";
 
@@ -30,19 +32,48 @@ interface Services {
       status: string;
     }) => void;
   };
-  alarmService: { broadcastAlarmTriggered: (data: AlarmEvent) => void };
+  alarmService: {
+    broadcastAlarmTriggered: (data: AlarmEvent) => void;
+    broadcastAlarmAcknowledged: (data: AlarmEvent) => void;
+    broadcastAlarmCleared: (data: AlarmEvent) => void;
+  };
   spcService: { broadcastSpcAlert: (data: SpcAlertEvent) => void };
 }
 
 /** Wire OPC UA events to socket broadcasts, queue, metrics, and alarm evaluation. */
 export function setupOpcuaBridge({
+  io,
   opcuaService,
   alarmService,
   spcService: spcSocketService,
 }: Services): void {
   // Wire alarm evaluator to socket broadcasts
-  alarmEvaluator.on("alarmTriggered", (alarm: AlarmEvent) => {
-    alarmService.broadcastAlarmTriggered(alarm);
+  alarmEvaluator.on("alarmTriggered", (row: AlertHistoryRow) => {
+    alarmService.broadcastAlarmTriggered(toAlarmEvent(row));
+    io.emit("alertTriggered", {
+      alertId: row.id,
+      ruleId: row.ruleId,
+      ruleName: row.ruleName,
+      severity: row.severity,
+      message: row.message,
+      machineId: row.machineId,
+      nodeKey: row.nodeKey,
+      value: row.triggerValue,
+      threshold: row.threshold,
+      timestamp: row.createdAt?.toISOString(),
+    });
+  });
+  alarmEvaluator.on("alarmCleared", (row: AlertHistoryRow) => {
+    alarmService.broadcastAlarmCleared(toAlarmEvent(row));
+    io.emit("alertUpdated", row);
+  });
+  alarmEvaluator.on("alarmAcknowledged", (row: AlertHistoryRow) => {
+    alarmService.broadcastAlarmAcknowledged(toAlarmEvent(row));
+    io.emit("alertAcknowledged", row);
+  });
+  alarmEvaluator.on("alarmUpdated", (row: AlertHistoryRow) => {
+    io.emit("alertUpdated", row);
+    io.emit("alarmUpdated", toAlarmEvent(row));
   });
 
   // Wire SPC alert events to socket broadcasts
@@ -51,21 +82,44 @@ export function setupOpcuaBridge({
   });
 
   // Load alarm rules on startup
-  void alarmEvaluator.loadRules();
+  webhookService.start();
 
+  let acquisitionStopped = false;
   opcuaEmitter.on("nodeChanged", (data: OpcuaNodeData) => {
+    if (acquisitionStopped) return;
     if (data && data.key && data.timestamp && data.value !== undefined) {
-      opcuaQueueWorker.enqueue({ ...data, machineId: data.machineId });
+      try {
+        opcuaQueueWorker.enqueue({ ...data, machineId: data.machineId });
+      } catch (error) {
+        acquisitionStopped = true;
+        logger.error(
+          "Durable storage unavailable. Stopping acquisition; unreceived intervals are unknown. Restore storage and restart the collector.",
+          error,
+        );
+        void multiMachineManager
+          .disconnectAll()
+          .catch((failure) =>
+            logger.error("Collector disconnect failed", failure),
+          );
+        void opcuaConnectionManager
+          .disconnectConnection()
+          .catch((failure) =>
+            logger.error("Collector disconnect failed", failure),
+          );
+        return;
+      }
       opcuaService.broadcastNodeChange(data);
       opcuaDataPointsReceived.inc({
         machine_id: String(data.machineId || "default"),
       });
 
-      // Evaluate alarm rules against incoming data
-      if (data.statusCode?.startsWith("Good")) alarmEvaluator.evaluate(data);
+      // Alarm evaluation runs from the durable queue, including unknown-quality markers.
 
       // SPC: fire-and-forget anomaly detection
-      if (data.statusCode?.startsWith("Good") && typeof data.value === "number") {
+      if (
+        data.statusCode?.startsWith("Good") &&
+        typeof data.value === "number"
+      ) {
         spcService
           .evaluateDataPoint(data.key, data.value, data.machineId ?? undefined)
           .catch((err) => {
@@ -197,6 +251,7 @@ export function createShutdown(
       await multiMachineManager.disconnectAll();
       await opcuaConnectionManager.disconnectConnection();
       await opcuaQueueWorker.stop();
+      await webhookService.stop();
       edgeSyncService.stopSyncLoop();
 
       logger.info("[Shutdown] Closing Database pool...");

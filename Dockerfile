@@ -14,7 +14,7 @@ RUN npm run build
 FROM node:24-trixie-slim AS production
 WORKDIR /app
 ENV NODE_ENV=production PUPPETEER_SKIP_DOWNLOAD=true PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-RUN apt-get update && apt-get install -y --no-install-recommends chromium ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends chromium ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 COPY shared/package.json shared/package.json
 COPY client/package.json client/package.json

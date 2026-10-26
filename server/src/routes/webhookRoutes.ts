@@ -11,13 +11,18 @@ const idParamSchema = Joi.object({ id: Joi.number().integer().required() });
 const createWebhookSchema = Joi.object({
   name: Joi.string().required().trim().min(1).max(255),
   url: Joi.string().required().uri().max(2048),
-  events: Joi.array().items(Joi.string()).min(1).required(),
+  events: Joi.array()
+    .items(Joi.string().valid("*", "alarm.triggered", "alarm.cleared"))
+    .min(1)
+    .required(),
 });
 
 const updateWebhookSchema = Joi.object({
   name: Joi.string().trim().min(1).max(255),
   url: Joi.string().uri().max(2048),
-  events: Joi.array().items(Joi.string()).min(1),
+  events: Joi.array()
+    .items(Joi.string().valid("*", "alarm.triggered", "alarm.cleared"))
+    .min(1),
   isActive: Joi.boolean(),
 }).min(1);
 
@@ -32,6 +37,13 @@ router.get(
       secret: secret.substring(0, 10) + "...",
     }));
     res.json(safe);
+  }),
+);
+
+router.get(
+  "/deliveries",
+  asyncHandler(async (_req, res) => {
+    res.json(await webhookService.listDeliveries());
   }),
 );
 

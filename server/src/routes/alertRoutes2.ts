@@ -7,8 +7,11 @@ import {
 } from "../middleware/validation.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { alertRepository, type AlertHistoryFilters } from "../repositories/alertRepository.js";
-import alertEvaluationService from "../services/alertEvaluationService.js";
+import {
+  alertRepository,
+  type AlertHistoryFilters,
+} from "../repositories/alertRepository.js";
+import alarmEvaluator from "../services/alarmService.js";
 
 const router = Router();
 
@@ -28,7 +31,19 @@ const ruleBodySchema = Joi.object({
   plantId: Joi.number().integer().optional().allow(null),
   nodeKey: Joi.string().required(),
   condition: Joi.string()
-    .valid("gt", "lt", "eq", "neq", "range", "rate_of_change", "state_change")
+    .valid(
+      "gt",
+      "gte",
+      "lt",
+      "lte",
+      "eq",
+      "neq",
+      "between",
+      "outside",
+      "range",
+      "rate_of_change",
+      "state_change",
+    )
     .required(),
   threshold: Joi.number().optional().allow(null),
   thresholdHigh: Joi.number().optional().allow(null),
@@ -48,7 +63,19 @@ const ruleUpdateSchema = Joi.object({
   plantId: Joi.number().integer().optional().allow(null),
   nodeKey: Joi.string().optional(),
   condition: Joi.string()
-    .valid("gt", "lt", "eq", "neq", "range", "rate_of_change", "state_change")
+    .valid(
+      "gt",
+      "gte",
+      "lt",
+      "lte",
+      "eq",
+      "neq",
+      "between",
+      "outside",
+      "range",
+      "rate_of_change",
+      "state_change",
+    )
     .optional(),
   threshold: Joi.number().optional().allow(null),
   thresholdHigh: Joi.number().optional().allow(null),
@@ -65,10 +92,12 @@ router.get(
   "/rules",
   validateQuery(rulesQuerySchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const rules = await alertRepository.listRules(req.query as {
-      machineId?: number;
-      isActive?: boolean;
-    });
+    const rules = await alertRepository.listRules(
+      req.query as {
+        machineId?: number;
+        isActive?: boolean;
+      },
+    );
     res.json(rules);
   }),
 );
@@ -83,7 +112,7 @@ router.post(
       ...req.body,
       createdBy: req.session?.userId ?? null,
     });
-    await alertEvaluationService.refreshRules();
+    await alarmEvaluator.reloadRules();
     res.status(201).json(rule);
   }),
 );
@@ -115,7 +144,7 @@ router.put(
       res.status(404).json({ error: "Alert rule not found" });
       return;
     }
-    await alertEvaluationService.refreshRules();
+    await alarmEvaluator.reloadRules();
     res.json(rule);
   }),
 );
@@ -132,7 +161,7 @@ router.delete(
       res.status(404).json({ error: "Alert rule not found" });
       return;
     }
-    await alertEvaluationService.refreshRules();
+    await alarmEvaluator.reloadRules();
     res.json({ message: "Alert rule deleted successfully" });
   }),
 );
@@ -180,12 +209,8 @@ router.put(
   validateParams(idParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id);
-    const userId = req.session?.userId ?? null;
-    const updated = await alertRepository.updateAlertStatus(
-      id,
-      "acknowledged",
-      userId,
-    );
+    const userId = req.session.userId!;
+    const updated = await alarmEvaluator.acknowledge(id, userId!);
     if (!updated) {
       res.status(404).json({ error: "Alert history entry not found" });
       return;
@@ -199,73 +224,47 @@ router.put(
   requireAuth,
   validateParams(idParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const id = Number(req.params.id);
-    const updated = await alertRepository.updateAlertStatus(id, "resolved");
-    if (!updated) {
-      res.status(404).json({ error: "Alert history entry not found" });
-      return;
-    }
-    res.json(updated);
+    res.status(409).json({
+      error: "Alarms clear only when good measurements confirm recovery.",
+    });
   }),
 );
 
 // ===== Channels =====
 
-const channelBodySchema = Joi.object({
-  name: Joi.string().required().min(1).max(255),
-  type: Joi.string()
-    .valid("email", "slack", "teams", "sms", "in_app")
-    .required(),
-  config: Joi.object().required(),
-  isActive: Joi.boolean().default(true),
-});
-
-const channelUpdateSchema = Joi.object({
-  name: Joi.string().min(1).max(255).optional(),
-  type: Joi.string()
-    .valid("email", "slack", "teams", "sms", "in_app")
-    .optional(),
-  config: Joi.object().optional(),
-  isActive: Joi.boolean().optional(),
-}).min(1);
-
 router.get(
   "/channels",
+  requireRole("admin"),
   asyncHandler(async (_req: Request, res: Response) => {
     const channels = await alertRepository.listChannels();
-    res.json(channels);
+    res.json(
+      channels.map(({ config, ...channel }) => ({
+        ...channel,
+        config: {},
+        supported: false,
+      })),
+    );
   }),
 );
 
-router.post(
-  "/channels",
-  requireAuth,
-  requireRole("admin"),
-  validateBody(channelBodySchema),
-  asyncHandler(async (req: Request, res: Response) => {
-    const channel = await alertRepository.createChannel({
-      ...req.body,
-      createdBy: req.session?.userId ?? null,
-    });
-    res.status(201).json(channel);
-  }),
-);
+router.post("/channels", requireAuth, requireRole("admin"), (_req, res) => {
+  res.status(501).json({
+    error:
+      "Channel delivery is not implemented. Configure signed webhooks instead.",
+  });
+});
 
 router.put(
   "/channels/:id",
   requireAuth,
   requireRole("admin"),
   validateParams(idParamSchema),
-  validateBody(channelUpdateSchema),
-  asyncHandler(async (req: Request, res: Response) => {
-    const id = Number(req.params.id);
-    const channel = await alertRepository.updateChannel(id, req.body);
-    if (!channel) {
-      res.status(404).json({ error: "Notification channel not found" });
-      return;
-    }
-    res.json(channel);
-  }),
+  (_req, res) => {
+    res.status(501).json({
+      error:
+        "Channel delivery is not implemented. Configure signed webhooks instead.",
+    });
+  },
 );
 
 router.delete(

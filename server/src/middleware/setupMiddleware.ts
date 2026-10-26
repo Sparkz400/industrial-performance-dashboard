@@ -21,6 +21,7 @@ const pgSession = connectPgSimple(session);
 
 export interface MiddlewareContext {
   sessionStore: InstanceType<typeof pgSession>;
+  sessionMiddleware: ReturnType<typeof session>;
   invalidCsrfTokenError: unknown;
 }
 
@@ -78,20 +79,20 @@ export function setupMiddleware(app: express.Application): MiddlewareContext {
     ttl: 60 * 60 * 2,
   });
 
-  app.use(
-    session({
-      store: sessionStore,
-      secret: process.env.SESSION_SECRET || "fallback-insecure-secret",
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: new URL(config.CLIENT_URL).protocol === "https:",
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-      },
-    }),
-  );
+  const sessionMiddleware = session({
+    store: sessionStore,
+    secret: config.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 2 * 60 * 60 * 1000,
+      secure: new URL(config.CLIENT_URL).protocol === "https:",
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+    },
+  });
+  app.use(sessionMiddleware);
 
   app.set("etag", "strong");
   app.disable("x-powered-by");
@@ -104,23 +105,31 @@ export function setupMiddleware(app: express.Application): MiddlewareContext {
   app.use(cookieParser(config.COOKIE_SECRET));
 
   // --- CSRF Protection ---
-  const { generateToken, csrfSynchronisedProtection, invalidCsrfTokenError } =
-    csrfSync({
-      getTokenFromRequest: (req) => {
-        return (req.headers[CSRF_HEADER_NAME] as string) || req.body?._csrf;
-      },
-      getTokenFromState: (req) => {
-        return req.session?.csrfToken;
-      },
-      storeTokenInState: (req, token) => {
-        req.session.csrfToken = token;
-      },
-      size: 64,
-    });
+  const {
+    generateToken,
+    getTokenFromRequest,
+    csrfSynchronisedProtection,
+    invalidCsrfTokenError,
+  } = csrfSync({
+    getTokenFromRequest: (req) => {
+      return (req.headers[CSRF_HEADER_NAME] as string) || req.body?._csrf;
+    },
+    getTokenFromState: (req) => {
+      return req.session?.csrfToken;
+    },
+    storeTokenInState: (req, token) => {
+      req.session.csrfToken = token;
+    },
+    size: 64,
+  });
 
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
       return next();
+    }
+    // Keep the session-token match explicit at the route boundary for static analysis.
+    if (req.session.csrfToken !== getTokenFromRequest(req)) {
+      return next(invalidCsrfTokenError);
     }
     csrfSynchronisedProtection(req, res, next);
   });
@@ -142,5 +151,5 @@ export function setupMiddleware(app: express.Application): MiddlewareContext {
     });
   });
 
-  return { sessionStore, invalidCsrfTokenError };
+  return { sessionStore, sessionMiddleware, invalidCsrfTokenError };
 }

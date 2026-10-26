@@ -30,6 +30,7 @@ server/data/
 server/reports/
 server/public/
 client/dist/
+client/storybook-static/
 .local/
 client/.env.local
 shared/dist/

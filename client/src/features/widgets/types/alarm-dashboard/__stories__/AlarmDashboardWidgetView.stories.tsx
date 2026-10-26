@@ -112,7 +112,6 @@ const meta: Meta<typeof AlarmDashboardWidgetView> = {
   ],
   args: {
     onAcknowledge: () => {},
-    onClear: () => {},
   },
 };
 

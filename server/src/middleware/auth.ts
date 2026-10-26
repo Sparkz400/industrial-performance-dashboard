@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import logger from "../utils/logger.js";
 import { UnauthorizedError, ForbiddenError } from "../utils/errors.js";
+import { getSessionUser } from "../services/sessionAccess.js";
 
 export type UserRole = "admin" | "viewer";
 
@@ -9,6 +10,7 @@ declare module "express-session" {
     userId?: number;
     userRole?: UserRole;
     username?: string;
+    userVersion?: string;
   }
 }
 
@@ -16,19 +18,52 @@ declare module "express-session" {
  * Middleware that requires a valid authenticated session.
  * Throws UnauthorizedError if the user is not logged in.
  */
-export const requireAuth = (
+export const requireAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const user = await getSessionUser(req.session);
+    if (!user) {
+      logger.warn(
+        `[Auth] Unauthenticated request to ${req.method} ${req.originalUrl}`,
+      );
+      next(new UnauthorizedError());
+      return;
+    }
+    req.session.userRole = user.role;
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** Viewers can acknowledge incidents and classify stops, but cannot change configuration. */
+export const requireMutationAccess = (
   req: Request,
   res: Response,
   next: NextFunction,
 ): void => {
-  if (!req.session?.userId) {
-    logger.warn(
-      `[Auth] Unauthenticated request to ${req.method} ${req.originalUrl}`,
-    );
-    next(new UnauthorizedError());
+  if (
+    /^\/(system|db|opcua|certificates|edge|reports)(?:\/|$)/i.test(req.path)
+  ) {
+    requireRole("admin")(req, res, next);
     return;
   }
-  next();
+  if (
+    ["GET", "HEAD", "OPTIONS"].includes(req.method) ||
+    (req.method === "POST" &&
+      /^\/alarms\/\d+\/acknowledge\/?$/.test(req.path)) ||
+    (req.method === "PUT" &&
+      /^\/alerts\/history\/\d+\/acknowledge\/?$/.test(req.path)) ||
+    (req.method === "POST" &&
+      /^\/production\/shifts\/\d+\/reasons\/?$/.test(req.path))
+  ) {
+    next();
+    return;
+  }
+  requireRole("admin")(req, res, next);
 };
 
 /**

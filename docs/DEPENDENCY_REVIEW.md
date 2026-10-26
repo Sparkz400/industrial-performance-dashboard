@@ -47,6 +47,19 @@ all required checks passed on `4c500941c151198466489bba8794fbc319f147c3` before 
 | [#38](https://github.com/Sparkz400/performance_dashboard/pull/38) | Consolidated into this change and superseded after integration. |
 | [#39](https://github.com/Sparkz400/performance_dashboard/pull/39) | This upgrades MUI icons to 9 while Material and System stay on 6. Retain a consistent MUI family and migrate components together, tracked in TODO F09. |
 
+## Additional major proposals reviewed during PR #51
+
+These proposals are closed and their migrations remain tracked in TODO F09. They
+are not needed to fix the two npm advisories, which PR #51 resolves with the tested
+current toolchain. Reopen a migration when its callers and checks can move together.
+
+| PR | Evidence and disposition |
+| --- | --- |
+| [#52](https://github.com/Sparkz400/performance_dashboard/pull/52) | MUI 9.5 changes the existing component/icon imports. Its CI build/browser failures include unresolved `@mui/icons-material/HelpOutline`; current code also imports `@mui/material/Grid2`. A component migration is required, not only three version bumps. |
+| [#53](https://github.com/Sparkz400/performance_dashboard/pull/53) | Storybook 10.6/Vite 8.3 leaves the configured addon-essentials on 8.6, whose declared Storybook peer is `^8.6.14`. Earlier CI passed because it did not build Storybook. PR #51 adds that missing build check; migrate the addon configuration with the whole family. |
+| [#54](https://github.com/Sparkz400/performance_dashboard/pull/54) | ESLint 10 fails on both operating systems: `react/display-name` calls removed `contextOrFilename.getFilename`. Installed eslint-plugin-react supports ESLint through 9, so the plugin/config migration remains required. |
+| [#55](https://github.com/Sparkz400/performance_dashboard/pull/55) | Vitest/coverage 5 are grouped correctly, but both type checks fail because Testing Library matcher declarations no longer augment the new assertion type (`toHaveValue`, `toBeVisible`, `toBeInTheDocument`). Keep the tested v4 pair until the test-type migration is qualified. |
+
 ## Consolidation details
 
 - PR 32 is subsumed by the newer PostgreSQL instrumentation in PR 34. OpenTelemetry API 1.10/resources and metrics SDK 3 are aligned with SDK Node/exporters 0.300, removing invalid peer dependencies. A real loopback span export verifies startup and shutdown.
@@ -56,23 +69,59 @@ all required checks passed on `4c500941c151198466489bba8794fbc319f147c3` before 
 - PR 34 is applied to current manifests without reverting earlier security fixes. The scheduler uses node-cron's exported ScheduledTask type. npm's old-lock resolver crashed, so the root workspace lock was resolved from the current manifests and validated with a clean install; no legacy-peer-deps or force flag is required.
 - Future major proposals group MUI, Storybook/Vite, lint, Vitest/coverage and virtualization families so coupled changes can be reviewed together.
 
-## Security residuals and ownership
+## Security follow-up — PR #51
 
-The local runtime-only npm audit reports **zero advisories**. The full audit
-reports **seven moderate package findings**, stemming from two development-only
-advisories: [esbuild development-server access](https://github.com/advisories/GHSA-67mh-4wv8-2f99)
-through drizzle-kit, and [UUID behavior](https://github.com/advisories/GHSA-w5hq-g745-h8pq)
-through Storybook addon-actions. Proposed npm fixes downgrade whole toolchains;
-they are not applied blindly. Do not expose development/Storybook/database tooling
-to untrusted networks. Repository maintainers own these residuals under F09;
-review supported upstream migrations and rerun audits for each release.
+The full npm audit now reports **zero vulnerabilities**, including development
+packages. Root overrides apply UUID 11.1.1 only to Storybook addon-actions, and
+esbuild 0.25.12 only to the deprecated Drizzle loader. This fixes
+[GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq) and
+[GHSA-67mh-4wv8-2f99](https://github.com/advisories/GHSA-67mh-4wv8-2f99) without
+changing the retained Storybook/Vite or Drizzle APIs. Remove these overrides when
+upstream toolchain migrations supply compatible patched dependencies.
 
-Container/Chromium advisories and code scanning are separate gates, reported by
-the current-image workflow. This record does not accept an image for production.
-The image scan for application commit `53cce7a7` reports one critical and 66 high
-open findings. [Critical libxml2 finding #468](https://github.com/Sparkz400/performance_dashboard/security/code-scanning/468)
-lists CVE-2026-6653 and provides no fixed Debian package version. These findings
-are not suppressed; maintainers must resolve or explicitly assess them under F09
-before accepting a production image. Later workflow/documentation-only changes
-do not constitute a patched application image.
-See [P0 acceptance](P0_ACCEPTANCE.md) and [TODO](../TODO.md).
+Validation includes clean install/peer validation, both builds, Storybook build,
+Drizzle generation with no schema changes, the real loader's sync/async TypeScript
+transforms, UUID undersized-buffer rejection, 194 unit tests, type/lint/format
+checks and the isolated production browser/simulator workflow. Security CI blocks
+all npm advisory severities, including development dependencies.
+
+CodeQL's CSRF finding is fixed with an explicit session-token equality check before
+the shared CSRF middleware. Tests reject missing, wrong and other-session tokens
+across REST/tRPC. Socket handshakes reject foreign browser origins, and CSRF error
+logs reveal only token presence, never token values or session IDs. No finding is
+silenced with a CodeQL suppression.
+
+## Container findings and release gate
+
+A fresh Node 24/Debian trixie/Chromium image with package upgrades was scanned using
+Trivy 0.76.1 on 2026-10-26. Local content digest:
+`sha256:4a564ea38e85633a993588d3fbf3ee6d00aff4fb224642f03c7a917c2038b3c4`.
+It contains the PR #51 application changes and patched npm lockfile. Hosted reports
+record their own exact commit and image identity; do not reuse this digest as
+proof for a later build.
+
+**413 findings remain: 1 critical, 66 high, 157 medium, 183 low, 6 unknown.**
+None lists an available fixed package. The critical
+[libxml2 CVE-2026-6653](https://security-tracker.debian.org/tracker/CVE-2026-6653)
+remains unfixed in stable Debian. These findings are not dismissed, suppressed or
+accepted for production. Repository maintainers own reassessment and mitigation
+before a release; rebuild and inspect the report for each candidate. Keep the
+installation isolated from untrusted inputs while the release gate is open.
+
+A Wolfi/Node 24 candidate passed application startup, migrations, login, PostgreSQL,
+native modules and PDF rendering, but its available Chromium 149 package produced
+1,655 findings (34 critical, 471 high). Both the starter and public Wolfi package
+indexes offered that older browser. The candidate was rejected; replacing the
+base did not safely resolve the browser exposure. No unverified binary or unstable
+Debian package was substituted to hide the findings.
+
+The retained Debian image passes SQLite, bcrypt, OPC UA import, scheduler, offline
+email, OpenTelemetry startup/shutdown and real Chromium PDF checks. An isolated
+container check also covers fresh PostgreSQL migrations/seed, served frontend,
+login/session persistence, database health, user 1000 and IANA timezone support.
+
+Container CI now runs on PRs/main and weekly, builds with a fresh base, preserves
+full JSON/SARIF plus image identity, and blocks **fixable** high/critical findings.
+The complete unfiltered report still appears in GitHub code scanning. A successful
+fixable-finding gate does not approve the unfixed risks. See
+[P0 acceptance](P0_ACCEPTANCE.md) and [TODO F09](../TODO.md).

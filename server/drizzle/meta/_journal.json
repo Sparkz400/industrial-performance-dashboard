@@ -29,6 +29,27 @@
       "when": 1792996317717,
       "tag": "0003_measurement_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793003054095,
+      "tag": "0004_production_workflow",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793004180354,
+      "tag": "0005_shift_reports",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793005062631,
+      "tag": "0006_alarm_receipts",
+      "breakpoints": true
     }
   ]
 }

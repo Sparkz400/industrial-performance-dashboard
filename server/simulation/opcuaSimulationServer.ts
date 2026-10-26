@@ -23,6 +23,40 @@ server.initialize(() => {
     browseName: "MyDevice",
   });
 
+  const started = Date.now();
+  const scenario = () => {
+    const seconds = Math.floor((Date.now() - started) / 1000);
+    const phase = seconds % 60;
+    const total =
+      Math.floor(seconds / 60) * 20 + Math.min(20, Math.floor(phase / 2));
+    return {
+      ProductionState: phase < 40 ? 1 : phase < 50 ? 0 : 2,
+      ProductionCount: total,
+      GoodCount: total - Math.floor(total / 10),
+      RejectCount: Math.floor(total / 10),
+    };
+  };
+  for (const key of [
+    "ProductionState",
+    "ProductionCount",
+    "GoodCount",
+    "RejectCount",
+  ] as const)
+    namespace.addVariable({
+      componentOf: device,
+      browseName: key,
+      nodeId: "ns=1;s=" + key,
+      dataType: "Int32",
+      minimumSamplingInterval: 1000,
+      value: {
+        get: () =>
+          new opcua.Variant({
+            dataType: opcua.DataType.Int32,
+            value: scenario()[key],
+          }),
+      },
+    });
+
   namespace.addVariable({
     componentOf: device,
     browseName: "Running",

@@ -18,6 +18,8 @@ import {
   fromDatabaseError,
 } from "../utils/errors.js";
 
+import { sessionEvents } from "../services/sessionAccess.js";
+
 const router = express.Router();
 
 const SALT_ROUNDS = 12;
@@ -59,6 +61,7 @@ router.post(
         username: users.username,
         email: users.email,
         passwordHash: users.passwordHash,
+        updatedAt: users.updatedAt,
         role: users.role,
         isActive: users.isActive,
       })
@@ -91,6 +94,7 @@ router.post(
     });
 
     req.session.userId = user.id;
+    req.session.userVersion = user.updatedAt?.toISOString();
     req.session.userRole = user.role;
     req.session.username = user.username;
 
@@ -129,11 +133,13 @@ router.post(
 router.post("/logout", (req: Request, res: Response, next) => {
   const username = req.session?.username || "unknown";
   const actor = getAuditActor(req);
+  const sessionId = req.sessionID;
   req.session.destroy((err) => {
     if (err) {
       next(new AppError("Logout failed.", 500));
       return;
     }
+    sessionEvents.emit("sessionRevoked", sessionId);
     res.clearCookie("connect.sid");
     logger.info(`[Auth] User "${username}" logged out.`);
     void auditLogService.recordEvent(
@@ -212,6 +218,7 @@ router.post(
       .set({ passwordHash: newHash, updatedAt: new Date() })
       .where(eq(users.id, req.session.userId!));
 
+    sessionEvents.emit("userRevoked", req.session.userId);
     logger.info(
       `[Auth] User "${req.session.username}" changed their password.`,
     );
@@ -341,6 +348,7 @@ router.put(
         throw new NotFoundError("User");
       }
 
+      sessionEvents.emit("userRevoked", id);
       logger.info(
         `[Auth] Admin "${req.session.username}" updated user id=${id}.`,
       );
@@ -358,6 +366,8 @@ router.put(
         },
         getAuditActor(req),
       );
+      if (id === req.session.userId)
+        req.session.userVersion = result[0].updatedAt?.toISOString();
       res.json({ user: result[0] });
     } catch (err: any) {
       if (err.code === "23505") throw fromDatabaseError(err);

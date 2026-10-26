@@ -48,7 +48,7 @@ describe("Machine Routes - POST /api/v1/machines", () => {
     expect(res.status).toBe(401);
   });
 
-  it("should reject unauthenticated POST without session", async () => {
+  it("should reject unauthenticated POST without session before CSRF validation", async () => {
     const request = await getTestApp();
     const res = await request.post("/api/v1/machines").send({
       name: "Test Machine",
@@ -56,7 +56,8 @@ describe("Machine Routes - POST /api/v1/machines", () => {
       port: 4840,
     });
 
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("INVALID_CSRF_TOKEN");
   });
 });
 

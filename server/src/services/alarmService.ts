@@ -1,174 +1,289 @@
-import { EventEmitter } from "events";
-import type { OpcuaNodeData } from "@performance-dashboard/shared";
+import { EventEmitter } from "node:events";
+import { and, eq, isNull, desc, sql } from "drizzle-orm";
+import db from "../database/db.js";
+import {
+  alertHistory,
+  alarmEvaluationState,
+  alarmEvaluationReceipts,
+  webhooks,
+  webhookDeliveries,
+  type AlertRuleRow,
+  type AlertHistoryRow,
+} from "../database/schema.js";
 import { alarmRepository } from "../repositories/alarmRepository.js";
-import logger from "../utils/logger.js";
+import type { SpoolEntry } from "../queue/measurementSpool.js";
+import type { AlarmEvent } from "@performance-dashboard/shared";
 
 interface RuleState {
+  eventId: string;
+  receivedAt: number;
+  sourceTime: number;
+  value: number | null;
   lastTriggeredAt: number;
-  inAlarmState: boolean;
 }
 
-interface LoadedRule {
-  id: number;
-  machineId: number | null;
-  nodeKey: string;
-  name: string;
-  condition: string;
-  threshold: number | null;
-  thresholdHigh: number | null;
-  severity: string;
-  cooldownSeconds: number | null;
+export const alarmConditions = [
+  "gt",
+  "gte",
+  "lt",
+  "lte",
+  "eq",
+  "neq",
+  "between",
+  "outside",
+  "range",
+  "rate_of_change",
+  "state_change",
+] as const;
+
+export function evaluateCondition(
+  rule: Pick<
+    AlertRuleRow,
+    "condition" | "threshold" | "thresholdHigh" | "rateWindowSeconds"
+  >,
+  value: number,
+  sourceTime: number,
+  previous?: Pick<RuleState, "value" | "sourceTime">,
+): boolean | null {
+  const low = rule.threshold;
+  const high = rule.thresholdHigh;
+  if (
+    rule.condition === "state_change" ||
+    rule.condition === "rate_of_change"
+  ) {
+    const elapsed = previous ? (sourceTime - previous.sourceTime) / 1000 : 0;
+    if (
+      previous?.value == null ||
+      elapsed <= 0 ||
+      elapsed > (rule.rateWindowSeconds ?? 60)
+    )
+      return null;
+    return rule.condition === "state_change"
+      ? value !== previous.value
+      : low != null && Math.abs(value - previous.value) / elapsed > low;
+  }
+  if (low == null) return null;
+  switch (rule.condition) {
+    case "gt":
+      return value > low;
+    case "gte":
+      return value >= low;
+    case "lt":
+      return value < low;
+    case "lte":
+      return value <= low;
+    case "eq":
+      return value === low;
+    case "neq":
+      return value !== low;
+    case "between":
+      return high == null ? null : value >= low && value <= high;
+    case "range":
+    case "outside":
+      return high == null ? null : value < low || value > high;
+    default:
+      return null;
+  }
 }
 
-class AlarmEvaluator extends EventEmitter {
-  private rules: LoadedRule[] = [];
-  private ruleState = new Map<number, RuleState>();
-  private loaded = false;
+export function toAlarmEvent(row: AlertHistoryRow): AlarmEvent {
+  return {
+    conditionState:
+      (row.metadata as { conditionState?: "active" | "clear" | "unknown" })
+        ?.conditionState ?? "unknown",
+    id: row.id,
+    ruleId: row.ruleId ?? 0,
+    machineId: row.machineId,
+    nodeKey: row.nodeKey ?? "",
+    severity: row.severity ?? "info",
+    status: row.status ?? "active",
+    message: row.message ?? "",
+    source: row.ruleName ?? "",
+    value: row.triggerValue,
+    threshold: row.threshold,
+    triggeredAt: row.createdAt?.toISOString() ?? "",
+    acknowledgedAt: row.acknowledgedAt?.toISOString() ?? null,
+    clearedAt: row.resolvedAt?.toISOString() ?? null,
+    acknowledgedBy: row.acknowledgedBy,
+  };
+}
+
+export class AlarmEvaluator extends EventEmitter {
+  private rules?: AlertRuleRow[];
 
   async loadRules(): Promise<void> {
-    try {
-      this.rules = await alarmRepository.getAllActiveRules();
-      this.loaded = true;
-      logger.info(
-        `[AlarmEvaluator] Loaded ${this.rules.length} active alarm rules`,
-      );
-    } catch (err) {
-      logger.error("[AlarmEvaluator] Failed to load rules:", err);
-    }
+    const rules = await alarmRepository.getAllActiveRules();
+    this.rules = rules.filter((rule) => rule.plantId == null);
   }
-
   async reloadRules(): Promise<void> {
     await this.loadRules();
   }
 
-  evaluate(nodeData: OpcuaNodeData): void {
-    if (!this.loaded || typeof nodeData.value !== "number") return;
-
-    const value = nodeData.value as number;
-    const machineId = nodeData.machineId;
-
-    for (const rule of this.rules) {
-      if (rule.nodeKey !== nodeData.key) continue;
+  // Called serially by the durable collector, before acknowledging the spool batch.
+  async evaluate(entry: SpoolEntry): Promise<void> {
+    const data = entry.data;
+    if (data.machineId == null) return;
+    if (!this.rules) await this.loadRules();
+    for (const rule of this.rules!) {
       if (
-        machineId != null &&
-        rule.machineId != null &&
-        rule.machineId !== machineId
+        rule.nodeKey !== data.key ||
+        (rule.machineId != null && rule.machineId !== data.machineId)
       )
         continue;
-
-      const triggered = this.evaluateCondition(
-        rule.condition,
-        value,
-        rule.threshold,
-        rule.thresholdHigh,
-      );
-
-      const state = this.ruleState.get(rule.id) ?? {
-        lastTriggeredAt: 0,
-        inAlarmState: false,
-      };
-
-      if (triggered && !state.inAlarmState) {
-        const cooldown = (rule.cooldownSeconds ?? 300) * 1000;
-        const now = Date.now();
-
-        if (now - state.lastTriggeredAt < cooldown) continue;
-
-        state.inAlarmState = true;
-        state.lastTriggeredAt = now;
-        this.ruleState.set(rule.id, state);
-
-        void this.triggerAlarm(rule, value, nodeData);
-      } else if (!triggered && state.inAlarmState) {
-        state.inAlarmState = false;
-        this.ruleState.set(rule.id, state);
-      }
+      const key = `${rule.id}:${data.machineId}`;
+      const receivedAt = new Date(data.receivedAt ?? data.timestamp).getTime();
+      if (rule.createdAt && receivedAt < rule.createdAt.getTime()) continue;
+      const sourceTime = new Date(
+        data.sourceTimestamp ?? data.timestamp,
+      ).getTime();
+      const scalar =
+        typeof data.value === "boolean" ? Number(data.value) : data.value;
+      const value =
+        data.statusCode?.startsWith("Good") &&
+        typeof scalar === "number" &&
+        Number.isFinite(scalar)
+          ? scalar
+          : null;
+      let changed: AlertHistoryRow | undefined;
+      let eventName = "alarmUpdated";
+      await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${key}))`);
+        const receipt = await tx
+          .insert(alarmEvaluationReceipts)
+          .values({ key: `${rule.id}:${entry.id}`, ruleId: rule.id })
+          .onConflictDoNothing()
+          .returning();
+        if (!receipt.length) return;
+        const [saved] = await tx
+          .select()
+          .from(alarmEvaluationState)
+          .where(eq(alarmEvaluationState.key, key));
+        const previous = saved?.state as RuleState | undefined;
+        if (previous && receivedAt < previous.receivedAt) return;
+        const state: RuleState = {
+          eventId: entry.id,
+          receivedAt,
+          sourceTime,
+          value,
+          lastTriggeredAt: previous?.lastTriggeredAt ?? 0,
+        };
+        // Adopt existing incidents on upgrade; acknowledgment must not create a second incident.
+        const [active] = await tx
+          .select()
+          .from(alertHistory)
+          .where(
+            and(
+              eq(alertHistory.ruleId, rule.id),
+              eq(alertHistory.machineId, data.machineId!),
+              isNull(alertHistory.resolvedAt),
+            ),
+          )
+          .orderBy(desc(alertHistory.id))
+          .limit(1);
+        if (!previous && active?.createdAt)
+          state.lastTriggeredAt = active.createdAt.getTime();
+        const condition =
+          value == null
+            ? null
+            : evaluateCondition(rule, value, sourceTime, previous);
+        const conditionState =
+          condition == null ? "unknown" : condition ? "active" : "clear";
+        if (active) {
+          const metadata = {
+            ...(active.metadata as Record<string, unknown>),
+            conditionState,
+            lastSourceTime: new Date(sourceTime).toISOString(),
+          };
+          if (condition === false) {
+            [changed] = await tx
+              .update(alertHistory)
+              .set({
+                status: "resolved",
+                resolvedAt: new Date(receivedAt),
+                metadata,
+              })
+              .where(eq(alertHistory.id, active.id))
+              .returning();
+            eventName = "alarmCleared";
+          } else if (
+            (active.metadata as Record<string, unknown>)?.conditionState !==
+            conditionState
+          ) {
+            [changed] = await tx
+              .update(alertHistory)
+              .set({ metadata })
+              .where(eq(alertHistory.id, active.id))
+              .returning();
+          }
+        } else if (
+          condition &&
+          receivedAt - state.lastTriggeredAt >=
+            (rule.cooldownSeconds ?? 300) * 1000
+        ) {
+          [changed] = await tx
+            .insert(alertHistory)
+            .values({
+              ruleId: rule.id,
+              ruleName: rule.name,
+              machineId: data.machineId,
+              nodeKey: data.key,
+              triggerValue: value,
+              threshold: rule.threshold,
+              severity: rule.severity,
+              status: "active",
+              message: `${rule.name}: ${value} (${rule.condition} ${rule.threshold ?? "previous value"})`,
+              createdAt: new Date(receivedAt),
+              metadata: {
+                conditionState,
+                sourceTime: new Date(sourceTime).toISOString(),
+                eventId: entry.id,
+              },
+            })
+            .returning();
+          state.lastTriggeredAt = receivedAt;
+          eventName = "alarmTriggered";
+        }
+        if (changed && eventName !== "alarmUpdated") {
+          const event = {
+            type:
+              eventName === "alarmTriggered"
+                ? "alarm.triggered"
+                : "alarm.cleared",
+            payload: toAlarmEvent(changed),
+            timestamp: new Date(receivedAt).toISOString(),
+          };
+          const destinations = await tx
+            .select()
+            .from(webhooks)
+            .where(eq(webhooks.isActive, true));
+          for (const destination of destinations) {
+            const events = destination.events as string[];
+            if (events.includes(event.type) || events.includes("*"))
+              await tx
+                .insert(webhookDeliveries)
+                .values({ webhookId: destination.id, event });
+          }
+        }
+        await tx
+          .insert(alarmEvaluationState)
+          .values({ key, ruleId: rule.id, state })
+          .onConflictDoUpdate({
+            target: alarmEvaluationState.key,
+            set: { state },
+          });
+      });
+      if (changed) this.emit(eventName, changed);
     }
   }
 
-  private evaluateCondition(
-    condition: string,
-    value: number,
-    threshold: number | null,
-    thresholdHigh: number | null,
-  ): boolean {
-    if (threshold == null) return false;
-
-    switch (condition) {
-      case "gt":
-        return value > threshold;
-      case "gte":
-        return value >= threshold;
-      case "lt":
-        return value < threshold;
-      case "lte":
-        return value <= threshold;
-      case "eq":
-        return value === threshold;
-      case "between":
-        return (
-          thresholdHigh != null && value >= threshold && value <= thresholdHigh
-        );
-      case "outside":
-        return (
-          thresholdHigh != null && (value < threshold || value > thresholdHigh)
-        );
-      default:
-        return false;
-    }
-  }
-
-  private async triggerAlarm(
-    rule: LoadedRule,
-    value: number,
-    nodeData: OpcuaNodeData,
-  ): Promise<void> {
-    try {
-      const alarm = await alarmRepository.createAlarm({
-        ruleId: rule.id,
-        ruleName: rule.name,
-        machineId: rule.machineId,
-        nodeKey: rule.nodeKey,
-        triggerValue: value,
-        threshold: rule.threshold,
-        severity: rule.severity as any,
-        status: "active" as any,
-        message: `${rule.name}: value ${value} ${rule.condition} ${rule.threshold} on ${nodeData.key}`,
-        metadata: {
-          label: nodeData.label,
-          dataType: nodeData.dataType,
-          timestamp: nodeData.timestamp,
-        },
-      });
-
-      logger.warn(
-        `[AlarmEvaluator] Alarm triggered: ${rule.name} (value=${value}, threshold=${rule.threshold})`,
-      );
-
-      this.emit("alarmTriggered", {
-        id: alarm.id,
-        ruleId: rule.id,
-        machineId: rule.machineId,
-        nodeKey: rule.nodeKey,
-        severity: rule.severity,
-        status: "active",
-        message: alarm.message,
-        source: rule.name,
-        value,
-        threshold: rule.threshold,
-        triggeredAt: alarm.createdAt?.toISOString() ?? new Date().toISOString(),
-        acknowledgedAt: null,
-        clearedAt: null,
-        acknowledgedBy: null,
-      });
-    } catch (err) {
-      logger.error(
-        `[AlarmEvaluator] Failed to create alarm for rule ${rule.id}:`,
-        err,
-      );
-    }
+  async acknowledge(
+    id: number,
+    userId: number,
+  ): Promise<AlertHistoryRow | null> {
+    const row = await alarmRepository.acknowledgeAlarm(id, userId);
+    if (row) this.emit("alarmAcknowledged", row);
+    return row;
   }
 }
 
-const alarmEvaluator = new AlarmEvaluator();
-export default alarmEvaluator;
+export default new AlarmEvaluator();

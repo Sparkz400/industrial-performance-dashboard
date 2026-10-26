@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { router, authedProcedure, adminProcedure } from "../trpc.js";
 import { alarmRepository } from "../../repositories/alarmRepository.js";
-import alarmEvaluator from "../../services/alarmService.js";
+import alarmEvaluator, {
+  alarmConditions,
+} from "../../services/alarmService.js";
 
 export const alarmRouter = router({
   list: authedProcedure
@@ -29,7 +31,7 @@ export const alarmRouter = router({
   acknowledge: authedProcedure
     .input(z.object({ id: z.number().int() }))
     .mutation(async ({ input, ctx }) => {
-      const alarm = await alarmRepository.acknowledgeAlarm(
+      const alarm = await alarmEvaluator.acknowledge(
         input.id,
         ctx.session.userId,
       );
@@ -39,10 +41,10 @@ export const alarmRouter = router({
 
   clear: authedProcedure
     .input(z.object({ id: z.number().int() }))
-    .mutation(async ({ input }) => {
-      const alarm = await alarmRepository.clearAlarm(input.id);
-      if (!alarm) throw new Error("Alarm not found");
-      return { alarm };
+    .mutation(() => {
+      throw new Error(
+        "Alarms clear only when good measurements confirm recovery",
+      );
     }),
 
   // Rules
@@ -56,14 +58,14 @@ export const alarmRouter = router({
         name: z.string().min(1).max(255),
         machineId: z.number().int(),
         nodeKey: z.string(),
-        condition: z.string(),
+        condition: z.enum(alarmConditions),
         threshold: z.number(),
         thresholdHigh: z.number().optional(),
         severity: z
           .enum(["critical", "high", "medium", "low", "info"])
           .default("medium"),
         cooldownSeconds: z.number().int().min(0).default(300),
-        channels: z.array(z.any()).default([]),
+        channels: z.array(z.never()).default([]),
         isActive: z.boolean().default(true),
         description: z.string().optional(),
       }),

@@ -705,6 +705,95 @@ export const notificationChannels = pgTable("notification_channels", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
+// One durable cursor per rule and observed machine; replay never reopens old incidents.
+export const alarmEvaluationState = pgTable("alarm_evaluation_state", {
+  key: varchar("key").primaryKey(),
+  ruleId: integer("rule_id")
+    .notNull()
+    .references(() => alertRules.id, { onDelete: "cascade" }),
+  state: jsonb("state").notNull(),
+});
+
+export const alarmEvaluationReceipts = pgTable("alarm_evaluation_receipts", {
+  key: varchar("key").primaryKey(),
+  ruleId: integer("rule_id")
+    .notNull()
+    .references(() => alertRules.id, { onDelete: "cascade" }),
+  processedAt: timestamp("processed_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const webhookDeliveries = pgTable("webhook_deliveries", {
+  id: serial("id").primaryKey(),
+  webhookId: integer("webhook_id")
+    .notNull()
+    .references(() => webhooks.id, { onDelete: "cascade" }),
+  event: jsonb("event").notNull(),
+  attempts: integer("attempts").notNull().default(0),
+  nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+  lastStatus: integer("last_status"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const machineProfiles = pgTable("machine_profiles", {
+  id: serial("id").primaryKey(),
+  machineId: integer("machine_id")
+    .notNull()
+    .references(() => machines.id, { onDelete: "restrict" }),
+  profile: jsonb("profile").notNull(),
+  createdBy: integer("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const productionShifts = pgTable("production_shifts", {
+  id: serial("id").primaryKey(),
+  machineId: integer("machine_id")
+    .notNull()
+    .references(() => machines.id, { onDelete: "restrict" }),
+  name: varchar("name", { length: 160 }).notNull(),
+  timezone: varchar("timezone", { length: 80 }).notNull(),
+  start: timestamp("start", { withTimezone: true }).notNull(),
+  end: timestamp("end", { withTimezone: true }).notNull(),
+  profile: jsonb("profile").notNull(),
+  job: jsonb("job").notNull(),
+  breaks: jsonb("breaks").notNull().default([]),
+  evidence: jsonb("evidence"),
+  createdBy: integer("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const downtimeReasons = pgTable("downtime_reasons", {
+  id: serial("id").primaryKey(),
+  shiftId: integer("shift_id")
+    .notNull()
+    .references(() => productionShifts.id, { onDelete: "restrict" }),
+  start: timestamp("start", { withTimezone: true }).notNull(),
+  end: timestamp("end", { withTimezone: true }).notNull(),
+  category: varchar("category", { length: 20 }).notNull(),
+  reason: varchar("reason", { length: 500 }).notNull(),
+  supersedesId: integer("supersedes_id").unique(),
+  actorId: integer("actor_id")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // ===== Feature 5: Scheduled Reports =====
 
 export const reportTemplates = pgTable("report_templates", {

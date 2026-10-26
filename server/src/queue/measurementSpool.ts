@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, statfsSync } from "node:fs";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { SignalMetadata } from "@performance-dashboard/shared";
@@ -26,7 +26,10 @@ export interface SpoolEntry {
 export class MeasurementSpool {
   private database: DatabaseSync;
 
-  constructor(filename: string) {
+  constructor(
+    private filename: string,
+    private limits = { maxEntries: 1_000_000, minFreeBytes: 64 * 1024 * 1024 },
+  ) {
     mkdirSync(dirname(filename), { recursive: true });
     this.database = new DatabaseSync(filename);
     this.database.exec(`
@@ -39,6 +42,17 @@ export class MeasurementSpool {
   }
 
   enqueue(data: OpcuaDataItem): void {
+    if (this.count() >= this.limits.maxEntries)
+      throw new Error(
+        "Measurement storage capacity reached; collection must stop",
+      );
+    if (this.filename !== ":memory:") {
+      const space = statfsSync(dirname(this.filename));
+      if (space.bavail * space.bsize < this.limits.minFreeBytes)
+        throw new Error(
+          "Measurement storage reserve reached; collection must stop",
+        );
+    }
     if (!data.key || !Number.isFinite(new Date(data.timestamp).getTime())) {
       throw new Error("Invalid measurement key or timestamp");
     }
@@ -75,6 +89,13 @@ export class MeasurementSpool {
         id: String(row.id),
         data: JSON.parse(String(row.payload)),
       }));
+  }
+
+  count(): number {
+    return Number(
+      this.database.prepare("SELECT count(*) AS count FROM measurements").get()!
+        .count,
+    );
   }
 
   acknowledge(entries: SpoolEntry[]): void {

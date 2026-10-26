@@ -1,7 +1,7 @@
 import crypto from "crypto";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull, lte, asc, sql } from "drizzle-orm";
 import db from "../database/db.js";
-import { webhooks } from "../database/schema.js";
+import { webhooks, webhookDeliveries } from "../database/schema.js";
 import type { NewWebhook, WebhookRow } from "../database/schema.js";
 import logger from "../utils/logger.js";
 import { NotFoundError } from "../utils/errors.js";
@@ -19,7 +19,96 @@ function signPayload(payload: string, secret: string): string {
   return crypto.createHmac("sha256", secret).update(payload).digest("hex");
 }
 
+let timer: ReturnType<typeof setTimeout> | undefined;
+let pending: Promise<void> | undefined;
+let stopped = true;
+
 export const webhookService = {
+  start(): void {
+    if (!stopped) return;
+    stopped = false;
+    const tick = () => {
+      pending = this.processDeliveries()
+        .catch((error) => {
+          logger.error(
+            "Webhook delivery worker failed; pending events retained",
+            error,
+          );
+        })
+        .finally(() => {
+          pending = undefined;
+          if (!stopped) timer = setTimeout(tick, 1000);
+        });
+    };
+    tick();
+  },
+
+  async stop(): Promise<void> {
+    stopped = true;
+    clearTimeout(timer);
+    await pending;
+  },
+
+  async processDeliveries(): Promise<void> {
+    // Lock one delivery at a time; multiple application instances cannot send it concurrently.
+    await db.transaction(async (tx) => {
+      const [delivery] = await tx
+        .select()
+        .from(webhookDeliveries)
+        .where(
+          and(
+            isNull(webhookDeliveries.deliveredAt),
+            lte(webhookDeliveries.nextAttemptAt, new Date()),
+          ),
+        )
+        .orderBy(asc(webhookDeliveries.nextAttemptAt))
+        .limit(1)
+        .for("update", { skipLocked: true });
+      if (!delivery) return;
+      const [destination] = await tx
+        .select()
+        .from(webhooks)
+        .where(eq(webhooks.id, delivery.webhookId));
+      const result = destination?.isActive
+        ? await deliverWebhook(
+            destination,
+            delivery.event as WebhookEvent,
+            delivery.id,
+          )
+        : { success: false, statusCode: 0 };
+      const attempts = delivery.attempts + 1;
+      await tx
+        .update(webhookDeliveries)
+        .set({
+          attempts,
+          lastStatus: result.statusCode,
+          deliveredAt: result.success ? new Date() : null,
+          nextAttemptAt: new Date(
+            Date.now() + Math.min(900000, 1000 * 2 ** Math.min(attempts, 10)),
+          ),
+        })
+        .where(eq(webhookDeliveries.id, delivery.id));
+    });
+  },
+
+  async listDeliveries() {
+    return db
+      .select({
+        id: webhookDeliveries.id,
+        webhookId: webhookDeliveries.webhookId,
+        attempts: webhookDeliveries.attempts,
+        nextAttemptAt: webhookDeliveries.nextAttemptAt,
+        deliveredAt: webhookDeliveries.deliveredAt,
+        lastStatus: webhookDeliveries.lastStatus,
+        createdAt: webhookDeliveries.createdAt,
+      })
+      .from(webhookDeliveries)
+      .orderBy(
+        sql`${webhookDeliveries.deliveredAt} ASC NULLS FIRST`,
+        asc(webhookDeliveries.id),
+      )
+      .limit(100);
+  },
   async listWebhooks(): Promise<WebhookRow[]> {
     return db.select().from(webhooks).orderBy(webhooks.createdAt);
   },
@@ -120,11 +209,10 @@ export const webhookService = {
       timestamp: new Date().toISOString(),
     };
 
-    // Fire-and-forget for each webhook
     for (const webhook of matchingWebhooks) {
-      deliverWebhook(webhook, event).catch((err) => {
-        logger.warn(`Webhook delivery failed for ${webhook.name}: ${err}`);
-      });
+      await db
+        .insert(webhookDeliveries)
+        .values({ webhookId: webhook.id, event });
     }
   },
 };
@@ -132,12 +220,13 @@ export const webhookService = {
 async function deliverWebhook(
   webhook: WebhookRow,
   event: WebhookEvent,
+  deliveryId?: number,
 ): Promise<{ success: boolean; statusCode: number; message: string }> {
-  const safeUrl = await assertSafeOutboundUrl(webhook.url, "Webhook URL");
   const body = JSON.stringify(event);
   const signature = signPayload(body, webhook.secret);
 
   try {
+    const safeUrl = await assertSafeOutboundUrl(webhook.url, "Webhook URL");
     const response = await fetchSafeOutbound(safeUrl.toString(), {
       method: "POST",
       headers: {
@@ -145,6 +234,7 @@ async function deliverWebhook(
         "X-Webhook-Signature": signature,
         "X-Webhook-Event": event.type,
         "X-Webhook-Id": String(webhook.id),
+        ...(deliveryId ? { "X-Webhook-Delivery-Id": String(deliveryId) } : {}),
       },
       body,
       signal: AbortSignal.timeout(10000),

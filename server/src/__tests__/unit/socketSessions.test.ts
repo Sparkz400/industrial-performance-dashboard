@@ -7,6 +7,11 @@ import { io as connect } from "socket.io-client";
 vi.mock("../../opc-ua/services/opcuaConnectionManager.js", () => ({
   default: {},
 }));
+vi.mock("../../services/sessionAccess.js", async () => ({
+  sessionEvents: new (await import("node:events")).EventEmitter(),
+  getSessionUser: async (session: { userId?: number }) =>
+    session?.userId ? { id: session.userId, role: "viewer" } : null,
+}));
 import { createSocketServer } from "../../socket/socketServer.js";
 import config from "../../config/config.js";
 
@@ -80,10 +85,66 @@ it("rejects unsigned handshakes without accumulating store listeners and accepts
         client.once("connect_error", reject);
       });
       expect(client.connected).toBe(true);
+      const disconnected = new Promise<void>((resolve) =>
+        client.once("disconnect", () => resolve()),
+      );
+      const { sessionEvents } = await import("../../services/sessionAccess.js");
+      sessionEvents.emit("sessionRevoked", id);
+      await disconnected;
+      expect(client.connected).toBe(false);
     } finally {
       client.disconnect();
     }
   } finally {
+    await new Promise<void>((resolve) => io.close(() => resolve()));
+  }
+});
+
+it("disconnects an expired socket even if it sends no further requests", async () => {
+  const store = new session.MemoryStore();
+  const server = createServer();
+  const { io } = createSocketServer(
+    server,
+    store as unknown as Parameters<typeof createSocketServer>[1],
+  );
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  if (!address || typeof address === "string")
+    throw new Error("Missing listener");
+  const id = "expiring-fixture";
+  const cookie = new session.Cookie();
+  cookie.maxAge = 1000;
+  await new Promise<void>((resolve, reject) =>
+    store.set(
+      id,
+      { cookie, userId: 7, userRole: "viewer", username: "fixture" },
+      (error) => (error ? reject(error) : resolve()),
+    ),
+  );
+  const signature = createHmac("sha256", config.SESSION_SECRET)
+    .update(id)
+    .digest("base64")
+    .replace(/=+$/, "");
+  const client = connect(`http://127.0.0.1:${address.port}`, {
+    transports: ["websocket"],
+    reconnection: false,
+    extraHeaders: {
+      cookie: `connect.sid=${encodeURIComponent(`s:${id}.${signature}`)}`,
+    },
+  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      client.once("connect", resolve);
+      client.once("connect_error", reject);
+    });
+    const disconnected = new Promise<void>((resolve) =>
+      client.once("disconnect", () => resolve()),
+    );
+    await disconnected;
+    expect(client.connected).toBe(false);
+  } finally {
+    client.disconnect();
     await new Promise<void>((resolve) => io.close(() => resolve()));
   }
 });

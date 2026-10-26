@@ -1,3 +1,9 @@
+vi.mock("../../services/sessionAccess.js", () => ({
+  getSessionUser: async (session: { userId?: number; userRole?: string }) =>
+    session?.userId
+      ? { id: session.userId, role: session.userRole ?? "viewer" }
+      : null,
+}));
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Request, Response, NextFunction } from "express";
 
@@ -26,36 +32,36 @@ function createMockReqResNext(sessionData: Record<string, any> = {}) {
   return { req, res, next };
 }
 
-describe("requireAuth middleware", () => {
-  it("should call next() when session has userId", () => {
+describe("requireAuth middleware", async () => {
+  it("should call next() when session has userId", async () => {
     const { req, res, next } = createMockReqResNext({
       userId: 1,
       userRole: "admin",
     });
-    requireAuth(req, res, next);
+    await requireAuth(req, res, next);
     expect(next).toHaveBeenCalledOnce();
     expect(next).toHaveBeenCalledWith(); // no error
   });
 
-  it("should call next with UnauthorizedError when no userId in session", () => {
+  it("should call next with UnauthorizedError when no userId in session", async () => {
     const { req, res, next } = createMockReqResNext({});
-    requireAuth(req, res, next);
+    await requireAuth(req, res, next);
     expect(next).toHaveBeenCalledOnce();
     expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
   });
 
-  it("should call next with UnauthorizedError when session is undefined", () => {
+  it("should call next with UnauthorizedError when session is undefined", async () => {
     const req = { method: "GET", originalUrl: "/test" } as unknown as Request;
     const res = {} as Response;
     const next = vi.fn() as NextFunction;
 
-    requireAuth(req, res, next);
+    await requireAuth(req, res, next);
     expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
   });
 });
 
-describe("requireRole middleware", () => {
-  it("should call next() when user has the required role", () => {
+describe("requireRole middleware", async () => {
+  it("should call next() when user has the required role", async () => {
     const { req, res, next } = createMockReqResNext({
       userId: 1,
       userRole: "admin",
@@ -68,7 +74,7 @@ describe("requireRole middleware", () => {
     expect(next).toHaveBeenCalledWith(); // no error
   });
 
-  it("should call next with ForbiddenError when user lacks required role", () => {
+  it("should call next with ForbiddenError when user lacks required role", async () => {
     const { req, res, next } = createMockReqResNext({
       userId: 2,
       userRole: "viewer",
@@ -81,7 +87,7 @@ describe("requireRole middleware", () => {
     expect(next).toHaveBeenCalledWith(expect.any(ForbiddenError));
   });
 
-  it("should accept multiple roles", () => {
+  it("should accept multiple roles", async () => {
     const { req, res, next } = createMockReqResNext({
       userId: 2,
       userRole: "viewer",
@@ -94,7 +100,7 @@ describe("requireRole middleware", () => {
     expect(next).toHaveBeenCalledWith(); // no error — viewer is in the allowed list
   });
 
-  it("should reject when userRole is undefined", () => {
+  it("should reject when userRole is undefined", async () => {
     const { req, res, next } = createMockReqResNext({ userId: 1 });
 
     const middleware = requireRole("admin");
