@@ -4,6 +4,12 @@ The React client connects to the Node.js server through authenticated REST/tRPC
 and live socket updates. The collector buffers samples on local disk before
 writing PostgreSQL history. Shared TypeScript contracts connect the workspaces.
 
+The interface, charts and wallboards use locally bundled Figtree fonts with
+tabular numerals; technical identifiers retain monospace. Regular and italic
+fonts and their stylesheet are precached for offline use without an external font
+service. See
+[font source and license](https://github.com/Sparkz400/performance_dashboard/blob/main/client/public/fonts/figtree/README.md).
+
 New measurements preserve namespace-aware identity and receive time. Dense trend
 queries span the selected interval with quality gaps and explicit resolution.
 Edge transfer remains disabled; AI suggestions do not execute database queries.

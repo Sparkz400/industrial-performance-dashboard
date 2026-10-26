@@ -93,7 +93,13 @@ export default function ResponsiveSidebar({ open, onToggle, onWidthChange }: Pro
       <Box
         component="nav"
         aria-label={t('Main navigation', 'Hauptnavigation')}
-        sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%', p: 0.5 }}
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '100%',
+          p: 0.5,
+          '& .Mui-selected .MuiListItemText-primary': { fontWeight: 600 },
+        }}
       >
         <IconButton
           aria-label={t(open ? 'Close navigation' : 'Expand navigation')}

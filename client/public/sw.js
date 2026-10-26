@@ -1,12 +1,15 @@
 /// <reference lib="webworker" />
 
-const CACHE_NAME = 'perf-dashboard-v1';
+const CACHE_NAME = 'perf-dashboard-v2';
+
+const FONT_URLS = [
+  '/fonts/figtree/figtree.css',
+  '/fonts/figtree/Figtree-Variable.woff2',
+  '/fonts/figtree/Figtree-Italic-Variable.woff2',
+];
 
 // Assets to precache for offline shell
-const PRECACHE_URLS = [
-  '/',
-  '/index.html',
-];
+const PRECACHE_URLS = ['/', '/index.html', ...FONT_URLS];
 
 // Install: precache shell assets
 self.addEventListener('install', (event) => {
@@ -33,6 +36,14 @@ self.addEventListener('fetch', (event) => {
 
   // Skip non-GET and API requests (always go to network)
   if (request.method !== 'GET' || url.pathname.startsWith('/api/')) {
+    return;
+  }
+
+  if (url.origin === self.location.origin && FONT_URLS.includes(url.pathname)) {
+    // These static files are identical across Origin headers, including font preloads.
+    event.respondWith(
+      caches.match(request, { ignoreVary: true }).then((cached) => cached || fetch(request)),
+    );
     return;
   }
 

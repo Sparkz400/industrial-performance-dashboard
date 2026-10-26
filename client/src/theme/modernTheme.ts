@@ -34,15 +34,28 @@ export const createModernTheme = (mode: 'dark' | 'light') => {
       borderRadius: 12,
     },
     typography: {
-      fontFamily: '"Inter", "Segoe UI", system-ui, -apple-system, sans-serif',
+      fontFamily: 'var(--font-family)',
+      fontWeightRegular: 400,
+      fontWeightMedium: 500,
+      fontWeightBold: 700,
+      h1: { fontWeight: 700 },
+      h2: { fontWeight: 700 },
+      h3: { fontWeight: 600 },
       h4: { fontWeight: 700, letterSpacing: '-0.02em' },
       h5: { fontWeight: 700, letterSpacing: '-0.01em' },
       h6: { fontWeight: 600, letterSpacing: '-0.01em', fontSize: '1.05rem' },
       subtitle1: { fontWeight: 600, fontSize: '0.95rem' },
+      button: { fontWeight: 600 },
       body2: { fontSize: '0.85rem', lineHeight: 1.6 },
       caption: { fontSize: '0.75rem', letterSpacing: '0.02em' },
     },
     components: {
+      MuiFormLabel: {
+        styleOverrides: { root: { fontWeight: 500 } },
+      },
+      MuiFormControlLabel: {
+        styleOverrides: { label: { fontWeight: 500 } },
+      },
       MuiCssBaseline: {
         styleOverrides: {
           body: {

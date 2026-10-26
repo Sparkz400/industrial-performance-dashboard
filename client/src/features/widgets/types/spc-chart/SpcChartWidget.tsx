@@ -199,6 +199,7 @@ const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError })
           )}
           layers={layers as unknown as undefined}
           theme={{
+            text: { fontFamily: 'var(--font-family)' },
             axis: {
               ticks: { text: { fontSize: 10 } },
               legend: { text: { fontSize: 12 } },

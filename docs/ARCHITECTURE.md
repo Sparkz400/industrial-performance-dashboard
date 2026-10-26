@@ -18,6 +18,13 @@ flowchart LR
 machine connections, business services, persistence and reports. `shared/`
 contains API and socket contracts. Compile shared types before dependent builds.
 
+The client bundles Figtree variable fonts locally (regular and italic, UI weights
+400–700). The shared CSS font family also feeds the component and chart themes;
+tabular numerals keep changing measurements aligned, while technical identifiers
+retain monospace. The service worker precaches the font stylesheet and both font
+files. No external font service is needed; provenance and license are in
+[the font directory](../client/public/fonts/figtree/README.md).
+
 The collector stores each scalar sample in a synchronous, durable local SQLite
 queue before broadcasting it. PostgreSQL receives a stable event ID, server and
 source timestamps, raw scalar value, quality and numeric projection. Good Boolean

@@ -39,6 +39,10 @@ Additional experimental screens include statistical process control, digital
 twins, recipes and compliance records. Their presence is not a support or
 certification claim; see [current status](docs/STATUS.md).
 
+The interface uses locally bundled Figtree fonts, including charts and wallboards,
+with tabular numerals for stable measurements and monospace technical identifiers.
+Fonts require no internet access; see [font source and license](client/public/fonts/figtree/README.md).
+
 Edge synchronization is disabled until canonical central ingestion is implemented.
 AI suggestions disclose external processing and do not execute measurement queries.
 Public links/embeds and legacy alarm email/chat/SMS channels are disabled.
