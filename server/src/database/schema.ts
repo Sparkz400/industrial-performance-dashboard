@@ -19,7 +19,11 @@ import type { SignalMetadata } from "@performance-dashboard/shared";
 
 // --- Enums ---
 
-export const userRoleEnum = pgEnum("users_role_enum", ["admin", "viewer"]);
+export const userRoleEnum = pgEnum("users_role_enum", [
+  "admin",
+  "viewer",
+  "wallboard",
+]);
 export const recipeStatusEnum = pgEnum("recipe_status_enum", [
   "draft",
   "active",
@@ -790,6 +794,73 @@ export const productionShifts = pgTable("production_shifts", {
     .notNull()
     .defaultNow(),
 });
+
+export const operatorEntries = pgTable(
+  "operator_entries",
+  {
+    id: serial("id").primaryKey(),
+    requestId: varchar("request_id", { length: 36 }).notNull().unique(),
+    machineId: integer("machine_id")
+      .notNull()
+      .references(() => machines.id, { onDelete: "cascade" }),
+    shiftId: integer("shift_id").references(() => productionShifts.id, {
+      onDelete: "set null",
+    }),
+    kind: varchar("kind", { length: 20 }).notNull(),
+    text: text("text").notNull(),
+    priority: varchar("priority", { length: 10 }).notNull().default("normal"),
+    status: varchar("status", { length: 10 }).notNull().default("open"),
+    ownerId: integer("owner_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    dueAt: timestamp("due_at", { withTimezone: true }),
+    intervalStart: timestamp("interval_start", { withTimezone: true }),
+    intervalEnd: timestamp("interval_end", { withTimezone: true }),
+    quantity: jsonb("quantity").$type<{
+      total: number;
+      good: number;
+      reject: number;
+    }>(),
+    version: integer("version").notNull().default(1),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("idx_operator_entries_machine_status").on(
+      table.machineId,
+      table.status,
+      table.updatedAt,
+    ),
+  ],
+);
+
+export const operatorEntryEvents = pgTable(
+  "operator_entry_events",
+  {
+    id: serial("id").primaryKey(),
+    entryId: integer("entry_id")
+      .notNull()
+      .references(() => operatorEntries.id, { onDelete: "cascade" }),
+    actorId: integer("actor_id")
+      .notNull()
+      .references(() => users.id),
+    version: integer("version").notNull(),
+    snapshot: jsonb("snapshot").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("operator_entry_version_unique").on(table.entryId, table.version),
+  ],
+);
 
 export const downtimeReasons = pgTable("downtime_reasons", {
   id: serial("id").primaryKey(),

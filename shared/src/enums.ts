@@ -26,6 +26,7 @@ export type ServiceName = (typeof ServiceName)[keyof typeof ServiceName];
 export const UserRole = {
   ADMIN: 'admin',
   VIEWER: 'viewer',
+  WALLBOARD: 'wallboard',
 } as const;
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];

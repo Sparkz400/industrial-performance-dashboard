@@ -13,7 +13,7 @@ export interface ComplianceAuditRecordInput {
   metadata?: Record<string, unknown>;
   userId?: number | null;
   username?: string | null;
-  userRole?: "admin" | "viewer" | null;
+  userRole?: "admin" | "viewer" | "wallboard" | null;
   ipAddress?: string | null;
   reasonForChange?: string | null;
   electronicSignature?: Record<string, unknown> | null;

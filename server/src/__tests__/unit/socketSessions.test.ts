@@ -9,11 +9,69 @@ vi.mock("../../opc-ua/services/opcuaConnectionManager.js", () => ({
 }));
 vi.mock("../../services/sessionAccess.js", async () => ({
   sessionEvents: new (await import("node:events")).EventEmitter(),
-  getSessionUser: async (session: { userId?: number }) =>
-    session?.userId ? { id: session.userId, role: "viewer" } : null,
+  getSessionUser: async (session: { userId?: number; userRole?: string }) =>
+    session?.userId
+      ? { id: session.userId, role: session.userRole ?? "viewer" }
+      : null,
 }));
 import { createSocketServer } from "../../socket/socketServer.js";
 import config from "../../config/config.js";
+import alarmEvaluator from "../../services/alarmService.js";
+
+it("denies alarm acknowledgment from a signed wallboard socket", async () => {
+  const acknowledge = vi
+    .spyOn(alarmEvaluator, "acknowledge")
+    .mockResolvedValue(null);
+  const store = new session.MemoryStore();
+  const server = createServer();
+  const { io } = createSocketServer(
+    server,
+    store as unknown as Parameters<typeof createSocketServer>[1],
+  );
+  io.on("connection", (socket) =>
+    socket.onAny((event, reply) => {
+      if (event === "owned:barrier") reply();
+    }),
+  );
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("No listener");
+  const id = "owned-wallboard";
+  const cookie = new session.Cookie();
+  cookie.maxAge = 60000;
+  await new Promise<void>((resolve, reject) =>
+    store.set(
+      id,
+      { cookie, userId: 7, username: "display", userRole: "wallboard" },
+      (error) => (error ? reject(error) : resolve()),
+    ),
+  );
+  const signature = createHmac("sha256", config.SESSION_SECRET)
+    .update(id)
+    .digest("base64")
+    .replace(/=+$/, "");
+  const client = connect(`http://127.0.0.1:${address.port}`, {
+    transports: ["websocket"],
+    reconnection: false,
+    extraHeaders: {
+      cookie: `connect.sid=${encodeURIComponent(`s:${id}.${signature}`)}`,
+    },
+  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      client.once("connect", resolve);
+      client.once("connect_error", reject);
+    });
+    client.emit("acknowledgeAlert", { id: 1 });
+    await new Promise<void>((resolve) => client.emit("owned:barrier", resolve));
+    expect(acknowledge).not.toHaveBeenCalled();
+  } finally {
+    client.disconnect();
+    await new Promise<void>((resolve) => io.close(() => resolve()));
+    acknowledge.mockRestore();
+  }
+});
 
 it("rejects unsigned handshakes without accumulating store listeners and accepts a signed session", async () => {
   const store = new session.MemoryStore();

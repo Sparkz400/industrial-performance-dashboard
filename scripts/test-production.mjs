@@ -77,7 +77,7 @@ try {
   });
   await migrate(drizzle(pool), { migrationsFolder: "server/drizzle" });
   const snapshot = JSON.parse(
-    await readFile("server/drizzle/meta/0007_snapshot.json", "utf8"),
+    await readFile("server/drizzle/meta/0008_snapshot.json", "utf8"),
   );
   const tables = new Set(
     (
@@ -853,6 +853,9 @@ try {
     400,
   );
   assert.deepEqual(pageErrors, []);
+
+  const { testOperator } = await import("./test-operator.mjs");
+  await testOperator({ call, page, frontend, pool, browser, viewer, machine, shift, adminId, viewerId });
   console.log(
     "PASS: browser shift creation, operator classification, immutable reconciliation, corrections and printed report; exact independent OEE = 43.333333%",
   );

@@ -5,6 +5,8 @@ owned simulator or an isolated test installation using OPC UA scalar signals.
 
 ## Implemented and covered by focused tests
 
+- Attributable operator handover/actions, reviewed manual declarations and a
+  restricted supervisor display; [operator workflow](OPERATOR_WORKFLOW.md).
 - Protected OPC UA identities, explicit trust, expiry/hostname checks and browser
   commissioning with redacted diagnostics; [S7-1500 pilot scope](S7_1500_PILOT.md).
 - Isolated installation/restore previews, complete image/database/file backups and

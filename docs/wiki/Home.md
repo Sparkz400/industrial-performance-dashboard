@@ -35,3 +35,7 @@ The [operations guide](https://github.com/Sparkz400/performance_dashboard/blob/m
 covers isolated installation previews, complete backups and restore/upgrade checks.
 [Capacity evidence](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/CAPACITY.md)
 declares the synthetic workload and its limits; it is not physical PLC qualification.
+
+[Operator handover and wallboard](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/OPERATOR_WORKFLOW.md)
+cover attributable actions, reviewed manual declarations, current job/target context
+and a restricted display account. Physical viewing-distance acceptance remains open.

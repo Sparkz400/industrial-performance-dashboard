@@ -40,6 +40,7 @@ import { reportSchedulerService } from "./src/services/reportSchedulerService.js
 
 // --- Route modules ---
 import productionRoutes from "./src/routes/productionRoutes.js";
+import operatorRoutes from "./src/routes/operatorRoutes.js";
 import authRoutes from "./src/routes/authRoutes.js";
 import systemRoutes from "./src/routes/systemRoutes.js";
 import dashboardRoutes from "./src/routes/dashboardRoutes.js";
@@ -127,6 +128,7 @@ export function createApp() {
   app.use("/api/v1/share", shareRoutes);
   app.use("/api/v1", requireAuth, requireMutationAccess);
   app.use("/api/v1/production", productionRoutes);
+  app.use("/api/v1/production", operatorRoutes);
   app.use("/api/v1/system", requireAuth, systemRoutes);
   app.use("/api/v1/dashboards", requireAuth, dashboardRoutes);
   app.use("/api/v1/opcua", requireAuth, opcuaRoutes);

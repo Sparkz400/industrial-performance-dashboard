@@ -310,16 +310,25 @@ below retain their unfulfilled acceptance criteria.
   Done: an operator sees the current job, stops needing reasons, authorized quality input
   and handover actions in a short touch-friendly flow. Acknowledgment and classification
   are application actions; machine control is not introduced.
-  Progress: Production workspace supports shift context, stop classification/corrections and administrator reconciliation. Handover, touch/accessibility qualification and operator quantity entry remain open.
+  Progress: Production workspace supports shift context, stop classification/corrections,
+  attributable handover/actions and reviewed operator quantity declarations. Mobile
+  browser acceptance is covered in `scripts/test-operator.mjs`; supervised operator
+  and accessibility qualification remain open. See [operator workflow](docs/OPERATOR_WORKFLOW.md).
 
 - [ ] **U04 — Add shift handover notes and action ownership** · P1 · M1 · New · M. Depends: U03.
   Done: notes link to machine/job/interval, have an owner and resolved/open state, and
   appear in the next handover. Edits are attributable; attachments, if enabled, are
   size/type constrained and permission checked.
+  Progress: Durable idempotent entries, immutable revision history, ownership, due
+  dates, interval/shift validation and conflict protection implemented and tested;
+  attachments disabled. Integration evidence pending in this factory-pilot wave.
 - [ ] **U05 — Deliver a useful supervisor wallboard** · P1 · M1 · Improve · M. Depends: U02.
   Done: a selected line shows state, target progress, prioritized issues and freshness;
   kiosk rotation reconnects cleanly and uses a restricted identity. Screens remain
   legible at the agreed viewing distance and do not depend on color alone.
+  Progress: Six-machine pages, selection/rotation/fullscreen, observed target progress,
+  freshness/unknown states and a read-only account are browser tested. Viewing-distance
+  and sustained display acceptance remain open; see [workflow](docs/OPERATOR_WORKFLOW.md).
 - [ ] **U06 — Establish accessible interaction patterns** · P1 · M1 · Improve · L. Depends: none.
   Done: commissioning, login, dashboards and operator actions support keyboard focus,
   non-drag alternatives, semantic labels and screen-reader status; test contrast, zoom,

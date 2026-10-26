@@ -12,7 +12,7 @@ export interface AuditLogRecordInput {
   metadata?: Record<string, unknown>;
   userId?: number | null;
   username?: string | null;
-  userRole?: "admin" | "viewer" | null;
+  userRole?: "admin" | "viewer" | "wallboard" | null;
   ipAddress?: string | null;
 }
 

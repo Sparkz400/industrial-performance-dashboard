@@ -48,7 +48,7 @@ export const authedProcedure = t.procedure.use(
     }
     if (
       type === "mutation" &&
-      path !== "alarm.acknowledge" &&
+      !(path === "alarm.acknowledge" && user.role === "viewer") &&
       user.role !== "admin"
     )
       throw new TRPCError({

@@ -35,12 +35,12 @@ const registerSchema = Joi.object({
   username: Joi.string().alphanum().min(3).max(100).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(8).max(255).required(),
-  role: Joi.string().valid("admin", "viewer").default("viewer"),
+  role: Joi.string().valid("admin", "viewer", "wallboard").default("viewer"),
 });
 
 const updateUserSchema = Joi.object({
   email: Joi.string().email().optional(),
-  role: Joi.string().valid("admin", "viewer").optional(),
+  role: Joi.string().valid("admin", "viewer", "wallboard").optional(),
   isActive: Joi.boolean().optional(),
 });
 

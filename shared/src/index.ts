@@ -351,6 +351,8 @@ export type {
 } from "./api-types.js";
 export type {
   ProductionState,
+  OperatorEntry,
+  MachineLiveSummary,
   ProductionSignal,
   ProductionProfile,
   ProductionInterval,

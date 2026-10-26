@@ -57,6 +57,13 @@
       "when": 1793017406996,
       "tag": "0007_peaceful_lady_vermin",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793021227137,
+      "tag": "0008_foamy_beyonder",
+      "breakpoints": true
     }
   ]
 }

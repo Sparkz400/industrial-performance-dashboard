@@ -3,7 +3,7 @@ import logger from "../utils/logger.js";
 import { UnauthorizedError, ForbiddenError } from "../utils/errors.js";
 import { getSessionUser } from "../services/sessionAccess.js";
 
-export type UserRole = "admin" | "viewer";
+export type UserRole = "admin" | "viewer" | "wallboard";
 
 declare module "express-session" {
   interface SessionData {
@@ -46,6 +46,13 @@ export const requireMutationAccess = (
   next: NextFunction,
 ): void => {
   if (
+    req.session.userRole === "wallboard" &&
+    !["GET", "HEAD", "OPTIONS"].includes(req.method)
+  ) {
+    next(new ForbiddenError("Wallboard accounts are read-only"));
+    return;
+  }
+  if (
     /^\/(system|db|opcua|certificates|edge|reports)(?:\/|$)/i.test(req.path)
   ) {
     requireRole("admin")(req, res, next);
@@ -58,7 +65,9 @@ export const requireMutationAccess = (
     (req.method === "PUT" &&
       /^\/alerts\/history\/\d+\/acknowledge\/?$/.test(req.path)) ||
     (req.method === "POST" &&
-      /^\/production\/shifts\/\d+\/reasons\/?$/.test(req.path))
+      /^\/production\/shifts\/\d+\/reasons\/?$/.test(req.path)) ||
+    (req.method === "POST" &&
+      /^\/production\/operator\/entries(?:\/\d+)?\/?$/.test(req.path))
   ) {
     next();
     return;

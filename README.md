@@ -48,6 +48,8 @@ The first nominated pilot family is [Siemens SIMATIC S7-1500](docs/S7_1500_PILOT
 software acceptance uses owned simulators, with physical CPU qualification still open.
 For isolated installation, complete backups, restore checks and upgrades, see the
 [operations guide](docs/OPERATIONS.md).
+The [operator workflow](docs/OPERATOR_WORKFLOW.md) covers handover actions, reviewed
+manual counts and the supervisor wallboard with a dedicated read-only account.
 
 ## Where it is going
 

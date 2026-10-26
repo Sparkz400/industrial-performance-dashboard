@@ -198,6 +198,7 @@ export function createSocketServer(
         });
     });
     socket.on("acknowledgeAlert", async ({ id }) => {
+      if (config.RECOVERY_MODE || socket.data.user.role === "wallboard") return;
       if (!Number.isSafeInteger(id) || id <= 0) return;
       try {
         await alarmEvaluator.acknowledge(id, socket.data.user.id);

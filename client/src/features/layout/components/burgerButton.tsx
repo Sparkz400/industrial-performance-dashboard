@@ -7,12 +7,17 @@ interface BurgerButtonProps {
 }
 
 const BurgerButton: React.FC<BurgerButtonProps> = ({ checked, onChange }) => (
-  <label className="burger" htmlFor="burger">
-    <input type="checkbox" id="burger" checked={checked} onChange={onChange} />
+  <button
+    type="button"
+    className="burger"
+    aria-label="Expand navigation"
+    aria-expanded={checked}
+    onClick={onChange}
+  >
     <span></span>
     <span></span>
     <span></span>
-  </label>
+  </button>
 );
 
 export default BurgerButton;
