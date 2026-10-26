@@ -100,6 +100,15 @@ await dailyFixture(async ({ pool, call, users, actors, api, expect }) => {
   const oldPreview = await (
     await call("admin", "POST", `/api/v1/history/${machine}/preview`)
   ).json();
+  assert.equal(
+    oldPreview.rows,
+    0,
+    "Newly received late history gets a 24-hour review window",
+  );
+  await pool.query(
+    "UPDATE opcua_data SET received_at=now()-interval '2 days' WHERE machine_id=$1 AND timestamp<'2026-01-04'",
+    [machine],
+  );
   await call("admin", "PUT", `/api/v1/history/${machine}/policy`, { days: 31 });
   assert.equal(
     (

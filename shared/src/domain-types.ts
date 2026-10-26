@@ -478,19 +478,28 @@ export interface BatchSummary {
     nodeKey: string;
     displayName: string;
     targetValue: number;
-    actualAvg: number;
-    actualMin: number;
-    actualMax: number;
-    withinTolerance: boolean;
+    actualAvg: number | null;
+    actualMin: number | null;
+    actualMax: number | null;
+    withinTolerance: boolean | null;
+    sampleCount: number;
+    excludedCount: number;
   }>;
-  overallCompliance: boolean;
+  overallCompliance: number | null;
 }
 
 export interface BatchDataSeries {
   nodeKey: string;
   displayName: string;
-  dataPoints: Array<{ timestamp: string; value: number }>;
-  setpoint?: { value: number; min: number; max: number };
+  dataPoints: Array<{
+    timestamp: string;
+    value: number | null;
+    rawValue: unknown;
+    statusCode: string | null;
+  }>;
+  setpoint?: number;
+  targetValue: number;
+  tolerance: number;
 }
 
 // ===== Digital Twin =====

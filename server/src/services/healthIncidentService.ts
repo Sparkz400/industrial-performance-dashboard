@@ -5,6 +5,9 @@ import worker from "../queue/opcuaQueueWorker.js";
 import alarmEvaluator from "./alarmService.js";
 import { liveProduction } from "./liveProductionService.js";
 import logger from "../utils/logger.js";
+import { escalateMaintenanceActions } from "./maintenanceActions.js";
+import { storageRunway } from "./storageRunway.js";
+import { runRetentionSchedules } from "./historyRetention.js";
 
 class HealthIncidentService {
   private timer?: ReturnType<typeof setInterval>;
@@ -43,6 +46,16 @@ class HealthIncidentService {
     return this.pending;
   }
   private async inspect(): Promise<void> {
+    await escalateMaintenanceActions();
+    await runRetentionSchedules();
+    for (const disk of await storageRunway())
+      await alarmEvaluator.observeHealth(
+        `disk-runway-${disk.kind}`,
+        null,
+        disk.daysToReserve == null ? null : disk.daysToReserve < 2,
+        "Storage runway",
+        `${disk.kind}: ${disk.daysToReserve == null ? "unknown" : disk.daysToReserve.toFixed(1) + " days to reserve"} based on observed free-space decline`,
+      );
     let health: ReturnType<typeof worker.getHealth>;
     try {
       health = worker.getHealth();

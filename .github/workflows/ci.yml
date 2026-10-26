@@ -90,6 +90,7 @@ jobs:
       - run: node scripts/test-recovery.mjs
       - run: node scripts/test-access.mjs
       - run: node scripts/test-history.mjs
+      - run: node scripts/test-quality-line.mjs
       - run: node scripts/test-daily-workflows.mjs
         env:
           DAILY_BROWSER: "1"

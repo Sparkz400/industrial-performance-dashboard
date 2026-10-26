@@ -7,12 +7,74 @@ import {
 } from "../middleware/validation.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { spcService } from "../services/spcService.js";
+import { spcService, clearProfileBuffers } from "../services/spcService.js";
+import {
+  approveBaseline,
+  baselineCapability,
+} from "../services/spcBaseline.js";
+import manager from "../database/dbConnection.js";
 
 const router = express.Router();
 
 // All SPC routes require authentication
 router.use(requireAuth);
+router.get(
+  "/profiles/:id/baselines",
+  validateParams(
+    Joi.object({ id: Joi.number().integer().positive().required() }),
+  ),
+  asyncHandler(async (req, res) => {
+    res.json(
+      (
+        await manager.pool.query(
+          "SELECT * FROM spc_baselines WHERE profile_id=$1 ORDER BY id DESC LIMIT 20",
+          [Number(req.params.id)],
+        )
+      ).rows,
+    );
+  }),
+);
+router.post(
+  "/baselines/:id/approve",
+  requireRole("admin"),
+  validateParams(
+    Joi.object({ id: Joi.number().integer().positive().required() }),
+  ),
+  validateBody(
+    Joi.object({
+      review: Joi.string().trim().min(20).max(2000).required(),
+      stableProcess: Joi.boolean().valid(true).required(),
+      independentNormalObservations: Joi.boolean().valid(true).required(),
+    }),
+  ),
+  asyncHandler(async (req, res) => {
+    const saved = await approveBaseline(
+      Number(req.params.id),
+      req.session.userId!,
+      req.body.review,
+    );
+    clearProfileBuffers(saved.profile_id);
+    res.json(saved);
+  }),
+);
+router.get(
+  "/profiles/:id/capability",
+  validateParams(
+    Joi.object({ id: Joi.number().integer().positive().required() }),
+  ),
+  validateQuery(
+    Joi.object({ lsl: Joi.number().required(), usl: Joi.number().required() }),
+  ),
+  asyncHandler(async (req, res) => {
+    res.json(
+      await baselineCapability(
+        Number(req.params.id),
+        Number(req.query.lsl),
+        Number(req.query.usl),
+      ),
+    );
+  }),
+);
 
 // ---- Param schemas ----
 
@@ -141,9 +203,18 @@ router.delete(
 router.post(
   "/profiles/:id/compute",
   requireRole("admin"),
+  validateBody(
+    Joi.object({
+      start: Joi.string().isoDate(),
+      end: Joi.string().isoDate(),
+    }).and("start", "end"),
+  ),
   validateParams(idParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const result = await spcService.computeBaseline(Number(req.params.id));
+    const result = await spcService.computeBaseline(
+      Number(req.params.id),
+      req.body.start ? req.body : undefined,
+    );
     res.json(result);
   }),
 );

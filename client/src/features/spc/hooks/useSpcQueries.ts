@@ -114,8 +114,12 @@ export function useComputeBaseline() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) =>
-      api.post(API_ENDPOINTS.spc.computeBaseline(id)) as Promise<SpcProfile>,
+      api.post(API_ENDPOINTS.spc.computeBaseline(id), {}) as Promise<{
+        id: number;
+        status: 'pending-review';
+      }>,
     onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ['baselines'] });
       queryClient.invalidateQueries({ queryKey: spcKeys.profile(id) });
       queryClient.invalidateQueries({ queryKey: spcKeys.profiles() });
     },

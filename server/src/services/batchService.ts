@@ -23,21 +23,26 @@ interface ParameterResult {
   nodeKey: string;
   displayName: string;
   targetValue: number;
-  actualAvg: number;
-  actualMin: number;
-  actualMax: number;
-  withinTolerance: boolean;
+  actualAvg: number | null;
+  actualMin: number | null;
+  actualMax: number | null;
+  withinTolerance: boolean | null;
+  sampleCount: number;
+  excludedCount: number;
 }
 
 interface BatchSummary {
+  computedAt?: string;
   duration: number;
   parameterResults: ParameterResult[];
-  overallCompliance: number;
+  overallCompliance: number | null;
 }
 
 interface DataPoint {
   timestamp: string;
-  value: number;
+  value: number | null;
+  rawValue: unknown;
+  statusCode: string | null;
 }
 
 interface BatchDataSeries {
@@ -45,6 +50,8 @@ interface BatchDataSeries {
   displayName: string;
   dataPoints: DataPoint[];
   setpoint?: number;
+  targetValue: number;
+  tolerance: number;
 }
 
 interface RecipeParameter {
@@ -61,14 +68,21 @@ export const batchService = {
     if (!batch) return batch;
     let recipeName: string | null = null;
     let recipeVersion: number | null = null;
-    if (batch.recipeId) {
+    if (batch.recipeSnapshot) {
+      const snapshot = batch.recipeSnapshot as {
+        name: string;
+        version: number;
+      };
+      recipeName = snapshot.name;
+      recipeVersion = snapshot.version;
+    } else if (batch.recipeId) {
       try {
         const recipe = await recipeRepository.findById(
           batch.recipeId as number,
         );
         if (recipe) {
           recipeName = recipe.name;
-          recipeVersion = recipe.version;
+          recipeVersion = null;
         }
       } catch {
         /* ignore */
@@ -83,7 +97,16 @@ export const batchService = {
       const match = batch.notes.match(/\[ABORTED\]\s*([\s\S]*)/);
       if (match) abortReason = match[1].trim();
     }
-    return { ...batch, recipeName, recipeVersion, abortReason };
+    return {
+      ...batch,
+      recipeName,
+      recipeVersion,
+      abortReason,
+      summary: batch.recipeSnapshot ? batch.summary : null,
+      summaryStatus: batch.recipeSnapshot
+        ? "frozen-recipe"
+        : "unverified-legacy",
+    };
   },
 
   /** Enrich multiple batches efficiently (batch recipe lookups) */
@@ -93,10 +116,7 @@ export const batchService = {
         batchList.filter((b) => b.recipeId).map((b) => b.recipeId as number),
       ),
     ];
-    const recipeMap = new Map<
-      number,
-      { name: string; version: number }
-    >();
+    const recipeMap = new Map<number, { name: string; version: number }>();
     await Promise.all(
       recipeIds.map(async (id) => {
         try {
@@ -112,9 +132,11 @@ export const batchService = {
       }),
     );
     return batchList.map((batch) => {
-      const recipe = batch.recipeId
-        ? recipeMap.get(batch.recipeId as number) ?? null
-        : null;
+      const recipe =
+        (batch.recipeSnapshot as { name: string; version: number } | null) ??
+        (batch.recipeId
+          ? (recipeMap.get(batch.recipeId as number) ?? null)
+          : null);
       let abortReason: string | null = null;
       if (
         batch.status === "aborted" &&
@@ -127,8 +149,12 @@ export const batchService = {
       return {
         ...batch,
         recipeName: recipe?.name ?? null,
-        recipeVersion: recipe?.version ?? null,
+        recipeVersion: batch.recipeSnapshot ? (recipe?.version ?? null) : null,
         abortReason,
+        summary: batch.recipeSnapshot ? batch.summary : null,
+        summaryStatus: batch.recipeSnapshot
+          ? "frozen-recipe"
+          : "unverified-legacy",
       };
     });
   },
@@ -139,7 +165,25 @@ export const batchService = {
       input.batchNumber = `BATCH-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     }
 
-    const batch = await batchRepository.create(input);
+    // Only server-owned recipe evidence may be frozen into a batch.
+    const recipe = input.recipeId
+      ? await recipeRepository.findById(input.recipeId)
+      : null;
+    if (input.recipeId && !recipe) throw new NotFoundError("Recipe");
+    if (recipe?.machineId && recipe.machineId !== input.machineId)
+      throw new ValidationError("Recipe belongs to another machine");
+    const batch = await batchRepository.create({
+      ...input,
+      recipeSnapshot: recipe
+        ? {
+            id: recipe.id,
+            name: recipe.name,
+            version: recipe.version,
+            parameters: recipe.parameters,
+            setpoints: recipe.setpoints,
+          }
+        : null,
+    });
 
     logger.info(
       `[Batch] Created batch "${batch.batchNumber}" (id=${batch.id})`,
@@ -335,13 +379,15 @@ export const batchService = {
       throw new NotFoundError("Batch");
     }
 
-    if (!batch.recipeId) {
+    if (!batch.recipeId && !batch.recipeSnapshot) {
       throw new ValidationError("Batch has no associated recipe");
     }
 
-    const recipe = await recipeRepository.findById(batch.recipeId);
+    const recipe = batch.recipeSnapshot;
     if (!recipe) {
-      throw new NotFoundError("Recipe");
+      throw new ValidationError(
+        "Historical batch has no frozen recipe revision; its original limits cannot be verified",
+      );
     }
 
     if (!batch.startedAt || !batch.completedAt) {
@@ -353,9 +399,10 @@ export const batchService = {
     const parameters = (recipe.parameters ?? []) as RecipeParameter[];
     if (parameters.length === 0) {
       const summary: BatchSummary = {
+        computedAt: new Date().toISOString(),
         duration: batch.completedAt.getTime() - batch.startedAt.getTime(),
         parameterResults: [],
-        overallCompliance: 100,
+        overallCompliance: null,
       };
       await batchRepository.update(batchId, { summary });
       return summary;
@@ -364,34 +411,61 @@ export const batchService = {
     const nodeKeys = parameters.map((p) => p.nodeKey);
 
     const result = await db.execute(
-      sql`SELECT node_key, avg(value) as avg_value, min(value) as min_value, max(value) as max_value
+      sql`SELECT node_key,
+          avg(value) FILTER (WHERE status_code LIKE 'Good%' AND value NOT IN ('NaN'::real, 'Infinity'::real, '-Infinity'::real)) as avg_value,
+          min(value) FILTER (WHERE status_code LIKE 'Good%' AND value NOT IN ('NaN'::real, 'Infinity'::real, '-Infinity'::real)) as min_value,
+          max(value) FILTER (WHERE status_code LIKE 'Good%' AND value NOT IN ('NaN'::real, 'Infinity'::real, '-Infinity'::real)) as max_value,
+          count(value) FILTER (WHERE status_code LIKE 'Good%' AND value NOT IN ('NaN'::real, 'Infinity'::real, '-Infinity'::real)) as sample_count,
+          count(*) as total_count
           FROM opcua_data
           WHERE machine_id = ${batch.machineId}
-            AND timestamp BETWEEN ${batch.startedAt} AND ${batch.completedAt}
-            AND node_key = ANY(${nodeKeys})
+            AND timestamp >= ${batch.startedAt} AND timestamp < ${batch.completedAt}
+            AND node_key IN (${sql.join(
+              nodeKeys.map((key) => sql`${key}`),
+              sql`, `,
+            )})
           GROUP BY node_key`,
     );
 
     const statsMap = new Map<
       string,
-      { avg: number; min: number; max: number }
+      {
+        avg: number | null;
+        min: number | null;
+        max: number | null;
+        sampleCount: number;
+        excludedCount: number;
+      }
     >();
-    for (const row of result.rows as { node_key: string; avg_value: string; min_value: string; max_value: string }[]) {
+    for (const row of result.rows as {
+      node_key: string;
+      avg_value: string | null;
+      min_value: string | null;
+      max_value: string | null;
+      sample_count: string;
+      total_count: string;
+    }[]) {
+      const finite = (value: string | null) =>
+        value != null && Number.isFinite(Number(value)) ? Number(value) : null;
       statsMap.set(row.node_key, {
-        avg: parseFloat(row.avg_value) || 0,
-        min: parseFloat(row.min_value) || 0,
-        max: parseFloat(row.max_value) || 0,
+        avg: finite(row.avg_value),
+        min: finite(row.min_value),
+        max: finite(row.max_value),
+        sampleCount: Number(row.sample_count),
+        excludedCount: Number(row.total_count) - Number(row.sample_count),
       });
     }
 
     const parameterResults: ParameterResult[] = parameters.map((param) => {
       const stats = statsMap.get(param.nodeKey);
-      const actualAvg = stats?.avg ?? 0;
-      const actualMin = stats?.min ?? 0;
-      const actualMax = stats?.max ?? 0;
+      const actualAvg = stats?.avg ?? null;
+      const actualMin = stats?.min ?? null;
+      const actualMax = stats?.max ?? null;
 
       const withinTolerance =
-        Math.abs(actualAvg - param.targetValue) <= param.tolerance;
+        actualAvg == null
+          ? null
+          : Math.abs(actualAvg - param.targetValue) <= param.tolerance;
 
       return {
         nodeKey: param.nodeKey,
@@ -401,6 +475,8 @@ export const batchService = {
         actualMin,
         actualMax,
         withinTolerance,
+        sampleCount: stats?.sampleCount ?? 0,
+        excludedCount: stats?.excludedCount ?? 0,
       };
     });
 
@@ -408,13 +484,17 @@ export const batchService = {
       (p) => p.withinTolerance,
     ).length;
     const overallCompliance =
-      parameterResults.length > 0
+      parameterResults.length > 0 &&
+      parameterResults.every(
+        (p) => p.withinTolerance !== null && p.excludedCount === 0,
+      )
         ? Math.round((compliantCount / parameterResults.length) * 100)
-        : 100;
+        : null;
 
     const duration = batch.completedAt.getTime() - batch.startedAt.getTime();
 
     const summary: BatchSummary = {
+      computedAt: new Date().toISOString(),
       duration,
       parameterResults,
       overallCompliance,
@@ -431,13 +511,15 @@ export const batchService = {
       throw new NotFoundError("Batch");
     }
 
-    if (!batch.recipeId) {
+    if (!batch.recipeId && !batch.recipeSnapshot) {
       throw new ValidationError("Batch has no associated recipe");
     }
 
-    const recipe = await recipeRepository.findById(batch.recipeId);
+    const recipe = batch.recipeSnapshot;
     if (!recipe) {
-      throw new NotFoundError("Recipe");
+      throw new ValidationError(
+        "Historical batch has no frozen recipe revision; its original limits cannot be verified",
+      );
     }
 
     if (!batch.startedAt) {
@@ -455,32 +537,48 @@ export const batchService = {
     const setpoints = (recipe.setpoints ?? {}) as Record<string, number>;
 
     const result = await getReadDb().execute(
-      sql`SELECT node_key, timestamp, value
+      sql`SELECT node_key, timestamp, value, raw_value, status_code
           FROM opcua_data
           WHERE machine_id = ${batch.machineId}
-            AND timestamp BETWEEN ${batch.startedAt} AND ${endTime}
-            AND node_key = ANY(${nodeKeys})
+            AND timestamp >= ${batch.startedAt} AND timestamp < ${endTime}
+            AND node_key IN (${sql.join(
+              nodeKeys.map((key) => sql`${key}`),
+              sql`, `,
+            )})
           ORDER BY node_key, timestamp`,
     );
 
     const seriesMap = new Map<string, DataPoint[]>();
-    for (const row of result.rows as { node_key: string; timestamp: string; value: string }[]) {
+    for (const row of result.rows as {
+      node_key: string;
+      timestamp: string;
+      value: string | null;
+      raw_value: unknown;
+      status_code: string | null;
+    }[]) {
       if (!seriesMap.has(row.node_key)) {
         seriesMap.set(row.node_key, []);
       }
       seriesMap.get(row.node_key)!.push({
         timestamp: row.timestamp,
-        value: parseFloat(row.value) || 0,
+        value:
+          row.status_code?.startsWith("Good") &&
+          row.value != null &&
+          Number.isFinite(Number(row.value))
+            ? Number(row.value)
+            : null,
+        rawValue: row.raw_value,
+        statusCode: row.status_code,
       });
     }
-
-    const paramMap = new Map(parameters.map((p) => [p.nodeKey, p]));
 
     return parameters.map((param) => ({
       nodeKey: param.nodeKey,
       displayName: param.displayName,
       dataPoints: seriesMap.get(param.nodeKey) ?? [],
       setpoint: setpoints[param.nodeKey] ?? param.targetValue,
+      targetValue: param.targetValue,
+      tolerance: param.tolerance,
     }));
   },
 
@@ -504,8 +602,8 @@ export const batchService = {
       const normalizedData = data.map((series) => ({
         ...series,
         dataPoints: series.dataPoints.map((dp) => ({
+          ...dp,
           timestamp: String(new Date(dp.timestamp).getTime() - startTime),
-          value: dp.value,
         })),
       }));
 

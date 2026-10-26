@@ -35,6 +35,7 @@ const {
     backup: { type: "string" },
     output: { type: "string" },
     image: { type: "string" },
+    "database-image": { type: "string" },
     port: { type: "string" },
   },
 });
@@ -474,13 +475,17 @@ if (command === "verify") {
     );
     const secret = () => randomBytes(32).toString("hex");
     const initialPassword = secret();
-    config = stack(options.image, {
-      DB_PASSWORD: secret(),
-      SESSION_SECRET: secret(),
-      COOKIE_SECRET: secret(),
-      OPCUA_IP: "127.0.0.1",
-      OPCUA_PORT: "4841",
-    });
+    config = stack(
+      options.image,
+      {
+        DB_PASSWORD: secret(),
+        SESSION_SECRET: secret(),
+        COOKIE_SECRET: secret(),
+        OPCUA_IP: "127.0.0.1",
+        OPCUA_PORT: "4841",
+      },
+      options["database-image"] || "postgres:16-alpine",
+    );
     config.services.app.environment.SEED_ADMIN_PASSWORD = initialPassword;
     await save(file, config);
     await save(join(directory, "initial-login.json"), {

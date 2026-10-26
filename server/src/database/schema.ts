@@ -16,6 +16,7 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { bigint, check, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const retentionPolicies = pgTable("retention_policies", {
   machineId: integer("machine_id").primaryKey(),
@@ -496,6 +497,13 @@ export const batches = pgTable(
     recipeId: integer("recipe_id").references(() => recipes.id, {
       onDelete: "set null",
     }),
+    recipeSnapshot: jsonb("recipe_snapshot").$type<{
+      id: number;
+      name: string;
+      version: number;
+      parameters: unknown;
+      setpoints: unknown;
+    }>(),
     machineId: integer("machine_id").references(() => machines.id, {
       onDelete: "set null",
     }),
@@ -1220,3 +1228,193 @@ export type ReportScheduleRow = typeof reportSchedules.$inferSelect;
 export type NewReportSchedule = typeof reportSchedules.$inferInsert;
 export type ReportHistoryRow = typeof reportHistory.$inferSelect;
 export type NewReportHistory = typeof reportHistory.$inferInsert;
+
+// Quality and operations evidence. Request-facing mutations are validated by their routes.
+export const qualityInspections = pgTable(
+  "quality_inspections",
+  {
+    id: serial("id").primaryKey(),
+    batchId: integer("batch_id")
+      .notNull()
+      .references(() => batches.id),
+    requestId: text("request_id").notNull().unique(),
+    checkName: text("check_name").notNull(),
+    result: text("result").notNull(),
+    quantity: integer("quantity").notNull(),
+    defectReason: text("defect_reason"),
+    note: text("note").notNull(),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("quality_inspections_batch").on(t.batchId),
+    check("quality_result", sql`${t.result} IN ('pass','fail','unknown')`),
+    check("quality_quantity", sql`${t.quantity}>0`),
+    check(
+      "quality_defect",
+      sql`${t.result}<>'fail' OR coalesce(length(trim(${t.defectReason})),0)>0`,
+    ),
+  ],
+);
+export const batchRework = pgTable("batch_rework", {
+  id: serial("id").primaryKey(),
+  batchId: integer("batch_id")
+    .notNull()
+    .references(() => batches.id),
+  inspectionId: integer("inspection_id")
+    .notNull()
+    .unique()
+    .references(() => qualityInspections.id),
+  ownerId: integer("owner_id")
+    .notNull()
+    .references(() => users.id),
+  dueAt: timestamp("due_at", { withTimezone: true }).notNull(),
+  action: text("action").notNull(),
+  createdBy: integer("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  completedBy: integer("completed_by").references(() => users.id),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  completionNote: text("completion_note"),
+  verificationId: integer("verification_id").references(
+    () => qualityInspections.id,
+  ),
+});
+export const batchLots = pgTable(
+  "batch_lots",
+  {
+    id: serial("id").primaryKey(),
+    batchId: integer("batch_id")
+      .notNull()
+      .references(() => batches.id),
+    lot: text("lot").notNull(),
+    direction: text("direction").notNull(),
+    quantity: doublePrecision("quantity").notNull(),
+    unit: text("unit").notNull(),
+    supplierReference: text("supplier_reference"),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique().on(t.batchId, t.lot),
+    index("lot_trace").on(t.lot),
+    uniqueIndex("lot_producer")
+      .on(t.lot)
+      .where(sql`${t.direction}='output'`),
+    check("lot_direction", sql`${t.direction} IN ('input','output')`),
+    check("lot_quantity", sql`${t.quantity}>0`),
+  ],
+);
+export const spcBaselines = pgTable("spc_baselines", {
+  id: serial("id").primaryKey(),
+  profileId: integer("profile_id")
+    .notNull()
+    .references(() => spcProfiles.id),
+  evidence: jsonb("evidence").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  review: text("review"),
+  superseded: boolean("superseded").notNull().default(false),
+});
+export const productionLines = pgTable("production_lines", {
+  id: serial("id").primaryKey(),
+  config: jsonb("config").notNull(),
+  createdBy: integer("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+export const maintenanceActions = pgTable(
+  "maintenance_actions",
+  {
+    id: serial("id").primaryKey(),
+    machineId: integer("machine_id")
+      .notNull()
+      .references(() => machines.id),
+    alarmId: integer("alarm_id")
+      .notNull()
+      .unique()
+      .references(() => alertHistory.id),
+    ownerId: integer("owner_id")
+      .notNull()
+      .references(() => users.id),
+    escalationOwnerId: integer("escalation_owner_id")
+      .notNull()
+      .references(() => users.id),
+    dueAt: timestamp("due_at", { withTimezone: true }).notNull(),
+    action: text("action").notNull(),
+    suppressionUntil: timestamp("suppression_until", { withTimezone: true }),
+    quietStart: integer("quiet_start"),
+    quietEnd: integer("quiet_end"),
+    escalatedAt: timestamp("escalated_at", { withTimezone: true }),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    completedBy: integer("completed_by").references(() => users.id),
+    serviceEventId: integer("service_event_id").references(
+      () => maintenanceEvents.id,
+    ),
+    completionNote: text("completion_note"),
+  },
+  (t) => [
+    index("maintenance_action_due")
+      .on(t.dueAt)
+      .where(sql`${t.completedAt} IS NULL`),
+  ],
+);
+export const storageObservations = pgTable(
+  "storage_observations",
+  {
+    kind: text("kind").notNull(),
+    path: text("path").notNull(),
+    observedAt: timestamp("observed_at", { withTimezone: true }).notNull(),
+    freeBytes: bigint("free_bytes", { mode: "number" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.kind, t.path, t.observedAt] })],
+);
+export const retentionSchedules = pgTable("retention_schedules", {
+  id: serial("id").primaryKey(),
+  machineId: integer("machine_id").notNull(),
+  previewId: text("preview_id")
+    .notNull()
+    .unique()
+    .references(() => retentionPreviews.id),
+  confirmRows: integer("confirm_rows").notNull(),
+  createdBy: integer("created_by")
+    .notNull()
+    .references(() => users.id),
+  runAt: timestamp("run_at", { withTimezone: true }).notNull(),
+  status: text("status").notNull().default("scheduled"),
+  error: text("error"),
+});
+export const retentionPreviewRows = pgTable(
+  "retention_preview_rows",
+  {
+    previewId: text("preview_id")
+      .notNull()
+      .references(() => retentionPreviews.id, { onDelete: "cascade" }),
+    measurementId: integer("measurement_id").notNull(),
+    timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.previewId, t.timestamp, t.measurementId] })],
+);

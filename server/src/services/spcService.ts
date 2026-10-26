@@ -1,3 +1,4 @@
+import { proposeBaseline } from "./spcBaseline.js";
 import { EventEmitter } from "events";
 import { sql } from "drizzle-orm";
 import db, { getReadDb } from "../database/db.js";
@@ -85,54 +86,11 @@ export const spcService = {
 
   // ---- Baseline computation ----
 
-  async computeBaseline(profileId: number) {
-    const profile = await spcRepository.findProfileById(profileId);
-    if (!profile) {
-      throw new NotFoundError("SPC Profile");
-    }
-
-    const result = await db.execute(
-      sql`SELECT avg(value) AS mean, stddev(value) AS stddev
-          FROM opcua_data
-          WHERE node_key = ${profile.nodeKey}
-            AND machine_id IS NOT DISTINCT FROM ${profile.machineId}
-            AND status_code LIKE 'Good%'
-            AND timestamp > now() - interval '7 days'`,
-    );
-
-    const row = result.rows[0] as
-      { mean: string | null; stddev: string | null } | undefined;
-    const mean = row?.mean != null ? Number(row.mean) : null;
-    const stddev = row?.stddev != null ? Number(row.stddev) : null;
-
-    if (mean == null || stddev == null) {
-      throw new ValidationError(
-        "Insufficient data to compute baseline. Ensure opcua_data contains recent values for this node key.",
-      );
-    }
-
-    const sensitivity = profile.sensitivity ?? 3.0;
-    const ucl = mean + sensitivity * stddev;
-    const lcl = mean - sensitivity * stddev;
-
-    const updated = await spcRepository.updateProfile(profileId, {
-      mean,
-      stddev,
-      ucl,
-      lcl,
-    });
-
-    // Also update lastComputedAt separately (not part of SpcProfileInput)
-    await db.execute(
-      sql`UPDATE spc_profiles SET last_computed_at = now() WHERE id = ${profileId}`,
-    );
-    clearProfileBuffers(profileId);
-
-    logger.info(
-      `[SPC] Computed baseline for profile ${profileId} (${profile.name}): mean=${mean}, stddev=${stddev}, ucl=${ucl}, lcl=${lcl}`,
-    );
-
-    return { ...updated, lastComputedAt: new Date(), ucl, lcl, mean, stddev };
+  async computeBaseline(
+    profileId: number,
+    range?: { start: string; end: string },
+  ) {
+    return proposeBaseline(profileId, range);
   },
 
   // ---- Real-time evaluation (called from opcuaBridge) ----
@@ -358,7 +316,7 @@ async function evaluateAgainstProfile(
   });
 }
 
-function clearProfileBuffers(profileId: number) {
+export function clearProfileBuffers(profileId: number) {
   for (const key of ringBuffers.keys()) {
     if (key.startsWith(`${profileId}:`)) ringBuffers.delete(key);
   }

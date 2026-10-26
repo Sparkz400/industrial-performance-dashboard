@@ -1,4 +1,7 @@
 import maintenanceRoutes from "./src/routes/maintenanceRoutes.js";
+import qualityRoutes from "./src/routes/qualityRoutes.js";
+import lineRoutes from "./src/routes/lineRoutes.js";
+import maintenanceActionRoutes from "./src/routes/maintenanceActionRoutes.js";
 import energyRoutes from "./src/routes/energyRoutes.js";
 import historyRoutes from "./src/routes/historyRoutes.js";
 import planningRoutes from "./src/routes/planningRoutes.js";
@@ -137,6 +140,9 @@ export function createApp() {
   app.use("/api/v1/history", historyRoutes);
   app.use("/api/v1/planning", planningRoutes);
   app.use("/api/v1/maintenance", maintenanceRoutes);
+  app.use("/api/v1/quality", qualityRoutes);
+  app.use("/api/v1/lines", lineRoutes);
+  app.use("/api/v1/maintenance-actions", maintenanceActionRoutes);
   app.use("/api/v1/energy", energyRoutes);
   app.use("/api/v1/production", productionRoutes);
   app.use("/api/v1/production", operatorRoutes);

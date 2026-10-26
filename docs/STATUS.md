@@ -5,6 +5,14 @@ owned simulator or an isolated test installation using OPC UA scalar signals.
 
 ## Implemented and covered by focused tests
 
+- Quality-aware batch summaries with unknown values, frozen recipes, inspections,
+  verified rework and declared lot genealogy; approved SPC reference capability.
+- Line definitions, blocked/starved/microstop/cycle evidence and uncertainty-aware candidates.
+- Alarm-linked maintenance actions, expiring suppression, UTC quiet hours and durable escalation.
+- Measured disk runway, exact reviewed retention schedules, offline image packaging
+  and configurable synthetic endurance workloads. See [scope and limits](QUALITY_LINE_OPERATIONS.md).
+  Full multi-day operation, browser-user capacity and physical qualification remain open.
+
 - Machine/site grants across REST, tRPC, sockets and exports; operator/supervisor roles.
 - Streaming raw history, reviewed retention, quality-aware hourly summaries and storage estimates.
 - Recurring calendars/holidays/DST, product runs, declared rollover and frozen report revisions.

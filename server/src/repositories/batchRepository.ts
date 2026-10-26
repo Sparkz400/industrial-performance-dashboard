@@ -11,6 +11,7 @@ export interface BatchCreateInput {
   notes?: string | null;
   metadata?: Record<string, unknown>;
   startedBy?: number | null;
+  recipeSnapshot?: NewBatch["recipeSnapshot"];
 }
 
 export interface BatchUpdateInput {

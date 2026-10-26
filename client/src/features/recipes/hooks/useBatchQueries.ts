@@ -17,6 +17,7 @@ export interface Batch {
   notes: string | null;
   metadata: Record<string, unknown>;
   summary: BatchSummary | null;
+  summaryStatus?: string;
   abortReason: string | null;
   startedBy: number | null;
   completedBy: number | null;
@@ -25,27 +26,37 @@ export interface Batch {
 }
 
 export interface BatchSummary {
+  computedAt?: string;
   duration: number;
   parameterResults: BatchParameterResult[];
-  overallCompliance: number;
+  overallCompliance: number | null;
 }
 
 export interface BatchParameterResult {
   nodeKey: string;
   displayName: string;
   targetValue: number;
-  actualAvg: number;
-  actualMin: number;
-  actualMax: number;
-  withinTolerance: boolean;
+  actualAvg: number | null;
+  actualMin: number | null;
+  actualMax: number | null;
+  withinTolerance: boolean | null;
+  sampleCount: number;
+  excludedCount: number;
 }
 
 /** Time-series data for a single parameter within a batch */
 export interface BatchDataSeries {
   nodeKey: string;
   displayName: string;
-  dataPoints: Array<{ timestamp: string; value: number }>;
+  dataPoints: Array<{
+    timestamp: string;
+    value: number | null;
+    rawValue: unknown;
+    statusCode: string | null;
+  }>;
   setpoint?: number;
+  targetValue: number;
+  tolerance: number;
 }
 
 export interface CreateBatchRequest {
@@ -83,6 +94,10 @@ const batchKeys = {
 
 // ── Hooks ──────────────────────────────────────────────────────────────────
 
+/**
+ *
+ * @param filters
+ */
 function buildBatchParams(filters: BatchFilters): string {
   const params = new URLSearchParams();
   if (filters.recipeId) params.set('recipeId', String(filters.recipeId));
@@ -93,6 +108,10 @@ function buildBatchParams(filters: BatchFilters): string {
   return qs ? `?${qs}` : '';
 }
 
+/**
+ *
+ * @param filters
+ */
 export function useBatches(filters: BatchFilters = {}) {
   return useQuery({
     queryKey: batchKeys.list(filters),
@@ -101,6 +120,10 @@ export function useBatches(filters: BatchFilters = {}) {
   });
 }
 
+/**
+ *
+ * @param id
+ */
 export function useBatch(id: number) {
   return useQuery({
     queryKey: batchKeys.detail(id),
@@ -109,6 +132,9 @@ export function useBatch(id: number) {
   });
 }
 
+/**
+ *
+ */
 export function useCreateBatch() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -120,6 +146,9 @@ export function useCreateBatch() {
   });
 }
 
+/**
+ *
+ */
 export function useStartBatch() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -130,6 +159,9 @@ export function useStartBatch() {
   });
 }
 
+/**
+ *
+ */
 export function useCompleteBatch() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -140,6 +172,9 @@ export function useCompleteBatch() {
   });
 }
 
+/**
+ *
+ */
 export function useAbortBatch() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -151,7 +186,10 @@ export function useAbortBatch() {
   });
 }
 
-/** Fetches time-series data for a batch (array of series per parameter) */
+/**
+ * Fetches time-series data for a batch (array of series per parameter)
+ * @param id
+ */
 export function useBatchData(id: number) {
   return useQuery({
     queryKey: batchKeys.data(id),
@@ -160,6 +198,9 @@ export function useBatchData(id: number) {
   });
 }
 
+/**
+ *
+ */
 export function useCompareBatches() {
   return useMutation({
     mutationFn: (data: CompareBatchesRequest) =>
@@ -167,6 +208,10 @@ export function useCompareBatches() {
   });
 }
 
+/**
+ *
+ * @param machineId
+ */
 export function useActiveBatch(machineId?: number) {
   return useQuery({
     queryKey: batchKeys.active(machineId),

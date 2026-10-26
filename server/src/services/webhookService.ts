@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { notificationResume } from "./maintenanceActions.js";
 import { eq, and, isNull, lte, asc, sql } from "drizzle-orm";
 import db from "../database/db.js";
 import { webhooks, webhookDeliveries } from "../database/schema.js";
@@ -65,6 +66,43 @@ export const webhookService = {
         .limit(1)
         .for("update", { skipLocked: true });
       if (!delivery) return;
+      const event = delivery.event as {
+        type?: string;
+        payload?: { id?: number; machineId?: number };
+      };
+      if (event.type?.startsWith("alarm.") && event.payload?.id) {
+        const actions = await tx.execute<{
+          suppression_until: Date | null;
+          quiet_start: number | null;
+          quiet_end: number | null;
+        }>(sql`
+          SELECT a.suppression_until,a.quiet_start,a.quiet_end FROM maintenance_actions a
+          JOIN alert_history original ON original.id=a.alarm_id JOIN alert_history current ON current.id=${event.payload.id}
+          WHERE a.completed_at IS NULL AND a.machine_id=current.machine_id AND original.rule_id IS NOT DISTINCT FROM current.rule_id
+          AND (original.rule_id IS NOT NULL OR original.id=current.id OR (original.metadata->>'healthKey' IS NOT NULL AND original.metadata->>'healthKey'=current.metadata->>'healthKey'))`);
+        const now = new Date();
+        const resumes = actions.rows
+          .map((a) =>
+            notificationResume(
+              now,
+              a.suppression_until ? new Date(a.suppression_until) : null,
+              a.quiet_start,
+              a.quiet_end,
+            ),
+          )
+          .filter((d): d is Date => d != null);
+        if (resumes.length) {
+          await tx
+            .update(webhookDeliveries)
+            .set({
+              nextAttemptAt: new Date(
+                Math.max(...resumes.map((d) => d.getTime())),
+              ),
+            })
+            .where(eq(webhookDeliveries.id, delivery.id));
+          return;
+        }
+      }
       const [destination] = await tx
         .select()
         .from(webhooks)
