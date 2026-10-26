@@ -47,6 +47,19 @@ all required checks passed on `4c500941c151198466489bba8794fbc319f147c3` before 
 | [#38](https://github.com/Sparkz400/performance_dashboard/pull/38) | Consolidated into this change and superseded after integration. |
 | [#39](https://github.com/Sparkz400/performance_dashboard/pull/39) | This upgrades MUI icons to 9 while Material and System stay on 6. Retain a consistent MUI family and migrate components together, tracked in TODO F09. |
 
+## Additional major proposals reviewed during PR #51
+
+These proposals are closed and their migrations remain tracked in TODO F09. They
+are not needed to fix the two npm advisories, which PR #51 resolves with the tested
+current toolchain. Reopen a migration when its callers and checks can move together.
+
+| PR | Evidence and disposition |
+| --- | --- |
+| [#52](https://github.com/Sparkz400/performance_dashboard/pull/52) | MUI 9.5 changes the existing component/icon imports. Its CI build/browser failures include unresolved `@mui/icons-material/HelpOutline`; current code also imports `@mui/material/Grid2`. A component migration is required, not only three version bumps. |
+| [#53](https://github.com/Sparkz400/performance_dashboard/pull/53) | Storybook 10.6/Vite 8.3 leaves the configured addon-essentials on 8.6, whose declared Storybook peer is `^8.6.14`. Earlier CI passed because it did not build Storybook. PR #51 adds that missing build check; migrate the addon configuration with the whole family. |
+| [#54](https://github.com/Sparkz400/performance_dashboard/pull/54) | ESLint 10 fails on both operating systems: `react/display-name` calls removed `contextOrFilename.getFilename`. Installed eslint-plugin-react supports ESLint through 9, so the plugin/config migration remains required. |
+| [#55](https://github.com/Sparkz400/performance_dashboard/pull/55) | Vitest/coverage 5 are grouped correctly, but both type checks fail because Testing Library matcher declarations no longer augment the new assertion type (`toHaveValue`, `toBeVisible`, `toBeInTheDocument`). Keep the tested v4 pair until the test-type migration is qualified. |
+
 ## Consolidation details
 
 - PR 32 is subsumed by the newer PostgreSQL instrumentation in PR 34. OpenTelemetry API 1.10/resources and metrics SDK 3 are aligned with SDK Node/exporters 0.300, removing invalid peer dependencies. A real loopback span export verifies startup and shutdown.

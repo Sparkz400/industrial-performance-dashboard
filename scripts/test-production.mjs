@@ -904,10 +904,16 @@ try {
   else if (appServer) await new Promise((r) => appServer.close(r));
   if (receiver) await new Promise((r) => receiver.close(r));
   await uaServer?.shutdown(0);
-  if (sessionStore) sessionStore.close();
+  await sessionStore?.close();
   await manager?.end();
   await pool?.end();
-  if (created) await admin.query(`DROP DATABASE "${database}" WITH (FORCE)`);
+  if (created) {
+    // Pool shutdown can resolve before PostgreSQL observes the socket disconnect.
+    await waitFor(async () => (
+      await admin.query("SELECT 1 FROM pg_stat_activity WHERE datname=$1", [database])
+    ).rowCount === 0, "Test database still has live connections after shutdown");
+    await admin.query(`DROP DATABASE "${database}"`);
+  }
   await admin.end();
   const resolved = resolve(directory);
   assert.equal(dirname(resolved), resolve(tmpdir()));

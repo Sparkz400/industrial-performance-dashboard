@@ -247,7 +247,7 @@ try {
   for (const socket of sockets) socket.destroy();
   if (proxy) await new Promise((r) => proxy.close(r));
   await pool?.end();
-  if (created) await admin.query(`DROP DATABASE "${database}" WITH (FORCE)`);
+  if (created) await admin.query(`DROP DATABASE "${database}"`);
   await admin.end();
   const target = resolve(directory);
   assert.equal(dirname(target), resolve(tmpdir()));
