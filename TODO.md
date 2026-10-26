@@ -35,7 +35,7 @@ The authorized scope is priorities **1–4, 6 and 7** from the next-wave review.
 Performance Dashboard is an independent product. TIA MCP integration is excluded.
 Software implementation is complete on `codex/daily-factory-workflows`.
 [Daily workflow acceptance](docs/DAILY_OPERATIONS_ACCEPTANCE.md) records tests and
-remaining hardware/operator boundaries; the pull request supplies integration evidence.
+remaining hardware/operator boundaries; [PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59) supplies integration evidence.
 
 - [x] **DF01 — Access controls:** explicit operator/supervisor roles, machine/site
   grants, consistent REST/tRPC/socket/export boundaries and immediate revocation.

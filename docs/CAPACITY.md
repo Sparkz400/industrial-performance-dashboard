@@ -22,7 +22,7 @@ samples), 200 concurrent incoming samples, 10 concurrent query clients making
 | Receive-to-commit lag p95, including the initial buffered burst | 24.005 seconds |
 | Incoming-sample commit lag p95 during replay | 527 ms |
 | Allocated spool/WAL bytes | 6,004,240 |
-| Sampled peak process RSS | 338 MiB |
+| Sampled peak process RSS | 176 MiB |
 | Process CPU during fixture | 1.54 s user + 0.62 s system |
 | PostgreSQL database size | 12.2 MiB |
 | Measurement table plus indexes | 2.4 MiB |
@@ -54,8 +54,8 @@ measurements.
 ## Daily historian follow-through
 
 The daily workflow test streams 200,000 raw rows while queries and ingestion continue
-for at least one minute. The final local run completed 338 reads and 338 new rows in
-63.167 seconds with query p95 230 ms. Retention then removed reviewed batches while
+for at least one minute. The final local run completed 176 reads and 176 new rows in
+64.967 seconds with query p95 531 ms. Retention then removed reviewed batches while
 retaining 180,000 good summary samples, bad-quality counts and late arrivals.
 See [daily acceptance](DAILY_OPERATIONS_ACCEPTANCE.md) for reproduction and limits.
 Storage forecasting uses measured row bytes and receipt rate; it does not infer free

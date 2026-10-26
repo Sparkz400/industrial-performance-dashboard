@@ -1,6 +1,7 @@
 # Daily workflow acceptance
 
 Scope: TODO **DF01–DF04, DF06, DF07**, implemented independently of TIA MCP.
+Integration: [PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59).
 Local evidence was collected on 2026-10-26 with Node 24.22.1, PostgreSQL 16,
 Chromium and owned fixtures. Use the CI checks on the exact revision being deployed.
 The behavioral contract and upgrade notes are in [daily operations](DAILY_OPERATIONS.md).
@@ -10,7 +11,7 @@ The behavioral contract and upgrade notes are in [daily operations](DAILY_OPERAT
 | Both builds and client type check | `npm run build`; `npx tsc --noEmit -p client/tsconfig.json` |
 | Unit and coverage suites | 157 server tests, 68 client tests; `npm run test:coverage` |
 | Roles and asset/site isolation | `node scripts/test-access.mjs`: five roles, two sites, REST, tRPC, CSV, live rooms, negative routes, counts, grant revocation, browser grant editing and account cache isolation |
-| Retention and sustained history | `node scripts/test-history.mjs`: 200,000-row raw export, explicit aggregation, concurrent reads/ingestion, policy revision rejection, 5,000-row deletion batches, late historical arrivals, quality summaries |
+| Retention and sustained history | `node scripts/test-history.mjs`: 200,000-row raw export, disconnected-reader cursor release, explicit aggregation, concurrent reads/ingestion, policy revision rejection, 5,000-row deletion batches, late historical arrivals, quality summaries |
 | Planning, maintenance, energy | `node scripts/test-daily-workflows.mjs`: calendars/holidays, replay-safe publication, run overlap/stale edits, non-running breaks, immutable canonical snapshots, metered energy, independent reconciliation, required checks and retry-safe service history |
 | Browser daily work | Set `DAILY_BROWSER=1` for the preceding script: saved/published calendar, product run/revision download, German inspection without losing a draft, energy setup, 390-pixel layout, coarse-pointer targets, focus and retention confirmation |
 | Existing factory workflow | `node scripts/test-production.mjs`: protected OPC UA, commissioning, reports/SMTP, operator/wallboard, read-only gateway, replay and deliberate storage failure |
@@ -25,9 +26,9 @@ that explicit evidence directory, not credentials, database files or other local
 
 ## Measured bounds
 
-In the final minute-long local history run, 338 history reads and 338 ingested rows
-ran while exporting 200,000 rows. Total elapsed time was 63.167 seconds, with query
-p95 **230 ms**. The summary retained **180,000 good samples** and kept bad quality
+In the final minute-long local history run, 176 history reads and 176 ingested rows
+ran while exporting 200,000 rows. Total elapsed time was 64.967 seconds, with query
+p95 **531 ms**. The summary retained **180,000 good samples** and kept bad quality
 explicit. Other verification jobs were running on the same host; this is a synthetic
 workload, not PLC throughput or a day-long factory soak.
 

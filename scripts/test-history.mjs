@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import { dailyFixture } from "./daily-fixture.mjs";
 
-await dailyFixture(async ({ pool, call, users }) => {
+await dailyFixture(async ({ pool, call, users, actors, api, expect }) => {
   const machine = (
     await pool.query(
       "INSERT INTO machines(name,endpoint_url,ip) VALUES('History fixture','opc.tcp://127.0.0.1:49620','127.0.0.1') RETURNING id",
@@ -18,6 +18,30 @@ await dailyFixture(async ({ pool, call, users }) => {
     [machine],
   );
   const path = `/api/v1/trending/export-csv?machineId=${machine}&nodeKeys=Count&startDate=2026-01-01T00:00:00Z&endDate=2026-01-04T00:00:00Z`;
+  const controller = new AbortController();
+  const interrupted = await fetch(api + path, {
+    signal: controller.signal,
+    headers: {
+      Cookie: (await actors.viewer.cookies(api))
+        .map((c) => `${c.name}=${c.value}`)
+        .join("; "),
+    },
+  });
+  assert.equal(interrupted.status, 200);
+  const reader = interrupted.body.getReader();
+  assert.equal((await reader.read()).done, false);
+  controller.abort();
+  await reader.cancel().catch(() => undefined);
+  await expect
+    .poll(
+      async () =>
+        (
+          await pool.query(
+            "SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname=current_database() AND pid<>pg_backend_pid() AND query LIKE 'FETCH FORWARD%' AND state<>'idle'",
+          )
+        ).rows[0].n,
+    )
+    .toBe(0);
   const started = Date.now();
   const exporting = call("viewer", "GET", path);
   const latencies = [];

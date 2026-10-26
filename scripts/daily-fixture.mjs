@@ -175,6 +175,12 @@ export async function dailyFixture(test) {
     }
     await admin.end();
     assert.equal(dirname(directory), resolve(tmpdir()));
-    await rm(directory, { recursive: true, force: true });
+    // Vite's optimizer can finish a filesystem write after its server closes on Windows.
+    await rm(directory, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 100,
+    });
   }
 }
