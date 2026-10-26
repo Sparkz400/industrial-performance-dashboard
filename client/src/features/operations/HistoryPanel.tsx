@@ -24,6 +24,8 @@ interface Preview {
   cutoff: string;
 }
 interface Storage {
+  disks?: { kind: string; freeBytes?: number; daysToReserve: number | null; error?: string }[];
+  schedules?: { id: number; run_at: string; status: string; error: string | null }[];
   rows: number;
   database_bytes: number;
   history_bytes: number;
@@ -37,6 +39,8 @@ interface Storage {
  * @param root0.machineId
  */
 export default function HistoryPanel({ machineId }: { machineId: number }) {
+  const [scheduledFor, setScheduledFor] = useState(''),
+    [scheduledMessage, setScheduledMessage] = useState('');
   const t = useT(),
     admin = useAuthStore((s) => s.user?.role === 'admin' && !s.user.recoveryMode);
   const [keys, setKeys] = useState('Count'),
@@ -158,6 +162,26 @@ export default function HistoryPanel({ machineId }: { machineId: number }) {
               {t('Storage and retention', 'Speicher und Aufbewahrung')}
             </Typography>
             {storage.error && <Alert severity="error">{String(storage.error)}</Alert>}
+            {storage.data?.disks?.map((d) => (
+              <Alert
+                key={d.kind}
+                severity={d.daysToReserve != null && d.daysToReserve < 2 ? 'warning' : 'info'}
+              >
+                {d.kind}: free{' '}
+                {d.freeBytes == null ? 'Unknown' : `${(d.freeBytes / 1073741824).toFixed(2)} GiB`} ·
+                runway{' '}
+                {d.daysToReserve == null
+                  ? 'Unknown'
+                  : `${d.daysToReserve.toFixed(1)} days to reserve`}
+                . {d.error}
+              </Alert>
+            ))}
+            {scheduledMessage && <Alert severity="success">{scheduledMessage}</Alert>}
+            {storage.data?.schedules?.map((s) => (
+              <Typography key={s.id}>
+                Scheduled retention: {new Date(s.run_at).toLocaleString()} · {s.status} {s.error}
+              </Typography>
+            ))}
             {storage.data && (
               <>
                 <Typography>
@@ -269,6 +293,30 @@ export default function HistoryPanel({ machineId }: { machineId: number }) {
                   }
                 >
                   {t('Apply reviewed retention', 'Geprüfte Aufbewahrung anwenden')}
+                </Button>
+                <TextField
+                  label="Run reviewed retention at (within one hour of preview)"
+                  type="datetime-local"
+                  slotProps={{ inputLabel: { shrink: true } }}
+                  value={scheduledFor}
+                  onChange={(e) => setScheduledFor(e.target.value)}
+                />
+                <Button
+                  disabled={busy || !confirmed || preview.completed || !scheduledFor}
+                  onClick={() =>
+                    void run(async () => {
+                      await operationRequest(`/history/${machineId}/schedule`, 'POST', {
+                        previewId: preview.id,
+                        confirmRows: preview.rows,
+                        runAt: toIso(scheduledFor),
+                      });
+                      setScheduledMessage(
+                        'Reviewed retention scheduled. It will fail safely if the preview or policy expires.',
+                      );
+                    })
+                  }
+                >
+                  Schedule reviewed retention
                 </Button>
                 <Typography role="status">
                   {t('Removed', 'Entfernt')}:{' '}

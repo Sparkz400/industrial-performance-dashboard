@@ -91,3 +91,12 @@ store calendar plans, product runs, immutable report snapshots, inspection histo
 energy meters/reconciliation and reviewed retention previews. Retention summarizes
 and removes a bounded batch atomically while protecting production/service evidence.
 See [daily operations](DAILY_OPERATIONS.md) for contracts and upgrade behavior.
+
+## Quality and line evidence
+
+Batch recipes and SPC reference readings are frozen in PostgreSQL. Inspections,
+rework verification, declared lot links, line definitions and maintenance actions
+use attributable, validated records. The health worker advances reviewed retention
+jobs and durable escalation; notification suppression defers existing outbox rows.
+See [quality and line contracts](QUALITY_LINE_OPERATIONS.md) for boundaries and
+[the migration](../server/drizzle/0015_quality_evidence.sql) for storage changes.

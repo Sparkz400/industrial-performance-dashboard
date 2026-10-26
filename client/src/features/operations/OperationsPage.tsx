@@ -3,6 +3,9 @@ import { Alert, Box, MenuItem, Stack, Tab, Tabs, TextField, Typography } from '@
 import { useQuery } from '@tanstack/react-query';
 import { useT } from '@/i18n';
 import { operationRequest } from './api';
+import { useAuthStore } from '@/stores/useAuthStore';
+const LinePanel = React.lazy(() => import('./LinePanel'));
+const MaintenanceActionsPanel = React.lazy(() => import('./MaintenanceActionsPanel'));
 const PlanningPanel = React.lazy(() => import('./PlanningPanel'));
 const MaintenancePanel = React.lazy(() => import('./MaintenancePanel'));
 const EnergyPanel = React.lazy(() => import('./EnergyPanel'));
@@ -11,6 +14,7 @@ const HistoryPanel = React.lazy(() => import('./HistoryPanel'));
  *
  */
 export default function OperationsPage() {
+  const admin = useAuthStore((s) => s.user?.role === 'admin');
   const t = useT(),
     [machine, setMachine] = useState(''),
     [tab, setTab] = useState(0);
@@ -52,7 +56,13 @@ export default function OperationsPage() {
           scrollButtons="auto"
           aria-label={t('Daily operations')}
         >
-          {['Planning', 'Maintenance', 'Energy and losses', 'History'].map((name, i) => (
+          {[
+            'Planning',
+            'Maintenance',
+            'Energy and losses',
+            'History',
+            ...(admin ? ['Production line', 'Alarm actions'] : []),
+          ].map((name, i) => (
             <Tab
               id={`operations-tab-${i}`}
               aria-controls={`operations-panel-${i}`}
@@ -75,8 +85,12 @@ export default function OperationsPage() {
                 <MaintenancePanel machineId={Number(machine)} />
               ) : tab === 2 ? (
                 <EnergyPanel machineId={Number(machine)} />
-              ) : (
+              ) : tab === 3 ? (
                 <HistoryPanel machineId={Number(machine)} />
+              ) : tab === 4 ? (
+                <LinePanel />
+              ) : (
+                <MaintenanceActionsPanel machineId={Number(machine)} />
               )}
             </Suspense>
           </Box>

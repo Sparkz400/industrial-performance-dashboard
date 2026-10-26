@@ -48,3 +48,10 @@ and collector/data-health incidents, including SMTP and self-monitoring limits.
 cover scoped roles, history retention, calendars/product runs, immutable reports,
 maintenance and energy. [Acceptance evidence](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DAILY_OPERATIONS_ACCEPTANCE.md)
 separates software checks from physical S7-1500 and operator acceptance.
+
+[Quality and line operations](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/QUALITY_LINE_OPERATIONS.md)
+adds frozen batch recipes, inspection/rework/lot evidence, reviewed SPC reference
+periods, production-line analysis and alarm-linked maintenance actions. It also
+covers measured disk runway, exact reviewed retention schedules, offline image
+bundles and configurable synthetic endurance workloads. These administrator
+workflows do not establish multi-day reliability or supported hardware capacity.

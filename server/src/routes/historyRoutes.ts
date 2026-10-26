@@ -1,3 +1,4 @@
+import { eligible, applyRetention } from "../services/historyRetention.js";
 import { Router } from "express";
 import Joi from "joi";
 import { randomUUID } from "node:crypto";
@@ -10,14 +11,10 @@ import {
 } from "../middleware/validation.js";
 import { requireRole } from "../middleware/auth.js";
 import { ValidationError } from "../utils/errors.js";
+import { storageRunway } from "../services/storageRunway.js";
 
 const router = Router();
 const id = Joi.object({ id: Joi.number().integer().positive().required() });
-// Shift source evidence is retained regardless of age. Deletion never activates itself.
-const eligible = `d.machine_id=$1 AND d.timestamp < $2 AND d.id <= $3 AND NOT EXISTS
-  (SELECT 1 FROM production_shifts s WHERE s.machine_id=d.machine_id AND d.timestamp >= s.start - interval '5 minutes' AND d.timestamp <= s.end)
-  AND NOT EXISTS (SELECT 1 FROM maintenance_plans p WHERE p.machine_id=d.machine_id AND p.config->>'active'='true'
-    AND d.timestamp >= coalesce((SELECT max(e.created_at) FROM maintenance_events e WHERE e.plan_id=p.id AND e.serviced),p.created_at)-interval '5 minutes')`;
 router.get(
   "/:id/summaries",
   validateParams(id),
@@ -73,14 +70,23 @@ router.get(
       )
     ).rows[0];
     const stat = stats.rows[0];
+    const disks = await storageRunway();
+    const schedules = (
+      await manager.pool.query(
+        "SELECT id,preview_id,run_at,status,error FROM retention_schedules WHERE machine_id=$1 ORDER BY id DESC LIMIT 20",
+        [machine],
+      )
+    ).rows;
     res.json({
       ...stat,
       ...capacity,
+      disks,
+      schedules,
       estimatedAdditional30DayBytes: stat.daily_rows
         ? stat.daily_rows * stat.bytes_per_row * 30
         : null,
       forecastBasis:
-        "Last 24 hours received, row bytes only; indexes, compression and workload changes are excluded. Free disk is not measured.",
+        "Last 24 hours received, row bytes only; indexes, compression and workload changes are excluded. Separate disk observations measure configured filesystems.",
       policy: policy.rows[0] ?? null,
       previews: previews.rows,
     });
@@ -157,6 +163,11 @@ router.post(
           ],
         )
       ).rows[0];
+      await connection.query(
+        `INSERT INTO retention_preview_rows(preview_id,measurement_id,timestamp)
+        SELECT $4,d.id,d.timestamp FROM opcua_data d WHERE ${eligible}`,
+        [machine, cutoff, maxId, preview.id],
+      );
       await connection.query("COMMIT");
       res
         .status(201)
@@ -179,67 +190,48 @@ router.post(
     }),
   ),
   asyncHandler(async (req, res) => {
-    const connection = await manager.pool.connect();
-    try {
-      await connection.query("BEGIN");
-      await connection.query("SET LOCAL statement_timeout='30s'");
-      const preview = (
-        await connection.query(
-          "SELECT * FROM retention_previews WHERE id=$1 AND machine_id=$2 FOR UPDATE",
-          [req.body.previewId, Number(req.params.id)],
-        )
-      ).rows[0];
-      const policy = (
-        await connection.query(
-          "SELECT * FROM retention_policies WHERE machine_id=$1 FOR UPDATE",
-          [Number(req.params.id)],
-        )
-      ).rows[0];
-      if (
-        !preview ||
-        preview.created_by !== req.session.userId ||
-        preview.rows !== req.body.confirmRows ||
-        preview.policy_version !== policy?.version ||
-        Date.now() - new Date(preview.created_at).getTime() > 3600000
-      )
-        throw new ValidationError(
-          "Preview expired or changed; create and review a new preview",
-        );
-      if (!preview.completed) {
-        // Same lock as planning prevents a shift being added while its evidence is removed.
-        await connection.query("SELECT pg_advisory_xact_lock($1::integer)", [
-          preview.machine_id,
-        ]);
-        const deleted = await connection.query(
-          `WITH candidates AS (SELECT d.timestamp,d.id FROM opcua_data d WHERE ${eligible} ORDER BY d.timestamp,d.id LIMIT 5000 FOR UPDATE),
-        removed AS (DELETE FROM opcua_data d USING candidates c WHERE d.timestamp=c.timestamp AND d.id=c.id RETURNING d.*),
-        summarized AS (INSERT INTO history_summaries(machine_id,node_key,bucket,samples,good,sum,min,max,identity)
-          SELECT machine_id,node_key,date_trunc('hour',timestamp,'UTC'),count(*),count(*) FILTER(WHERE status_code LIKE 'Good%' AND value IS NOT NULL),
-          sum(value) FILTER(WHERE status_code LIKE 'Good%' AND value IS NOT NULL),min(value) FILTER(WHERE status_code LIKE 'Good%' AND value IS NOT NULL),max(value) FILTER(WHERE status_code LIKE 'Good%' AND value IS NOT NULL),
-          CASE WHEN count(signal_metadata)=0 THEN 'unknown' WHEN count(signal_metadata)<count(*) OR min(md5(signal_metadata::text))<>max(md5(signal_metadata::text)) THEN 'mixed' ELSE min(md5(signal_metadata::text)) END
-          FROM removed GROUP BY 1,2,3 ON CONFLICT(machine_id,node_key,bucket) DO UPDATE SET
-          samples=history_summaries.samples+excluded.samples,good=history_summaries.good+excluded.good,
-          sum=coalesce(history_summaries.sum,0)+coalesce(excluded.sum,0),min=least(history_summaries.min,excluded.min),max=greatest(history_summaries.max,excluded.max),
-          identity=CASE WHEN history_summaries.identity=excluded.identity THEN excluded.identity ELSE 'mixed' END RETURNING 1)
-        SELECT count(*)::int AS count FROM removed`,
-          [preview.machine_id, preview.cutoff, preview.max_id],
-        );
-        const count = deleted.rows[0].count;
-        preview.deleted += count;
-        preview.completed = count < 5000;
-        await connection.query(
-          "UPDATE retention_previews SET deleted=$2,completed=$3 WHERE id=$1",
-          [preview.id, preview.deleted, preview.completed],
-        );
-      }
-      await connection.query("COMMIT");
-      res.json(preview);
-    } catch (error) {
-      await connection.query("ROLLBACK");
-      throw error;
-    } finally {
-      connection.release();
-    }
+    res.json(
+      await applyRetention(
+        Number(req.params.id),
+        req.body.previewId,
+        req.body.confirmRows,
+        req.session.userId!,
+      ),
+    );
+  }),
+);
+router.post(
+  "/:id/schedule",
+  validateParams(id),
+  validateBody(
+    Joi.object({
+      previewId: Joi.string().uuid().required(),
+      confirmRows: Joi.number().integer().min(0).required(),
+      runAt: Joi.date().iso().required(),
+    }),
+  ),
+  asyncHandler(async (req, res) => {
+    const runAt = new Date(req.body.runAt);
+    if (runAt.getTime() <= Date.now())
+      throw new ValidationError("Schedule must be in the future");
+    const saved = await manager.pool.query(
+      `INSERT INTO retention_schedules(machine_id,preview_id,confirm_rows,created_by,run_at)
+    SELECT p.machine_id,p.id,p.rows,$4,$5 FROM retention_previews p JOIN retention_policies policy ON policy.machine_id=p.machine_id
+    WHERE p.id=$1 AND p.machine_id=$2 AND p.rows=$3 AND p.created_by=$4 AND p.policy_version=policy.version
+    AND NOT p.completed AND $5::timestamptz<p.created_at+interval '1 hour' ON CONFLICT(preview_id) DO NOTHING RETURNING *`,
+      [
+        req.body.previewId,
+        Number(req.params.id),
+        req.body.confirmRows,
+        req.session.userId,
+        runAt,
+      ],
+    );
+    if (!saved.rowCount)
+      throw new ValidationError(
+        "Review a fresh preview; schedule it before its one-hour expiry",
+      );
+    res.status(201).json(saved.rows[0]);
   }),
 );
 export default router;

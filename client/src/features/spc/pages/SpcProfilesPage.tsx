@@ -40,6 +40,7 @@ import {
   type CreateSpcProfileRequest,
 } from '../hooks/useSpcQueries';
 import SpcAlertsList from '../components/SpcAlertsList';
+import BaselineReview from '../components/BaselineReview';
 
 const SPC_METHODS = [
   { value: 'zscore', label: 'Z-Score' },
@@ -135,6 +136,7 @@ const SpcProfilesPage: React.FC = () => {
           Failed to load SPC profiles: {(error as Error).message}
         </Alert>
       )}
+      <BaselineReview />
 
       {showAlerts && (
         <Paper sx={{ p: 2, mb: 3 }}>

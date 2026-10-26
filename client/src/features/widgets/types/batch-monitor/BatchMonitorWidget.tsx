@@ -138,12 +138,11 @@ const BatchMonitorWidget: React.FC<BatchMonitorWidgetProps> = ({ config = {}, on
             </TableHead>
             <TableBody>
               {seriesData.map((series) => {
-                const values = series.dataPoints.map((dp) => dp.value);
-                const current = values.length > 0 ? values[values.length - 1] : null;
+                const current = series.dataPoints.at(-1)?.value ?? null;
                 const inRange =
-                  series.setpoint != null && current != null
-                    ? Math.abs(current - series.setpoint) <= series.setpoint * 0.1
-                    : true;
+                  current != null
+                    ? Math.abs(current - series.targetValue) <= series.tolerance
+                    : null;
                 return (
                   <TableRow key={series.nodeKey}>
                     <TableCell sx={{ py: 0.3, fontSize: '0.75rem' }}>
@@ -157,11 +156,16 @@ const BatchMonitorWidget: React.FC<BatchMonitorWidgetProps> = ({ config = {}, on
                         py: 0.3,
                         fontSize: '0.75rem',
                         fontWeight: 600,
-                        color: inRange ? 'success.main' : 'error.main',
+                        color:
+                          inRange == null
+                            ? 'text.secondary'
+                            : inRange
+                              ? 'success.main'
+                              : 'error.main',
                       }}
                       align="right"
                     >
-                      {current != null ? current.toFixed(2) : '-'}
+                      {current != null ? current.toFixed(2) : 'Unknown'}
                     </TableCell>
                   </TableRow>
                 );

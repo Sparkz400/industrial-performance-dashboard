@@ -95,11 +95,7 @@ router.get(
       machineId: req.query.machineId ? Number(req.query.machineId) : undefined,
       recipeId: req.query.recipeId ? Number(req.query.recipeId) : undefined,
       status: req.query.status as
-        | "planned"
-        | "running"
-        | "completed"
-        | "aborted"
-        | undefined,
+        "planned" | "running" | "completed" | "aborted" | undefined,
       limit: req.query.limit ? Number(req.query.limit) : undefined,
     };
     res.json(await batchService.listBatches(filters));
@@ -191,6 +187,13 @@ router.post(
 );
 
 // GET /:id/data - Get batch time-series data
+router.post(
+  "/:id/summary",
+  validateParams(idParamSchema),
+  asyncHandler(async (req, res) => {
+    res.json(await batchService.computeBatchSummary(Number(req.params.id)));
+  }),
+);
 router.get(
   "/:id/data",
   validateParams(idParamSchema),

@@ -73,6 +73,13 @@ recurring shift calendars, product runs and frozen reports, maintenance inspecti
 metered energy and reviewed history retention. Core workflows support English/German.
 See [daily workflow acceptance](docs/DAILY_OPERATIONS_ACCEPTANCE.md) for software evidence.
 
+[Quality and line operations](docs/QUALITY_LINE_OPERATIONS.md) adds frozen batch
+recipes, inspections/rework/lot traceability, reviewed SPC reference baselines,
+line-loss investigations and linked alarm maintenance actions. It also documents
+measured disk runway, reviewed retention scheduling, offline image packages and
+configurable multi-day synthetic workloads. Advanced screens currently require
+an administrator; multi-day reliability and supported capacity remain unqualified.
+
 ## Where it is going
 
 The [roadmap](docs/ROADMAP.md) starts with trustworthy measurements and a useful

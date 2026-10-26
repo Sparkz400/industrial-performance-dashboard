@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import BatchQualityPanel from '../components/BatchQualityPanel';
 import {
   Box,
   Typography,
@@ -312,10 +313,10 @@ interface BatchDetailDialogProps {
 
 const BatchDetailDialog: React.FC<BatchDetailDialogProps> = ({ batchId, onClose }) => {
   const { data: batch, isLoading: batchLoading } = useBatch(batchId);
-  const { data: seriesData, isLoading: dataLoading } = useBatchData(batchId);
+  const { data: seriesData, isLoading: dataLoading, error: dataError } = useBatchData(batchId);
 
   const isLoading = batchLoading || dataLoading;
-  const hasSummary = batch?.summary && batch.summary.parameterResults.length > 0;
+  const hasSummary = !!batch?.summary;
 
   return (
     <Dialog open onClose={onClose} maxWidth="md" fullWidth>
@@ -331,6 +332,13 @@ const BatchDetailDialog: React.FC<BatchDetailDialogProps> = ({ batchId, onClose 
         )}
       </DialogTitle>
       <DialogContent>
+        {batch?.summaryStatus === 'unverified-legacy' && (
+          <Alert severity="warning">
+            This historical batch has no frozen recipe. Its original limits and previous compliance
+            cannot be verified.
+          </Alert>
+        )}
+        {dataError && <Alert severity="info">{String(dataError)}</Alert>}
         {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />
@@ -339,11 +347,20 @@ const BatchDetailDialog: React.FC<BatchDetailDialogProps> = ({ batchId, onClose 
           <>
             {batch!.summary && (
               <Alert
-                severity={batch!.summary.overallCompliance >= 90 ? 'success' : 'warning'}
+                severity={
+                  batch!.summary.overallCompliance == null
+                    ? 'info'
+                    : batch!.summary.overallCompliance >= 90
+                      ? 'success'
+                      : 'warning'
+                }
                 sx={{ mb: 2 }}
               >
-                Overall Compliance: {batch!.summary.overallCompliance}% | Duration:{' '}
-                {Math.round(batch!.summary.duration / 60000)}m
+                Overall Compliance:{' '}
+                {batch!.summary.overallCompliance == null
+                  ? 'Unknown'
+                  : `${batch!.summary.overallCompliance}%`}{' '}
+                | Duration: {Math.round(batch!.summary.duration / 60000)}m
               </Alert>
             )}
             <TableContainer>
@@ -356,6 +373,7 @@ const BatchDetailDialog: React.FC<BatchDetailDialogProps> = ({ batchId, onClose 
                     <TableCell align="right">Min</TableCell>
                     <TableCell align="right">Max</TableCell>
                     <TableCell>Status</TableCell>
+                    <TableCell>Good / excluded samples</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -366,21 +384,45 @@ const BatchDetailDialog: React.FC<BatchDetailDialogProps> = ({ batchId, onClose 
                       <TableCell
                         align="right"
                         sx={{
-                          color: param.withinTolerance ? 'success.main' : 'error.main',
+                          color:
+                            param.withinTolerance == null
+                              ? 'text.secondary'
+                              : param.withinTolerance
+                                ? 'success.main'
+                                : 'error.main',
                           fontWeight: 600,
                         }}
                       >
-                        {param.actualAvg.toFixed(2)}
+                        {param.actualAvg?.toFixed(2) ?? 'Unknown'}
                       </TableCell>
-                      <TableCell align="right">{param.actualMin.toFixed(2)}</TableCell>
-                      <TableCell align="right">{param.actualMax.toFixed(2)}</TableCell>
+                      <TableCell align="right">
+                        {param.actualMin?.toFixed(2) ?? 'Unknown'}
+                      </TableCell>
+                      <TableCell align="right">
+                        {param.actualMax?.toFixed(2) ?? 'Unknown'}
+                      </TableCell>
                       <TableCell>
                         <Chip
-                          label={param.withinTolerance ? 'OK' : 'Out of range'}
+                          label={
+                            param.withinTolerance == null
+                              ? 'Unknown'
+                              : param.withinTolerance
+                                ? 'OK'
+                                : 'Out of range'
+                          }
                           size="small"
-                          color={param.withinTolerance ? 'success' : 'error'}
+                          color={
+                            param.withinTolerance == null
+                              ? 'default'
+                              : param.withinTolerance
+                                ? 'success'
+                                : 'error'
+                          }
                           variant="outlined"
                         />
+                      </TableCell>
+                      <TableCell>
+                        {param.sampleCount ?? 'Unknown'} / {param.excludedCount ?? 'Unknown'}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -403,14 +445,16 @@ const BatchDetailDialog: React.FC<BatchDetailDialogProps> = ({ batchId, onClose 
               </TableHead>
               <TableBody>
                 {seriesData.map((series) => {
-                  const values = series.dataPoints.map((dp) => dp.value);
-                  const current = values.length > 0 ? values[values.length - 1] : null;
-                  const min = values.length > 0 ? Math.min(...values) : null;
-                  const max = values.length > 0 ? Math.max(...values) : null;
+                  const values = series.dataPoints
+                    .map((dp) => dp.value)
+                    .filter((v): v is number => v != null);
+                  const current = series.dataPoints.at(-1)?.value ?? null;
+                  const min = values.length > 0 ? values.reduce((a, b) => Math.min(a, b)) : null;
+                  const max = values.length > 0 ? values.reduce((a, b) => Math.max(a, b)) : null;
                   const inRange =
-                    series.setpoint != null && current != null
-                      ? Math.abs(current - series.setpoint) <= series.setpoint * 0.1
-                      : true;
+                    current != null
+                      ? Math.abs(current - series.targetValue) <= series.tolerance
+                      : null;
                   return (
                     <TableRow key={series.nodeKey}>
                       <TableCell>{series.displayName}</TableCell>
@@ -420,11 +464,16 @@ const BatchDetailDialog: React.FC<BatchDetailDialogProps> = ({ batchId, onClose 
                       <TableCell
                         align="right"
                         sx={{
-                          color: inRange ? 'success.main' : 'error.main',
+                          color:
+                            inRange == null
+                              ? 'text.secondary'
+                              : inRange
+                                ? 'success.main'
+                                : 'error.main',
                           fontWeight: 600,
                         }}
                       >
-                        {current != null ? current.toFixed(2) : '-'}
+                        {current != null ? current.toFixed(2) : 'Unknown'}
                       </TableCell>
                       <TableCell align="right">{min != null ? min.toFixed(2) : '-'}</TableCell>
                       <TableCell align="right">{max != null ? max.toFixed(2) : '-'}</TableCell>
@@ -441,6 +490,7 @@ const BatchDetailDialog: React.FC<BatchDetailDialogProps> = ({ batchId, onClose 
           </Typography>
         )}
 
+        <BatchQualityPanel batchId={batchId} />
         {batch?.status === 'aborted' && batch.abortReason && (
           <Alert severity="error" sx={{ mt: 2 }}>
             Abort reason: {batch.abortReason}
