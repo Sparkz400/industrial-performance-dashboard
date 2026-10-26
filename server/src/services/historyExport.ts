@@ -48,14 +48,22 @@ export async function streamHistory(
       avg: "avg(value)",
       min: "min(value)",
       max: "max(value)",
-      last: "(array_agg(value ORDER BY timestamp DESC,id DESC))[1]",
+      last: "max(value) FILTER (WHERE export_rank=1)",
     }[params.aggregation ?? "avg"];
+    // Rank the last value without accumulating an unbounded array for a dense bucket.
+    const source =
+      params.aggregation === "last"
+        ? `(SELECT timestamp,node_key,value,status_code,
+        row_number() OVER (PARTITION BY node_key,floor((extract(epoch FROM timestamp)-extract(epoch FROM $3::timestamptz))/$5)
+        ORDER BY timestamp DESC,id DESC) AS export_rank
+        FROM opcua_data WHERE machine_id=$1 AND node_key=ANY($2) AND timestamp >= $3 AND timestamp <= $4) AS ranked`
+        : "opcua_data";
     const query = aggregate
       ? `SELECT to_timestamp(floor((extract(epoch FROM timestamp)-extract(epoch FROM $3::timestamptz))/$5)*$5+extract(epoch FROM $3::timestamptz)) AS timestamp,
       node_key,CASE WHEN bool_and(coalesce(status_code LIKE 'Good%' AND value IS NOT NULL,false)) THEN ${expression} ELSE NULL END AS value,
       count(*) AS sample_count,count(*) FILTER(WHERE status_code LIKE 'Good%' AND value IS NOT NULL) AS good_sample_count,
       CASE WHEN bool_and(coalesce(status_code LIKE 'Good%' AND value IS NOT NULL,false)) THEN 'Good' ELSE 'MixedOrBad' END AS status_code
-      FROM opcua_data WHERE machine_id=$1 AND node_key=ANY($2) AND timestamp >= $3 AND timestamp <= $4 GROUP BY 1,node_key ORDER BY 1,node_key`
+      FROM ${source} ${params.aggregation === "last" ? "" : "WHERE machine_id=$1 AND node_key=ANY($2) AND timestamp >= $3 AND timestamp <= $4"} GROUP BY 1,node_key ORDER BY 1,node_key`
       : `
       SELECT id, timestamp, node_key, value, raw_value, status_code, data_type, source_timestamp, received_at, signal_metadata
       FROM opcua_data WHERE machine_id=$1 AND node_key=ANY($2) AND timestamp >= $3 AND timestamp <= $4

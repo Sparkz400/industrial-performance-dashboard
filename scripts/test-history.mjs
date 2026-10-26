@@ -78,6 +78,13 @@ await dailyFixture(async ({ pool, call, users, actors, api, expect }) => {
   assert.match(aggregateCsv, /sampleCount,goodSampleCount/);
   assert.match(aggregateCsv, /"MixedOrBad"/);
   assert.equal(aggregateCsv.trim().split("\n").length, 57);
+  const last = await call(
+    "viewer",
+    "GET",
+    `/api/v1/trending/export-csv?machineId=${machine}&nodeKeys=Count&startDate=2026-01-01T00:00:01Z&endDate=2026-01-01T00:00:02Z&downsampleBucketSeconds=60&aggregation=last`,
+  );
+  assert.equal(last.status(), 200, await last.text());
+  assert.match(await last.text(), /"Count","2","2","2","Good"/);
   assert.equal(
     (
       await call("viewer", "PUT", `/api/v1/history/${machine}/policy`, {
