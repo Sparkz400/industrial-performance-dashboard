@@ -46,13 +46,16 @@ simulator evidence do not establish physical-machine acceptance or release readi
   policy does not establish site/asset or tenant isolation. See the
   [production workflow and evidence](PRODUCTION_WORKFLOW.md) and [TODO](../TODO.md).
 - Separate companies must use separate installations. Tenant isolation is unqualified.
-- The runtime dependency audit is clear in this wave; development tooling retains
-  moderate advisories documented in [the review](DEPENDENCY_REVIEW.md). Security CI blocks high
-  and critical runtime advisories and uploads the complete audit report; inspect
-  it alongside the functional checks.
+- The full npm audit reports zero vulnerabilities, including development tools.
+  Security CI now blocks advisories at every severity and preserves the full audit.
+  Scoped UUID/esbuild overrides and their compatibility checks are documented in
+  [the review](DEPENDENCY_REVIEW.md). CSRF and cross-origin socket regression checks pass.
 - Container scans also report operating-system and Chromium advisories in GitHub
   code scanning. These are reported, not suppressed or treated as passing release
-  acceptance; review the exact image before deployment.
+  acceptance; review the exact image before deployment. The rebuilt Debian image
+  retains 413 findings (one critical, 66 high), all without available package fixes.
+  CI scans pull requests and main, preserves image identity/full reports, and blocks
+  fixable high/critical findings. This gate does not approve the remaining risks.
 
 ## Next acceptance milestone
 

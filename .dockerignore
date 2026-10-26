@@ -15,6 +15,7 @@ logs
 performance_dashboard
 
 client/dist
+client/storybook-static
 server/dist
 
 *.md

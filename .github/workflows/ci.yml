@@ -28,6 +28,14 @@ jobs:
         env:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
       - run: npm run build
+      - run: node scripts/test-dev-dependencies.mjs
+      - run: npm run db:generate -w server
+      - name: Reject uncommitted migration changes
+        run: node -e "if(require('node:child_process').execFileSync('git',['status','--porcelain','--','server/drizzle'],{encoding:'utf8'}).trim())process.exit(1)"
+      - run: npm run storybook:build -w client
+        if: runner.os == 'Linux'
+        env:
+          STORYBOOK_DISABLE_TELEMETRY: '1'
       - run: npx tsc --noEmit -p client/tsconfig.json
       - run: npm run lint
       - run: npm run format:check -w client
@@ -93,3 +101,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: docker build -t performance-dashboard:ci .
       - run: docker run --rm --entrypoint node performance-dashboard:ci ../scripts/test-runtime.mjs
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - run: node scripts/test-container.mjs performance-dashboard:ci

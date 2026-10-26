@@ -105,12 +105,15 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   fix actionable findings or record scope, mitigation and owner for accepted residual
   risk. Test outbound URLs, uploads, SVG, CSRF and secrets handling at their boundaries.
   Progress: [dependency review](docs/DEPENDENCY_REVIEW.md), clean root install and
-  peer validation; runtime audit zero, seven moderate development-package findings.
+  peer validation; full runtime/development npm audit zero. Scoped UUID/esbuild fixes,
+  Storybook builds, Drizzle transforms/generation and CSRF/socket-origin regressions pass.
   Follow-up: qualify coordinated MUI, Storybook/Vite, lint, Vitest 5, virtualization,
-  grid-layout and Node major migrations; resolve development advisories with supported
-  upstream versions. Exact-image/code-scanning review and the full boundary audit remain open.
-  Image review: application commit `53cce7a7` has one critical and 66 high Trivy
-  findings, including libxml2 with no fixed package listed; see the dependency review.
+  grid-layout and Node major migrations. The full boundary audit remains open.
+  Image review: PR #51 rebuild with package upgrades retains 413 Debian findings,
+  including one critical and 66 high, with no available fixes. A tested Wolfi candidate
+  has more browser vulnerabilities and is not adopted. Full reports remain visible;
+  CI blocks fixable high/critical findings. No residual risk is accepted by this change.
+  Maintainers own upstream reassessment before release; see the dependency review.
 - [ ] **F10 — Create a feature-level acceptance matrix** · P0 · M0 · Improve · M. Depends: F02, F03, F06, F07.
   Done: enabled pilot features have happy-path and failure-path evidence; distinguish
   unit, database, browser, simulator and physical-machine checks. CI success alone never

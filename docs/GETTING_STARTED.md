@@ -34,8 +34,10 @@ Open node mappings, browse the simulator and map `AirConsumption`,
 matching scalar types. Save the mappings and connect. Add monitoring widgets to
 the dashboard. These readings are synthetic, not real production measurements.
 
-For OEE, use the [compatibility guide](COMPATIBILITY.md). The simple simulator
-does not supply production counters, so it cannot establish a valid OEE figure.
+For a complete synthetic shift, open **Production shift → Commission machine**
+and follow the [production workflow](PRODUCTION_WORKFLOW.md). The simulator includes
+running/idle/fault states and total/good/reject counters. These fixtures exercise
+the calculations; they do not qualify a physical machine.
 
 ## Container deployment
 
@@ -57,6 +59,11 @@ Open http://localhost:3001. The container serves the built frontend and API from
 one origin. Migrations run before app startup. PostgreSQL, measurement spool,
 certificates and reports use persistent volumes. Never use `down -v` unless you
 intend to delete those data volumes and have verified backups.
+
+The image uses Node 24 on Debian trixie with Chromium for PDF reports, running
+as user 1000. Rebuild with `docker compose build --pull` to refresh base packages.
+Review the exact-image [security findings](DEPENDENCY_REVIEW.md) before deployment;
+passing functional tests or the fixable-advisory gate does not accept unfixed risks.
 
 For nonlocal deployments, read [SECURITY.md](../SECURITY.md) and validate HTTPS,
 proxy trust, credentials, OPC UA certificate trust, backup restoration and access
