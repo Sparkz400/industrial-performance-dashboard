@@ -1,421 +1,287 @@
-import fs from "fs";
-import path from "path";
-import puppeteer from "puppeteer";
+import fs from "node:fs";
+import path from "node:path";
 import { reportRepository } from "../repositories/reportRepository.js";
-import {
-  alertRepository,
-  type AlertHistoryFilters,
-} from "../repositories/alertRepository.js";
+import { alertRepository } from "../repositories/alertRepository.js";
 import { trendingDataService } from "./trendingDataService.js";
 import { oeeCalculationService } from "./oeeCalculationService.js";
 import { reportEmailService } from "./reportEmailService.js";
+import { writeReportPdf, type ReportSection } from "./reportPdf.js";
 import logger from "../utils/logger.js";
-import type { TrendingSeries } from "@performance-dashboard/shared";
+import type {
+  ScheduledReportConfig,
+  ScheduledReportSection,
+} from "@performance-dashboard/shared";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const REPORTS_DIR = path.resolve("reports");
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function ensureReportsDir(): void {
-  if (!fs.existsSync(REPORTS_DIR)) {
-    fs.mkdirSync(REPORTS_DIR, { recursive: true });
+async function collectSection(
+  section: ScheduledReportSection,
+  start: Date,
+  end: Date,
+  timezone: string,
+): Promise<ReportSection> {
+  const title =
+    section.title ??
+    { trending: "Trending Data", alerts: "Alerts", oee: "OEE Summary" }[
+      section.type
+    ] ??
+    section.type;
+  const number = (value: number | null | undefined, digits = 2) =>
+    value != null && Number.isFinite(value) ? value.toFixed(digits) : "N/A";
+  if (section.type === "trending") {
+    if (!section.machineId)
+      return {
+        title,
+        paragraphs: [
+          "Trending unavailable: select one machine in this report section.",
+        ],
+      };
+    if (!section.nodeKeys?.length)
+      return { title, paragraphs: ["No tags configured for this section."] };
+    const result = await trendingDataService.queryTrendingData({
+      machineId: section.machineId,
+      nodeKeys: section.nodeKeys,
+      startDate: start,
+      endDate: end,
+    });
+    return {
+      title,
+      paragraphs: result.series.length ? [] : ["No data available."],
+      table: {
+        headers: [
+          "Tag",
+          "Latest displayed",
+          "Avg",
+          "Min",
+          "Max",
+          "Points / coverage",
+        ],
+        widths: [100, 60, 45, 45, 45, 216],
+        rows: result.series.map((series) => [
+          series.displayName,
+          number(series.data.at(-1)?.value),
+          number(series.statistics?.average),
+          number(series.statistics?.min),
+          number(series.statistics?.max),
+          `${series.goodSampleCount ?? 0}/${series.sampleCount ?? 0} usable samples; ${series.resolutionMs ?? 0} ms buckets; ${series.truncated ? "TRUNCATED" : "full query window"}; continuity unverified`,
+        ]),
+      },
+    };
   }
-}
-
-function formatDate(d: Date): string {
-  return d.toISOString().replace(/[:.]/g, "-");
-}
-
-// ---------------------------------------------------------------------------
-// HTML rendering
-// ---------------------------------------------------------------------------
-
-interface SectionConfig {
-  type: string;
-  title?: string;
-  nodeKeys?: string[];
-  machineId?: number;
-  [key: string]: unknown;
-}
-
-interface TemplateConfig {
-  title?: string;
-  sections?: SectionConfig[];
-  [key: string]: unknown;
-}
-
-function renderHtmlReport(
-  title: string,
-  sections: string[],
-  generatedAt: Date,
-): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>${escapeHtml(title)}</title>
-  <style>
-    body { font-family: Arial, Helvetica, sans-serif; margin: 40px; color: #333; }
-    h1 { color: #1a237e; border-bottom: 2px solid #1a237e; padding-bottom: 8px; }
-    h2 { color: #283593; margin-top: 32px; }
-    table { border-collapse: collapse; width: 100%; margin: 12px 0; }
-    th, td { border: 1px solid #ccc; padding: 8px 12px; text-align: left; }
-    th { background: #e8eaf6; }
-    .footer { margin-top: 40px; font-size: 12px; color: #999; }
-    .summary-box { background: #f5f5f5; border-radius: 6px; padding: 16px; margin: 12px 0; }
-  </style>
-</head>
-<body>
-  <h1>${escapeHtml(title)}</h1>
-  ${sections.join("\n")}
-  <div class="footer">Generated at ${generatedAt.toISOString()}</div>
-</body>
-</html>`;
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function renderTrendingSection(
-  title: string,
-  series: TrendingSeries[],
-): string {
-  if (series.length === 0) {
-    return `<h2>${escapeHtml(title)}</h2><p>No data available.</p>`;
+  if (section.type === "alerts") {
+    const alerts = await alertRepository.listAlertHistory({
+      startDate: start,
+      endDate: end,
+      limit: 200,
+      ...(section.machineId ? { machineId: section.machineId } : {}),
+    });
+    if (!alerts.length)
+      return { title, paragraphs: ["No alerts recorded in this period."] };
+    const severities: Record<string, number> = {};
+    for (const alert of alerts)
+      severities[alert.severity ?? "unknown"] =
+        (severities[alert.severity ?? "unknown"] ?? 0) + 1;
+    return {
+      title,
+      paragraphs: [
+        `Alerts shown: ${alerts.length}. ${Object.entries(severities)
+          .map(([severity, count]) => `${severity}: ${count}`)
+          .join(
+            "; ",
+          )}${alerts.length === 200 ? ". Display limit reached: additional alerts may exist." : ""}`,
+      ],
+      table: {
+        headers: ["Time", "Severity", "Status", "Rule", "Message", "Value"],
+        widths: [83, 48, 54, 77, 201, 48],
+        rows: alerts.map((alert) => [
+          alert.createdAt
+            ? new Date(alert.createdAt).toLocaleString("en-GB", {
+                timeZone: timezone,
+              })
+            : "N/A",
+          alert.severity ?? "N/A",
+          alert.status ?? "N/A",
+          alert.ruleName ?? "N/A",
+          alert.message ?? "",
+          String(alert.triggerValue ?? "N/A"),
+        ]),
+      },
+    };
   }
-
-  const rows: string[] = [];
-  for (const s of series) {
-    if (s.data.length === 0) continue;
-    const latest = s.data[s.data.length - 1];
-    const avg = s.statistics?.average?.toFixed(2) ?? "N/A";
-    const min = s.statistics?.min?.toFixed(2) ?? "N/A";
-    const max = s.statistics?.max?.toFixed(2) ?? "N/A";
-
-    rows.push(
-      `<tr>
-        <td>${escapeHtml(s.displayName)}</td>
-        <td>${latest.value != null ? latest.value.toFixed(2) : "N/A"}</td>
-        <td>${avg}</td>
-        <td>${min}</td>
-        <td>${max}</td>
-        <td>${s.goodSampleCount ?? 0}/${s.sampleCount ?? 0} usable samples; ${s.resolutionMs ?? 0} ms buckets; ${s.truncated ? "TRUNCATED" : "full query window"}; continuity unverified</td>
-      </tr>`,
-    );
+  if (section.type === "oee") {
+    if (!section.machineId)
+      return { title, paragraphs: ["No machine configured for OEE section."] };
+    try {
+      const result = await oeeCalculationService.calculateOee(
+        section.machineId,
+        start,
+        end,
+      );
+      const pct = (value: number) =>
+        Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : "N/A";
+      return {
+        title,
+        paragraphs: [
+          ...(result.dataComplete
+            ? []
+            : [
+                "Incomplete measurement coverage. These figures are provisional.",
+              ]),
+          `OEE: ${pct(result.oee)}`,
+        ],
+        table: {
+          headers: ["Metric", "Value", "Details"],
+          widths: [110, 80, 321],
+          rows: [
+            [
+              "Availability",
+              pct(result.availability.availability),
+              `Running: ${number(result.availability.runningTimeMinutes, 1)} min, Planned stop: ${number(result.availability.plannedStopTimeMinutes, 1)} min`,
+            ],
+            [
+              "Performance",
+              pct(result.performance.performance),
+              `Total count: ${result.performance.totalCount}`,
+            ],
+            [
+              "Quality",
+              pct(result.quality.quality),
+              `Good: ${result.quality.goodCount}, Rejected: ${result.quality.rejectCount}`,
+            ],
+          ],
+        },
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn(
+        `[ReportGenerator] OEE section failed for machine ${section.machineId}: ${message}`,
+      );
+      return { title, paragraphs: [`OEE data unavailable: ${message}`] };
+    }
   }
-
-  return `<h2>${escapeHtml(title)}</h2>
-<table>
-  <thead><tr><th>Tag</th><th>Latest displayed</th><th>Avg</th><th>Min</th><th>Max</th><th>Points</th></tr></thead>
-  <tbody>${rows.join("")}</tbody>
-</table>`;
-}
-
-async function renderAlertSection(
-  title: string,
-  startDate: Date,
-  endDate: Date,
-  machineId?: number,
-): Promise<string> {
-  const filters: AlertHistoryFilters = {
-    startDate,
-    endDate,
-    limit: 200,
+  return {
+    title,
+    paragraphs: [`Section type "${section.type}" is not implemented.`],
   };
-  if (machineId) filters.machineId = machineId;
-
-  const alerts = await alertRepository.listAlertHistory(filters);
-
-  if (alerts.length === 0) {
-    return `<h2>${escapeHtml(title)}</h2>
-<div class="summary-box"><p>No alerts recorded in this period.</p></div>`;
-  }
-
-  // Summary counts by severity
-  const bySeverity: Record<string, number> = {};
-  for (const a of alerts) {
-    const sev = a.severity ?? "unknown";
-    bySeverity[sev] = (bySeverity[sev] ?? 0) + 1;
-  }
-
-  const summaryParts = Object.entries(bySeverity)
-    .map(([sev, count]) => `<strong>${escapeHtml(sev)}:</strong> ${count}`)
-    .join(" &middot; ");
-
-  const rows = alerts.map(
-    (a: (typeof alerts)[number]) =>
-      `<tr>
-        <td>${a.createdAt ? new Date(a.createdAt).toLocaleString() : "N/A"}</td>
-        <td>${escapeHtml(a.severity ?? "N/A")}</td>
-        <td>${escapeHtml(a.status ?? "N/A")}</td>
-        <td>${escapeHtml(a.ruleName ?? "N/A")}</td>
-        <td>${escapeHtml(a.message ?? "")}</td>
-        <td>${a.triggerValue != null ? a.triggerValue : "N/A"}</td>
-      </tr>`,
-  );
-
-  return `<h2>${escapeHtml(title)}</h2>
-<div class="summary-box"><p>Total alerts: ${alerts.length} &mdash; ${summaryParts}</p></div>
-<table>
-  <thead><tr><th>Time</th><th>Severity</th><th>Status</th><th>Rule</th><th>Message</th><th>Value</th></tr></thead>
-  <tbody>${rows.join("")}</tbody>
-</table>`;
 }
-
-async function renderOeeSection(
-  title: string,
-  startDate: Date,
-  endDate: Date,
-  machineId?: number,
-): Promise<string> {
-  if (!machineId) {
-    return `<h2>${escapeHtml(title)}</h2>
-<div class="summary-box"><p>No machine configured for OEE section.</p></div>`;
-  }
-
-  try {
-    const result = await oeeCalculationService.calculateOee(
-      machineId,
-      startDate,
-      endDate,
-    );
-
-    const pct = (v: number) => (v * 100).toFixed(1) + "%";
-
-    return `<h2>${escapeHtml(title)}</h2>
-<div class="summary-box">
-  ${result.dataComplete ? "" : "<p><strong>Incomplete measurement coverage. These figures are provisional.</strong></p>"}
-  <p><strong>OEE:</strong> ${pct(result.oee)}</p>
-</div>
-<table>
-  <thead><tr><th>Metric</th><th>Value</th><th>Details</th></tr></thead>
-  <tbody>
-    <tr>
-      <td>Availability</td>
-      <td>${pct(result.availability.availability)}</td>
-      <td>Running: ${result.availability.runningTimeMinutes.toFixed(1)} min, Planned stop: ${result.availability.plannedStopTimeMinutes.toFixed(1)} min</td>
-    </tr>
-    <tr>
-      <td>Performance</td>
-      <td>${pct(result.performance.performance)}</td>
-      <td>Total count: ${result.performance.totalCount}</td>
-    </tr>
-    <tr>
-      <td>Quality</td>
-      <td>${pct(result.quality.quality)}</td>
-      <td>Good: ${result.quality.goodCount}, Rejected: ${result.quality.rejectCount}</td>
-    </tr>
-  </tbody>
-</table>`;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    logger.warn(
-      `[ReportGenerator] OEE section failed for machine ${machineId}: ${msg}`,
-    );
-    return `<h2>${escapeHtml(title)}</h2>
-<div class="summary-box"><p>OEE data unavailable: ${escapeHtml(msg)}</p></div>`;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Service
-// ---------------------------------------------------------------------------
 
 class ReportGeneratorService {
-  /**
-   * Generate a PDF report for a given schedule.
-   */
-  async generate(scheduleId: number): Promise<void> {
-    ensureReportsDir();
+  private running = new Set<number>();
 
-    // Load schedule & template
+  async generate(scheduleId: number): Promise<void> {
+    if (this.running.has(scheduleId)) return;
+    this.running.add(scheduleId);
+    try {
+      await this.generateOnce(scheduleId);
+    } finally {
+      this.running.delete(scheduleId);
+    }
+  }
+
+  private async generateOnce(scheduleId: number): Promise<void> {
     const schedule = await reportRepository.findScheduleById(scheduleId);
     if (!schedule) {
-      logger.error(
-        `[ReportGenerator] Schedule ${scheduleId} not found — skipping`,
-      );
+      logger.warn(`[ReportGenerator] Schedule ${scheduleId} not found`);
       return;
     }
-
     const template = await reportRepository.findTemplateById(
       schedule.templateId,
     );
     if (!template) {
-      logger.error(
-        `[ReportGenerator] Template ${schedule.templateId} not found for schedule ${scheduleId}`,
+      logger.warn(
+        `[ReportGenerator] Template ${schedule.templateId} not found`,
       );
       return;
     }
-
-    // Create history entry with 'generating' status
-    const historyEntry = await reportRepository.createHistory({
-      scheduleId: schedule.id,
+    const history = await reportRepository.createHistory({
+      scheduleId,
       templateId: template.id,
       scheduleName: schedule.name,
       status: "generating",
     });
-
     try {
-      const templateConfig = (template.templateConfig ?? {}) as TemplateConfig;
-      const reportTitle = templateConfig.title ?? template.name ?? "Report";
-      const sections: string[] = [];
+      const config = (template.templateConfig ?? {}) as ScheduledReportConfig;
+      const title = config.title ?? template.name ?? "Report";
       const now = new Date();
-      const endDate = now;
-      const startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Default: last 24h
-
-      // Build sections based on template config
-      const configSections = templateConfig.sections ?? [];
-
-      for (const section of configSections) {
-        switch (section.type) {
-          case "trending": {
-            const nodeKeys = section.nodeKeys ?? [];
-            if (nodeKeys.length > 0) {
-              if (!section.machineId) {
-                sections.push(
-                  "<p>Trending unavailable: select one machine in this report section.</p>",
-                );
-                break;
-              }
-              const result = await trendingDataService.queryTrendingData({
-                nodeKeys,
-                machineId: section.machineId,
-                startDate,
-                endDate,
-              });
-              sections.push(
-                renderTrendingSection(
-                  section.title ?? "Trending Data",
-                  result.series,
-                ),
-              );
-            }
-            break;
-          }
-          case "alerts":
-            sections.push(
-              await renderAlertSection(
-                section.title ?? "Alerts",
-                startDate,
-                endDate,
-                section.machineId,
-              ),
-            );
-            break;
-          case "oee":
-            sections.push(
-              await renderOeeSection(
-                section.title ?? "OEE Summary",
-                startDate,
-                endDate,
-                section.machineId,
-              ),
-            );
-            break;
-          default:
-            sections.push(
-              `<h2>${escapeHtml(section.title ?? section.type)}</h2><p>Section type "${escapeHtml(section.type)}" not yet implemented.</p>`,
-            );
+      const hours = config.lookbackHours ?? 24;
+      if (!Number.isFinite(hours) || hours <= 0 || hours > 744)
+        throw new Error("Report window must be between 0 and 744 hours");
+      const start = new Date(now.getTime() - hours * 60 * 60 * 1000);
+      const timezone = schedule.timezone ?? "UTC";
+      new Intl.DateTimeFormat("en", { timeZone: timezone }).format(now);
+      const sections: ReportSection[] = [];
+      for (const section of config.sections ?? []) {
+        const machines = section.machineId
+          ? [section.machineId]
+          : ((schedule.machineIds ?? []) as number[]);
+        for (const machineId of machines.length ? machines : [undefined]) {
+          const result = await collectSection(
+            { ...section, machineId },
+            start,
+            now,
+            timezone,
+          );
+          if (machineId) result.title += ` - Machine ${machineId}`;
+          sections.push(result);
         }
       }
-
-      // If no sections configured, add a default note
-      if (sections.length === 0) {
-        sections.push(
-          '<div class="summary-box"><p>No report sections configured in the template.</p></div>',
-        );
-      }
-
-      const html = renderHtmlReport(reportTitle, sections, now);
-
-      // Generate PDF with Puppeteer
-      const pdfFilename = `report-${schedule.id}-${formatDate(now)}.pdf`;
-      const pdfPath = path.join(REPORTS_DIR, pdfFilename);
-
-      const browser = await puppeteer.launch({
-        headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      });
-
-      try {
-        const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: "load" });
-        await page.pdf({
-          path: pdfPath,
-          format: "A4",
-          printBackground: true,
-          margin: { top: "20mm", bottom: "20mm", left: "15mm", right: "15mm" },
+      if (!sections.length)
+        sections.push({
+          title: "Report",
+          paragraphs: ["No report sections configured in the template."],
         });
-      } finally {
-        await browser.close();
-      }
-
-      const stats = fs.statSync(pdfPath);
-
-      // Update history with completed status
-      await reportRepository.updateHistoryStatus(historyEntry.id, {
+      const directory = path.resolve(process.env.REPORTS_DIR || "reports");
+      fs.mkdirSync(directory, { recursive: true });
+      const pdfPath = path.join(
+        directory,
+        `report-${scheduleId}-${history.id}.pdf`,
+      );
+      await writeReportPdf(pdfPath, {
+        title,
+        generatedAt: now,
+        period: `Period: ${start.toISOString()} to ${now.toISOString()}\nAlert display timezone: ${timezone}`,
+        sections,
+      });
+      await reportRepository.updateHistoryStatus(history.id, {
         status: "completed",
         filePath: pdfPath,
-        fileSize: stats.size,
+        fileSize: fs.statSync(pdfPath).size,
         completedAt: new Date(),
       });
-
-      // Update schedule last run info
-      await reportRepository.updateSchedule(schedule.id, {
-        lastRunAt: new Date(),
+      await reportRepository.updateSchedule(scheduleId, {
+        lastRunAt: now,
         lastRunStatus: "completed",
-      } as any);
-
-      logger.info(
-        `[ReportGenerator] Report generated: ${pdfPath} (${stats.size} bytes)`,
-      );
-
-      // Send email if recipients are configured
+      });
       const recipients = (schedule.recipients ?? []) as string[];
-      if (recipients.length > 0) {
+      if (
+        recipients.length &&
+        ((schedule.deliveryChannels ?? ["email"]) as string[]).includes("email")
+      ) {
         try {
           await reportEmailService.sendReport(
             recipients,
             `Scheduled Report: ${schedule.name}`,
-            `Please find attached the report "${reportTitle}" generated on ${now.toISOString()}.`,
+            `Please find attached the report "${title}" generated on ${now.toISOString()}.`,
             pdfPath,
           );
-        } catch (emailErr) {
+        } catch (error) {
           logger.error(
-            `[ReportGenerator] Failed to send email for schedule ${scheduleId}:`,
-            emailErr,
+            `[ReportGenerator] Email delivery failed for schedule ${scheduleId}`,
+            error,
           );
-          // Email failure does not mark the report itself as failed
         }
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-
-      await reportRepository.updateHistoryStatus(historyEntry.id, {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await reportRepository.updateHistoryStatus(history.id, {
         status: "failed",
-        error: errorMessage,
+        error: message,
         completedAt: new Date(),
       });
-
-      await reportRepository.updateSchedule(schedule.id, {
+      await reportRepository.updateSchedule(scheduleId, {
         lastRunAt: new Date(),
         lastRunStatus: "failed",
-      } as any);
-
+      });
       logger.error(
-        `[ReportGenerator] Failed to generate report for schedule ${scheduleId}:`,
-        err,
+        `[ReportGenerator] Generation failed for schedule ${scheduleId}: ${message}`,
       );
     }
   }

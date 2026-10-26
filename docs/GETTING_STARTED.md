@@ -60,10 +60,11 @@ one origin. Migrations run before app startup. PostgreSQL, measurement spool,
 certificates and reports use persistent volumes. Never use `down -v` unless you
 intend to delete those data volumes and have verified backups.
 
-The image uses Node 24 on Debian trixie with Chromium for PDF reports, running
-as user 1000. Rebuild with `docker compose build --pull` to refresh base packages.
-Review the exact-image [security findings](DEPENDENCY_REVIEW.md) before deployment;
-passing functional tests or the fixable-advisory gate does not accept unfixed risks.
+The image uses Node 24 on Wolfi and renders PDFs directly, running as user 1000.
+Rebuild with `docker compose build --pull` to refresh base packages. Existing
+database and volume paths are retained. Follow the [reporting migration guide](REPORTING.md)
+for upgrade, rollback, SMTP and report settings. Review the exact-image
+[security evidence](DEPENDENCY_REVIEW.md) before deployment.
 
 For nonlocal deployments, read [SECURITY.md](../SECURITY.md) and validate HTTPS,
 proxy trust, credentials, OPC UA certificate trust, backup restoration and access

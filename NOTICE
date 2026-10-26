@@ -3,4 +3,6 @@ Copyright 2026 Nico Schuermann and contributors
 
 Licensed under the Apache License, Version 2.0.
 Third-party dependencies retain their respective copyrights and licenses.
+Bundled Noto Sans fonts are licensed under the SIL Open Font License 1.1;
+see server/assets/fonts/OFL.txt for their copyright and license terms.
 This project is independent of industrial equipment and protocol vendors.

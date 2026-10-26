@@ -91,6 +91,24 @@ evidence. Consult the exact PR/head checks for hosted results.
 
 The first-wave counts above remain a historical snapshot.
 
+## Browser-free container and report migration
+
+The Node 24/Wolfi runtime passes the actual-image SQLite, bcrypt, OPC UA certificate
+creation/read/subscription, tracing, PDF and in-memory SMTP attachment checks.
+Container acceptance additionally checks fresh/repeated migrations, login/session,
+timezone, automatic PDF/download, persisted reports after restart and forced-crash/
+database-outage replay. The full scan has zero findings; exact image identity and
+historical results are in the [security review](DEPENDENCY_REVIEW.md).
+
+Local validation now includes 136 server tests, 67 client tests, the 12 existing
+browser flows and the extended production browser workflow. Reporting tests cover
+create/edit/reload, selected machines, timezone/DST, manual and actual timer runs,
+invalid input, viewer denial and browser downloads. A standard PDF and ten-page
+200-alarm stress PDF were rendered and visually inspected; text assertions verify
+Unicode, every row, long-message continuation, unknown-data notices and page numbers.
+Generation-failure and email-failure behavior are checked. See
+[the compatibility matrix and remaining limits](REPORTING.md).
+
 ## Still open
 
 Broader feature acceptance remains F10. Public sharing is contained by disabling it;

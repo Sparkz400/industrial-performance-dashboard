@@ -1,6 +1,5 @@
 FROM node:24-trixie-slim AS build
 WORKDIR /app
-ENV PUPPETEER_SKIP_DOWNLOAD=true
 COPY package.json package-lock.json ./
 COPY shared/package.json shared/package.json
 COPY client/package.json client/package.json
@@ -11,22 +10,29 @@ COPY client/ client/
 COPY server/ server/
 RUN npm run build
 
-FROM node:24-trixie-slim AS production
+FROM node:24-trixie-slim AS dependencies
 WORKDIR /app
-ENV NODE_ENV=production PUPPETEER_SKIP_DOWNLOAD=true PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends chromium ca-certificates && rm -rf /var/lib/apt/lists/*
+ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 COPY shared/package.json shared/package.json
 COPY client/package.json client/package.json
 COPY server/package.json server/package.json
-RUN npm ci --omit=dev --workspace=server --workspace=shared --ignore-scripts \
-    && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
-    && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
+RUN npm ci --omit=dev --workspace=server --workspace=shared --ignore-scripts
+
+FROM cgr.dev/chainguard/wolfi-base:latest@sha256:360896efb0753a5701c48f860e17130c205eae5a264797aa3e7ea126ee2923a7 AS production
+WORKDIR /app
+ENV NODE_ENV=production
+RUN apk upgrade --no-cache && apk add --no-cache nodejs-24 ca-certificates tzdata \
+    && addgroup -g 1000 node && adduser -D -u 1000 -G node node
+COPY --from=dependencies /app/node_modules node_modules
+COPY --from=dependencies /app/package.json package.json
+COPY --from=dependencies /app/server server
+COPY --from=dependencies /app/shared shared
 COPY --from=build --chown=node:node /app/shared/dist shared/dist
 COPY --from=build --chown=node:node /app/server/dist server/dist
 COPY --from=build --chown=node:node /app/server/drizzle server/drizzle
 COPY --from=build --chown=node:node /app/client/dist server/public
-COPY --chown=node:node scripts/test-runtime.mjs scripts/test-runtime.mjs
+COPY --chown=node:node scripts/test-runtime.mjs scripts/test-recovery.mjs scripts/
 RUN mkdir -p server/data server/certificates server/logs server/reports && chown -R node:node server
 WORKDIR /app/server
 USER node

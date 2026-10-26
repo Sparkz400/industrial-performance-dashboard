@@ -50,12 +50,12 @@ simulator evidence do not establish physical-machine acceptance or release readi
   Security CI now blocks advisories at every severity and preserves the full audit.
   Scoped UUID/esbuild overrides and their compatibility checks are documented in
   [the review](DEPENDENCY_REVIEW.md). CSRF and cross-origin socket regression checks pass.
-- Container scans also report operating-system and Chromium advisories in GitHub
-  code scanning. These are reported, not suppressed or treated as passing release
-  acceptance; review the exact image before deployment. The rebuilt Debian image
-  retains 413 findings (one critical, 66 high), all without available package fixes.
-  CI scans pull requests and main, preserves image identity/full reports, and blocks
-  fixable high/critical findings. This gate does not approve the remaining risks.
+- The Node 24/Wolfi image renders scheduled PDFs without Chromium and has zero
+  findings in the full scan (28 OS and 557 Node packages). Actual-image collection,
+  recovery, reporting and persisted-volume checks pass. CI preserves complete scan
+  evidence and blocks all high/critical findings, including unfixed ones. See the
+  [reporting migration](REPORTING.md) and [image review](DEPENDENCY_REVIEW.md).
+  Broader F09 boundary review and physical/deployment qualification remain open.
 
 ## Next acceptance milestone
 

@@ -33,7 +33,7 @@ interface ReportHistoryItem {
   generatedAt: string;
   status: 'generating' | 'completed' | 'failed';
   fileSize: number | null;
-  errorMessage: string | null;
+  error: string | null;
 }
 
 interface ReportHistoryResponse {
@@ -88,6 +88,7 @@ const ReportHistoryPage: React.FC = () => {
 
   const { data, isLoading, error, refetch } = useQuery<ReportHistoryResponse>({
     queryKey: ['reportHistory', page, rowsPerPage, scheduleFilter],
+    refetchInterval: 2000,
     queryFn: async () => {
       const params = new URLSearchParams();
       params.set('offset', String(page * rowsPerPage));

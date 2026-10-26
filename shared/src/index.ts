@@ -355,3 +355,4 @@ export type {
   DowntimeReason,
   ShiftReport,
 } from "./production.js";
+export type { ScheduledReportConfig, ScheduledReportSection } from './reports.js';

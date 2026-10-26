@@ -98,6 +98,7 @@ try {
     `import { MeasurementSpool } from ${JSON.stringify(spoolUrl)};\nconst spool=new MeasurementSpool(process.env.OPCUA_SPOOL_PATH);\nlet n=0;process.on('message',()=>{spool.enqueue({key:'OwnedCounter',label:'Owned',timestamp:new Date(),value:n++,statusCode:'Good'});process.send({accepted:spool.peek(100).at(-1).id});});process.send({ready:true});`,
   );
   child = fork(producer, [], {
+    execArgv: [],
     env: process.env,
     stdio: ["ignore", "ignore", "pipe", "ipc"],
     windowsHide: true,
@@ -109,6 +110,12 @@ try {
       15000,
     );
     child.once("error", reject);
+    child.once("exit", (code) => {
+      if (code !== null) {
+        clearTimeout(timeout);
+        reject(new Error(`Producer exited ${code}`));
+      }
+    });
     child.on("message", (message) => {
       if (message.accepted) accepted.push(message.accepted);
       if (accepted.length === 20) {
@@ -152,6 +159,7 @@ try {
     `import { MeasurementSpool } from ${JSON.stringify(spoolUrl)};\nMeasurementSpool.prototype.acknowledge=function(){process.send({committed:true});Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,30000);};\nconst { OpcuaQueueWorker }=await import(${JSON.stringify(workerUrl)});await new OpcuaQueueWorker().processBatch();`,
   );
   child = fork(replay, [], {
+    execArgv: [],
     env: process.env,
     stdio: ["ignore", "ignore", "pipe", "ipc"],
     windowsHide: true,

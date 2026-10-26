@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -36,6 +36,8 @@ import PageSkeleton from '@/shared/components/loading/PageSkeleton';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { API_ENDPOINTS } from '@/config/config';
 import protectedFetch from '@/utils/protectedFetch';
+import { useMachineStore } from '@/stores/useMachineStore';
+import type { ScheduledReportConfig, ScheduledReportSection } from '@performance-dashboard/shared';
 
 interface ReportTemplate {
   id: number;
@@ -43,7 +45,7 @@ interface ReportTemplate {
   type: 'shift' | 'daily' | 'weekly';
   description: string;
   isActive: boolean;
-  sections: string[];
+  templateConfig: ScheduledReportConfig;
 }
 
 interface TemplateFormValues {
@@ -52,15 +54,15 @@ interface TemplateFormValues {
   description: string;
   isActive: boolean;
   sections: string[];
+  templateConfig: ScheduledReportConfig;
 }
 
 const TEMPLATE_TYPES = ['shift', 'daily', 'weekly'] as const;
 
 const AVAILABLE_SECTIONS = [
-  { key: 'oee_summary', label: 'OEE Summary' },
-  { key: 'alert_summary', label: 'Alert Summary' },
-  { key: 'trending_data', label: 'Trending Data' },
-  { key: 'uptime_chart', label: 'Uptime Chart' },
+  { key: 'oee', label: 'OEE Summary' },
+  { key: 'alerts', label: 'Alert Summary' },
+  { key: 'trending', label: 'Trending Data' },
 ];
 
 const getTypeColor = (type: string): 'primary' | 'secondary' | 'success' => {
@@ -82,7 +84,19 @@ const defaultFormValues: TemplateFormValues = {
   description: '',
   isActive: true,
   sections: [],
+  templateConfig: { lookbackHours: 24, sections: [] },
 };
+
+const templatePayload = ({ sections, templateConfig, ...values }: TemplateFormValues) => ({
+  ...values,
+  templateConfig: {
+    ...templateConfig,
+    sections: sections.flatMap((type) => {
+      const existing = templateConfig.sections?.filter((section) => section.type === type);
+      return existing?.length ? existing : [{ type }];
+    }),
+  },
+});
 
 const fetchTemplates = async (): Promise<ReportTemplate[]> => {
   const res = await protectedFetch(API_ENDPOINTS.reports.templates);
@@ -92,6 +106,11 @@ const fetchTemplates = async (): Promise<ReportTemplate[]> => {
 
 const ReportTemplatesPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const machines = useMachineStore((s) => s.machines);
+  const fetchMachines = useMachineStore((s) => s.fetchMachines);
+  useEffect(() => {
+    void fetchMachines();
+  }, [fetchMachines]);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ReportTemplate | null>(null);
@@ -114,7 +133,7 @@ const ReportTemplatesPage: React.FC = () => {
       const res = await protectedFetch(API_ENDPOINTS.reports.templates, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
+        body: JSON.stringify(templatePayload(values)),
       });
       if (!res.ok) throw new Error('Failed to create template');
       return res.json();
@@ -130,7 +149,7 @@ const ReportTemplatesPage: React.FC = () => {
       const res = await protectedFetch(API_ENDPOINTS.reports.templateById(id), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
+        body: JSON.stringify(templatePayload(values)),
       });
       if (!res.ok) throw new Error('Failed to update template');
       return res.json();
@@ -175,7 +194,10 @@ const ReportTemplatesPage: React.FC = () => {
       type: template.type,
       description: template.description,
       isActive: template.isActive,
-      sections: template.sections ?? [],
+      sections: [
+        ...new Set(template.templateConfig?.sections?.map((section) => section.type) ?? []),
+      ],
+      templateConfig: template.templateConfig ?? {},
     });
     setFormErrors({});
     setFormOpen(true);
@@ -189,6 +211,24 @@ const ReportTemplatesPage: React.FC = () => {
         : [...prev.sections, sectionKey],
     }));
   };
+
+  const updateSection = (type: string, values: Partial<ScheduledReportSection>) =>
+    setFormValues((previous) => {
+      const sections = previous.templateConfig.sections ?? [];
+      return {
+        ...previous,
+        templateConfig: {
+          ...previous.templateConfig,
+          sections: sections.some((section) => section.type === type)
+            ? sections.map((section, index) =>
+                index === sections.findIndex((item) => item.type === type)
+                  ? { ...section, ...values }
+                  : section,
+              )
+            : [...sections, { type, ...values }],
+        },
+      };
+    });
 
   const handleSubmit = () => {
     const errors: Record<string, string> = {};
@@ -276,10 +316,18 @@ const ReportTemplatesPage: React.FC = () => {
                     <Switch checked={template.isActive} size="small" disabled />
                   </TableCell>
                   <TableCell>
-                    <IconButton size="small" onClick={() => handleOpenEdit(template)}>
+                    <IconButton
+                      size="small"
+                      aria-label="Edit template"
+                      onClick={() => handleOpenEdit(template)}
+                    >
                       <EditIcon fontSize="small" />
                     </IconButton>
-                    <IconButton size="small" onClick={() => setDeleteConfirm(template)}>
+                    <IconButton
+                      size="small"
+                      aria-label="Delete template"
+                      onClick={() => setDeleteConfirm(template)}
+                    >
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </TableCell>
@@ -334,6 +382,36 @@ const ReportTemplatesPage: React.FC = () => {
               rows={2}
             />
             <Typography variant="subtitle2">Report Sections</Typography>
+            <TextField
+              label="Report title"
+              value={formValues.templateConfig.title ?? ''}
+              helperText="Leave blank to use the template name."
+              onChange={(event) =>
+                setFormValues((previous) => ({
+                  ...previous,
+                  templateConfig: {
+                    ...previous.templateConfig,
+                    title: event.target.value || undefined,
+                  },
+                }))
+              }
+            />
+            <TextField
+              label="Reporting window (hours)"
+              type="number"
+              value={formValues.templateConfig.lookbackHours ?? 24}
+              helperText="A rolling window ending when the report runs; category does not change this window."
+              slotProps={{ htmlInput: { min: 1, max: 744 } }}
+              onChange={(event) =>
+                setFormValues((previous) => ({
+                  ...previous,
+                  templateConfig: {
+                    ...previous.templateConfig,
+                    lookbackHours: Number(event.target.value),
+                  },
+                }))
+              }
+            />
             <FormGroup>
               {AVAILABLE_SECTIONS.map((section) => (
                 <FormControlLabel
@@ -348,6 +426,57 @@ const ReportTemplatesPage: React.FC = () => {
                 />
               ))}
             </FormGroup>
+            {AVAILABLE_SECTIONS.filter((section) => formValues.sections.includes(section.key)).map(
+              (section) => {
+                const settings = formValues.templateConfig.sections?.find(
+                  (item) => item.type === section.key,
+                );
+                return (
+                  <Box key={section.key} sx={{ display: 'grid', gap: 1 }}>
+                    <TextField
+                      select
+                      label={`Machine for ${section.label}`}
+                      value={settings?.machineId ?? ''}
+                      onChange={(event) =>
+                        updateSection(section.key, {
+                          machineId: event.target.value ? Number(event.target.value) : undefined,
+                        })
+                      }
+                    >
+                      <MenuItem value="">Use the scheduled machines</MenuItem>
+                      {machines.map((machine) => (
+                        <MenuItem key={machine.id} value={machine.id}>
+                          {machine.name}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                    {section.key === 'trending' && (
+                      <TextField
+                        label="Trend signals"
+                        defaultValue={settings?.nodeKeys?.join(', ') ?? ''}
+                        helperText="Mapping names separated by commas, for example PowerConsumption, AirConsumption."
+                        onBlur={(event) =>
+                          updateSection(section.key, {
+                            nodeKeys: event.target.value
+                              .split(',')
+                              .map((value) => value.trim())
+                              .filter(Boolean),
+                          })
+                        }
+                      />
+                    )}
+                  </Box>
+                );
+              },
+            )}
+            {formValues.sections.some(
+              (type) => !AVAILABLE_SECTIONS.some((section) => section.key === type),
+            ) && (
+              <Alert severity="warning">
+                This template contains legacy sections the report generator cannot render. They
+                remain in the saved template and are marked unavailable in the PDF.
+              </Alert>
+            )}
           </Box>
         </DialogContent>
         <DialogActions>

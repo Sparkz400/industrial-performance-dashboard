@@ -11,9 +11,10 @@ Read [compatibility](https://github.com/Sparkz400/performance_dashboard/blob/mai
 before connecting equipment and [security](https://github.com/Sparkz400/performance_dashboard/blob/main/SECURITY.md)
 before exposing a service beyond a workstation.
 
-Container images use Node 24, Debian and Chromium. Rebuild with fresh base packages
+Container images use Node 24/Wolfi with browser-free PDF generation. Rebuild with fresh base packages
 and review the [exact-image security evidence](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DEPENDENCY_REVIEW.md)
-before deployment; passing CI does not approve unfixed findings.
+before deployment. The [reporting migration guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/REPORTING.md)
+covers preserved features, existing volumes, upgrades, rollback and email settings.
 
 After starting the owned simulator, open **Production shift → Commission machine**.
 Follow the [production workflow guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/PRODUCTION_WORKFLOW.md)

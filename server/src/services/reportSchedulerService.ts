@@ -1,5 +1,5 @@
 import cron, { type ScheduledTask } from "node-cron";
-import cronParser from "cron-parser";
+import { CronExpressionParser } from "cron-parser";
 import { reportRepository } from "../repositories/reportRepository.js";
 import { reportGeneratorService } from "./reportGeneratorService.js";
 import logger from "../utils/logger.js";
@@ -19,7 +19,11 @@ class ReportSchedulerService {
     try {
       const schedules = await reportRepository.getAllActiveSchedules();
       for (const schedule of schedules) {
-        this.scheduleJob(schedule.id, schedule.cronExpression);
+        this.scheduleJob(
+          schedule.id,
+          schedule.cronExpression,
+          schedule.timezone ?? "UTC",
+        );
       }
       logger.info(
         `[ReportScheduler] Initialised ${schedules.length} scheduled report jobs`,
@@ -32,30 +36,38 @@ class ReportSchedulerService {
   /**
    * Create (or replace) a cron job for the given schedule.
    */
-  scheduleJob(scheduleId: number, cronExpression: string): void {
+  scheduleJob(
+    scheduleId: number,
+    cronExpression: string,
+    timezone = "UTC",
+  ): void {
     // Stop any existing job for this schedule
     this.unscheduleJob(scheduleId);
 
-    if (!cron.validate(cronExpression)) {
+    if (!this.calculateNextRun(cronExpression, timezone)) {
       logger.warn(
         `[ReportScheduler] Invalid cron expression for schedule ${scheduleId}: "${cronExpression}"`,
       );
       return;
     }
 
-    const task = cron.schedule(cronExpression, async () => {
-      logger.info(
-        `[ReportScheduler] Cron tick — generating report for schedule ${scheduleId}`,
-      );
-      try {
-        await reportGeneratorService.generate(scheduleId);
-      } catch (err) {
-        logger.error(
-          `[ReportScheduler] Report generation failed for schedule ${scheduleId}:`,
-          err,
+    const task = cron.schedule(
+      cronExpression,
+      async () => {
+        logger.info(
+          `[ReportScheduler] Cron tick — generating report for schedule ${scheduleId}`,
         );
-      }
-    });
+        try {
+          await reportGeneratorService.generate(scheduleId);
+        } catch (err) {
+          logger.error(
+            `[ReportScheduler] Report generation failed for schedule ${scheduleId}:`,
+            err,
+          );
+        }
+      },
+      { timezone, noOverlap: true },
+    );
 
     this.scheduledJobs.set(scheduleId, task);
     logger.debug(
@@ -69,7 +81,7 @@ class ReportSchedulerService {
   unscheduleJob(scheduleId: number): void {
     const existing = this.scheduledJobs.get(scheduleId);
     if (existing) {
-      existing.stop();
+      void existing.destroy();
       this.scheduledJobs.delete(scheduleId);
       logger.debug(`[ReportScheduler] Unscheduled job ${scheduleId}`);
     }
@@ -80,13 +92,14 @@ class ReportSchedulerService {
    */
   async refreshAll(): Promise<void> {
     // Stop all existing jobs
-    for (const [id, task] of this.scheduledJobs) {
-      task.stop();
-    }
-    this.scheduledJobs.clear();
+    this.stop();
 
     // Reload from DB
     await this.init();
+  }
+
+  stop(): void {
+    for (const id of this.scheduledJobs.keys()) this.unscheduleJob(id);
   }
 
   /**
@@ -99,10 +112,7 @@ class ReportSchedulerService {
     try {
       const options: { tz?: string } = {};
       if (timezone) options.tz = timezone;
-      const interval = cronParser.CronExpressionParser.parse(
-        cronExpression,
-        options,
-      );
+      const interval = CronExpressionParser.parse(cronExpression, options);
       return interval.next().toISOString();
     } catch {
       return null;

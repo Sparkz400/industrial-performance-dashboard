@@ -91,37 +91,53 @@ across REST/tRPC. Socket handshakes reject foreign browser origins, and CSRF err
 logs reveal only token presence, never token values or session IDs. No finding is
 silenced with a CodeQL suppression.
 
-## Container findings and release gate
+## Browser-free runtime migration — 2026-10-26
 
-A fresh Node 24/Debian trixie/Chromium image with package upgrades was scanned using
-Trivy 0.76.1 on 2026-10-26. Local content digest:
-`sha256:4a564ea38e85633a993588d3fbf3ee6d00aff4fb224642f03c7a917c2038b3c4`.
-It contains the PR #51 application changes and patched npm lockfile. Hosted reports
-record their own exact commit and image identity; do not reuse this digest as
-proof for a later build.
+The Node 24/Wolfi runtime replaces the Debian/Chromium image. PDFKit renders the
+existing trend, alarm and OEE reports directly with licensed embedded Noto Sans
+fonts. The browser dependency and its system packages are removed from production;
+Playwright remains a development-only browser test dependency. See the
+[compatibility matrix, upgrade procedure and remaining limits](REPORTING.md).
 
-**413 findings remain: 1 critical, 66 high, 157 medium, 183 low, 6 unknown.**
-None lists an available fixed package. The critical
-[libxml2 CVE-2026-6653](https://security-tracker.debian.org/tracker/CVE-2026-6653)
-remains unfixed in stable Debian. These findings are not dismissed, suppressed or
-accepted for production. Repository maintainers own reassessment and mitigation
-before a release; rebuild and inspect the report for each candidate. Keep the
-installation isolated from untrusted inputs while the release gate is open.
+The complete Trivy 0.76.1 scan reports **zero findings**, across **28 Wolfi packages
+and 557 Node packages**. The full npm audit also reports zero at every severity,
+including development dependencies. Scans are unfiltered: there is no ignore file,
+`ignore-unfixed` switch, dismissed advisory or severity suppression. Fresh CI scans
+record the source commit, image identity, complete package inventory and JSON/SARIF.
+This is evidence for the scanned build and database date, not a promise about
+future advisories or a replacement for the broader F09 boundary audit.
 
-A Wolfi/Node 24 candidate passed application startup, migrations, login, PostgreSQL,
-native modules and PDF rendering, but its available Chromium 149 package produced
-1,655 findings (34 critical, 471 high). Both the starter and public Wolfi package
-indexes offered that older browser. The candidate was rejected; replacing the
-base did not safely resolve the browser exposure. No unverified binary or unstable
-Debian package was substituted to hide the findings.
+The local candidate's content digest is recorded below; hosted builds retain their
+own image identity and must not borrow this result for a different image.
+`sha256:b021d56f2a5a0dbb8e26a588ceb5850e534c1fdd5120b2453c3cfe75e9b08d34`.
 
-The retained Debian image passes SQLite, bcrypt, OPC UA import, scheduler, offline
-email, OpenTelemetry startup/shutdown and real Chromium PDF checks. An isolated
-container check also covers fresh PostgreSQL migrations/seed, served frontend,
-login/session persistence, database health, user 1000 and IANA timezone support.
+Validation: 136 server and 67 client unit tests, both builds, client type/lint/format,
+Storybook, Drizzle no-change generation and dev-tool compatibility checks. Twelve
+existing browser flows and the extended production workflow pass. New reporting
+checks cover template creation/editing and reload, machine/timezone settings,
+manual and actual timer runs, browser history/download, invalid input and viewer
+restrictions. PDFs were rendered and inspected against the old HTML renderer;
+Unicode, all 200 alarm rows, long-cell continuation, footers and failure cleanup
+are checked automatically. The SMTP service's attachment is verified in memory.
 
-Container CI now runs on PRs/main and weekly, builds with a fresh base, preserves
-full JSON/SARIF plus image identity, and blocks **fixable** high/critical findings.
-The complete unfiltered report still appears in GitHub code scanning. A successful
-fixable-finding gate does not approve the unfixed risks. See
-[P0 acceptance](P0_ACCEPTANCE.md) and [TODO F09](../TODO.md).
+The actual Wolfi image passes SQLite/bcrypt, OPC UA certificate creation/read/live
+subscription, OpenTelemetry startup/shutdown, PDF generation and email attachment
+creation. Isolated container acceptance covers fresh/repeated migrations, seed,
+frontend/login/session/health, user 1000, IANA timezones, automatic PDF download,
+report-volume persistence across restart and forced-termination/database-outage
+measurement replay. No production endpoint or external mail service was used.
+
+Container CI runs on PRs/main and weekly and now blocks **all high/critical
+findings, including those without fixes**. Full JSON/SARIF remains visible in code
+scanning, with image identity retained as an artifact. Rebuild and rescan each
+release candidate; passing automated checks does not establish physical-machine,
+SMTP-provider, backup/restore or deployment acceptance.
+
+### Superseded image evidence
+
+The previous PR #51 Node 24/Debian trixie/Chromium image
+`sha256:4a564ea38e85633a993588d3fbf3ee6d00aff4fb224642f03c7a917c2038b3c4`
+had 413 findings: 1 critical, 66 high, 157 medium, 183 low and 6 unknown, without
+available fixed packages. A full Wolfi image with Chromium 149 had 1,655 findings
+and was rejected. Those results remain historical evidence; they do not describe
+the migrated browser-free runtime. None was dismissed to obtain the new result.

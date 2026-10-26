@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -69,7 +69,7 @@ interface ScheduleFormValues {
   deliveryChannels: string[];
 }
 
-const DELIVERY_CHANNELS = ['email', 'slack', 'teams'];
+const DELIVERY_CHANNELS = ['email'];
 const COMMON_TIMEZONES = [
   'UTC',
   'America/New_York',
@@ -126,6 +126,10 @@ const fetchTemplates = async (): Promise<ReportTemplate[]> => {
 const ReportSchedulesPage: React.FC = () => {
   const queryClient = useQueryClient();
   const machines = useMachineStore((s) => s.machines);
+  const fetchMachines = useMachineStore((s) => s.fetchMachines);
+  useEffect(() => {
+    void fetchMachines();
+  }, [fetchMachines]);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<ReportSchedule | null>(null);
@@ -140,6 +144,7 @@ const ReportSchedulesPage: React.FC = () => {
     refetch,
   } = useQuery({
     queryKey: ['reportSchedules'],
+    refetchInterval: 5000,
     queryFn: fetchSchedules,
   });
 
@@ -343,7 +348,10 @@ const ReportSchedulesPage: React.FC = () => {
               {schedules.map((schedule) => (
                 <TableRow key={schedule.id}>
                   <TableCell>{schedule.name}</TableCell>
-                  <TableCell>{schedule.templateName}</TableCell>
+                  <TableCell>
+                    {templates.find((template) => template.id === schedule.templateId)?.name ??
+                      schedule.templateId}
+                  </TableCell>
                   <TableCell>
                     <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem">
                       {schedule.cronExpression}
@@ -379,10 +387,18 @@ const ReportSchedulesPage: React.FC = () => {
                     >
                       <PlayArrowIcon fontSize="small" />
                     </IconButton>
-                    <IconButton size="small" onClick={() => handleOpenEdit(schedule)}>
+                    <IconButton
+                      size="small"
+                      aria-label="Edit schedule"
+                      onClick={() => handleOpenEdit(schedule)}
+                    >
                       <EditIcon fontSize="small" />
                     </IconButton>
-                    <IconButton size="small" onClick={() => setDeleteConfirm(schedule)}>
+                    <IconButton
+                      size="small"
+                      aria-label="Delete schedule"
+                      onClick={() => setDeleteConfirm(schedule)}
+                    >
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </TableCell>
@@ -410,10 +426,11 @@ const ReportSchedulesPage: React.FC = () => {
               required
             />
             <FormControl fullWidth error={!!formErrors.templateId}>
-              <InputLabel>Template</InputLabel>
+              <InputLabel id="report-template">Template</InputLabel>
               <Select
                 value={formValues.templateId}
                 label="Template"
+                labelId="report-template"
                 onChange={(e) =>
                   setFormValues((prev) => ({ ...prev, templateId: e.target.value as number }))
                 }
@@ -440,10 +457,11 @@ const ReportSchedulesPage: React.FC = () => {
               required
             />
             <FormControl fullWidth>
-              <InputLabel>Timezone</InputLabel>
+              <InputLabel id="report-timezone">Timezone</InputLabel>
               <Select
                 value={formValues.timezone}
                 label="Timezone"
+                labelId="report-timezone"
                 onChange={(e) => setFormValues((prev) => ({ ...prev, timezone: e.target.value }))}
               >
                 {COMMON_TIMEZONES.map((tz) => (
@@ -454,9 +472,10 @@ const ReportSchedulesPage: React.FC = () => {
               </Select>
             </FormControl>
             <FormControl fullWidth>
-              <InputLabel>Machines</InputLabel>
+              <InputLabel id="report-machines">Machines</InputLabel>
               <Select
                 multiple
+                labelId="report-machines"
                 value={formValues.machineIds}
                 onChange={handleMachineIdsChange}
                 input={<OutlinedInput label="Machines" />}
@@ -479,21 +498,30 @@ const ReportSchedulesPage: React.FC = () => {
               placeholder="user@example.com, admin@example.com"
             />
             <FormControl fullWidth>
-              <InputLabel>Delivery Channels</InputLabel>
+              <InputLabel id="report-delivery-channels">Delivery Channels</InputLabel>
               <Select
                 multiple
+                labelId="report-delivery-channels"
                 value={formValues.deliveryChannels}
                 onChange={handleDeliveryChannelsChange}
                 input={<OutlinedInput label="Delivery Channels" />}
                 renderValue={(selected) => selected.join(', ')}
               >
-                {DELIVERY_CHANNELS.map((ch) => (
+                {[...new Set([...DELIVERY_CHANNELS, ...formValues.deliveryChannels])].map((ch) => (
                   <MenuItem key={ch} value={ch} sx={{ textTransform: 'capitalize' }}>
-                    {ch}
+                    {DELIVERY_CHANNELS.includes(ch) ? ch : `${ch} (unavailable)`}
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
+            {formValues.deliveryChannels.some(
+              (channel) => !DELIVERY_CHANNELS.includes(channel),
+            ) && (
+              <Alert severity="warning">
+                Only email report delivery is implemented. Remove unavailable channels to save this
+                schedule.
+              </Alert>
+            )}
           </Box>
         </DialogContent>
         <DialogActions>

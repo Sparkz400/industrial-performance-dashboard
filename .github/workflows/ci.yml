@@ -25,9 +25,13 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-        env:
-          PUPPETEER_SKIP_DOWNLOAD: 'true'
       - run: npm run build
+      - name: Verify report layout and complete PDF text
+        if: runner.os == 'Linux'
+        run: |
+          python -m pip install pypdf==6.10.0
+          node scripts/test-report-pdf.mjs
+          python scripts/check-report-pdf.py
       - run: node scripts/test-dev-dependencies.mjs
       - run: npm run db:generate -w server
       - name: Reject uncommitted migration changes
@@ -47,6 +51,7 @@ jobs:
           path: |
             client/coverage/
             server/coverage/
+            .local/report-evidence/
           retention-days: 7
   browser:
     name: Browser and database
@@ -66,7 +71,6 @@ jobs:
       E2E_USERNAME: admin
       E2E_PASSWORD: ci-only-admin-password
       SEED_ADMIN_PASSWORD: ci-only-admin-password
-      PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0

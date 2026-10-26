@@ -184,8 +184,8 @@ function bootstrap() {
   reportSchedulerService.init();
 
   const shutdown = createShutdown(server, services.io);
-  process.on('SIGINT', () => shutdown('SIGINT'));
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => { reportSchedulerService.stop(); void shutdown('SIGINT'); });
+  process.on('SIGTERM', () => { reportSchedulerService.stop(); void shutdown('SIGTERM'); });
 
   const PORT = config.PORT;
   server.listen(PORT, config.HOST, () => {

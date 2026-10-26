@@ -39,6 +39,7 @@ let pool,
   sessionStore,
   multiMachine,
   webhookService,
+  reportScheduler,
   liveClient;
 let created = false;
 const waitFor = async (check, message, timeout = 30000) => {
@@ -64,6 +65,7 @@ try {
     OPCUA_PKI_DIR: join(directory, "client-pki"),
     AUTO_ACCEPT_CERTIFICATES: "false",
     OPCUA_QUEUE_DELAY: "100",
+    REPORTS_DIR: join(directory, "reports"),
   });
   pool = new pg.Pool({
     host: process.env.DB_HOST,
@@ -135,6 +137,9 @@ try {
   ).default;
   ({ webhookService } =
     await import("../server/dist/src/services/webhookService.js"));
+  reportScheduler = (
+    await import("../server/dist/src/services/reportSchedulerService.js")
+  ).reportSchedulerService;
   const { chromium } = await import("@playwright/test");
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
@@ -812,6 +817,160 @@ try {
   console.log(
     "PASS: browser shift creation, operator classification, immutable reconciliation, corrections and printed report; exact independent OEE = 43.333333%",
   );
+  // Exercise saved configuration and actual downloads through the reporting UI.
+  await page.goto(`${frontend}/reports/templates`);
+  await page.getByRole("button", { name: /create template/i }).click();
+  let dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^Name/).fill("Migration report");
+  await dialog.getByLabel("Report title", { exact: true }).fill("Prüfstand Δ");
+  await dialog.getByLabel("Reporting window (hours)").fill("168");
+  for (const section of ["OEE Summary", "Alert Summary", "Trending Data"])
+    await dialog.getByLabel(section, { exact: true }).check();
+  await dialog
+    .getByLabel("Trend signals")
+    .pressSequentially("AlarmSignal, MissingSignal");
+  await dialog.getByRole("button", { name: /^save$/i }).click();
+  await dialog.waitFor({ state: "hidden" });
+  let templates = await (await call("GET", "/api/v1/reports/templates")).json();
+  const template = templates.find((item) => item.name === "Migration report");
+  assert.ok(template);
+  assert.equal(template.templateConfig.lookbackHours, 168);
+  assert.deepEqual(
+    template.templateConfig.sections.find((item) => item.type === "trending")
+      .nodeKeys,
+    ["AlarmSignal", "MissingSignal"],
+  );
+  await page.reload();
+  await page
+    .getByRole("row")
+    .filter({ hasText: "Migration report" })
+    .getByLabel("Edit template")
+    .click();
+  dialog = page.getByRole("dialog");
+  assert.equal(
+    await dialog.getByLabel("Trend signals").inputValue(),
+    "AlarmSignal, MissingSignal",
+  );
+  await dialog.getByLabel("Description").fill("Browser-free acceptance");
+  await dialog.getByRole("button", { name: /save/i }).click();
+  await dialog.waitFor({ state: "hidden" });
+  templates = await (await call("GET", "/api/v1/reports/templates")).json();
+  assert.deepEqual(
+    templates.find((item) => item.id === template.id).templateConfig,
+    template.templateConfig,
+  );
+  for (const invalid of [
+    { cronExpression: "bad" },
+    { timezone: "Invalid/Zone" },
+  ]) {
+    assert.equal(
+      (
+        await call("POST", "/api/v1/reports/schedules", {
+          templateId: template.id,
+          name: "Invalid",
+          cronExpression: "0 6 * * *",
+          ...invalid,
+        })
+      ).status(),
+      400,
+    );
+  }
+  assert.equal(
+    (
+      await call("POST", "/api/v1/reports/templates", {
+        name: "Invalid",
+        type: "daily",
+        templateConfig: { lookbackHours: -1 },
+      })
+    ).status(),
+    400,
+  );
+  await page.goto(`${frontend}/reports/schedules`);
+  await page.getByRole("button", { name: /create schedule/i }).click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^Name/).fill("Migration schedule");
+  await dialog.getByRole("combobox", { name: "Template", exact: true }).click();
+  await page
+    .getByRole("option", { name: "Migration report", exact: true })
+    .click();
+  await dialog.getByRole("combobox", { name: "Timezone", exact: true }).click();
+  await page
+    .getByRole("option", { name: "Europe/Berlin", exact: true })
+    .click();
+  await dialog.getByRole("combobox", { name: "Machines", exact: true }).click();
+  await page.getByRole("option", { name: machine.name, exact: true }).click();
+  await page.keyboard.press("Escape");
+  await dialog.getByRole("button", { name: /^save$/i }).click();
+  await dialog.waitFor({ state: "hidden" });
+  const schedule = (
+    await (await call("GET", "/api/v1/reports/schedules")).json()
+  ).find((item) => item.name === "Migration schedule");
+  assert.deepEqual(schedule.machineIds, [machine.id]);
+  assert.equal(schedule.timezone, "Europe/Berlin");
+  assert.ok(schedule.nextRunAt);
+  await page
+    .getByRole("row")
+    .filter({ hasText: "Migration schedule" })
+    .getByTitle("Run Now")
+    .click();
+  const completedReports = async () =>
+    (
+      await (
+        await call(
+          "GET",
+          `/api/v1/reports/history?scheduleId=${schedule.id}&status=completed`,
+        )
+      ).json()
+    ).data;
+  await waitFor(
+    async () => (await completedReports()).length === 1,
+    "Manual report did not finish",
+  );
+  await page.goto(`${frontend}/reports/history`);
+  const downloadEvent = page.waitForEvent("download");
+  await page
+    .getByRole("row")
+    .filter({ hasText: "Migration schedule" })
+    .getByTitle("Download")
+    .click();
+  const download = await downloadEvent;
+  await download.saveAs(".local/production-evidence/scheduled-report.pdf");
+  const downloaded = await readFile(
+    ".local/production-evidence/scheduled-report.pdf",
+  );
+  assert.equal(downloaded.subarray(0, 4).toString(), "%PDF");
+  assert.ok(downloaded.length > 5000);
+  await page.screenshot({
+    path: ".local/production-evidence/report-history.png",
+    fullPage: true,
+  });
+  assert.equal(
+    (
+      await call(
+        "POST",
+        `/api/v1/reports/schedules/${schedule.id}/run-now`,
+        {},
+        viewer.request,
+      )
+    ).status(),
+    403,
+  );
+  // A real timer tick proves the saved schedule reaches the generator, not just a mock.
+  await call("PUT", `/api/v1/reports/schedules/${schedule.id}`, {
+    cronExpression: "*/2 * * * * *",
+  });
+  await waitFor(
+    async () => (await completedReports()).length >= 2,
+    "Automatic report did not finish",
+  );
+  await call("PUT", `/api/v1/reports/schedules/${schedule.id}`, {
+    isActive: false,
+  });
+  assert.equal(reportScheduler.activeJobCount, 0);
+  assert.deepEqual(pageErrors, []);
+  console.log(
+    "PASS: report template create/edit/persistence, machine selection, timezone, invalid input, manual/automatic generation, browser history/download and viewer denial",
+  );
   // Logout and account revocation deny both subsequent requests and live sockets.
   await call("POST", "/api/v1/auth/logout", {}, viewer.request);
   await waitFor(() => !liveClient.connected, "Logout left socket connected");
@@ -894,6 +1053,7 @@ try {
   await context.close();
   await webhookService.stop();
 } finally {
+  reportScheduler?.stop();
   liveClient?.disconnect();
   await webhookService?.stop();
   await browser?.close();
@@ -909,9 +1069,15 @@ try {
   await pool?.end();
   if (created) {
     // Pool shutdown can resolve before PostgreSQL observes the socket disconnect.
-    await waitFor(async () => (
-      await admin.query("SELECT 1 FROM pg_stat_activity WHERE datname=$1", [database])
-    ).rowCount === 0, "Test database still has live connections after shutdown");
+    await waitFor(
+      async () =>
+        (
+          await admin.query("SELECT 1 FROM pg_stat_activity WHERE datname=$1", [
+            database,
+          ])
+        ).rowCount === 0,
+      "Test database still has live connections after shutdown",
+    );
     await admin.query(`DROP DATABASE "${database}"`);
   }
   await admin.end();

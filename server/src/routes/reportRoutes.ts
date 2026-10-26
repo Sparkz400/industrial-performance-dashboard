@@ -20,6 +20,38 @@ router.use(requireAuth);
 // ===== Validation Schemas =====
 
 const idParamSchema = Joi.object({ id: Joi.number().integer().required() });
+const templateConfigSchema = Joi.object({
+  title: Joi.string().max(500),
+  lookbackHours: Joi.number().greater(0).max(744),
+  sections: Joi.array()
+    .max(50)
+    .items(
+      Joi.object({
+        type: Joi.string().max(100).required(),
+        title: Joi.string().max(500),
+        machineId: Joi.number().integer().positive(),
+        nodeKeys: Joi.array().max(32).items(Joi.string().max(255)),
+      }).unknown(true),
+    ),
+}).unknown(true);
+const timezoneSchema = Joi.string()
+  .max(50)
+  .custom((value, helpers) => {
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: value });
+      return value;
+    } catch {
+      return helpers.error("any.invalid");
+    }
+  });
+const cronSchema = Joi.string()
+  .min(1)
+  .max(100)
+  .custom((value, helpers) =>
+    reportSchedulerService.calculateNextRun(value)
+      ? value
+      : helpers.error("any.invalid"),
+  );
 
 // --- Templates ---
 
@@ -27,7 +59,7 @@ const templateBodySchema = Joi.object({
   name: Joi.string().required().min(1).max(255),
   type: Joi.string().required().min(1).max(50),
   description: Joi.string().optional().allow("", null),
-  templateConfig: Joi.object().required(),
+  templateConfig: templateConfigSchema.required(),
   plantId: Joi.number().integer().optional().allow(null),
   isActive: Joi.boolean().default(true),
 });
@@ -36,7 +68,7 @@ const templateUpdateSchema = Joi.object({
   name: Joi.string().min(1).max(255).optional(),
   type: Joi.string().min(1).max(50).optional(),
   description: Joi.string().optional().allow("", null),
-  templateConfig: Joi.object().optional(),
+  templateConfig: templateConfigSchema.optional(),
   plantId: Joi.number().integer().optional().allow(null),
   isActive: Joi.boolean().optional(),
 }).min(1);
@@ -46,12 +78,16 @@ const templateUpdateSchema = Joi.object({
 const scheduleBodySchema = Joi.object({
   templateId: Joi.number().integer().required(),
   name: Joi.string().required().min(1).max(255),
-  cronExpression: Joi.string().required().min(1).max(100),
-  timezone: Joi.string().max(50).default("UTC"),
-  machineIds: Joi.array().items(Joi.number().integer()).default([]),
+  cronExpression: cronSchema.required(),
+  timezone: timezoneSchema.default("UTC"),
+  machineIds: Joi.array()
+    .max(100)
+    .items(Joi.number().integer().positive())
+    .unique()
+    .default([]),
   recipients: Joi.array().items(Joi.string().email()).default([]),
   deliveryChannels: Joi.array()
-    .items(Joi.string().valid("email", "webhook"))
+    .items(Joi.string().valid("email"))
     .default(["email"]),
   isActive: Joi.boolean().default(true),
 });
@@ -59,13 +95,15 @@ const scheduleBodySchema = Joi.object({
 const scheduleUpdateSchema = Joi.object({
   templateId: Joi.number().integer().optional(),
   name: Joi.string().min(1).max(255).optional(),
-  cronExpression: Joi.string().min(1).max(100).optional(),
-  timezone: Joi.string().max(50).optional(),
-  machineIds: Joi.array().items(Joi.number().integer()).optional(),
-  recipients: Joi.array().items(Joi.string().email()).optional(),
-  deliveryChannels: Joi.array()
-    .items(Joi.string().valid("email", "webhook"))
+  cronExpression: cronSchema.optional(),
+  timezone: timezoneSchema.optional(),
+  machineIds: Joi.array()
+    .max(100)
+    .items(Joi.number().integer().positive())
+    .unique()
     .optional(),
+  recipients: Joi.array().items(Joi.string().email()).optional(),
+  deliveryChannels: Joi.array().items(Joi.string().valid("email")).optional(),
   isActive: Joi.boolean().optional(),
 }).min(1);
 
@@ -142,7 +180,17 @@ router.get(
   "/schedules",
   asyncHandler(async (_req: Request, res: Response) => {
     const schedules = await reportRepository.listSchedules();
-    res.json(schedules);
+    res.json(
+      schedules.map((schedule) => ({
+        ...schedule,
+        nextRunAt: schedule.isActive
+          ? reportSchedulerService.calculateNextRun(
+              schedule.cronExpression,
+              schedule.timezone ?? "UTC",
+            )
+          : null,
+      })),
+    );
   }),
 );
 

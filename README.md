@@ -99,8 +99,9 @@ npm run test:e2e
 Browser tests need the local database, seeded credentials and Chromium. See
 [Contributing](CONTRIBUTING.md) for the full commands and CI boundaries.
 Security checks include the full npm audit, CodeQL and exact-image container reports.
-Unfixed image findings remain an open release gate; see the
-[dependency and image review](docs/DEPENDENCY_REVIEW.md).
+The production image uses Node 24/Wolfi and browser-free PDFs; the full migrated
+image scan is clear. See the [dependency and image review](docs/DEPENDENCY_REVIEW.md)
+and [reporting compatibility/upgrade guide](docs/REPORTING.md) for evidence and limits.
 
 ## License
 

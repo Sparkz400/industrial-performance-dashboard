@@ -109,11 +109,12 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Storybook builds, Drizzle transforms/generation and CSRF/socket-origin regressions pass.
   Follow-up: qualify coordinated MUI, Storybook/Vite, lint, Vitest 5, virtualization,
   grid-layout and Node major migrations. The full boundary audit remains open.
-  Image review: PR #51 rebuild with package upgrades retains 413 Debian findings,
-  including one critical and 66 high, with no available fixes. A tested Wolfi candidate
-  has more browser vulnerabilities and is not adopted. Full reports remain visible;
-  CI blocks fixable high/critical findings. No residual risk is accepted by this change.
-  Maintainers own upstream reassessment before release; see the dependency review.
+  Image remediation complete: Node 24/Wolfi with direct PDF rendering removes the
+  Debian/Chromium runtime. Full Trivy scan: zero findings across 28 OS and 557 Node
+  packages. CI blocks all high/critical findings, including unfixed ones. Actual-image
+  collection, crash/outage replay, scheduled PDF/download, email attachment and report
+  persistence checks pass. [Migration evidence and limits](docs/REPORTING.md).
+  Maintainers must rescan each release; the broader boundary audit above remains open.
 - [ ] **F10 — Create a feature-level acceptance matrix** · P0 · M0 · Improve · M. Depends: F02, F03, F06, F07.
   Done: enabled pilot features have happy-path and failure-path evidence; distinguish
   unit, database, browser, simulator and physical-machine checks. CI success alone never
@@ -381,11 +382,17 @@ below retain their unfulfilled acceptance criteria.
   references with readable PDF/print layouts. Review a real rendered report; formatting
   must not hide incomplete data or change numeric precision silently.
   Progress: Largest losses, gaps, inputs and readable print/JSON output are implemented and rendered. Action ownership and handover references remain open.
+  Scheduled PDF migration: existing trend/alarm/OEE sections, Unicode fonts, multipage
+  tables, unknown-data notices and downloads are verified without a server browser.
+  Template editing now saves the actual generator configuration; [evidence](docs/REPORTING.md).
 
 - [ ] **R03 — Make schedules and delivery restart-safe** · P1 · M2 · Improve · L. Depends: R01, I01.
   Done: schedule timezone/DST, missed-run policy and stable run identity are explicit;
   retries do not create uncontrolled duplicate mail, and overlapping executions are
   bounded. Failed generation and failed delivery are separate statuses.
+  Progress: timezone/DST, actual timer execution, machine selection and in-process
+  overlap protection are tested. Missed-run replay, cross-process locking, durable
+  delivery retry/deduplication and separate delivery status remain open.
 - [ ] **R04 — Preserve report revisions and reproducibility** · P1 · M2 · New · M. Depends: H04, R01.
   Done: exports record inputs, window, mapping/calculation revisions and generation time;
   a correction creates a new revision with a reason. Published reports can be reproduced

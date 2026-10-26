@@ -40,8 +40,8 @@ for private vulnerability reporting.
 No. Functional tests, dependency audits and container security reports are separate
 evidence. Review [current status and limits](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/STATUS.md), including image advisories and physical-machine qualification.
 
-Passing CI does not approve the unfixed container findings. The full npm audit,
-CodeQL and image reports are separate checks; see the
+The migrated runtime's full scan is clear; this does not qualify production hardware
+or future builds. The full npm audit, CodeQL and image reports are separate checks; see the
 [security review](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DEPENDENCY_REVIEW.md)
 for current evidence and the release gate.
 
@@ -50,4 +50,6 @@ for current evidence and the release gate.
 Public links and embeds are disabled until scoped data sharing is qualified.
 Signed-in viewers can see this company's data and classify observed stops.
 Signed alarm webhooks are tested; email/chat/SMS channel delivery is disabled.
+Scheduled report PDF email is a separate SMTP service; see the
+[reporting guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/REPORTING.md).
 See the [workflow limits](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/PRODUCTION_WORKFLOW.md).

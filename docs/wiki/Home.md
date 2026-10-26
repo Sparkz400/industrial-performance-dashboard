@@ -26,5 +26,6 @@ reconciled reports, durable alarm delivery and the single-company permission pol
 Public sharing and legacy notification channels are disabled. Physical qualification
 and protected OPC UA identities remain open.
 
-The full npm audit is clear in this wave. Unfixed operating-system/browser findings
-remain an open release gate; see the [security review](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DEPENDENCY_REVIEW.md).
+The full npm audit and migrated Node 24/Wolfi image scan are clear in this wave.
+Scheduled reports use direct PDF generation; see the [reporting guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/REPORTING.md)
+and [security review](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DEPENDENCY_REVIEW.md).
