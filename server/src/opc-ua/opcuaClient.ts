@@ -293,6 +293,51 @@ export async function connectAndSubscribe(
         }
       }
 
+      // A read heartbeat provides fresh observations even when a monitored value stays constant.
+      let reading = false;
+      const heartbeat = setInterval(() => {
+        if (reading) return;
+        reading = true;
+        const entries = Object.entries(activeMapping);
+        void session
+          .read(
+            entries.map(([, mapping]) => ({
+              nodeId: mapping.nodeId,
+              attributeId: opcua.AttributeIds.Value,
+            })),
+            0,
+          )
+          .then((values) => {
+            for (let i = 0; i < entries.length; i++) {
+              const [key, mapping] = entries[i];
+              const value = values[i];
+              opcuaEmitter.emit("nodeChanged", {
+                key,
+                label: mapping.label,
+                value: value.value.value ?? null,
+                timestamp: new Date(),
+                sourceTimestamp: value.sourceTimestamp,
+                receivedAt: new Date(),
+                signalMetadata: metadataByKey.get(key),
+                dataType: mapping.dataType,
+                statusCode: value.statusCode.toString(),
+                machineId,
+              });
+            }
+          })
+          .catch((error) =>
+            logger.warn(
+              "OPC UA read heartbeat failed; coverage becomes unknown after the configured gap",
+              error,
+            ),
+          )
+          .finally(() => {
+            reading = false;
+          });
+      }, 10000);
+      subscription.once("terminated", () => clearInterval(heartbeat));
+      session.once("session_closed", () => clearInterval(heartbeat));
+
       return {
         client,
         session,

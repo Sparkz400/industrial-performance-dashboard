@@ -65,11 +65,11 @@ describe("CSRF Token Endpoint - GET /api/v1/csrf-token", () => {
 });
 
 describe("Metrics Endpoint - GET /metrics", () => {
-  it("should return metrics without authentication", async () => {
+  it("requires authentication for metrics", async () => {
     const request = await getTestApp();
     const res = await request.get("/metrics");
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(401);
   });
 });
 

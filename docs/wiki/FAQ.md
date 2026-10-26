@@ -39,3 +39,10 @@ for private vulnerability reporting.
 
 No. Functional tests, dependency audits and container security reports are separate
 evidence. Review [current status and limits](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/STATUS.md), including image advisories and physical-machine qualification.
+
+## Can I use public links or notification channels?
+
+Public links and embeds are disabled until scoped data sharing is qualified.
+Signed-in viewers can see this company's data and classify observed stops.
+Signed alarm webhooks are tested; email/chat/SMS channel delivery is disabled.
+See the [workflow limits](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/PRODUCTION_WORKFLOW.md).

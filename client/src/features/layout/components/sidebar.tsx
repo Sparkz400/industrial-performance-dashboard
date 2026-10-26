@@ -267,6 +267,18 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ open, onToggle, o
             </ListItemButton>
           </ListItem>
 
+          <ListItem disablePadding>
+            <ListItemButton
+              component={Link}
+              to="/production"
+              selected={location.pathname === '/production'}
+            >
+              <ListItemIcon>
+                <FactoryIcon />
+              </ListItemIcon>
+              {open && <ListItemText primary="Production shift" />}
+            </ListItemButton>
+          </ListItem>
           {/* Machines (admin only) */}
           {user?.role === 'admin' && (
             <ListItem disablePadding>

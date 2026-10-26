@@ -347,3 +347,11 @@ export type {
   DeleteReportScheduleResponse,
   GetReportHistoryResponse,
 } from "./api-types.js";
+export type {
+  ProductionState,
+  ProductionSignal,
+  ProductionProfile,
+  ProductionInterval,
+  DowntimeReason,
+  ShiftReport,
+} from "./production.js";

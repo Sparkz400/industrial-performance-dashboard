@@ -11,6 +11,8 @@ import { useSnackbar, closeSnackbar } from 'notistack';
 import { useStatusStore } from './stores/useStatusStore';
 import { useAuthStore } from './stores/useAuthStore';
 
+const ProductionPage = React.lazy(() => import('./features/production/ProductionPage'));
+
 // Lazy load pages
 const LoginPage = React.lazy(() => import('./features/auth/pages/LoginPage'));
 const DashboardPage = React.lazy(() => import('./features/dashboard/pages/dashboardPage'));
@@ -236,6 +238,14 @@ function App() {
               <Suspense fallback={<PageLoader />}>
                 <AnimatePresence mode="wait">
                   <Routes>
+                    <Route
+                      path="/production"
+                      element={
+                        <PageTransition>
+                          <ProductionPage />
+                        </PageTransition>
+                      }
+                    />
                     <Route
                       path="/"
                       element={

@@ -29,7 +29,10 @@ their signals, and build a shared view of a production line.
 - Retain namespace-aware signal identity and receive time for new measurements.
 - Show bounded trends over the full selected interval with quality gaps and resolution.
 - Buffer measurements on local disk and replay them after database interruptions.
-- Provide alerts, report scheduling and administration with authenticated sessions.
+- Commission namespace-aware machine profiles and create a machine dashboard.
+- Track running/idle/fault/unknown intervals, classify stops and reconcile a shift report.
+- Persist alarm transitions and signed webhook retries with authenticated acknowledgment.
+- Enforce admin/viewer access and disconnect revoked or expired sessions.
 
 Additional experimental screens include statistical process control, digital
 twins, recipes and compliance records. Their presence is not a support or
@@ -37,7 +40,9 @@ certification claim; see [current status](docs/STATUS.md).
 
 Edge synchronization is disabled until canonical central ingestion is implemented.
 AI suggestions disclose external processing and do not execute measurement queries.
-See [P0 acceptance evidence](docs/P0_ACCEPTANCE.md) for the first fixes and remaining gates.
+Public links/embeds and undelivered email/chat/SMS channels are disabled.
+See the [production workflow](docs/PRODUCTION_WORKFLOW.md) and
+[P0 acceptance evidence](docs/P0_ACCEPTANCE.md) for tested paths and remaining gates.
 
 ## Where it is going
 

@@ -2,6 +2,7 @@ import db from "../database/db.js";
 import { opcuaData } from "../database/schema.js";
 import logger from "../utils/logger.js";
 import config from "../config/config.js";
+import alarmEvaluator from "../services/alarmService.js";
 import {
   MeasurementSpool,
   toMeasurementRow,
@@ -15,6 +16,7 @@ export class OpcuaQueueWorker {
   private timer?: ReturnType<typeof setTimeout>;
   private pending?: Promise<void>;
   private stopped = false;
+  private storageFailure: { at: string; message: string } | null = null;
 
   private getSpool() {
     return (this.spool ??= new MeasurementSpool(config.OPCUA_SPOOL_PATH));
@@ -23,7 +25,23 @@ export class OpcuaQueueWorker {
   enqueue(data: OpcuaDataItem): void {
     if (this.stopped) throw new Error("Measurement collector is stopped");
     // Fail visibly if local storage is unavailable; never acknowledge a lost sample.
-    this.getSpool().enqueue(data);
+    try {
+      this.getSpool().enqueue(data);
+    } catch (error) {
+      this.storageFailure = {
+        at: new Date().toISOString(),
+        message: error instanceof Error ? error.message : "Storage unavailable",
+      };
+      throw error;
+    }
+  }
+
+  getHealth() {
+    return {
+      pendingMeasurements: this.getSpool().count(),
+      storageFailure: this.storageFailure,
+      continuity: "unreceived intervals remain unknown",
+    };
   }
 
   async processBatch(): Promise<void> {
@@ -33,6 +51,7 @@ export class OpcuaQueueWorker {
       .insert(opcuaData)
       .values(batch.map(toMeasurementRow))
       .onConflictDoNothing();
+    for (const entry of batch) await alarmEvaluator.evaluate(entry);
     // Retrying after an ambiguous PostgreSQL commit is safe because event IDs are stable.
     this.getSpool().acknowledge(batch);
   }

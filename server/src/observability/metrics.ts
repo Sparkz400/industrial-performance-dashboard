@@ -96,6 +96,7 @@ export function metricsMiddleware(
  * Normalize route paths to reduce cardinality.
  * Replaces numeric path segments with :id placeholder.
  */
-function normalizeRoute(path: string): string {
+function normalizeRoute(path: unknown): string {
+  if (typeof path !== "string") return "/unmatched";
   return path.replace(/\/\d+/g, "/:id");
 }

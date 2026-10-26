@@ -7,11 +7,8 @@ import {
   Select,
   InputLabel,
   FormControl,
-  Chip,
-  OutlinedInput,
   Typography,
 } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material';
 
 export interface AlertRuleFormValues {
   name: string;
@@ -32,17 +29,11 @@ interface Machine {
   name: string;
 }
 
-interface Channel {
-  id: number;
-  name: string;
-}
-
 interface AlertRuleFormProps {
   initialValues?: Partial<AlertRuleFormValues>;
   onSubmit: (values: AlertRuleFormValues) => void;
   onCancel: () => void;
   machines?: Machine[];
-  channels?: Channel[];
 }
 
 const CONDITIONS = [
@@ -50,7 +41,7 @@ const CONDITIONS = [
   { value: 'lt', label: 'Less Than' },
   { value: 'eq', label: 'Equal To' },
   { value: 'neq', label: 'Not Equal To' },
-  { value: 'range', label: 'Range' },
+  { value: 'range', label: 'Outside Range' },
   { value: 'rate_of_change', label: 'Rate of Change' },
   { value: 'state_change', label: 'State Change' },
 ];
@@ -76,7 +67,6 @@ const AlertRuleForm: React.FC<AlertRuleFormProps> = ({
   onSubmit,
   onCancel,
   machines = [],
-  channels = [],
 }) => {
   const [values, setValues] = useState<AlertRuleFormValues>({
     ...defaultValues,
@@ -97,11 +87,6 @@ const AlertRuleForm: React.FC<AlertRuleFormProps> = ({
         return next;
       });
     }
-  };
-
-  const handleChannelsChange = (event: SelectChangeEvent<number[]>) => {
-    const value = event.target.value;
-    handleChange('channels', typeof value === 'string' ? [] : value);
   };
 
   const validate = (): boolean => {
@@ -126,7 +111,7 @@ const AlertRuleForm: React.FC<AlertRuleFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
-      onSubmit(values);
+      onSubmit({ ...values, channels: [] });
     }
   };
 
@@ -161,7 +146,7 @@ const AlertRuleForm: React.FC<AlertRuleFormProps> = ({
           onChange={(e) => handleChange('machineId', e.target.value)}
         >
           <MenuItem value="">
-            <em>None</em>
+            <em>All machines (evaluated separately)</em>
           </MenuItem>
           {machines.map((m) => (
             <MenuItem key={m.id} value={m.id}>
@@ -228,7 +213,7 @@ const AlertRuleForm: React.FC<AlertRuleFormProps> = ({
       )}
       {values.condition === 'rate_of_change' && (
         <TextField
-          label="Rate Window (seconds)"
+          label="Maximum sample gap (seconds)"
           type="number"
           value={values.rateWindowSeconds}
           onChange={(e) =>
@@ -254,29 +239,10 @@ const AlertRuleForm: React.FC<AlertRuleFormProps> = ({
           ))}
         </Select>
       </FormControl>
-      <FormControl fullWidth>
-        <InputLabel>Notification Channels</InputLabel>
-        <Select
-          multiple
-          value={values.channels}
-          onChange={handleChannelsChange}
-          input={<OutlinedInput label="Notification Channels" />}
-          renderValue={(selected) => (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-              {selected.map((id) => {
-                const ch = channels.find((c) => c.id === id);
-                return <Chip key={id} label={ch?.name || id} size="small" />;
-              })}
-            </Box>
-          )}
-        >
-          {channels.map((ch) => (
-            <MenuItem key={ch.id} value={ch.id}>
-              {ch.name}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+      <Typography variant="body2">
+        Incidents appear in Alert History. Configure signed delivery in Settings → Webhooks
+        (alarm.triggered / alarm.cleared). Email, chat and SMS channels are unavailable.
+      </Typography>
       <TextField
         label="Cooldown (seconds)"
         type="number"

@@ -32,23 +32,38 @@ import WebhookIcon from '@mui/icons-material/Webhook';
 import { useSnackbar } from 'notistack';
 import { api } from '@/utils/api';
 import type { Webhook } from '@/types';
+import { API_BASE_URL } from '@/config/config';
+import protectedFetch from '@/utils/protectedFetch';
+import { useQuery } from '@tanstack/react-query';
 
 const AVAILABLE_EVENTS = [
-  { value: '*', label: 'All Events' },
-  { value: 'dashboard.created', label: 'Dashboard Created' },
-  { value: 'dashboard.updated', label: 'Dashboard Updated' },
-  { value: 'dashboard.deleted', label: 'Dashboard Deleted' },
-  { value: 'machine.connected', label: 'Machine Connected' },
-  { value: 'machine.disconnected', label: 'Machine Disconnected' },
+  { value: '*', label: 'All supported alarm events' },
   { value: 'alarm.triggered', label: 'Alarm Triggered' },
-  { value: 'alarm.resolved', label: 'Alarm Resolved' },
-  { value: 'opcua.data', label: 'OPC UA Data Received' },
+  { value: 'alarm.cleared', label: 'Alarm Cleared' },
 ];
 
 /**
  *
  */
 export default function WebhookManager() {
+  const [createdSecret, setCreatedSecret] = useState('');
+  const deliveries = useQuery({
+    queryKey: ['webhook-deliveries'],
+    queryFn: async () => {
+      const response = await protectedFetch(`${API_BASE_URL}/webhooks/deliveries`);
+      if (!response.ok) throw new Error('Cannot read delivery attempts');
+      return response.json() as Promise<
+        {
+          id: number;
+          webhookId: number;
+          attempts: number;
+          deliveredAt: string | null;
+          lastStatus: number | null;
+        }[]
+      >;
+    },
+    refetchInterval: 5000,
+  });
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -83,7 +98,8 @@ export default function WebhookManager() {
     }
     setCreating(true);
     try {
-      await api.endpoints.createWebhook(form);
+      const created = (await api.endpoints.createWebhook(form)) as Webhook;
+      setCreatedSecret(created.secret);
       setDialogOpen(false);
       setForm({ name: '', url: '', events: [] });
       loadWebhooks();
@@ -156,9 +172,35 @@ export default function WebhookManager() {
       </Box>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Send real-time event notifications to external systems like SAP, MES, AWS IoT, or Azure IoT
-        Hub.
+        Deliver persisted alarm events with a signed payload. Receivers must deduplicate the
+        X-Webhook-Delivery-Id header. Failed deliveries retry after a delay; the test button is a
+        separate test event.
       </Typography>
+
+      {createdSecret && (
+        <Alert severity="info" onClose={() => setCreatedSecret('')} sx={{ mb: 2 }}>
+          Save this signing secret in the receiver; it is shown only after creation.
+          <TextField
+            fullWidth
+            label="New webhook signing secret"
+            value={createdSecret}
+            slotProps={{ input: { readOnly: true } }}
+          />
+        </Alert>
+      )}
+      {deliveries.error && <Alert severity="error">{String(deliveries.error)}</Alert>}
+      {deliveries.data && deliveries.data.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          <Typography fontWeight="bold">Delivery attempts (up to 100, pending first)</Typography>
+          {deliveries.data.map((delivery) => (
+            <Typography variant="body2" key={delivery.id}>
+              Delivery {delivery.id} → webhook {delivery.webhookId}:{' '}
+              {delivery.deliveredAt ? 'delivered' : 'pending retry'} · attempts {delivery.attempts}{' '}
+              · last HTTP status {delivery.lastStatus ?? 'not sent'}
+            </Typography>
+          ))}
+        </Box>
+      )}
 
       {webhooks.length === 0 ? (
         <Paper sx={{ p: 4, textAlign: 'center' }}>

@@ -13,3 +13,9 @@ for measurement quality, durable replay, OEE boundaries and deployment limits.
 
 See [[Roadmap]] for proposed contracts, connector expansion and multi-site work.
 Those proposals do not describe functionality already supported by this architecture.
+
+The [production workflow](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/PRODUCTION_WORKFLOW.md)
+covers guided commissioning, immutable shift profiles, operator corrections,
+reconciled reports, durable alarm delivery and the single-company permission policy.
+Public sharing and legacy notification channels are disabled. Physical qualification
+and protected OPC UA identities remain open.

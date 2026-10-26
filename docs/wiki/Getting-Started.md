@@ -10,3 +10,7 @@ mapping, local Windows startup and container deployment.
 Read [compatibility](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/COMPATIBILITY.md)
 before connecting equipment and [security](https://github.com/Sparkz400/performance_dashboard/blob/main/SECURITY.md)
 before exposing a service beyond a workstation.
+
+After starting the owned simulator, open **Production shift → Commission machine**.
+Follow the [production workflow guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/PRODUCTION_WORKFLOW.md)
+for reusable mappings, shift reports and isolated recovery/browser checks.

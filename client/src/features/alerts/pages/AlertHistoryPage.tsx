@@ -21,7 +21,6 @@ import {
   TextField,
 } from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import DoneAllIcon from '@mui/icons-material/DoneAll';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PageSkeleton from '@/shared/components/loading/PageSkeleton';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -37,7 +36,8 @@ interface AlertHistoryItem {
   triggerValue: number;
   threshold: number;
   status: string;
-  triggeredAt: string;
+  createdAt: string;
+  metadata?: { conditionState?: string };
   acknowledgedAt: string | null;
   resolvedAt: string | null;
 }
@@ -113,7 +113,7 @@ const AlertHistoryPage: React.FC = () => {
       if (!res.ok) throw new Error('Failed to fetch alert history');
       return res.json();
     },
-    refetchInterval: 30000,
+    refetchInterval: 5000,
   });
 
   const acknowledgeMutation = useMutation({
@@ -122,18 +122,6 @@ const AlertHistoryPage: React.FC = () => {
         method: 'PUT',
       });
       if (!res.ok) throw new Error('Failed to acknowledge alert');
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['alertHistory'] });
-    },
-  });
-
-  const resolveMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await protectedFetch(API_ENDPOINTS.alerts.resolve(id), {
-        method: 'PUT',
-      });
-      if (!res.ok) throw new Error('Failed to resolve alert');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alertHistory'] });
@@ -151,7 +139,8 @@ const AlertHistoryPage: React.FC = () => {
             Alert History
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            View and manage triggered alerts
+            Acknowledge incidents here. Only good measurements can confirm recovery; unknown quality
+            never clears an alarm.
           </Typography>
         </Box>
         <Button startIcon={<RefreshIcon />} onClick={() => refetch()} disabled={isLoading}>
@@ -255,7 +244,7 @@ const AlertHistoryPage: React.FC = () => {
                 ) : (
                   items.map((item) => (
                     <TableRow key={item.id}>
-                      <TableCell>{formatDate(item.triggeredAt)}</TableCell>
+                      <TableCell>{formatDate(item.createdAt)}</TableCell>
                       <TableCell>{item.ruleName}</TableCell>
                       <TableCell>
                         <Chip
@@ -274,7 +263,11 @@ const AlertHistoryPage: React.FC = () => {
                       <TableCell>{item.threshold}</TableCell>
                       <TableCell>
                         <Chip
-                          label={item.status}
+                          label={
+                            item.metadata?.conditionState === 'unknown'
+                              ? `${item.status} · input unknown`
+                              : item.status
+                          }
                           color={getStatusColor(item.status)}
                           size="small"
                           sx={{ textTransform: 'capitalize' }}
@@ -289,16 +282,6 @@ const AlertHistoryPage: React.FC = () => {
                             disabled={acknowledgeMutation.isPending}
                           >
                             <CheckCircleOutlineIcon fontSize="small" />
-                          </IconButton>
-                        )}
-                        {item.status === 'acknowledged' && (
-                          <IconButton
-                            size="small"
-                            title="Resolve"
-                            onClick={() => resolveMutation.mutate(item.id)}
-                            disabled={resolveMutation.isPending}
-                          >
-                            <DoneAllIcon fontSize="small" />
                           </IconButton>
                         )}
                       </TableCell>

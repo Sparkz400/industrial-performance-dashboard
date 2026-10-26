@@ -28,6 +28,7 @@ import PageSkeleton from '@/shared/components/loading/PageSkeleton';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { API_ENDPOINTS } from '@/config/config';
 import protectedFetch from '@/utils/protectedFetch';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { useMachineStore } from '@/stores/useMachineStore';
 import AlertRuleForm from '../components/AlertRuleForm';
 import type { AlertRuleFormValues } from '../components/AlertRuleForm';
@@ -37,6 +38,7 @@ interface AlertRule {
   name: string;
   description: string;
   machineId: number | null;
+  plantId: number | null;
   nodeKey: string;
   condition: string;
   threshold: number;
@@ -48,25 +50,15 @@ interface AlertRule {
   cooldownSeconds: number;
 }
 
-interface Channel {
-  id: number;
-  name: string;
-}
-
 const fetchRules = async (): Promise<AlertRule[]> => {
   const res = await protectedFetch(API_ENDPOINTS.alerts.rules);
   if (!res.ok) throw new Error('Failed to fetch alert rules');
   return res.json();
 };
 
-const fetchChannels = async (): Promise<Channel[]> => {
-  const res = await protectedFetch(API_ENDPOINTS.alerts.channels);
-  if (!res.ok) throw new Error('Failed to fetch channels');
-  return res.json();
-};
-
 const AlertRulesPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const admin = useAuthStore((s) => s.user?.role === 'admin');
   const machines = useMachineStore((s) => s.machines);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -81,11 +73,6 @@ const AlertRulesPage: React.FC = () => {
   } = useQuery({
     queryKey: ['alertRules'],
     queryFn: fetchRules,
-  });
-
-  const { data: channels = [] } = useQuery({
-    queryKey: ['alertChannels'],
-    queryFn: fetchChannels,
   });
 
   const createMutation = useMutation({
@@ -151,7 +138,16 @@ const AlertRulesPage: React.FC = () => {
 
   const handleSubmit = useCallback(
     (values: AlertRuleFormValues) => {
-      const payload = values as unknown as Record<string, unknown>;
+      const payload = {
+        ...values,
+        plantId: null,
+        machineId: values.machineId === '' ? null : Number(values.machineId),
+        threshold: values.threshold === '' ? null : Number(values.threshold),
+        thresholdHigh: values.thresholdHigh === '' ? null : Number(values.thresholdHigh),
+        rateWindowSeconds:
+          values.rateWindowSeconds === '' ? null : Number(values.rateWindowSeconds),
+        cooldownSeconds: values.cooldownSeconds === '' ? 60 : Number(values.cooldownSeconds),
+      };
       if (editingRule) {
         updateMutation.mutate({ id: editingRule.id, values: payload });
       } else {
@@ -167,7 +163,8 @@ const AlertRulesPage: React.FC = () => {
     }
   }, [deleteConfirm, deleteMutation]);
 
-  const mutationError = createMutation.error || updateMutation.error || deleteMutation.error;
+  const mutationError =
+    createMutation.error || updateMutation.error || deleteMutation.error || toggleMutation.error;
 
   return (
     <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
@@ -186,6 +183,7 @@ const AlertRulesPage: React.FC = () => {
           </Button>
           <Button
             variant="contained"
+            disabled={!admin}
             startIcon={<AddIcon />}
             onClick={() => {
               setEditingRule(null);
@@ -197,6 +195,17 @@ const AlertRulesPage: React.FC = () => {
         </Box>
       </Box>
 
+      {!admin && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Rules are read-only for viewers. You can acknowledge incidents in Alert History.
+        </Alert>
+      )}
+      {rules.some((rule) => rule.plantId != null || rule.channels?.length) && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Legacy plant rules and notification channels are unsupported. Select an explicit machine
+          or all machines, and configure delivery in Settings → Webhooks.
+        </Alert>
+      )}
       {(error || mutationError) && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {(error as Error)?.message || (mutationError as Error)?.message}
@@ -213,7 +222,12 @@ const AlertRulesPage: React.FC = () => {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             Create alert rules to get notified when node values exceed thresholds.
           </Typography>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setFormOpen(true)}>
+          <Button
+            variant="contained"
+            disabled={!admin}
+            startIcon={<AddIcon />}
+            onClick={() => setFormOpen(true)}
+          >
             Create Your First Rule
           </Button>
         </Box>
@@ -262,6 +276,8 @@ const AlertRulesPage: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Switch
+                      disabled={!admin}
+                      inputProps={{ 'aria-label': `Enable ${rule.name}` }}
                       checked={rule.isActive}
                       onChange={() =>
                         toggleMutation.mutate({ id: rule.id, isActive: !rule.isActive })
@@ -271,6 +287,7 @@ const AlertRulesPage: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <IconButton
+                      disabled={!admin}
                       size="small"
                       onClick={() => {
                         setEditingRule(rule);
@@ -279,7 +296,11 @@ const AlertRulesPage: React.FC = () => {
                     >
                       <EditIcon fontSize="small" />
                     </IconButton>
-                    <IconButton size="small" onClick={() => setDeleteConfirm(rule)}>
+                    <IconButton
+                      disabled={!admin}
+                      size="small"
+                      onClick={() => setDeleteConfirm(rule)}
+                    >
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </TableCell>
@@ -326,7 +347,6 @@ const AlertRulesPage: React.FC = () => {
               setEditingRule(null);
             }}
             machines={machines.map((m) => ({ id: m.id, name: m.name }))}
-            channels={channels}
           />
         </DialogContent>
       </Dialog>

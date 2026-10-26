@@ -7,7 +7,7 @@ import AlarmDashboardWidgetView from './AlarmDashboardWidgetView';
  *
  */
 function AlarmDashboardWidget(): React.ReactElement {
-  const { data, loading, error, acknowledgeAlarm, clearAlarm } = useAlarmData();
+  const { data, loading, error, acknowledgeAlarm } = useAlarmData();
 
   return (
     <AlarmDashboardWidgetView
@@ -15,7 +15,6 @@ function AlarmDashboardWidget(): React.ReactElement {
       loading={loading}
       error={error}
       onAcknowledge={acknowledgeAlarm}
-      onClear={clearAlarm}
     />
   );
 }

@@ -6,7 +6,12 @@ owned simulator or an isolated test installation using OPC UA scalar signals.
 ## Implemented and covered by focused tests
 
 - Raw Boolean, string and numeric measurements with quality metadata and numeric projection.
-- Durable local queue reopen/replay and stable event identities after failed writes.
+- Durable queue recovery through process termination, database connection outage,
+  interrupted replay and SQLite capacity failure; accepted events retain stable identities.
+- One alarm evaluator, atomic event receipts, persisted webhook retries and measured recovery.
+- UI commissioning, reusable immutable profiles, shift snapshots, operator corrections
+  and a reconciled/printable shift report verified against an independent fixture.
+- Current-account REST/tRPC permissions, signed-in socket actors, logout and expiry.
 - OEE boundary clipping, unchanged states, missing intervals and observed counter resets.
 - Explicit incomplete-coverage handling and conversion of API ratios to UI percentages.
 - Authenticated application routes and configurable machine/tag management.
@@ -27,17 +32,19 @@ simulator evidence do not establish physical-machine acceptance or release readi
 - OPC UA anonymous sessions and scalar values are the supported connection scope.
 - Process crashes and unobserved machine events can leave uncertain intervals;
   reconnection notifications cannot reconstruct measurements never received.
-- Counter decreases are treated as resets to zero. Rollover, negative counters,
-  shifts/timezones and daily manual-entry aggregation need further qualification.
+- Shift profiles explicitly choose reset-to-zero or reject-decrease. Legacy OEE
+  still assumes reset-to-zero; rollover and daily manual entries remain unqualified.
+  Shift windows use explicit offsets and IANA timezones; recurring calendars and
+  holidays remain open. Unsampled counter boundaries prevent a verified report.
 - The disk spool needs free space, a persistent volume and a single collector.
 - Edge/cloud transfer and ingest are disabled: previously transferred queue records
   do not establish queryable central history. Retained records remain visible in settings.
 - AI provides suggestions only, discloses Anthropic processing and never executes SQL
   or renders provider-invented measurement charts. Missing configuration returns 503.
-- Compliance, recipes and digital twins remain experimental. Alert/webhook wiring
-  and the full authorization/share/session audit remain open. Trend/SPC isolation
-  fixes do not qualify these independent features. The [TODO backlog](../TODO.md)
-  records the outstanding acceptance work.
+- Compliance, recipes and digital twins remain experimental. Public shares/embeds
+  and legacy notification channels are disabled. The tested single-company permission
+  policy does not establish site/asset or tenant isolation. See the
+  [production workflow and evidence](PRODUCTION_WORKFLOW.md) and [TODO](../TODO.md).
 - Separate companies must use separate installations. Tenant isolation is unqualified.
 - The runtime dependency audit is clear in this wave; development tooling retains
   moderate advisories documented in [the review](DEPENDENCY_REVIEW.md). Security CI blocks high

@@ -21,6 +21,7 @@ const pgSession = connectPgSimple(session);
 
 export interface MiddlewareContext {
   sessionStore: InstanceType<typeof pgSession>;
+  sessionMiddleware: ReturnType<typeof session>;
   invalidCsrfTokenError: unknown;
 }
 
@@ -78,20 +79,20 @@ export function setupMiddleware(app: express.Application): MiddlewareContext {
     ttl: 60 * 60 * 2,
   });
 
-  app.use(
-    session({
-      store: sessionStore,
-      secret: process.env.SESSION_SECRET || "fallback-insecure-secret",
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: new URL(config.CLIENT_URL).protocol === "https:",
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-      },
-    }),
-  );
+  const sessionMiddleware = session({
+    store: sessionStore,
+    secret: config.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 2 * 60 * 60 * 1000,
+      secure: new URL(config.CLIENT_URL).protocol === "https:",
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+    },
+  });
+  app.use(sessionMiddleware);
 
   app.set("etag", "strong");
   app.disable("x-powered-by");
@@ -142,5 +143,5 @@ export function setupMiddleware(app: express.Application): MiddlewareContext {
     });
   });
 
-  return { sessionStore, invalidCsrfTokenError };
+  return { sessionStore, sessionMiddleware, invalidCsrfTokenError };
 }

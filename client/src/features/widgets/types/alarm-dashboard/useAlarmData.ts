@@ -44,7 +44,6 @@ interface UseAlarmDataReturn {
   loading: boolean;
   error: string | null;
   acknowledgeAlarm: (id: number) => void;
-  clearAlarm: (id: number) => void;
 }
 
 /**
@@ -109,11 +108,17 @@ export function useAlarmData(): UseAlarmDataReturn {
 
     socket.on('alarmTriggered', handleAlarmTriggered);
     socket.on('alarmAcknowledged', handleAlarmAcknowledged);
+    const handleAlarmUpdated = (event: AlarmEvent) =>
+      setData((prev) =>
+        prev.map((alarm) => (alarm.id === event.id ? mapAlarmEventToAlarm(event) : alarm)),
+      );
+    socket.on('alarmUpdated', handleAlarmUpdated);
     socket.on('alarmCleared', handleAlarmCleared);
 
     return () => {
       socket.off('alarmTriggered', handleAlarmTriggered);
       socket.off('alarmAcknowledged', handleAlarmAcknowledged);
+      socket.off('alarmUpdated', handleAlarmUpdated);
       socket.off('alarmCleared', handleAlarmCleared);
     };
   }, [socket, socketConnected]);
@@ -134,23 +139,7 @@ export function useAlarmData(): UseAlarmDataReturn {
     }
   }, []);
 
-  const clearAlarm = useCallback(async (id: number) => {
-    try {
-      const response = await fetch(API_ENDPOINTS.alarms.clear(id), {
-        method: 'POST',
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-      const { alarm } = await response.json();
-      setData((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, ...alarm, status: alarm.status } : a)),
-      );
-    } catch (err) {
-      console.error('Error clearing alarm:', err);
-    }
-  }, []);
-
-  return { data, loading, error, acknowledgeAlarm, clearAlarm };
+  return { data, loading, error, acknowledgeAlarm };
 }
 
 /**
@@ -172,7 +161,7 @@ function mapAlarmEventToAlarm(event: AlarmEvent): Alarm {
     acknowledgedBy: event.acknowledgedBy ?? null,
     acknowledgedAt: event.acknowledgedAt ?? null,
     resolvedAt: event.clearedAt ?? null,
-    metadata: null,
+    metadata: { conditionState: event.conditionState ?? 'unknown' },
     createdAt: event.triggeredAt,
   };
 }

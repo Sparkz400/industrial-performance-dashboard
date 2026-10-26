@@ -32,8 +32,12 @@ functionality.
 The first P0 wave implements and tests F02/F04/F05/H01/H02 in
 [PR #40](https://github.com/Sparkz400/performance_dashboard/pull/40). Validation and
 scope are recorded in [P0 acceptance](docs/P0_ACCEPTANCE.md).
-F01/F09/F10/H03 have partial progress and remain open. The next functional slice
-is F03/A01 (one real alarm-to-delivery path), followed by F06/F07/F08 and endpoint trust.
+The production-workflow wave completes F03/F06/A01 and the bounded stop-reason,
+explainable-OEE and reconciled-report slice O02/O03/R01. See
+[production acceptance evidence](docs/P0_ACCEPTANCE.md#production-workflow-wave).
+F07 has tested controls but remains open for the full route/role matrix; F08 is
+contained by disabling sharing. Next gates are C01/C02 endpoint identity/trust,
+F09 release security, and D01-D03 installation/backup/upgrade qualification.
 
 All 29 dependency PRs were reviewed. Fifteen obsolete or incompatible proposals
 were closed with reasons; fourteen compatible proposals are consolidated into this
@@ -50,17 +54,20 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   edge receive and empty AI results; map enabled screens to supported, experimental or
   disabled states and link each reproduced issue to its owning task.
   Progress: trend/machine-isolation, edge and AI regressions plus the acceptance
-  matrix are present; alarm/webhook contract fixtures remain open.
+  matrix and actual UI-rule-to-receiver alarm fixtures are present. Complete the
+  screen-by-screen experimental/disabled acceptance inventory before closure.
 - [x] **F02 — Isolate SPC state and baselines** · P0 · M0 · Improve · M. Depends: F01, H01.
   Done: machine/tag/profile identities isolate baselines and rolling windows; two machines
   with identical keys and multiple profiles cannot contaminate or double-count samples.
   Keep SPC explicitly experimental until Q01/Q02 qualify its statistics.
   Completed: [PR #40](https://github.com/Sparkz400/performance_dashboard/pull/40);
   [validation and limits](docs/P0_ACCEPTANCE.md).
-- [ ] **F03 — Prove a real alert-to-delivery path** · P0 · M0 · Improve · M. Depends: F01.
+- [x] **F03 — Prove a real alert-to-delivery path** · P0 · M0 · Improve · M. Depends: F01.
   Done: trace a simulator event through the UI-created rule, evaluator, persisted history
   and configured delivery; identify one supported engine, and disable or migrate unwired
   alternatives. Verify real event wiring separately from webhook test delivery.
+  Validation: production-workflow change; [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
+
 - [x] **F04 — Make edge status honest** · P0 · M0 · Improve · S. Depends: F01.
   Done: UI/API/docs distinguish queued, transferred and queryable-in-history states;
   unfinished central ingestion is disabled or labeled experimental; reconnect/retry
@@ -73,21 +80,26 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   SQL cannot appear as a verified result. No arbitrary SQL execution is added.
   Completed: [PR #40](https://github.com/Sparkz400/performance_dashboard/pull/40);
   [validation and limits](docs/P0_ACCEPTANCE.md).
-- [ ] **F06 — Qualify durable acquisition failures** · P0 · M0 · Improve · L. Depends: H01.
+- [x] **F06 — Qualify durable acquisition failures** · P0 · M0 · Improve · L. Depends: H01.
   Done: test process termination, database outage, spool reopen, disk-full and replay
   interruption; account for every durably accepted event and expose unreceived/unknown
   intervals. Define behavior before storage exhaustion rather than silently dropping data.
+  Validation: production-workflow change; [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
+
 - [ ] **F07 — Audit every data-access boundary** · P0 · M0 · Improve · L. Depends: F01.
   Done: negative tests cover admin/viewer, REST, tRPC, sockets, reports, shares and exports;
   machine identifiers cannot bypass authorization. Document one-company deployment
   limits and close any unintended access found before accepting the affected feature.
-  Progress: socket middleware now reuses one session parser and the validated secret;
-  a real socket regression covers unsigned rejection, signed acceptance and stable
-  session-store listener counts. The broader authorization/expiry audit is still open.
+  Progress: current-account REST/tRPC guards, admin-only configuration, spoofed
+  socket actor rejection, idle expiry, logout/deactivation and report-export rejection
+  pass real tests. HTTP/socket middleware shares one parser and cookie lifetime.
+  Finish the exhaustive route/role/identifier matrix, including experimental modules.
 - [ ] **F08 — Constrain public shares and embeds** · P0 · M0 · Improve · M. Depends: F07.
   Done: revocation/expiry work for page, API and live updates; shared views reveal only
   selected data, have explicit lifetime and embedding rules, and exclude administrative
   metadata. Expired sessions/shares stop receiving newly streamed data.
+  Progress: Sharing and embeds now return 410; creation is disabled and old tokens can be revoked. Selected-data sharing remains unimplemented.
+
 - [ ] **F09 — Resolve security findings against the actual release** · P0 · M0 · Improve · M. Depends: F01.
   Done: review dependency, container and code-scanning reports for the exact commit/image;
   fix actionable findings or record scope, mitigation and owner for accepted residual
@@ -108,6 +120,11 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Progress: top-level mocks and separate app-bootstrap budget resolve the observed
   harness issues; [feature evidence](docs/P0_ACCEPTANCE.md) names remaining negative tests.
 
+Implemented and locally validated on `codex/production-shift-workflow`; integration
+and current-head CI are tracked by the accompanying PR. The application is running
+locally with additive migrations and existing data preserved. Wider backlog items
+below retain their unfulfilled acceptance criteria.
+
 ## Connectivity
 
 - [ ] **C01 — Support protected OPC UA user identities** · P0 · M0 · Improve · L. Depends: F09.
@@ -122,10 +139,14 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Done: a guided check reports connection, identity, trust, browse/read permission,
   source time and sample quality; users can save a redacted diagnostic report without
   scanning arbitrary networks or issuing machine writes.
+  Progress: Guided exact-endpoint check and read/type/quality/source-time preview work with the owned simulator. Protected identity/trust diagnostics and a redacted diagnostic export remain open.
+
 - [ ] **C04 — Build reusable, versioned machine profiles** · P1 · M1 · New · L. Depends: C03.
   Done: profiles include namespace-aware signals, types, units, scales, state meanings,
   counters and supported endpoint versions; import previews differences and requires
   review. A second simulator instance can be commissioned without source edits.
+  Progress: Immutable namespace-aware profiles support validation, import review, export and reuse. A second endpoint instance and protected/vendor version qualification remain open.
+
 - [ ] **C05 — Define a connector contract and gateway recipes** · P1 · M2 · New · L. Depends: C04, H01.
   Done: normalize source identity, quality, timestamps and reconnect behavior; demonstrate
   one actual legacy-device gateway path and document costs/prerequisites. Use an approved
@@ -195,6 +216,8 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Done: operators see backlog age/bytes, disk runway, write failures and recovery rate;
   export/quarantine recovery has audit evidence. Define backpressure and alert thresholds
   using measured capacity, while preserving all acknowledged records within that boundary.
+  Progress: One-million-event cap, 64 MiB reserve and visible backlog/failure status stop acquisition before loss. Configurable capacity, forecasting and full retention policy remain open.
+
 - [ ] **H10 — Add reusable derived signals safely** · P2 · M3 · New · L. Depends: H02, H04.
   Done: a bounded expression model supports units, quality propagation and versioning;
   no arbitrary server code executes. Test division by zero, incompatible units, missing
@@ -206,22 +229,32 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Done: site timezone, overnight shifts, breaks, holidays and DST transitions produce
   explicit planned-production windows; no double-counting at boundaries. Explain the
   difference between scheduled time, observed time and missing coverage.
-- [ ] **O02 — Add structured downtime reasons and corrections** · P1 · M1 · New · L. Depends: O01.
+  Progress: Explicit offset/timezone windows, overnight/DST handling, planned breaks and overlap rejection are implemented. Recurring calendars and holidays remain open.
+
+- [x] **O02 — Add structured downtime reasons and corrections** · P1 · M1 · New · L. Depends: O01.
   Done: detected stops can be categorized, split or corrected with actor/reason/history;
   planned/unplanned/unknown are distinct, overlaps are rejected, and corrected results
   can be reproduced without destroying the original machine timeline.
-- [ ] **O03 — Make OEE explainable down to its inputs** · P1 · M1 · Improve · M. Depends: O02.
+  Validation: production-workflow change; [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
+
+- [x] **O03 — Make OEE explainable down to its inputs** · P1 · M1 · Improve · M. Depends: O02.
   Done: drill from availability/performance/quality to mapped signals, production window,
   excluded periods and counts; identify suspicious values above 100% without silently
   clamping them. Show missing prerequisites and the calculation revision.
+  Validation: production-workflow change; [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
+
 - [ ] **O04 — Add product and work-order context** · P1 · M1 · New · L. Depends: O01, C04.
   Done: jobs have stable IDs, product, target quantity, ideal cycle and effective periods;
   selecting a job does not write to the machine. Product changes preserve historical
   context and prevent current standards from silently altering older OEE results.
+  Progress: Each shift freezes work-order reference, product, target and cycle standard. Separate job identities and multiple effective product runs remain open.
+
 - [ ] **O05 — Qualify counters, rejects and manual quantities** · P1 · M1 · Improve · L. Depends: O04.
   Done: support explicit reset/rollover policies, counter width and discontinuities;
   manual entries are timestamped deltas or declared snapshots with correction history.
   Tests prevent duplicated totals, negative production and inferred perfect quality.
+  Progress: Explicit reset-to-zero/reject-decrease and quality/boundary gaps are tested. Rollover, counter-width qualification and manual quantity corrections remain open.
+
 - [ ] **O06 — Measure setup and changeover loss** · P2 · M3 · New · M. Depends: O04, O02.
   Done: expected/actual changeover periods use product transitions and operator-confirmed
   context; overlapping runs and unobserved transitions remain visible. Compare comparable
@@ -238,6 +271,8 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Done: a reconciliation view compares source counters, accepted good/reject quantities,
   operator adjustments and planned/observed time; unresolved differences are explicit
   and prevent a report from being labeled verified.
+  Progress: A recorded independent ledger must match total/good/reject quantities; differences prevent verification. Manual quantity adjustments and physical shift reconciliation remain open.
+
 - [ ] **O10 — Support machines with limited automatic data** · P2 · M2 · New · M. Depends: O02, U06.
   Done: authorized manual counts/state intervals and approved sensor/gateway signals can
   support a bounded workflow; provenance and coverage distinguish manual from automatic
@@ -249,6 +284,8 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Done: endpoint, signal selection, meaning, preview and dashboard creation form one
   recoverable flow; a new user finishes the owned simulator setup without source edits.
   Failed steps explain the relevant permission, certificate or mapping issue.
+  Progress: The browser-tested flow checks, maps, previews, reviews, saves and creates a dashboard for the owned simulator. Protected-endpoint failures and new-user acceptance remain open.
+
 - [ ] **U02 — Unify freshness, loading and failure states** · P1 · M1 · Improve · M. Depends: H02.
   Done: widgets consistently show last measurement, connection state, missing coverage
   and empty/error states; stale data cannot resemble a live healthy machine. Verify
@@ -257,6 +294,8 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Done: an operator sees the current job, stops needing reasons, authorized quality input
   and handover actions in a short touch-friendly flow. Acknowledgment and classification
   are application actions; machine control is not introduced.
+  Progress: Production workspace supports shift context, stop classification/corrections and administrator reconciliation. Handover, touch/accessibility qualification and operator quantity entry remain open.
+
 - [ ] **U04 — Add shift handover notes and action ownership** · P1 · M1 · New · M. Depends: U03.
   Done: notes link to machine/job/interval, have an owner and resolved/open state, and
   appear in the next handover. Edits are attributable; attachments, if enabled, are
@@ -288,10 +327,12 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
 
 ## Alerts
 
-- [ ] **A01 — Consolidate the alarm and alert lifecycle** · P0 · M0 · Improve · L. Depends: F03, H01.
+- [x] **A01 — Consolidate the alarm and alert lifecycle** · P0 · M0 · Improve · L. Depends: F03, H01.
   Done: one documented rule/event model connects configuration, evaluation, history and
   subscriptions; migrate existing rules without duplicate notifications. Active, cleared,
   acknowledged and unknown states have consistent semantics across API and UI.
+  Validation: production-workflow change; [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
+
 - [ ] **A02 — Add debounce, hysteresis and minimum duration** · P1 · M1 · Improve · M. Depends: A01.
   Done: noisy thresholds do not flood history; boundaries and clear conditions are
   documented and replay-tested. Bad/stale input suspends or changes evaluation explicitly
@@ -308,6 +349,8 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Done: email/webhook destinations have testable routing, quiet hours, escalation and
   durable retry state; credentials are protected and delivery failure is visible.
   Test restarts and a receiver outage without uncontrolled notification floods.
+  Progress: Alarm webhooks have durable retries, HMAC signatures, stable receiver deduplication IDs and visible attempt status. Email, escalation and quiet hours remain open.
+
 - [ ] **A06 — Measure alert usefulness and flood behavior** · P2 · M2 · New · M. Depends: A04.
   Done: show repeated/chattering alarms, acknowledgment delays and muted items; distinguish
   operator response time from delivery delay. Tune thresholds against replayed incidents
@@ -320,17 +363,22 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Done: cooldown/window state has a documented rebuild/persistence policy; restart and
   historical replay cannot silently suppress a new incident or resend every old one.
   Event time and evaluation time remain distinguishable.
+  Progress: Rule/machine state and unique receipts survive evaluator restart and identical-timestamp replay; failed transactions consume no receipt/cooldown. Historical rule-version replay remains unqualified.
 
 ## Reporting
 
-- [ ] **R01 — Produce a reconciled shift report** · P1 · M1 · Improve · L. Depends: O01, O02, O04.
+- [x] **R01 — Produce a reconciled shift report** · P1 · M1 · Improve · L. Depends: O01, O02, O04.
   Done: report planned time, quantities, loss reasons, OEE inputs and coverage for the
   exact shift/product scope; match the dashboard and independent fixture. Missing data
   and unresolved reconciliation prevent an unqualified verified label.
+  Validation: production-workflow change; [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
+
 - [ ] **R02 — Make reports useful for daily decisions** · P1 · M1 · Improve · M. Depends: R01, U02.
   Done: include the largest losses, unresolved actions, data freshness and drill-through
   references with readable PDF/print layouts. Review a real rendered report; formatting
   must not hide incomplete data or change numeric precision silently.
+  Progress: Largest losses, gaps, inputs and readable print/JSON output are implemented and rendered. Action ownership and handover references remain open.
+
 - [ ] **R03 — Make schedules and delivery restart-safe** · P1 · M2 · Improve · L. Depends: R01, I01.
   Done: schedule timezone/DST, missed-run policy and stable run identity are explicit;
   retries do not create uncontrolled duplicate mail, and overlapping executions are
@@ -339,6 +387,8 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Done: exports record inputs, window, mapping/calculation revisions and generation time;
   a correction creates a new revision with a reason. Published reports can be reproduced
   or clearly identify why underlying retention prevents full regeneration.
+  Progress: JSON includes profile/calculation revision, generation time and original correction records. Reports still read retained measurements; immutable published revisions remain open.
+
 - [ ] **R05 — Enforce distribution and retention boundaries** · P1 · M2 · Improve · M. Depends: R01, F07.
   Done: recipients/downloads are scoped, expired links fail, deleted schedules stop future
   delivery and stored PDFs follow a declared retention policy. Test unauthorized access

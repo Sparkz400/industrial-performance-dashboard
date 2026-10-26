@@ -31,15 +31,17 @@ router.get(
   "/",
   validateQuery(alarmsQuerySchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const alarms = await alarmRepository.listAlarms(req.query as {
-      severity?: string;
-      status?: string;
-      machineId?: number;
-      limit?: number;
-      offset?: number;
-      startDate?: string;
-      endDate?: string;
-    });
+    const alarms = await alarmRepository.listAlarms(
+      req.query as {
+        severity?: string;
+        status?: string;
+        machineId?: number;
+        limit?: number;
+        offset?: number;
+        startDate?: string;
+        endDate?: string;
+      },
+    );
     res.json(alarms);
   }),
 );
@@ -54,7 +56,7 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const userId = req.session?.userId ?? null;
-    const alarm = await alarmRepository.acknowledgeAlarm(id, userId);
+    const alarm = await alarmEvaluator.acknowledge(id, userId!);
     if (!alarm) {
       res.status(404).json({ error: "Alarm not found" });
       return;
@@ -69,13 +71,9 @@ router.post(
   "/:id/clear",
   validateParams(idParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const id = Number(req.params.id);
-    const alarm = await alarmRepository.clearAlarm(id);
-    if (!alarm) {
-      res.status(404).json({ error: "Alarm not found" });
-      return;
-    }
-    res.json({ alarm });
+    res.status(409).json({
+      error: "Alarms clear only when good measurements confirm recovery.",
+    });
   }),
 );
 

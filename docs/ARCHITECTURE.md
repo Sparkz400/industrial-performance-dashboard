@@ -54,3 +54,12 @@ a confident percentage.
 
 Deployment uses one application per organization. Current global access roles
 and plant tables do not provide verified isolation between independent tenants.
+
+## Production workflow
+
+The durable worker now evaluates alarms after history insertion and before spool
+acknowledgment. Incident transitions, event receipts and pending webhook delivery
+rows commit together; receivers deduplicate delivery IDs. Profiles and shift inputs
+are immutable snapshots; operator corrections append history. Authorization checks
+the current account at REST/tRPC boundaries and socket actions, with logout/expiry
+disconnection. Public sharing is disabled. See [contracts and limits](PRODUCTION_WORKFLOW.md).

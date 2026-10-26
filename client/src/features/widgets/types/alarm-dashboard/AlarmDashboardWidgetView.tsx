@@ -15,7 +15,6 @@ import {
 } from '@mui/material';
 import WidgetSkeleton from '@/shared/components/loading/WidgetSkeleton';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import DoneAllIcon from '@mui/icons-material/DoneAll';
 import { SEVERITY_LEVELS, ALARM_STATUS } from './useAlarmData';
 import type { Alarm, SeverityLevel, AlarmStatus } from './useAlarmData';
 
@@ -59,7 +58,6 @@ interface AlarmDashboardWidgetViewProps {
   loading: boolean;
   error: string | null;
   onAcknowledge: (id: number) => void;
-  onClear: (id: number) => void;
 }
 
 const AlarmDashboardWidgetView = memo(function AlarmDashboardWidgetView({
@@ -67,7 +65,6 @@ const AlarmDashboardWidgetView = memo(function AlarmDashboardWidgetView({
   loading,
   error,
   onAcknowledge,
-  onClear,
 }: AlarmDashboardWidgetViewProps) {
   const [page, setPage] = useState<number>(0);
   const [rowsPerPage, setRowsPerPage] = useState<number>(5);
@@ -126,7 +123,11 @@ const AlarmDashboardWidgetView = memo(function AlarmDashboardWidgetView({
                 </TableCell>
                 <TableCell>
                   <Chip
-                    label={alarm.status ?? 'unknown'}
+                    label={
+                      alarm.metadata?.conditionState === 'unknown'
+                        ? `${alarm.status} · input unknown`
+                        : (alarm.status ?? 'unknown')
+                    }
                     color={getStatusColor((alarm.status ?? 'active') as AlarmStatus)}
                     size="small"
                   />
@@ -141,16 +142,6 @@ const AlarmDashboardWidgetView = memo(function AlarmDashboardWidgetView({
                       aria-label={`Acknowledge alarm: ${alarm.message}`}
                     >
                       <CheckCircleOutlineIcon fontSize="small" />
-                    </IconButton>
-                  )}
-
-                  {alarm.status !== ALARM_STATUS.CLEARED && (
-                    <IconButton
-                      size="small"
-                      onClick={() => onClear(alarm.id)}
-                      aria-label={`Clear alarm: ${alarm.message}`}
-                    >
-                      <DoneAllIcon fontSize="small" />
                     </IconButton>
                   )}
                 </TableCell>
