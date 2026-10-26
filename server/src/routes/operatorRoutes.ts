@@ -27,6 +27,7 @@ const router = Router();
 const id = Joi.number().integer().positive().required();
 const instant = Joi.string()
   .isoDate()
+  .strict()
   .pattern(/(?:Z|[+-]\d{2}:\d{2})$/)
   .allow(null);
 router.get(
@@ -220,14 +221,12 @@ router.post(
           );
         return existing;
       }
-      await tx
-        .insert(operatorEntryEvents)
-        .values({
-          entryId: saved.id,
-          actorId: req.session.userId!,
-          version: 1,
-          snapshot: saved,
-        });
+      await tx.insert(operatorEntryEvents).values({
+        entryId: saved.id,
+        actorId: req.session.userId!,
+        version: 1,
+        snapshot: saved,
+      });
       return saved;
     });
     res.status(201).json(entry);
@@ -274,14 +273,12 @@ router.post(
         })
         .where(eq(operatorEntries.id, entryId))
         .returning();
-      await tx
-        .insert(operatorEntryEvents)
-        .values({
-          entryId,
-          actorId: req.session.userId!,
-          version: updated.version,
-          snapshot: updated,
-        });
+      await tx.insert(operatorEntryEvents).values({
+        entryId,
+        actorId: req.session.userId!,
+        version: updated.version,
+        snapshot: updated,
+      });
       return updated;
     });
     res.json(result);

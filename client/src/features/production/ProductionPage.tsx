@@ -23,6 +23,7 @@ import type { ShiftReport, DowntimeReason } from '@performance-dashboard/shared'
 import { useAuthStore } from '@/stores/useAuthStore';
 import CommissioningPanel, { productionRequest, downloadJson } from './CommissioningPanel';
 import OperatorWorkspace from './OperatorWorkspace';
+import IncidentReplayPanel from './IncidentReplayPanel';
 import { Link } from 'react-router-dom';
 
 interface Shift {
@@ -139,13 +140,22 @@ export default function ProductionPage() {
             Download support diagnostics
           </Button>
         )}
-        <Tabs value={tab} onChange={(_, value) => setTab(value)}>
+        <Tabs
+          value={tab}
+          onChange={(_, value) => setTab(value)}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+        >
           <Tab value={0} label="Shift workspace" />
           <Tab value={2} label="Operator handover" />
+          <Tab value={3} label="Incident replay" />
           {admin && <Tab value={1} label="Commission machine" />}
         </Tabs>
       </Box>
-      {tab === 2 ? (
+      {tab === 3 ? (
+        <IncidentReplayPanel />
+      ) : tab === 2 ? (
         <Box sx={{ pt: 3 }}>
           <OperatorWorkspace />
         </Box>

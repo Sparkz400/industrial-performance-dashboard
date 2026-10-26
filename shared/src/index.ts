@@ -363,3 +363,5 @@ export type {
   ScheduledReportConfig,
   ScheduledReportSection,
 } from "./reports.js";
+export type { ReplaySample, ReplayEvent, IncidentReplay } from "./replay.js";
+export { replayObservation, replayPoints } from "./replay.js";

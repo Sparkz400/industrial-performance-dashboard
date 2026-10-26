@@ -16,7 +16,12 @@ import {
   reportHistory,
   webhookDeliveries,
 } from "../database/schema.js";
-import { validateBody, validateParams } from "../middleware/validation.js";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../middleware/validation.js";
+import { incidentReplay } from "../services/incidentReplay.js";
 import { requireRole } from "../middleware/auth.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import {
@@ -36,9 +41,46 @@ const idSchema = Joi.object({
 });
 const instant = Joi.string()
   .isoDate()
+  .strict()
   .pattern(/(?:Z|[+-]\d{2}:\d{2})$/)
   .required();
 const windowSchema = Joi.object({ start: instant, end: instant });
+
+router.get(
+  "/replay/:id",
+  validateParams(idSchema),
+  validateQuery(
+    Joi.object({
+      start: instant,
+      end: instant,
+      keys: Joi.array()
+        .items(Joi.string().max(200).required())
+        .single()
+        .min(1)
+        .max(8)
+        .unique()
+        .required(),
+      maxGapSeconds: Joi.number().integer().min(1).max(3600).default(60),
+    }),
+  ),
+  asyncHandler(async (req, res) => {
+    const query = req.query as unknown as {
+      start: string;
+      end: string;
+      keys: string[];
+      maxGapSeconds: number;
+    };
+    res.json(
+      await incidentReplay(
+        Number(req.params.id),
+        query.start,
+        query.end,
+        query.keys,
+        query.maxGapSeconds,
+      ),
+    );
+  }),
+);
 
 function window(start: string, end: string) {
   const from = new Date(start),

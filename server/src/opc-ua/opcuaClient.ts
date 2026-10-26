@@ -135,8 +135,9 @@ export async function connectAndSubscribe(
       );
 
       const connectPromise = client.connect(endpointUrl);
+      let connectionTimer: ReturnType<typeof setTimeout> | undefined;
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(
+        connectionTimer = setTimeout(
           () =>
             reject(
               new Error("Connection timeout after 30 seconds (client.connect)"),
@@ -145,7 +146,11 @@ export async function connectAndSubscribe(
         );
       });
 
-      await Promise.race([connectPromise, timeoutPromise]);
+      try {
+        await Promise.race([connectPromise, timeoutPromise]);
+      } finally {
+        clearTimeout(connectionTimer);
+      }
       logger.info(
         `[ConnectAndSub Attempt ${retryCount + 1}] Client connected successfully to ${endpointUrl}!`,
       );

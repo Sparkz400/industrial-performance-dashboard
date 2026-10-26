@@ -5,6 +5,8 @@ owned simulator or an isolated test installation using OPC UA scalar signals.
 
 ## Implemented and covered by focused tests
 
+- Bounded incident replay with quality/gaps, separate clocks, immutable operator
+  revisions and retrospective stop classifications; [replay contract](INCIDENT_REPLAY.md).
 - An opt-in read-only Modbus TCP adapter with encrypted, co-located OPC UA and a
   reusable profile; [legacy gateway scope and recipe](LEGACY_GATEWAY.md).
 - Durable report jobs, missed-slot catch-up, independent email retry status, alarm

@@ -54,6 +54,8 @@ manual counts and the supervisor wallboard with a dedicated read-only account.
 email retry status, alarm holds/hysteresis and collector/data-health incidents.
 The [legacy gateway recipe](docs/LEGACY_GATEWAY.md) includes a read-only Modbus TCP
 adapter, owned simulator and reusable production profile.
+[Incident replay](docs/INCIDENT_REPLAY.md) joins bounded historical signals, alarm
+transitions, operator revisions and stop classifications with explicit clock and gap information.
 
 ## Where it is going
 

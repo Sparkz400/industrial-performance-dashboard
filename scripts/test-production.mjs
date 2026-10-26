@@ -1028,6 +1028,8 @@ try {
   await testUnattendedAlarms({ page, frontend, call, pool, machine, adminId, worker });
   const { testGateway } = await import("./test-gateway.mjs");
   await testGateway({ call, page, frontend, pool, directory, multiMachine, worker, waitFor });
+  const { testIncidentReplay } = await import("./test-incident-replay.mjs");
+  await testIncidentReplay({ call, pool, page, frontend, machine, shift, adminId, viewer });
   assert.deepEqual(pageErrors, []);
   await call("POST", "/api/v1/auth/logout", {}, viewer.request);
   await waitFor(() => !liveClient.connected, "Logout left socket connected");
@@ -1130,6 +1132,8 @@ try {
   await (
     await import("../server/dist/src/opc-ua/services/certificateManager.js")
   ).default.dispose();
+  // NodeOPCUA caches default stores across clients; release them before deleting owned PKI folders.
+  await (await import("node-opcua")).OPCUACertificateManager.disposeAll();
   await pool?.end();
   if (created) {
     // Pool shutdown can resolve before PostgreSQL observes the socket disconnect.

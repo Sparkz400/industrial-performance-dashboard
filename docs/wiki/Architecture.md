@@ -24,6 +24,11 @@ The optional [legacy gateway](https://github.com/Sparkz400/performance_dashboard
 polls a bounded read-only Modbus register block and exposes encrypted local OPC UA.
 Its configuration and identity are included in managed backups; recovery stops polling.
 
+[Incident replay](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/INCIDENT_REPLAY.md)
+reads a consistent, bounded snapshot of one machine's signals, alarm transitions,
+operator revisions and stop classifications. Source and receive clocks remain
+separate; missing quality/time and truncated history are explicit.
+
 Scheduled PDFs use PDFKit and embedded fonts on Node 24/Wolfi, without a production
 browser. Existing database/volume paths remain intact. See the
 [reporting contracts and evidence](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/REPORTING.md).

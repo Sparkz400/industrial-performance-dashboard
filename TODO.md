@@ -621,6 +621,9 @@ below retain their unfulfilled acceptance criteria.
   Done: replay a bounded historical window with signal quality, events, changes and
   annotations in time order; separate source/receive clocks and missing intervals.
   Correlated signals are presented as investigation leads, not proven causes.
+  Progress: bounded signal/event replay, keyboard/playback cursor, raw quality and
+  clock details, immutable operator revisions, later stop annotations and JSON
+  export are implemented; see docs/INCIDENT_REPLAY.md. Final integration pending.
 - [ ] **X04 — Prototype bounded capacity and completion forecasts** · P3 · M5 · Research · L. Depends: O05, R06.
   Done: estimate using comparable jobs and recent capacity with uncertainty ranges;
   backtest against actual completion and disclose unsupported process changes. Forecasts
