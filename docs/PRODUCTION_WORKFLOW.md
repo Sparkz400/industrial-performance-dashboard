@@ -103,6 +103,9 @@ account or password change invalidates earlier sessions. Sessions last at most
 two hours on each socket. Logout/account changes disconnect local sockets;
 store/account revocations performed elsewhere are checked at most every second.
 Incoming socket actions revalidate the session and ignore client-supplied actors.
+Browser socket origins must match the configured application origin; an untrusted
+origin cannot use a signed session cookie. State-changing HTTP requests require
+the matching session CSRF token, including tRPC mutations.
 Metrics, infrastructure settings and legacy scheduled-report distribution require
 an administrator. Viewers read this company's data, including its shift reports;
 there is no per-machine or tenant isolation. Use separate installations for companies.

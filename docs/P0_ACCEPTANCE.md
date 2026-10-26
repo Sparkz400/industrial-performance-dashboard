@@ -82,7 +82,9 @@ evidence. Consult the exact PR/head checks for hosted results.
   machine isolation, unknown quality, equal-time replay and transaction rollback.
 - Access: viewer/admin/anonymous REST and tRPC, infrastructure route casing, metrics,
   disabled shares, report exports, spoofed actors, unsigned sockets, idle expiry,
-  logout and account deactivation. This is a single-company policy, not asset isolation.
+  logout and account deactivation. Missing/wrong/other-session CSRF tokens and foreign
+  WebSocket origins are rejected. Integration tests now use real CSRF middleware.
+  This is a single-company policy, not asset isolation.
 - Production: namespace resolution and reviewed commissioning; immutable shift inputs;
   state/counter gaps, DST, resets, excluded-break conflict, reason overlap/correction/split,
   original reconciliation preservation and independently calculated OEE.

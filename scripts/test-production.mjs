@@ -161,6 +161,37 @@ try {
     { username: "shiftviewer", password },
     viewer.request,
   );
+  for (const path of [
+    "/api/v1/dashboards",
+    "/api/v1/production/shifts",
+    "/api/trpc/dashboard.save",
+  ]) {
+    assert.equal(
+      (await context.request.post(`${apiUrl}${path}`, { data: {} })).status(),
+      403,
+      "Missing CSRF: " + path,
+    );
+    assert.equal(
+      (
+        await context.request.post(`${apiUrl}${path}`, {
+          data: {},
+          headers: { "x-csrf-token": "invalid-token" },
+        })
+      ).status(),
+      403,
+      "Wrong CSRF: " + path,
+    );
+    assert.equal(
+      (
+        await context.request.post(`${apiUrl}${path}`, {
+          data: {},
+          headers: { "x-csrf-token": await csrf(viewer.request) },
+        })
+      ).status(),
+      403,
+      "Another session token: " + path,
+    );
+  }
   for (const [method, path, data] of [
     ["POST", "/api/v1/dashboards", {}],
     ["POST", "/api/v1/alarms/rules", {}],
@@ -372,6 +403,28 @@ try {
   ).rows[0];
   assert.equal(incident.machine_id, machine.id);
   const { io: connectSocket } = await import("socket.io-client");
+  const foreignSocket = connectSocket(apiUrl, {
+    transports: ["websocket"],
+    reconnection: false,
+    timeout: 3000,
+    extraHeaders: {
+      origin: "https://untrusted.example.invalid",
+      cookie: (await viewer.cookies(apiUrl))
+        .map((c) => c.name + "=" + c.value)
+        .join("; "),
+    },
+  });
+  try {
+    await new Promise((resolve, reject) => {
+      foreignSocket.once("connect_error", resolve);
+      foreignSocket.once("connect", () =>
+        reject(new Error("Foreign origin accepted a session cookie")),
+      );
+    });
+    assert.equal(foreignSocket.connected, false);
+  } finally {
+    foreignSocket.disconnect();
+  }
   assert.ok(
     (
       await pool.query(

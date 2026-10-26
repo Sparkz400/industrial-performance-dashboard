@@ -6,6 +6,7 @@ vi.mock("../../utils/logger.js", () => ({
 }));
 
 import { errorHandler, asyncHandler } from "../../middleware/errorHandler.js";
+import logger from "../../utils/logger.js";
 import {
   AppError,
   NotFoundError,
@@ -44,11 +45,18 @@ describe("errorHandler", () => {
 
   it("should handle CSRF errors with 403 status", () => {
     const res = createMockRes();
-    const req = createMockReq();
+    const req = createMockReq({
+      headers: { "x-csrf-token": "private-token" },
+      sessionID: "private-session",
+      session: { csrfToken: "private-token" },
+    });
 
     handler(invalidCsrfTokenError, req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(403);
+    expect(JSON.stringify(vi.mocked(logger.error).mock.calls)).not.toContain(
+      "private-",
+    );
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
         status: "error",

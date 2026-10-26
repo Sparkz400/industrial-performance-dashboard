@@ -45,13 +45,14 @@ describe("Dashboard Routes - POST /api/v1/dashboards/import", () => {
     expect(res.status).toBe(401);
   });
 
-  it("should reject unauthenticated POST requests", async () => {
+  it("should reject unauthenticated POST requests before CSRF validation", async () => {
     const request = await getTestApp();
     const res = await request
       .post("/api/v1/dashboards/import")
       .send({ name: "Imported Dashboard", widgets: [], layout: [] });
 
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("INVALID_CSRF_TOKEN");
   });
 });
 
@@ -69,11 +70,12 @@ describe("Dashboard Routes - GET /api/v1/dashboards/:id", () => {
 });
 
 describe("Dashboard Routes - DELETE /api/v1/dashboards/:id", () => {
-  it("should require authentication for delete", async () => {
+  it("should require authentication for delete before CSRF validation", async () => {
     const request = await getTestApp();
     const res = await request.delete("/api/v1/dashboards/dash-test-123");
 
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("INVALID_CSRF_TOKEN");
   });
 
   it("should require authentication even with CSRF token", async () => {

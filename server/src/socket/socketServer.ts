@@ -50,6 +50,14 @@ export function createSocketServer(
   sharedSessionMiddleware?: ReturnType<typeof session>,
 ): SocketServices {
   const io: TypedServer = new SocketIOServer(server, {
+    // WebSocket handshakes are not protected by browser CORS enforcement.
+    allowRequest: (request, callback) => {
+      callback(
+        null,
+        request.headers.origin === undefined ||
+          request.headers.origin === new URL(config.CLIENT_URL).origin,
+      );
+    },
     cors: {
       origin: config.CLIENT_URL,
       methods: ["GET", "POST"],
