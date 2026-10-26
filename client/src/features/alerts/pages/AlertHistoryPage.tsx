@@ -1,3 +1,5 @@
+import { useT } from '@/i18n';
+import { useAuthStore } from '@/stores/useAuthStore';
 import React, { useState, useCallback } from 'react';
 import {
   Box,
@@ -86,6 +88,12 @@ const formatDate = (isoDate: string | null | undefined): string => {
 };
 
 const AlertHistoryPage: React.FC = () => {
+  const t = useT();
+
+  const canAcknowledge = useAuthStore(
+    (s) =>
+      ['admin', 'operator', 'supervisor'].includes(s.user?.role ?? '') && !s.user?.recoveryMode,
+  );
   const queryClient = useQueryClient();
 
   const [page, setPage] = useState(0);
@@ -136,15 +144,16 @@ const AlertHistoryPage: React.FC = () => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
           <Typography variant="h4" fontWeight="bold">
-            Alert History
+            {t('Alert History')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Acknowledge incidents here. Only good measurements can confirm recovery; unknown quality
-            never clears an alarm.
+            {t(
+              'Acknowledge incidents here. Only good measurements can confirm recovery; unknown quality never clears an alarm.',
+            )}
           </Typography>
         </Box>
         <Button startIcon={<RefreshIcon />} onClick={() => refetch()} disabled={isLoading}>
-          Refresh
+          {t('Refresh')}
         </Button>
       </Box>
 
@@ -157,10 +166,10 @@ const AlertHistoryPage: React.FC = () => {
       {/* Filter bar */}
       <Paper sx={{ p: 2, mb: 2, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
         <FormControl size="small" sx={{ minWidth: 130 }}>
-          <InputLabel>Severity</InputLabel>
+          <InputLabel>{t('Severity')}</InputLabel>
           <Select
             value={severityFilter}
-            label="Severity"
+            label={t('Severity')}
             onChange={(e) => {
               setSeverityFilter(e.target.value);
               setPage(0);
@@ -174,10 +183,10 @@ const AlertHistoryPage: React.FC = () => {
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 130 }}>
-          <InputLabel>Status</InputLabel>
+          <InputLabel>{t('Status')}</InputLabel>
           <Select
             value={statusFilter}
-            label="Status"
+            label={t('Status')}
             onChange={(e) => {
               setStatusFilter(e.target.value);
               setPage(0);
@@ -191,7 +200,7 @@ const AlertHistoryPage: React.FC = () => {
           </Select>
         </FormControl>
         <TextField
-          label="From"
+          label={t('From')}
           type="date"
           size="small"
           value={dateFrom}
@@ -202,7 +211,7 @@ const AlertHistoryPage: React.FC = () => {
           InputLabelProps={{ shrink: true }}
         />
         <TextField
-          label="To"
+          label={t('To')}
           type="date"
           size="small"
           value={dateTo}
@@ -222,14 +231,14 @@ const AlertHistoryPage: React.FC = () => {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Timestamp</TableCell>
-                  <TableCell>Rule</TableCell>
-                  <TableCell>Severity</TableCell>
-                  <TableCell>Node Key</TableCell>
-                  <TableCell>Trigger Value</TableCell>
-                  <TableCell>Threshold</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Actions</TableCell>
+                  <TableCell>{t('Timestamp')}</TableCell>
+                  <TableCell>{t('Rule')}</TableCell>
+                  <TableCell>{t('Severity')}</TableCell>
+                  <TableCell>{t('Node Key')}</TableCell>
+                  <TableCell>{t('Trigger Value')}</TableCell>
+                  <TableCell>{t('Threshold')}</TableCell>
+                  <TableCell>{t('Status')}</TableCell>
+                  <TableCell>{t('Actions')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -237,7 +246,7 @@ const AlertHistoryPage: React.FC = () => {
                   <TableRow>
                     <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                       <Typography variant="body2" color="text.secondary">
-                        No alert history found
+                        {t('No alert history found')}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -274,10 +283,10 @@ const AlertHistoryPage: React.FC = () => {
                         />
                       </TableCell>
                       <TableCell>
-                        {item.status === 'active' && (
+                        {canAcknowledge && item.status === 'active' && (
                           <IconButton
                             size="small"
-                            title="Acknowledge"
+                            title={t('Acknowledge')}
                             onClick={() => acknowledgeMutation.mutate(item.id)}
                             disabled={acknowledgeMutation.isPending}
                           >

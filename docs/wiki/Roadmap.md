@@ -23,3 +23,8 @@ toward machines; physical-machine qualification is separate from automated check
 - [Machine compatibility](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/COMPATIBILITY.md)
 
 Task status lives in TODO. This page is only an overview and is maintained in the repository.
+
+[Daily factory workflows](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DAILY_OPERATIONS.md)
+cover scoped roles, history retention, calendars/product runs, immutable reports,
+maintenance and energy. [Acceptance evidence](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DAILY_OPERATIONS_ACCEPTANCE.md)
+separates software checks from physical S7-1500 and operator acceptance.

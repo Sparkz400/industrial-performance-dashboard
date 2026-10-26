@@ -16,6 +16,43 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+
+export const retentionPolicies = pgTable("retention_policies", {
+  machineId: integer("machine_id").primaryKey(),
+  days: integer("days").notNull(),
+  version: integer("version").notNull().default(1),
+});
+export const retentionPreviews = pgTable("retention_previews", {
+  id: text("id").primaryKey(),
+  machineId: integer("machine_id").notNull(),
+  policyVersion: integer("policy_version").notNull(),
+  cutoff: timestamp("cutoff", { withTimezone: true }).notNull(),
+  maxId: integer("max_id").notNull(),
+  rows: integer("rows").notNull(),
+  createdBy: integer("created_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  deleted: integer("deleted").notNull().default(0),
+  completed: boolean("completed").notNull().default(false),
+});
+export const historySummaries = pgTable(
+  "history_summaries",
+  {
+    machineId: integer("machine_id").notNull(),
+    nodeKey: text("node_key").notNull(),
+    bucket: timestamp("bucket", { withTimezone: true }).notNull(),
+    samples: integer("samples").notNull(),
+    good: integer("good").notNull(),
+    sum: doublePrecision("sum"),
+    min: doublePrecision("min"),
+    max: doublePrecision("max"),
+    identity: text("identity").notNull().default("unknown"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.machineId, table.nodeKey, table.bucket] }),
+  ],
+);
 import type {
   SignalMetadata,
   ScheduledReportConfig,
@@ -27,6 +64,8 @@ export const userRoleEnum = pgEnum("users_role_enum", [
   "admin",
   "viewer",
   "wallboard",
+  "operator",
+  "supervisor",
 ]);
 export const recipeStatusEnum = pgEnum("recipe_status_enum", [
   "draft",
@@ -567,6 +606,41 @@ export const plants = pgTable("plants", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
+export const machineSites = pgTable("machine_sites", {
+  machineId: integer("machine_id")
+    .primaryKey()
+    .references(() => machines.id, { onDelete: "cascade" }),
+  plantId: integer("plant_id")
+    .notNull()
+    .references(() => plants.id, { onDelete: "cascade" }),
+});
+
+export const machineGrants = pgTable(
+  "machine_grants",
+  {
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    machineId: integer("machine_id")
+      .notNull()
+      .references(() => machines.id, { onDelete: "cascade" }),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.machineId] })],
+);
+
+export const dashboardAssets = pgTable(
+  "dashboard_assets",
+  {
+    dashboardId: text("dashboard_id")
+      .notNull()
+      .references(() => dashboards.id, { onDelete: "cascade" }),
+    machineId: integer("machine_id")
+      .notNull()
+      .references(() => machines.id, { onDelete: "cascade" }),
+  },
+  (table) => [primaryKey({ columns: [table.dashboardId, table.machineId] })],
+);
+
 export const plantMemberships = pgTable(
   "plant_memberships",
   {
@@ -798,8 +872,95 @@ export const productionShifts = pgTable("production_shifts", {
   end: timestamp("end", { withTimezone: true }).notNull(),
   profile: jsonb("profile").notNull(),
   job: jsonb("job").notNull(),
+  runs: jsonb("runs")
+    .$type<import("@performance-dashboard/shared").ProductRun[]>()
+    .notNull()
+    .default([]),
+  planVersion: integer("plan_version").notNull().default(1),
+  calendarKey: text("calendar_key").unique(),
   breaks: jsonb("breaks").notNull().default([]),
   evidence: jsonb("evidence"),
+  createdBy: integer("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const productionCalendars = pgTable("production_calendars", {
+  id: serial("id").primaryKey(),
+  machineId: integer("machine_id")
+    .notNull()
+    .references(() => machines.id, { onDelete: "restrict" }),
+  config: jsonb("config").notNull(),
+  version: integer("version").notNull().default(1),
+  createdBy: integer("created_by")
+    .notNull()
+    .references(() => users.id),
+});
+export const shiftReportRevisions = pgTable("shift_report_revisions", {
+  id: serial("id").primaryKey(),
+  shiftId: integer("shift_id")
+    .notNull()
+    .references(() => productionShifts.id, { onDelete: "restrict" }),
+  snapshot: jsonb("snapshot").notNull(),
+  digest: text("digest").notNull(),
+  createdBy: integer("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+export const maintenancePlans = pgTable("maintenance_plans", {
+  id: serial("id").primaryKey(),
+  machineId: integer("machine_id")
+    .notNull()
+    .references(() => machines.id, { onDelete: "restrict" }),
+  config: jsonb("config").notNull(),
+  profile: jsonb("profile").notNull(),
+  version: integer("version").notNull().default(1),
+  createdBy: integer("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+export const maintenanceEvents = pgTable("maintenance_events", {
+  id: serial("id").primaryKey(),
+  requestId: text("request_id").notNull().unique(),
+  planId: integer("plan_id")
+    .notNull()
+    .references(() => maintenancePlans.id, { onDelete: "restrict" }),
+  serviced: boolean("serviced").notNull(),
+  checks: jsonb("checks").notNull(),
+  note: text("note").notNull(),
+  incidentId: integer("incident_id").references(() => operatorEntries.id, {
+    onDelete: "restrict",
+  }),
+  createdBy: integer("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+export const energyMeters = pgTable("energy_meters", {
+  machineId: integer("machine_id")
+    .primaryKey()
+    .references(() => machines.id, { onDelete: "restrict" }),
+  config: jsonb("config").notNull(),
+  version: integer("version").notNull().default(1),
+});
+export const energyReconciliations = pgTable("energy_reconciliations", {
+  shiftId: integer("shift_id")
+    .primaryKey()
+    .references(() => productionShifts.id, { onDelete: "restrict" }),
+  kWh: doublePrecision("kwh").notNull(),
+  toleranceKWh: doublePrecision("tolerance_kwh").notNull(),
+  reference: text("reference").notNull(),
   createdBy: integer("created_by")
     .notNull()
     .references(() => users.id),

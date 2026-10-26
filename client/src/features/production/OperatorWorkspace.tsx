@@ -1,3 +1,5 @@
+import { translate as t, useLanguage } from '@/i18n';
+import LiveState from './LiveState';
 import React, { useState } from 'react';
 import { Alert, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
@@ -25,8 +27,10 @@ const instant = (value: string) => (value ? new Date(value).toISOString() : null
  *
  */
 export default function OperatorWorkspace() {
+  useLanguage((s) => s.language);
   const user = useAuthStore((s) => s.user);
-  const editable = user?.role !== 'wallboard' && !user?.recoveryMode;
+  const editable =
+    ['admin', 'operator', 'supervisor'].includes(user?.role ?? '') && !user?.recoveryMode;
   const [machine, setMachine] = useState('');
   const [draft, setDraft] = useState(empty);
   const [editing, setEditing] = useState<OperatorEntry | null>(null);
@@ -146,14 +150,15 @@ export default function OperatorWorkspace() {
     [draft.total, draft.good, draft.reject, draft.shiftId].every(Boolean);
   return (
     <Stack spacing={2}>
-      <Typography variant="h5">Operator handover</Typography>
+      <Typography variant="h5">{t('Operator handover')} </Typography>
       <Typography color="text.secondary">
-        Record observations, assign follow-up actions and review the next shift’s outstanding work.
-        Manual counts stay separate from measured production.
+        {t(
+          'Record observations, assign follow-up actions and review the next shift’s outstanding work. Manual counts stay separate from measured production.',
+        )}{' '}
       </Typography>
       <TextField
         select
-        label="Handover machine"
+        label={t('Handover machine')}
         value={machine}
         onChange={(e) => {
           setMachine(e.target.value);
@@ -176,34 +181,37 @@ export default function OperatorWorkspace() {
       {machine && (
         <>
           {live.error ? (
-            <Alert severity="warning">Current work-order status unavailable.</Alert>
+            <Alert severity="warning">{t('Current work-order status unavailable.')} </Alert>
           ) : (
             live.data?.machines.map((asset) => (
               <Paper key={asset.id} variant="outlined" sx={{ p: 2 }}>
                 <Typography variant="h6">
                   {asset.shift?.job.reference || 'No active work order'} {asset.shift?.job.product}
                 </Typography>
+                <Typography>{asset.shift?.name}</Typography>
+                <LiveState machine={asset} updatedAt={live.dataUpdatedAt} failed={!!live.error} />
                 <Typography>
-                  {asset.shift?.name} · {asset.state} · {asset.freshness}
-                </Typography>
-                <Typography>
-                  Observed {asset.production.observed?.toLocaleString() ?? 'unknown'} /{' '}
-                  {asset.shift?.job.target?.toLocaleString() ?? '—'} target
-                  {asset.production.complete ? '' : ' · partial or unavailable coverage'}
+                  {t('Observed')}{' '}
+                  {asset.production.observed?.toLocaleString(useLanguage.getState().language) ??
+                    'unknown'}{' '}
+                  /{' '}
+                  {asset.shift?.job.target?.toLocaleString(useLanguage.getState().language) ?? '—'}{' '}
+                  {t('target')}{' '}
+                  {asset.production.complete ? '' : t(' · partial or unavailable coverage')}
                 </Typography>
               </Paper>
             ))
           )}
           <Button onClick={() => setAll(!all)}>
-            {all ? 'Show outstanding only' : 'Include resolved entries'}
+            {all ? t('Show outstanding only') : t('Include resolved entries')}
           </Button>
           {entries.data?.truncated && (
             <Alert severity="warning">
-              Showing the latest 200 matching entries. Older entries remain stored.
+              {t('Showing the latest 200 matching entries. Older entries remain stored.')}{' '}
             </Alert>
           )}
           {entries.data?.entries.length === 0 && (
-            <Typography>No matching handover entries.</Typography>
+            <Typography>{t('No matching handover entries.')} </Typography>
           )}
           {entries.data?.entries.map((entry) => (
             <Paper
@@ -216,51 +224,65 @@ export default function OperatorWorkspace() {
               }}
             >
               <Typography fontWeight={700}>
-                {entry.kind} · {entry.priority} priority · {entry.status}
+                {entry.kind} · {entry.priority} {t('priority ·')} {entry.status}
               </Typography>
               <Typography sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
                 {entry.text}
               </Typography>
               <Typography variant="body2">
-                Owner: {actor(entry.ownerId)}
-                {entry.dueAt ? ` · Due ${new Date(entry.dueAt).toLocaleString()}` : ''}
+                {t('Owner:')} {actor(entry.ownerId)}
+                {entry.dueAt
+                  ? ` · Due ${new Date(entry.dueAt).toLocaleString(useLanguage.getState().language)}`
+                  : ''}
               </Typography>
               <Typography variant="body2">
-                Recorded by {actor(entry.createdBy)} · {new Date(entry.createdAt).toLocaleString()}{' '}
-                · revision {entry.version}
+                {t('Recorded by')} {actor(entry.createdBy)} ·{' '}
+                {new Date(entry.createdAt).toLocaleString(useLanguage.getState().language)}{' '}
+                {t('· revision')} {entry.version}
                 {entry.shiftId ? ` · shift #${entry.shiftId}` : ''}
               </Typography>
               {entry.intervalStart && (
                 <Typography variant="body2">
-                  Observation: {new Date(entry.intervalStart).toLocaleString()} –{' '}
-                  {new Date(entry.intervalEnd!).toLocaleString()}
+                  {t('Observation:')}{' '}
+                  {new Date(entry.intervalStart).toLocaleString(useLanguage.getState().language)} –{' '}
+                  {new Date(entry.intervalEnd!).toLocaleString(useLanguage.getState().language)}
                 </Typography>
               )}
               {entry.quantity && (
                 <Alert severity="info">
-                  Manual declaration: {entry.quantity.total} total, {entry.quantity.good} good,{' '}
-                  {entry.quantity.reject} reject.{' '}
-                  {entry.status === 'resolved' ? 'Reviewed; ' : 'Awaiting administrator review; '}
-                  measured KPIs are unchanged.
+                  {t('Manual declaration:')} {entry.quantity.total} {t('total,')}{' '}
+                  {entry.quantity.good} {t('good,')} {entry.quantity.reject} {t('reject.')}{' '}
+                  {entry.status === 'resolved'
+                    ? t('Reviewed; ')
+                    : t('Awaiting administrator review; ')}
+                  {t('measured KPIs are unchanged.')}{' '}
                 </Alert>
               )}
               <Button onClick={() => setHistory(history === entry.id ? null : entry.id)}>
-                History #{entry.id}
+                {t('History #')}
+                {entry.id}
               </Button>
-              {editable && (entry.kind !== 'quantity' || user?.role === 'admin') && (
-                <Button onClick={() => edit(entry)}>Review / edit #{entry.id}</Button>
-              )}
+              {editable &&
+                (entry.kind !== 'quantity' ||
+                  ['admin', 'supervisor'].includes(user?.role ?? '')) && (
+                  <Button onClick={() => edit(entry)}>
+                    {t('Review / edit #')}
+                    {entry.id}
+                  </Button>
+                )}
               {history === entry.id && (
                 <Stack spacing={1} aria-label={`History for entry ${entry.id}`}>
-                  {events.data?.truncated && <Typography>Latest 100 revisions shown.</Typography>}
+                  {events.data?.truncated && (
+                    <Typography>{t('Latest 100 revisions shown.')} </Typography>
+                  )}
                   {events.data?.events.map((event) => (
                     <Typography key={event.id} variant="body2">
-                      Revision {event.version} · {actor(event.actorId)} ·{' '}
-                      {new Date(event.createdAt).toLocaleString()} · {event.snapshot.status} ·{' '}
-                      {event.snapshot.text} · owner {actor(event.snapshot.ownerId)} ·{' '}
-                      {event.snapshot.priority} priority
+                      {t('Revision')} {event.version} · {actor(event.actorId)} ·{' '}
+                      {new Date(event.createdAt).toLocaleString(useLanguage.getState().language)} ·{' '}
+                      {event.snapshot.status} · {event.snapshot.text} {t('· owner')}{' '}
+                      {actor(event.snapshot.ownerId)} · {event.snapshot.priority} {t('priority')}{' '}
                       {event.snapshot.dueAt
-                        ? ` · due ${new Date(event.snapshot.dueAt).toLocaleString()}`
+                        ? ` · due ${new Date(event.snapshot.dueAt).toLocaleString(useLanguage.getState().language)}`
                         : ''}
                     </Typography>
                   ))}
@@ -282,24 +304,24 @@ export default function OperatorWorkspace() {
                 <Typography variant="h6">
                   {editing
                     ? `Review entry #${editing.id} · revision ${editing.version}`
-                    : 'New handover entry'}
+                    : t('New handover entry')}
                 </Typography>
                 <TextField
                   select
-                  label="Entry type"
+                  label={t('Entry type')}
                   value={draft.kind}
                   disabled={!!editing}
                   onChange={(e) => setDraft({ ...draft, kind: e.target.value })}
                 >
-                  <MenuItem value="note">Handover note</MenuItem>
-                  <MenuItem value="action">Assigned action</MenuItem>
-                  <MenuItem value="quantity">Manual quantity declaration</MenuItem>
+                  <MenuItem value="note">{t('Handover note')} </MenuItem>
+                  <MenuItem value="action">{t('Assigned action')} </MenuItem>
+                  <MenuItem value="quantity">{t('Manual quantity declaration')} </MenuItem>
                 </TextField>
                 <TextField
                   required
                   multiline
                   minRows={2}
-                  label="Observation / action"
+                  label={t('Observation / action')}
                   value={draft.text}
                   onChange={(e) => setDraft({ ...draft, text: e.target.value })}
                   slotProps={{ htmlInput: { maxLength: 4000 } }}
@@ -308,22 +330,22 @@ export default function OperatorWorkspace() {
                   <TextField
                     fullWidth
                     select
-                    label="Priority"
+                    label={t('Priority')}
                     value={draft.priority}
                     onChange={(e) => setDraft({ ...draft, priority: e.target.value })}
                   >
-                    <MenuItem value="normal">Normal</MenuItem>
-                    <MenuItem value="high">High</MenuItem>
+                    <MenuItem value="normal">{t('Normal')} </MenuItem>
+                    <MenuItem value="high">{t('High')} </MenuItem>
                   </TextField>
                   <TextField
                     fullWidth
                     select
-                    label="Action owner"
+                    label={t('Action owner')}
                     value={draft.ownerId}
                     required={draft.kind === 'action'}
                     onChange={(e) => setDraft({ ...draft, ownerId: e.target.value })}
                   >
-                    <MenuItem value="">Unassigned</MenuItem>
+                    <MenuItem value="">{t('Unassigned')} </MenuItem>
                     {owners.data?.map((owner) => (
                       <MenuItem key={owner.id} value={owner.id}>
                         {owner.username}
@@ -332,8 +354,8 @@ export default function OperatorWorkspace() {
                   </TextField>
                 </Stack>
                 <TextField
-                  label="Due date (ISO with timezone, optional)"
-                  placeholder="2026-10-26T18:00:00+01:00"
+                  label={t('Due date (ISO with timezone, optional)')}
+                  placeholder={t('2026-10-26T18:00:00+01:00')}
                   value={draft.dueAt}
                   onChange={(e) => setDraft({ ...draft, dueAt: e.target.value })}
                 />
@@ -341,12 +363,12 @@ export default function OperatorWorkspace() {
                   <>
                     <TextField
                       select
-                      label="Linked shift"
+                      label={t('Linked shift')}
                       value={draft.shiftId}
                       required={draft.kind === 'quantity'}
                       onChange={(e) => setDraft({ ...draft, shiftId: e.target.value })}
                     >
-                      <MenuItem value="">No shift</MenuItem>
+                      <MenuItem value="">{t('No shift')} </MenuItem>
                       {shifts.data
                         ?.filter((shift) => shift.machineId === Number(machine))
                         .map((shift) => (
@@ -356,39 +378,40 @@ export default function OperatorWorkspace() {
                         ))}
                     </TextField>
                     <TextField
-                      label="Observation start (ISO with timezone, optional)"
+                      label={t('Observation start (ISO with timezone, optional)')}
                       value={draft.intervalStart}
                       onChange={(e) => setDraft({ ...draft, intervalStart: e.target.value })}
                     />
                     <TextField
-                      label="Observation end (ISO with timezone, optional)"
+                      label={t('Observation end (ISO with timezone, optional)')}
                       value={draft.intervalEnd}
                       onChange={(e) => setDraft({ ...draft, intervalEnd: e.target.value })}
                     />
                     {draft.kind === 'quantity' && (
                       <>
                         <Alert severity="info">
-                          Declare independent counts for review. This does not replace measurements
-                          or verify the shift report.
+                          {t(
+                            'Declare independent counts for review. This does not replace measurements or verify the shift report.',
+                          )}{' '}
                         </Alert>
                         <TextField
                           required
                           type="number"
-                          label="Declared total"
+                          label={t('Declared total')}
                           value={draft.total}
                           onChange={(e) => setDraft({ ...draft, total: e.target.value })}
                         />
                         <TextField
                           required
                           type="number"
-                          label="Declared good"
+                          label={t('Declared good')}
                           value={draft.good}
                           onChange={(e) => setDraft({ ...draft, good: e.target.value })}
                         />
                         <TextField
                           required
                           type="number"
-                          label="Declared reject"
+                          label={t('Declared reject')}
                           value={draft.reject}
                           onChange={(e) => setDraft({ ...draft, reject: e.target.value })}
                         />
@@ -398,18 +421,18 @@ export default function OperatorWorkspace() {
                 )}
                 <Stack direction="row" spacing={1}>
                   <Button type="submit" variant="contained" disabled={busy || !quantityReady}>
-                    Save handover
+                    {t('Save handover')}{' '}
                   </Button>
                   {editing && (
                     <Button
                       disabled={busy}
                       onClick={() => void save(editing.status === 'open' ? 'resolved' : 'open')}
                     >
-                      {editing.status === 'open' ? 'Resolve / mark reviewed' : 'Reopen entry'}
+                      {editing.status === 'open' ? t('Resolve / mark reviewed') : t('Reopen entry')}
                     </Button>
                   )}
                   <Button disabled={busy} onClick={clear}>
-                    New entry / cancel edit
+                    {t('New entry / cancel edit')}{' '}
                   </Button>
                 </Stack>
               </Stack>

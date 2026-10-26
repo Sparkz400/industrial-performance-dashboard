@@ -1,4 +1,5 @@
 import { dashboardRepository } from "../repositories/dashboardRepository.js";
+import { accessScope } from "./accessScope.js";
 import logger from "../utils/logger.js";
 import { NotFoundError, fromDatabaseError } from "../utils/errors.js";
 
@@ -51,6 +52,8 @@ export const dashboardService = {
     if (primaryDashboards.length > 0) {
       return primaryDashboards;
     }
+    if (accessScope.getStore()?.role !== "admin" && accessScope.getStore())
+      return [];
 
     logger.info(
       "No dashboards found on read replica or primary. Creating a default dashboard.",

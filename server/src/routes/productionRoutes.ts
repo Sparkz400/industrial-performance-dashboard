@@ -34,6 +34,7 @@ import {
 } from "../services/shiftCalculation.js";
 import { NotFoundError, ValidationError } from "../utils/errors.js";
 import opcuaQueueWorker from "../queue/opcuaQueueWorker.js";
+import { machineScope } from "../services/accessScope.js";
 
 const router = Router();
 const idSchema = Joi.object({
@@ -97,13 +98,29 @@ function window(start: string, end: string) {
   return { from, to };
 }
 
-async function report(id: number): Promise<ShiftReport> {
-  const [shift] = await db
+export async function report(
+  id: number,
+  range?: {
+    start: string;
+    end: string;
+    job: ShiftReport["job"];
+    idealCycleMs: number;
+  },
+  database: Pick<typeof db, "select"> = db,
+): Promise<ShiftReport> {
+  const [shift] = await database
     .select()
     .from(productionShifts)
     .where(eq(productionShifts.id, id));
   if (!shift) throw new NotFoundError("Shift");
-  const profile = shift.profile as ProductionProfile;
+  const profile = { ...(shift.profile as ProductionProfile) };
+  if (range) {
+    shift.start = new Date(range.start);
+    shift.end = new Date(range.end);
+    shift.job = range.job;
+    shift.evidence = null;
+    profile.idealCycleMs = range.idealCycleMs;
+  }
   const samples: Parameters<typeof calculateShift>[0]["samples"] = {};
   for (const signal of Object.values(profile.signals)) {
     const filter = and(
@@ -116,13 +133,13 @@ async function report(id: number): Promise<ShiftReport> {
       statusCode: opcuaData.statusCode,
       signalMetadata: opcuaData.signalMetadata,
     };
-    const previous = await db
+    const previous = await database
       .select(projection)
       .from(opcuaData)
       .where(and(filter, lte(opcuaData.timestamp, shift.start)))
       .orderBy(desc(opcuaData.timestamp), desc(opcuaData.id))
       .limit(1);
-    const rows = await db
+    const rows = await database
       .select(projection)
       .from(opcuaData)
       .where(
@@ -150,12 +167,12 @@ async function report(id: number): Promise<ShiftReport> {
           : null,
     }));
   }
-  const reasons = await db
+  const reasons = await database
     .select()
     .from(downtimeReasons)
     .where(eq(downtimeReasons.shiftId, id))
     .orderBy(asc(downtimeReasons.id));
-  return calculateShift({
+  const result = calculateShift({
     ...shift,
     profile,
     job: shift.job as ShiftReport["job"],
@@ -170,6 +187,73 @@ async function report(id: number): Promise<ShiftReport> {
     })),
     samples,
   });
+  result.planVersion = shift.planVersion;
+  if (!range && shift.runs.length) {
+    result.runs = [];
+    for (const plan of shift.runs)
+      result.runs.push({
+        plan,
+        report: await report(
+          id,
+          {
+            ...plan,
+            job: {
+              reference: plan.reference,
+              product: plan.product,
+              target: plan.target,
+            },
+          },
+          database,
+        ),
+      });
+    const running = result.intervals.filter((i) => i.state === "running");
+    const uncovered = running.some((interval) => {
+      const coverage = shift.runs.reduce(
+        (sum, run) =>
+          sum +
+          Math.max(
+            0,
+            Math.min(Date.parse(interval.end), Date.parse(run.end)) -
+              Math.max(Date.parse(interval.start), Date.parse(run.start)),
+          ),
+        0,
+      );
+      return coverage !== Date.parse(interval.end) - Date.parse(interval.start);
+    });
+    const complete = result.runs.every(
+      (r) =>
+        r.report.quantities.total != null &&
+        !r.report.issues.some((issue) => issue.startsWith("total counter")),
+    );
+    const milliseconds = running.reduce(
+      (sum, i) => sum + Date.parse(i.end) - Date.parse(i.start),
+      0,
+    );
+    result.oee.performance =
+      complete &&
+      !uncovered &&
+      milliseconds > 0 &&
+      !result.issues.some((issue) =>
+        issue.startsWith("Running overlaps an excluded break"),
+      )
+        ? result.runs.reduce(
+            (sum, r) => sum + r.report.quantities.total! * r.plan.idealCycleMs,
+            0,
+          ) / milliseconds
+        : null;
+    if (result.oee.performance == null)
+      result.issues.push(
+        "Product run performance is unknown: incomplete run counters, unassigned running time or running during excluded breaks.",
+      );
+    result.oee.overall =
+      result.oee.availability != null &&
+      result.oee.performance != null &&
+      result.oee.quality != null
+        ? result.oee.availability * result.oee.performance * result.oee.quality
+        : null;
+    result.verified = result.issues.length === 0;
+  }
+  return result;
 }
 
 router.get(
@@ -182,7 +266,8 @@ router.get(
           name: machines.name,
           status: machines.status,
         })
-        .from(machines),
+        .from(machines)
+        .where(machineScope(machines.id)),
     );
   }),
 );
@@ -338,6 +423,7 @@ router.get(
           timezone: productionShifts.timezone,
         })
         .from(productionShifts)
+        .where(machineScope(productionShifts.machineId))
         .orderBy(desc(productionShifts.start))
         .limit(100),
     );
@@ -431,7 +517,9 @@ router.post(
     Joi.object({
       start: instant,
       end: instant,
-      category: Joi.string().valid("planned", "unplanned").required(),
+      category: Joi.string()
+        .valid("planned", "unplanned", "changeover")
+        .required(),
       reason: Joi.string().trim().min(1).max(500).required(),
       supersedesId: Joi.number().integer().positive().allow(null).default(null),
     }),
@@ -502,7 +590,7 @@ router.post(
 );
 router.post(
   "/shifts/:id/reconcile",
-  requireRole("admin"),
+  requireRole("admin", "supervisor"),
   validateParams(idSchema),
   validateBody(
     Joi.object({

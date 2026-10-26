@@ -9,7 +9,10 @@ import { chromium } from "@playwright/test";
 
 const image = process.argv[2];
 const previousImage = process.argv[3] || image;
-assert.ok(image, "Usage: node scripts/test-operations.mjs IMAGE [PREVIOUS_IMAGE]");
+assert.ok(
+  image,
+  "Usage: node scripts/test-operations.mjs IMAGE [PREVIOUS_IMAGE]",
+);
 const id = randomUUID().replaceAll("-", "").slice(0, 12),
   source = `pd-ops-${id}`,
   restored = `${source}-restore`,
@@ -165,7 +168,7 @@ try {
   );
   await page.goto(`http://localhost:${nextPort}/login`);
   await page.getByLabel("Username").fill(login.username);
-  await page.getByLabel(/password/i).fill(login.password);
+  await page.getByLabel(/^password/i).fill(login.password);
   await page.getByRole("button", { name: /sign in|log in/i }).click();
   await page.getByText(/Recovery preview: machine connections/).waitFor();
   const csrf = (

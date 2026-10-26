@@ -1,3 +1,4 @@
+import { translate as t, useLanguage } from '@/i18n';
 /* eslint-disable security/detect-object-injection -- Dynamic keys below come from fixed field/role lists; imported profiles are validated by the API. */
 import React, { useEffect, useState } from 'react';
 import {
@@ -102,6 +103,7 @@ interface Preview {
  *
  */
 export default function CommissioningPanel() {
+  useLanguage((s) => s.language);
   const machines = useMachineStore((s) => s.machines);
   const fetchMachines = useMachineStore((s) => s.fetchMachines);
   const addMachine = useMachineStore((s) => s.addMachine);
@@ -180,18 +182,18 @@ export default function CommissioningPanel() {
   }
   return (
     <Stack spacing={2}>
-      <Typography variant="h5">Commission a machine</Typography>
+      <Typography variant="h5">{t('Commission a machine')} </Typography>
       <Alert severity="info">
-        This flow only reads the selected endpoint using its saved machine identity. Verify
-        permissions, certificate trust and machine-specific meanings before using production
-        equipment.
+        {t(
+          'This flow only reads the selected endpoint using its saved machine identity. Verify permissions, certificate trust and machine-specific meanings before using production equipment.',
+        )}{' '}
       </Alert>
       {error && <Alert severity="error">{error}</Alert>}
-      <Typography variant="h6">1. Select and check the endpoint</Typography>
+      <Typography variant="h6">{t('1. Select and check the endpoint')} </Typography>
       <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
         <TextField
           select
-          label="Machine to commission"
+          label={t('Machine to commission')}
           value={machineId}
           onChange={(e) => {
             setMachineId(e.target.value);
@@ -206,9 +208,9 @@ export default function CommissioningPanel() {
             </MenuItem>
           ))}
         </TextField>
-        <Button onClick={() => setShowMachine(true)}>Add machine</Button>
+        <Button onClick={() => setShowMachine(true)}>{t('Add machine')} </Button>
         <Button disabled={!machineId || busy} onClick={() => void inspect(false)}>
-          Check connection
+          {t('Check connection')}{' '}
         </Button>
       </Stack>
       <MachineForm
@@ -223,8 +225,8 @@ export default function CommissioningPanel() {
       {preview && (
         <>
           <Alert severity="info">
-            Connected using {preview.identity}, {preview.securityMode}. {preview.trust}. Checked{' '}
-            {new Date(preview.checkedAt).toLocaleString()}.
+            {t('Connected using')} {preview.identity}, {preview.securityMode}. {preview.trust}
+            {t('. Checked')} {new Date(preview.checkedAt).toLocaleString()}.
           </Alert>
           <Button
             onClick={() =>
@@ -258,25 +260,25 @@ export default function CommissioningPanel() {
               )
             }
           >
-            Download redacted diagnostics
+            {t('Download redacted diagnostics')}{' '}
           </Button>
         </>
       )}
-      <Typography variant="h6">2. Map the signals and their meaning</Typography>
+      <Typography variant="h6">{t('2. Map the signals and their meaning')} </Typography>
       <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
         <TextField
-          label="Profile name"
+          label={t('Profile name')}
           value={profile.name}
           onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))}
         />
         <TextField
-          label="Machine model / supported version"
+          label={t('Machine model / supported version')}
           value={profile.endpointModel}
           onChange={(e) => setProfile((p) => ({ ...p, endpointModel: e.target.value }))}
         />
         <TextField
           select
-          label="Reuse a saved profile"
+          label={t('Reuse a saved profile')}
           value=""
           sx={{ minWidth: 230 }}
           onChange={(e) => {
@@ -286,7 +288,7 @@ export default function CommissioningPanel() {
         >
           {profiles.map((p) => (
             <MenuItem value={p.id} key={p.id}>
-              {p.profile.name} · revision {p.id}
+              {p.profile.name} {t('· revision')} {p.id}
             </MenuItem>
           ))}
         </TextField>
@@ -304,17 +306,18 @@ export default function CommissioningPanel() {
             })
           }
         >
-          Use owned simulator example
+          {t('Use owned simulator example')}{' '}
         </Button>
       </Stack>
       <Typography variant="body2">
-        Available namespaces: {preview?.namespaces.join(' · ') ?? 'Check the connection first'}.
-        Importing a profile previews fields here; it does not change the machine.
+        {t('Available namespaces:')}{' '}
+        {preview?.namespaces.join(' · ') ?? 'Check the connection first'}
+        {t('. Importing a profile previews fields here; it does not change the machine.')}{' '}
       </Typography>
       {roles.map((role) => (
         <Box key={role} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
           <Typography fontWeight="bold" sx={{ mb: 1 }}>
-            {role === 'state' ? 'Machine state' : `${role} counter`}
+            {role === 'state' ? t('Machine state') : `${role} counter`}
           </Typography>
           <Stack direction="row" flexWrap="wrap" gap={1}>
             <TextField
@@ -382,38 +385,41 @@ export default function CommissioningPanel() {
           />
         ))}
         <TextField
-          label="Ideal cycle (milliseconds)"
+          label={t('Ideal cycle (milliseconds)')}
           type="number"
           value={profile.idealCycleMs}
           onChange={(e) => setProfile((p) => ({ ...p, idealCycleMs: Number(e.target.value) }))}
         />
         <TextField
-          label="Unknown after (seconds)"
+          label={t('Unknown after (seconds)')}
           type="number"
           value={profile.maxGapSeconds}
           onChange={(e) => setProfile((p) => ({ ...p, maxGapSeconds: Number(e.target.value) }))}
         />
         <TextField
           select
-          label="Counter decreases"
+          label={t('Counter decreases')}
           value={profile.counterPolicy}
           onChange={(e) =>
             setProfile((p) => ({
               ...p,
               counterPolicy: e.target.value as ProductionProfile['counterPolicy'],
+              counterModulus:
+                e.target.value === 'rollover' ? (p.counterModulus ?? 65536) : undefined,
             }))
           }
         >
-          <MenuItem value="reject-decrease">Mark as incomplete</MenuItem>
-          <MenuItem value="reset-to-zero">Declared reset to zero</MenuItem>
+          <MenuItem value="reject-decrease">{t('Mark as incomplete')} </MenuItem>
+          <MenuItem value="reset-to-zero">{t('Declared reset to zero')} </MenuItem>
+          <MenuItem value="rollover">{t('Declared counter rollover')} </MenuItem>
         </TextField>
       </Stack>
       <Stack direction="row" spacing={2}>
         <Button onClick={() => downloadJson(profile, 'machine-profile.json')}>
-          Export profile
+          {t('Export profile')}{' '}
         </Button>
         <Button component="label">
-          Import profile
+          {t('Import profile')}{' '}
           <input
             type="file"
             accept="application/json,.json"
@@ -439,39 +445,41 @@ export default function CommissioningPanel() {
           />
         </Button>
       </Stack>
-      <Typography variant="h6">3. Preview, review and save</Typography>
+      <Typography variant="h6">{t('3. Preview, review and save')} </Typography>
       <Button variant="outlined" disabled={!machineId || busy} onClick={() => void inspect(true)}>
-        Preview mapped signals
+        {t('Preview mapped signals')}{' '}
       </Button>
       {preview?.signals.map((signal) => (
         <Alert key={signal.role} severity={signal.good ? 'success' : 'warning'}>
           {signal.role}: {signal.nodeId} → {String(signal.value)} · {signal.quality} ·{' '}
-          {signal.actualType} · source {signal.sourceTime ?? 'unknown'}
+          {signal.actualType} {t('· source')} {signal.sourceTime ?? 'unknown'}
         </Alert>
       ))}
       {preview && (
         <Typography variant="body2">
-          Existing mappings:{' '}
-          {preview.currentMappings.map((m) => `${m.nodeKey} → ${m.nodeId}`).join('; ') || 'none'}.
-          Saving adds or updates the reviewed mappings and preserves other signals.
+          {t('Existing mappings:')}{' '}
+          {preview.currentMappings.map((m) => `${m.nodeKey} → ${m.nodeId}`).join('; ') || 'none'}
+          {t('. Saving adds or updates the reviewed mappings and preserves other signals.')}{' '}
         </Typography>
       )}
       <FormControlLabel
         control={<Checkbox checked={reviewed} onChange={(e) => setReviewed(e.target.checked)} />}
-        label="I reviewed the mappings, state meanings, units and counter policy for this machine."
+        label={t(
+          'I reviewed the mappings, state meanings, units and counter policy for this machine.',
+        )}
       />
       <Button
         variant="contained"
         disabled={busy || !reviewed || !preview?.ready || previewKey !== key}
         onClick={() => void save()}
       >
-        Save profile and create dashboard
+        {t('Save profile and create dashboard')}{' '}
       </Button>
       {saved && (
         <Alert severity="success">
-          Profile saved. Connection: {saved.connection}.{' '}
+          {t('Profile saved. Connection:')} {saved.connection}.{' '}
           <Button component={Link} to={`/dashboard/${saved.dashboardId}`}>
-            Open machine dashboard
+            {t('Open machine dashboard')}{' '}
           </Button>
         </Alert>
       )}

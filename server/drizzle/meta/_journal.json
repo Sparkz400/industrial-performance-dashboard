@@ -71,6 +71,41 @@
       "when": 1793023132978,
       "tag": "0009_tiny_blockbuster",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793032048874,
+      "tag": "0010_asset_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793033221139,
+      "tag": "0011_history_retention",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793033505244,
+      "tag": "0012_production_planning",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793033837280,
+      "tag": "0013_maintenance_energy",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793035372789,
+      "tag": "0014_evidence_identity",
+      "breakpoints": true
     }
   ]
 }

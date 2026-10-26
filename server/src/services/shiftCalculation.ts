@@ -79,6 +79,8 @@ export function counterDeltas(
     if (
       sample.value == null ||
       sample.value < 0 ||
+      (profile.counterPolicy === "rollover" &&
+        (!profile.counterModulus || sample.value >= profile.counterModulus)) ||
       !sample.statusCode?.startsWith("Good")
     ) {
       previous = undefined;
@@ -90,6 +92,15 @@ export function counterDeltas(
       if (gap <= 0 || gap > profile.maxGapSeconds * 1000) complete = false;
       else if (sample.value >= previous.value!) {
         count += (sample.value - previous.value!) * scale;
+        usable++;
+      } else if (
+        profile.counterPolicy === "rollover" &&
+        profile.counterModulus &&
+        previous.value! >= profile.counterModulus * 0.9 &&
+        sample.value <= profile.counterModulus * 0.1
+      ) {
+        count +=
+          (profile.counterModulus - previous.value! + sample.value) * scale;
         usable++;
       } else if (profile.counterPolicy === "reset-to-zero") {
         count += sample.value * scale;
@@ -136,7 +147,9 @@ export function calculateShift(input: {
       ...input.breaks.flatMap((i) => [Date.parse(i.start), Date.parse(i.end)]),
       ...reasons.flatMap((i) => [Date.parse(i.start), Date.parse(i.end)]),
     ]),
-  ].sort((a, b) => a - b);
+  ]
+    .filter((time) => time >= start.getTime() && time <= end.getTime())
+    .sort((a, b) => a - b);
   let intervalIndex = 0;
   for (let i = 0; i < boundaries.length - 1; i++) {
     const from = boundaries[i],

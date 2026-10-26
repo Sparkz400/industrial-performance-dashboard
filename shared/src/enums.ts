@@ -1,12 +1,12 @@
 // ===== Connection Status =====
 
 export const ConnectionStatus = {
-  CONNECTED: 'CONNECTED',
-  CONNECTING: 'CONNECTING',
-  DISCONNECTED: 'DISCONNECTED',
-  ERROR: 'ERROR',
-  WARNING: 'WARNING',
-  UNKNOWN: 'UNKNOWN',
+  CONNECTED: "CONNECTED",
+  CONNECTING: "CONNECTING",
+  DISCONNECTED: "DISCONNECTED",
+  ERROR: "ERROR",
+  WARNING: "WARNING",
+  UNKNOWN: "UNKNOWN",
 } as const;
 
 export type ConnectionStatus =
@@ -15,8 +15,8 @@ export type ConnectionStatus =
 // ===== Service Names =====
 
 export const ServiceName = {
-  DATABASE: 'DATABASE',
-  OPCUA: 'OPCUA',
+  DATABASE: "DATABASE",
+  OPCUA: "OPCUA",
 } as const;
 
 export type ServiceName = (typeof ServiceName)[keyof typeof ServiceName];
@@ -24,9 +24,11 @@ export type ServiceName = (typeof ServiceName)[keyof typeof ServiceName];
 // ===== User Roles =====
 
 export const UserRole = {
-  ADMIN: 'admin',
-  VIEWER: 'viewer',
-  WALLBOARD: 'wallboard',
+  OPERATOR: "operator",
+  SUPERVISOR: "supervisor",
+  ADMIN: "admin",
+  VIEWER: "viewer",
+  WALLBOARD: "wallboard",
 } as const;
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
@@ -34,9 +36,9 @@ export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 // ===== OPC-UA Security =====
 
 export const SecurityMode = {
-  NONE: 'None',
-  SIGN: 'Sign',
-  SIGN_AND_ENCRYPT: 'SignAndEncrypt',
+  NONE: "None",
+  SIGN: "Sign",
+  SIGN_AND_ENCRYPT: "SignAndEncrypt",
 } as const;
 
 export type SecurityMode = (typeof SecurityMode)[keyof typeof SecurityMode];
@@ -44,9 +46,9 @@ export type SecurityMode = (typeof SecurityMode)[keyof typeof SecurityMode];
 // ===== Health Check Status =====
 
 export const HealthStatus = {
-  OK: 'ok',
-  DEGRADED: 'degraded',
-  ERROR: 'error',
+  OK: "ok",
+  DEGRADED: "degraded",
+  ERROR: "error",
 } as const;
 
 export type HealthStatus = (typeof HealthStatus)[keyof typeof HealthStatus];
@@ -54,9 +56,9 @@ export type HealthStatus = (typeof HealthStatus)[keyof typeof HealthStatus];
 // ===== Export Formats =====
 
 export const ExportFormat = {
-  PNG: 'png',
-  SVG: 'svg',
-  CSV: 'csv',
+  PNG: "png",
+  SVG: "svg",
+  CSV: "csv",
 } as const;
 
 export type ExportFormat = (typeof ExportFormat)[keyof typeof ExportFormat];
@@ -64,21 +66,21 @@ export type ExportFormat = (typeof ExportFormat)[keyof typeof ExportFormat];
 // ===== Notification Types =====
 
 export const NotificationType = {
-  ALARM: 'alarm',
-  STATUS: 'status',
-  SYSTEM: 'system',
-  INFO: 'info',
+  ALARM: "alarm",
+  STATUS: "status",
+  SYSTEM: "system",
+  INFO: "info",
 } as const;
 
 export type NotificationType =
   (typeof NotificationType)[keyof typeof NotificationType];
 
 export const NotificationSeverity = {
-  CRITICAL: 'critical',
-  HIGH: 'high',
-  MEDIUM: 'medium',
-  LOW: 'low',
-  INFO: 'info',
+  CRITICAL: "critical",
+  HIGH: "high",
+  MEDIUM: "medium",
+  LOW: "low",
+  INFO: "info",
 } as const;
 
 export type NotificationSeverity =
@@ -87,11 +89,11 @@ export type NotificationSeverity =
 // ===== Alarm Severity =====
 
 export const AlarmSeverity = {
-  CRITICAL: 'critical',
-  HIGH: 'high',
-  MEDIUM: 'medium',
-  LOW: 'low',
-  INFO: 'info',
+  CRITICAL: "critical",
+  HIGH: "high",
+  MEDIUM: "medium",
+  LOW: "low",
+  INFO: "info",
 } as const;
 
 export type AlarmSeverity = (typeof AlarmSeverity)[keyof typeof AlarmSeverity];
@@ -99,9 +101,9 @@ export type AlarmSeverity = (typeof AlarmSeverity)[keyof typeof AlarmSeverity];
 // ===== Alarm Status =====
 
 export const AlarmStatus = {
-  ACTIVE: 'active',
-  ACKNOWLEDGED: 'acknowledged',
-  CLEARED: 'cleared',
+  ACTIVE: "active",
+  ACKNOWLEDGED: "acknowledged",
+  CLEARED: "cleared",
 } as const;
 
 export type AlarmStatus = (typeof AlarmStatus)[keyof typeof AlarmStatus];
@@ -109,11 +111,11 @@ export type AlarmStatus = (typeof AlarmStatus)[keyof typeof AlarmStatus];
 // ===== Alarm Condition =====
 
 export const AlarmCondition = {
-  GT: 'gt',
-  GTE: 'gte',
-  LT: 'lt',
-  LTE: 'lte',
-  EQ: 'eq',
+  GT: "gt",
+  GTE: "gte",
+  LT: "lt",
+  LTE: "lte",
+  EQ: "eq",
 } as const;
 
 export type AlarmCondition =
@@ -122,10 +124,10 @@ export type AlarmCondition =
 // ===== Aggregate Resolution =====
 
 export const AggregateResolution = {
-  RAW: 'raw',
-  HOURLY: 'hourly',
-  DAILY: 'daily',
-  WEEKLY: 'weekly',
+  RAW: "raw",
+  HOURLY: "hourly",
+  DAILY: "daily",
+  WEEKLY: "weekly",
 } as const;
 
 export type AggregateResolution =
@@ -134,12 +136,12 @@ export type AggregateResolution =
 // ===== Time Range Presets =====
 
 export const TimeRangePreset = {
-  ONE_HOUR: '1h',
-  SIX_HOURS: '6h',
-  TWENTY_FOUR_HOURS: '24h',
-  SEVEN_DAYS: '7d',
-  THIRTY_DAYS: '30d',
-  CUSTOM: 'custom',
+  ONE_HOUR: "1h",
+  SIX_HOURS: "6h",
+  TWENTY_FOUR_HOURS: "24h",
+  SEVEN_DAYS: "7d",
+  THIRTY_DAYS: "30d",
+  CUSTOM: "custom",
 } as const;
 
 export type TimeRangePreset =
@@ -150,34 +152,34 @@ export type TimeRangePreset =
 export function getStatusLabel(status: string): string {
   switch (status) {
     case ConnectionStatus.CONNECTED:
-      return 'Connected';
+      return "Connected";
     case ConnectionStatus.CONNECTING:
-      return 'Connecting...';
+      return "Connecting...";
     case ConnectionStatus.DISCONNECTED:
-      return 'Disconnected';
+      return "Disconnected";
     case ConnectionStatus.ERROR:
-      return 'Error';
+      return "Error";
     case ConnectionStatus.WARNING:
-      return 'Warning';
+      return "Warning";
     case ConnectionStatus.UNKNOWN:
     default:
-      return 'Unknown';
+      return "Unknown";
   }
 }
 
 export function getStatusColor(status: string): string {
   switch (status) {
     case ConnectionStatus.CONNECTED:
-      return 'success';
+      return "success";
     case ConnectionStatus.CONNECTING:
-      return 'info';
+      return "info";
     case ConnectionStatus.WARNING:
-      return 'warning';
+      return "warning";
     case ConnectionStatus.ERROR:
     case ConnectionStatus.DISCONNECTED:
-      return 'error';
+      return "error";
     case ConnectionStatus.UNKNOWN:
     default:
-      return 'default';
+      return "default";
   }
 }

@@ -29,7 +29,7 @@ test.describe("Authentication Flow", () => {
 
     // Fill in invalid credentials
     await page.getByLabel(/username/i).fill("invaliduser");
-    await page.getByLabel(/password/i).fill("wrongpassword");
+    await page.getByLabel(/^password/i).fill("wrongpassword");
     await page.getByRole("button", { name: /login|sign in/i }).click();
 
     // Should show error message
@@ -42,7 +42,7 @@ test.describe("Authentication Flow", () => {
     await page.goto("/");
 
     const usernameField = page.getByLabel(/username/i);
-    const passwordField = page.getByLabel(/password/i);
+    const passwordField = page.getByLabel(/^password/i);
 
     await expect(usernameField).toBeVisible({ timeout: 10_000 });
     await expect(passwordField).toBeVisible();

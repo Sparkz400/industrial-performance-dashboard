@@ -1,6 +1,7 @@
 import { eq, and, desc, gte, lte, sql, isNull } from "drizzle-orm";
 import { validateAlarmRule } from "../services/alarmRuleValidation.js";
 import db, { getReadDb } from "../database/db.js";
+import { machineScope } from "../services/accessScope.js";
 import {
   alertRules,
   alertHistory,
@@ -12,7 +13,7 @@ export const alarmRepository = {
 
   async listRules(filters?: { machineId?: number; isActive?: boolean }) {
     const readDb = getReadDb();
-    const conditions = [];
+    const conditions = [machineScope(alertRules.machineId)];
     if (filters?.machineId != null)
       conditions.push(eq(alertRules.machineId, filters.machineId));
     if (filters?.isActive != null)
@@ -29,7 +30,7 @@ export const alarmRepository = {
     const [rule] = await getReadDb()
       .select()
       .from(alertRules)
-      .where(eq(alertRules.id, id));
+      .where(and(eq(alertRules.id, id), machineScope(alertRules.machineId)));
     return rule ?? null;
   },
 
@@ -88,7 +89,7 @@ export const alarmRepository = {
     endDate?: string;
   }) {
     const readDb = getReadDb();
-    const conditions = [];
+    const conditions = [machineScope(alertHistory.machineId)];
 
     if (filters?.severity)
       conditions.push(sql`${alertHistory.severity} = ${filters.severity}`);
@@ -114,7 +115,9 @@ export const alarmRepository = {
     const [alarm] = await getReadDb()
       .select()
       .from(alertHistory)
-      .where(eq(alertHistory.id, id));
+      .where(
+        and(eq(alertHistory.id, id), machineScope(alertHistory.machineId)),
+      );
     return alarm ?? null;
   },
 
@@ -135,6 +138,7 @@ export const alarmRepository = {
       .where(
         and(
           eq(alertHistory.id, id),
+          machineScope(alertHistory.machineId),
           isNull(alertHistory.resolvedAt),
           isNull(alertHistory.acknowledgedAt),
         ),

@@ -59,6 +59,11 @@ transitions, operator revisions and stop classifications with explicit clock and
 See [factory-pilot acceptance](docs/FACTORY_PILOT_ACCEPTANCE.md) for tested software
 milestones and the separate physical-machine gates.
 
+The [daily operations guide](docs/DAILY_OPERATIONS.md) covers machine/site access,
+recurring shift calendars, product runs and frozen reports, maintenance inspections,
+metered energy and reviewed history retention. Core workflows support English/German.
+See [daily workflow acceptance](docs/DAILY_OPERATIONS_ACCEPTANCE.md) for software evidence.
+
 ## Where it is going
 
 The [roadmap](docs/ROADMAP.md) starts with trustworthy measurements and a useful

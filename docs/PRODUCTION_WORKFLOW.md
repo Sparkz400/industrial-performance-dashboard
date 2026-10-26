@@ -42,9 +42,9 @@ observation within the profile's maximum gap become **unknown**. Bad quality,
 unrecognized state values and different source identities also remain unknown.
 Unknown is never treated as a stopped machine or a reason to infer production.
 
-Select an observed idle/fault/planned interval to classify its reason. Viewers may
-acknowledge alarms and classify/correct stops; other application changes require
-an administrator. Corrections append a record with actor, time and predecessor;
+Select an observed idle/fault/planned interval to classify its reason. Operators,
+supervisors and administrators may acknowledge alarms and classify/correct stops
+on their assigned machines. Viewers and wallboards are read-only. Corrections append a record with actor, time and predecessor;
 they do not delete the original reason or machine timeline. Narrow a correction
 and add another non-overlapping reason to split an interval. Running, unknown,
 future and overlapping reason intervals are rejected.
@@ -107,8 +107,10 @@ Browser socket origins must match the configured application origin; an untruste
 origin cannot use a signed session cookie. State-changing HTTP requests require
 the matching session CSRF token, including tRPC mutations.
 Metrics, infrastructure settings and legacy scheduled-report distribution require
-an administrator. Viewers read this company's data, including its shift reports;
-there is no per-machine or tenant isolation. Use separate installations for companies.
+an administrator. Direct machine grants and active site memberships scope read and
+write paths, including tRPC, sockets and exports. Dashboards require all their listed
+assets. See [daily operations](DAILY_OPERATIONS.md) for the role matrix and migration
+behavior. Use separate installations for companies; tenant isolation is unqualified.
 
 Public shares and embeds return 410 and new sharing is disabled. Existing tokens
 are retained for administrator revocation. Selected-data sharing remains F08;

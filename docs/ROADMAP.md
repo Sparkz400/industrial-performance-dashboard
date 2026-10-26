@@ -68,7 +68,7 @@ deferred tasks must be recorded explicitly rather than silently counted as done.
 | **M2 — Brownfield connectivity and dependable history** | Needed gateway protocol, stable ingestion contract, retention/rollups, durable events, deterministic reports and tested operational recovery | Required adapters pass C10 fixtures and real endpoint qualification; H04–H07/H09–H10, I01–I05, D07 and relevant alert/report items demonstrate replay, load and operational limits. |
 | **M3 — Production improvement workflows** | Better line-loss analysis, validated quality/batches, maintenance, energy and useful asset views | Select a concrete improvement question for O06–O08, Q01–Q07, M01–M06, U08 and X03. Show before/after evidence with comparable conditions and no invented causal claim. |
 | **M4 — Multi-site operations** | Authenticated edge ingestion, site permissions, identity federation and fleet administration | H08, D08 and E01–E05 prove authorization boundaries, independent offline operation, deduplication and recovery across a named site pair. Separate companies still use separate installations. |
-| **M5 — Evidence-backed intelligence and ecosystem** | Governed data questions, evaluated anomaly detection, selected extensions and demand-led enterprise options | X01/X02/X04–X06, I06–I08 and E06 require separate go/no-go decisions, useful evaluation results and a maintenance owner. No autonomous machine control. |
+| **M5 — Evidence-backed intelligence and ecosystem** | Governed data questions, evaluated anomaly detection, selected extensions and demand-led enterprise options | X01/X02/X04–X06, I07–I08 and E06 require separate go/no-go decisions, useful evaluation results and a maintenance owner. No autonomous machine control. |
 
 M1 pilot acceptance is not a general release or machine-family qualification.
 M2 and later scopes are selectable: the pilot inventory determines whether MQTT,
@@ -108,7 +108,7 @@ done in parallel where it does not depend on an unresolved data contract.
 | Reporting | Scheduling reliability, coverage, export limits | Reproducible shift summaries, comparisons and permission-scoped distribution | [R](../TODO.md#reporting), [reports](../client/src/features/reports) |
 | Quality | SPC isolation/statistics, batch transitions, evidence terminology | Inspection/reject workflows, genealogy and read-only recipe verification | [Q](../TODO.md#quality-and-traceability), [services](../server/src/services) |
 | Maintenance and energy | Existing consumption/condition visualizations | Maintenance log/counters, condition workflow, energy per good unit, tariff and baseline comparison | [M](../TODO.md#maintenance-and-energy) |
-| Integrations | Actual event wiring, durable webhooks, widget boundaries | Versioned import/export API, ERP/CMMS reference contracts and TIA MCP handoff | [I](../TODO.md#integrations-and-extension-points) |
+| Integrations | Actual event wiring, durable webhooks, widget boundaries | Versioned import/export API and ERP/CMMS reference contracts | [I](../TODO.md#integrations-and-extension-points) |
 | Operation | Container deployment, observability, health and recovery | Measured operating envelope, upgrade/restore procedure, disconnected installation and optional HA | [D](../TODO.md#deployment-and-operation) |
 | Enterprise | Plant scoping and administrator workflows | SSO, service accounts, site overview, fleet lifecycle and a gated tenancy study | [E](../TODO.md#enterprise-and-multi-site) |
 | Intelligence | Honest NL and SVG capabilities | Governed analytical questions, evaluated anomaly models, replay and bounded forecasts | [X](../TODO.md#analytics-and-experiments) |
@@ -205,3 +205,13 @@ feedback; remove low-value proposals rather than accumulating unused modules.
 Not planned here: autonomous PLC control, safety functions, a full ERP replacement,
 universal machine compatibility, unconditional multi-tenancy, a 3D simulation
 engine or predictive-maintenance claims without suitable evidence.
+
+## Daily workflow delivery
+
+DF01–DF04, DF06 and DF07 implement the next standalone software slice: scoped asset/site
+roles, bounded history and reviewed retention, calendars/product runs, core bilingual
+workflows, service inspections and measured energy/loss accounting. See
+[daily operations](DAILY_OPERATIONS.md) and [acceptance](DAILY_OPERATIONS_ACCEPTANCE.md).
+This does not close broader multi-company hosting, CMMS, tariffs, prediction, physical
+S7-1500 qualification or customer acceptance items. Product integration with TIA MCP
+is outside this roadmap.

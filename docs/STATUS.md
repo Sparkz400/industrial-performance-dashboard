@@ -5,6 +5,14 @@ owned simulator or an isolated test installation using OPC UA scalar signals.
 
 ## Implemented and covered by focused tests
 
+- Machine/site grants across REST, tRPC, sockets and exports; operator/supervisor roles.
+- Streaming raw history, reviewed retention, quality-aware hourly summaries and storage estimates.
+- Recurring calendars/holidays/DST, product runs, declared rollover and frozen report revisions.
+- Maintenance plans, observed runtime/cycles, inspections, attributable service and incident links.
+- Metered energy, per-good-part/idle/changeover losses and independent reconciliation.
+- English/German core workflows, account cache isolation, freshness, keyboard/touch and deferred widget loading.
+  See [daily operations](DAILY_OPERATIONS.md) and [acceptance](DAILY_OPERATIONS_ACCEPTANCE.md).
+
 - Bounded incident replay with quality/gaps, separate clocks, immutable operator
   revisions and retrospective stop classifications; [replay contract](INCIDENT_REPLAY.md).
 - An opt-in read-only Modbus TCP adapter with encrypted, co-located OPC UA and a
@@ -51,18 +59,18 @@ simulator evidence do not establish physical-machine acceptance or release readi
   encrypted channel and explicit certificate trust. See the [S7-1500 pilot guide](S7_1500_PILOT.md).
 - Process crashes and unobserved machine events can leave uncertain intervals;
   reconnection notifications cannot reconstruct measurements never received.
-- Shift profiles explicitly choose reset-to-zero or reject-decrease. Legacy OEE
-  still assumes reset-to-zero; rollover and daily manual entries remain unqualified.
-  Shift windows use explicit offsets and IANA timezones; recurring calendars and
-  holidays remain open. Unsampled counter boundaries prevent a verified report.
+- Shift profiles explicitly choose reset-to-zero, reject-decrease or declared rollover.
+  Legacy OEE still assumes reset-to-zero. Calendars handle IANA timezones, holidays and
+  explicit DST ambiguity. Unsampled counter/run boundaries prevent verified reports;
+  resets near rollover and multiple wraps still require source/sampling qualification.
 - The disk spool needs free space, a persistent volume and a single collector.
 - Edge/cloud transfer and ingest are disabled: previously transferred queue records
   do not establish queryable central history. Retained records remain visible in settings.
 - AI provides suggestions only, discloses Anthropic processing and never executes SQL
   or renders provider-invented measurement charts. Missing configuration returns 503.
 - Compliance, recipes and digital twins remain experimental. Public shares/embeds
-  and legacy notification channels are disabled. The tested single-company permission
-  policy does not establish site/asset or tenant isolation. See the
+  and legacy notification channels are disabled. Site/asset scope is enforced within
+  one installation; this does not establish tenant isolation. See the
   [production workflow and evidence](PRODUCTION_WORKFLOW.md) and [TODO](../TODO.md).
 - Separate companies must use separate installations. Tenant isolation is unqualified.
 - The full npm audit reports zero vulnerabilities, including development tools.

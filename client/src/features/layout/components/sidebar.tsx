@@ -1,770 +1,229 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Box,
+  Button,
+  Chip,
+  Collapse,
   Divider,
   Drawer,
+  IconButton,
   List,
-  ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  MenuItem,
+  TextField,
   Tooltip,
   Typography,
-  Badge,
-  Collapse,
-  alpha,
-  CircularProgress,
+  useMediaQuery,
 } from '@mui/material';
-import { useTheme as useMuiTheme } from '@mui/material/styles';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import SettingsIcon from '@mui/icons-material/Settings';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import LightModeIcon from '@mui/icons-material/LightMode';
-import DarkModeIcon from '@mui/icons-material/DarkMode';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorIcon from '@mui/icons-material/Error';
-import WarningIcon from '@mui/icons-material/Warning';
-import NetworkCheckIcon from '@mui/icons-material/NetworkCheck';
-import PrecisionManufacturingIcon from '@mui/icons-material/PrecisionManufacturing';
-import SpeedIcon from '@mui/icons-material/Speed';
-import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
-import AssessmentIcon from '@mui/icons-material/Assessment';
 import FactoryIcon from '@mui/icons-material/Factory';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import BuildIcon from '@mui/icons-material/Build';
+import SettingsIcon from '@mui/icons-material/Settings';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import MenuIcon from '@mui/icons-material/Menu';
+import HelpIcon from '@mui/icons-material/HelpOutline';
+import ContrastIcon from '@mui/icons-material/Contrast';
 import LogoutIcon from '@mui/icons-material/Logout';
-import PersonIcon from '@mui/icons-material/Person';
-import InstallMobileIcon from '@mui/icons-material/InstallMobile';
-import GavelIcon from '@mui/icons-material/Gavel';
-import TimelineIcon from '@mui/icons-material/Timeline';
-import ViewInArIcon from '@mui/icons-material/ViewInAr';
-import BurgerButton from './burgerButton';
-import { useThemeStore } from '@/stores/useThemeStore';
-import { useStatusStore } from '@/stores/useStatusStore';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { useSpcStore } from '@/stores/useSpcStore';
+import { useStatusStore } from '@/stores/useStatusStore';
+import { useThemeStore } from '@/stores/useThemeStore';
 import { usePWA } from '@/hooks/usePWA';
-
-import type { ServiceStatus } from '@/types';
-
-// Simple debounce function
-/**
- *
- * @param func
- * @param delay
- */
-function debounce<T extends (...args: unknown[]) => void>(
-  func: T,
-  delay: number,
-): T & { cancel?: () => void } {
-  let timer: ReturnType<typeof setTimeout>;
-  const debounced = (...args: Parameters<T>) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      func(...args);
-    }, delay);
-  };
-  return debounced as T & { cancel?: () => void };
-}
-
-// Get icon based on status
-/**
- *
- * @param statusItem
- */
-function getStatusIcon(statusItem?: ServiceStatus): React.JSX.Element {
-  const statusStr = statusItem?.status?.toLowerCase() || 'unknown'; // Access the 'status' property
-
-  if (statusStr === 'connected' || statusStr === 'ok') return <CheckCircleIcon color="success" />; // Use MUI color prop
-  if (statusStr === 'warning') return <WarningIcon color="warning" />;
-  if (statusStr === 'error' || statusStr === 'disconnected') return <ErrorIcon color="error" />;
-  if (statusStr === 'connecting') return <CircularProgress size={18} color="info" />; // Add connecting icon
-  return <HelpOutlineIcon color="disabled" />; // Default/Unknown icon
-}
-
-interface ResponsiveSidebarProps {
+import { useLanguage, useT } from '@/i18n';
+interface Props {
   open: boolean;
   onToggle: () => void;
   onWidthChange: (width: number) => void;
 }
-
-const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ open, onToggle, onWidthChange }) => {
-  const themeMode = useThemeStore((s) => s.themeMode);
-  const toggleTheme = useThemeStore((s) => s.toggleTheme);
-  const theme = useMuiTheme();
-  const location = useLocation();
-  const contentRef = useRef<HTMLDivElement | null>(null);
-  const [statusExpanded, setStatusExpanded] = useState<boolean>(false);
-  const status = useStatusStore((s) => s.status);
-  const socketConnected = useStatusStore((s) => s.socketConnected);
-
-  const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
-  const spcAlertCount = useSpcStore((s) => s.activeAlertCount);
-  const { canInstall, promptInstall } = usePWA();
-
-  const overallStatus = status?.overall?.status || 'UNKNOWN';
-
-  // Get badge color for overall status
-  const getOverallBadgeColor = (): 'success' | 'warning' | 'error' | 'info' | 'default' => {
-    switch (overallStatus.toLowerCase()) {
-      case 'connected':
-      case 'ok':
-        return 'success';
-      case 'warning':
-        return 'warning';
-      case 'error':
-      case 'disconnected':
-        return 'error';
-      case 'connecting':
-        return 'info';
-      default:
-        return 'default';
-    }
+/**
+ *
+ * @param root0
+ * @param root0.open
+ * @param root0.onToggle
+ * @param root0.onWidthChange
+ */
+export default function ResponsiveSidebar({ open, onToggle, onWidthChange }: Props) {
+  const t = useT(),
+    location = useLocation(),
+    mobile = useMediaQuery('(max-width:599px)'),
+    user = useAuthStore((s) => s.user),
+    logout = useAuthStore((s) => s.logout),
+    admin = user?.role === 'admin';
+  const { language, setLanguage } = useLanguage(),
+    toggleTheme = useThemeStore((s) => s.toggleTheme),
+    status = useStatusStore((s) => s.status),
+    socket = useStatusStore((s) => s.socketConnected);
+  const [advanced, setAdvanced] = useState(false),
+    { canInstall, promptInstall } = usePWA();
+  const width = open ? 260 : 56;
+  useEffect(() => onWidthChange(mobile ? 56 : width), [width, mobile, onWidthChange]);
+  const links = [
+    { to: '/', label: 'Dashboard', icon: <DashboardIcon /> },
+    { to: '/production', label: 'Production', icon: <FactoryIcon /> },
+    { to: '/operations', label: 'Daily operations', icon: <BuildIcon /> },
+    { to: '/alerts/history', label: 'Alerts', icon: <NotificationsIcon /> },
+    ...(admin
+      ? [
+          { to: '/machines', label: 'Machines', icon: <FactoryIcon /> },
+          { to: '/settings', label: 'Settings', icon: <SettingsIcon /> },
+        ]
+      : []),
+    { to: '/help', label: 'Help', icon: <HelpIcon /> },
+  ];
+  const advancedLinks = [
+    ['/plants', 'Plants'],
+    ['/oee/config', 'OEE Config'],
+    ['/reports/history', 'Reports'],
+    ['/compliance', 'Compliance'],
+    ['/spc', 'SPC Profiles'],
+    ['/digital-twins', 'Digital Twins'],
+  ];
+  const navigate = () => {
+    if (mobile && open) onToggle();
   };
-
-  const measureWidth = useCallback((): number => {
-    if (!contentRef.current) return 0;
-    const width = open ? contentRef.current.scrollWidth : 56; // Collapsed width
-    const maxSidebarWidth = window.innerWidth * 0.3;
-    return Math.min(width, maxSidebarWidth);
-  }, [open]);
-
-  useEffect(() => {
-    // Flag to track if component is mounted
-    let isMounted = true;
-
-    // Measure and update sidebar width when open changes
-    // Use a safer approach than requestAnimationFrame
-    const updateWidth = (): void => {
-      if (!isMounted) return;
-
-      const width = measureWidth();
-      onWidthChange(width);
-    };
-
-    // Schedule the initial update
-    const initialUpdateTimeout = setTimeout(updateWidth, 10);
-
-    // Create a proper debounced resize handler that checks mount state
-    const handleResize = (): void => {
-      if (!isMounted) return;
-
-      const width = measureWidth();
-      onWidthChange(width);
-    };
-
-    // Create the debounced version
-    const debouncedHandleResize = debounce(handleResize, 200);
-
-    // Add event listener
-    window.addEventListener('resize', debouncedHandleResize);
-
-    // Comprehensive cleanup
-    return () => {
-      isMounted = false;
-      clearTimeout(initialUpdateTimeout);
-
-      // Remove event listener
-      window.removeEventListener('resize', debouncedHandleResize);
-
-      // Cancel any pending debounced calls
-      if (debouncedHandleResize.cancel) {
-        debouncedHandleResize.cancel();
-      }
-    };
-  }, [open, measureWidth, onWidthChange]);
-
-  const toggleStatus = useCallback((): void => {
-    setStatusExpanded((prev) => !prev);
-  }, []);
-
-  // Get status text directly from the standardized object
-  const getDatabaseStatusText = (): string => status?.database?.statusText || 'Unknown';
-  const getOpcuaStatusText = (): string => status?.opcua?.statusText || 'Unknown';
-
   return (
     <Drawer
-      variant="persistent"
-      open={true} // Always open from MUI's perspective; we control the width via CSS
-      PaperProps={{
-        sx: {
-          position: 'fixed',
-          overflowX: 'hidden',
-          overflowY: 'auto',
-          height: '100vh',
-          width: open ? 'auto' : '56px',
-          transition: 'width 0.3s ease',
-          borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-        },
-      }}
-      sx={{ flexShrink: 0 }}
+      variant={mobile && open ? 'temporary' : 'permanent'}
+      open={open}
+      onClose={onToggle}
+      slotProps={{ paper: { sx: { width, overflowX: 'hidden' } } }}
     >
       <Box
-        ref={contentRef}
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%',
-          bgcolor: theme.palette.background.paper,
-          color: theme.palette.text.primary,
-          whiteSpace: 'nowrap',
-          py: 1,
-          px: 0,
-        }}
+        component="nav"
+        aria-label={t('Main navigation', 'Hauptnavigation')}
+        sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%', p: 0.5 }}
       >
-        <List disablePadding sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-          {/* Burger button */}
-          <ListItem
-            disablePadding
-            sx={{
-              display: 'flex',
-              justifyContent: open ? 'space-between' : 'center',
-              py: 1,
-              px: 2,
-            }}
-          >
-            <BurgerButton checked={open} onChange={onToggle} />
-            {open && (
-              <Typography variant="subtitle1" fontWeight="bold">
-                Dashboard
-              </Typography>
-            )}
-          </ListItem>
-          <Divider sx={{ my: 1 }} />
-
-          {/* Main navigation */}
-          <ListItem disablePadding>
-            <ListItemButton
-              component={Link}
-              to="/"
-              selected={location.pathname === '/'}
-              sx={{
-                py: 1.5,
-                justifyContent: open ? 'flex-start' : 'center',
-                '&.Mui-selected': {
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  '&:hover': {
-                    bgcolor: alpha(theme.palette.primary.main, 0.2),
-                  },
-                  '& .MuiListItemIcon-root': {
-                    color: theme.palette.primary.main,
-                  },
-                  '& .MuiListItemText-primary': {
-                    fontWeight: 'bold',
-                    color: theme.palette.primary.main,
-                  },
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
-              >
-                <DashboardIcon />
-              </ListItemIcon>
-              {open && <ListItemText primary="Dashboard" />}
-            </ListItemButton>
-          </ListItem>
-
-          <ListItem disablePadding>
-            <ListItemButton
-              component={Link}
-              to="/production"
-              selected={location.pathname === '/production'}
-            >
-              <ListItemIcon>
-                <FactoryIcon />
-              </ListItemIcon>
-              {open && <ListItemText primary="Production shift" />}
-            </ListItemButton>
-          </ListItem>
-          {/* Machines (admin only) */}
-          {user?.role === 'admin' && (
-            <ListItem disablePadding>
+        <IconButton
+          aria-label={t(open ? 'Close navigation' : 'Expand navigation')}
+          aria-expanded={open}
+          onClick={onToggle}
+          sx={{ width: 48, height: 48, alignSelf: 'flex-start' }}
+        >
+          <MenuIcon />
+        </IconButton>
+        {open && (
+          <Typography sx={{ px: 1, py: 1, fontWeight: 700 }}>Performance Dashboard</Typography>
+        )}
+        <List>
+          {links.map((link) => (
+            <Tooltip key={link.to} title={open ? '' : t(link.label)} placement="right">
               <ListItemButton
                 component={Link}
-                to="/machines"
-                selected={location.pathname === '/machines'}
-                sx={{
-                  py: 1.5,
-                  justifyContent: open ? 'flex-start' : 'center',
-                  '&.Mui-selected': {
-                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                    '&:hover': {
-                      bgcolor: alpha(theme.palette.primary.main, 0.2),
-                    },
-                    '& .MuiListItemIcon-root': {
-                      color: theme.palette.primary.main,
-                    },
-                    '& .MuiListItemText-primary': {
-                      fontWeight: 'bold',
-                      color: theme.palette.primary.main,
-                    },
-                  },
-                }}
+                to={link.to}
+                aria-label={t(link.label)}
+                aria-current={location.pathname === link.to ? 'page' : undefined}
+                selected={location.pathname === link.to}
+                onClick={navigate}
+                sx={{ minHeight: 48, px: 1.5, borderRadius: 1 }}
               >
-                <ListItemIcon
-                  sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
-                >
-                  <PrecisionManufacturingIcon />
-                </ListItemIcon>
-                {open && <ListItemText primary="Machines" />}
-              </ListItemButton>
-            </ListItem>
-          )}
-
-          {/* Plants (admin only) */}
-          {user?.role === 'admin' && (
-            <ListItem disablePadding>
-              <ListItemButton
-                component={Link}
-                to="/plants"
-                selected={location.pathname === '/plants'}
-                sx={{
-                  py: 1.5,
-                  justifyContent: open ? 'flex-start' : 'center',
-                  '&.Mui-selected': {
-                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
-                    '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
-                    '& .MuiListItemText-primary': {
-                      fontWeight: 'bold',
-                      color: theme.palette.primary.main,
-                    },
-                  },
-                }}
-              >
-                <ListItemIcon
-                  sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
-                >
-                  <FactoryIcon />
-                </ListItemIcon>
-                {open && <ListItemText primary="Plants" />}
-              </ListItemButton>
-            </ListItem>
-          )}
-
-          {/* OEE Config (admin only) */}
-          {user?.role === 'admin' && (
-            <ListItem disablePadding>
-              <ListItemButton
-                component={Link}
-                to="/oee/config"
-                selected={location.pathname === '/oee/config'}
-                sx={{
-                  py: 1.5,
-                  justifyContent: open ? 'flex-start' : 'center',
-                  '&.Mui-selected': {
-                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
-                    '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
-                    '& .MuiListItemText-primary': {
-                      fontWeight: 'bold',
-                      color: theme.palette.primary.main,
-                    },
-                  },
-                }}
-              >
-                <ListItemIcon
-                  sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
-                >
-                  <SpeedIcon />
-                </ListItemIcon>
-                {open && <ListItemText primary="OEE Config" />}
-              </ListItemButton>
-            </ListItem>
-          )}
-
-          {/* Alerts */}
-          <ListItem disablePadding>
-            <ListItemButton
-              component={Link}
-              to="/alerts/history"
-              selected={location.pathname.startsWith('/alerts')}
-              sx={{
-                py: 1.5,
-                justifyContent: open ? 'flex-start' : 'center',
-                '&.Mui-selected': {
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
-                  '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
-                  '& .MuiListItemText-primary': {
-                    fontWeight: 'bold',
-                    color: theme.palette.primary.main,
-                  },
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
-              >
-                <NotificationsActiveIcon />
-              </ListItemIcon>
-              {open && <ListItemText primary="Alerts" />}
-            </ListItemButton>
-          </ListItem>
-
-          {/* Reports */}
-          <ListItem disablePadding>
-            <ListItemButton
-              component={Link}
-              to="/reports/history"
-              selected={location.pathname.startsWith('/reports')}
-              sx={{
-                py: 1.5,
-                justifyContent: open ? 'flex-start' : 'center',
-                '&.Mui-selected': {
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
-                  '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
-                  '& .MuiListItemText-primary': {
-                    fontWeight: 'bold',
-                    color: theme.palette.primary.main,
-                  },
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
-              >
-                <AssessmentIcon />
-              </ListItemIcon>
-              {open && <ListItemText primary="Reports" />}
-            </ListItemButton>
-          </ListItem>
-
-          {/* Compliance (admin only) */}
-          {user?.role === 'admin' && (
-            <ListItem disablePadding>
-              <ListItemButton
-                component={Link}
-                to="/compliance"
-                selected={location.pathname.startsWith('/compliance')}
-                sx={{
-                  py: 1.5,
-                  justifyContent: open ? 'flex-start' : 'center',
-                  '&.Mui-selected': {
-                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
-                    '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
-                    '& .MuiListItemText-primary': {
-                      fontWeight: 'bold',
-                      color: theme.palette.primary.main,
-                    },
-                  },
-                }}
-              >
-                <ListItemIcon
-                  sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
-                >
-                  <GavelIcon />
-                </ListItemIcon>
-                {open && <ListItemText primary="Compliance" />}
-              </ListItemButton>
-            </ListItem>
-          )}
-
-          {/* SPC Profiles */}
-          <ListItem disablePadding>
-            <ListItemButton
-              component={Link}
-              to="/spc"
-              selected={location.pathname.startsWith('/spc')}
-              sx={{
-                py: 1.5,
-                justifyContent: open ? 'flex-start' : 'center',
-                '&.Mui-selected': {
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
-                  '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
-                  '& .MuiListItemText-primary': {
-                    fontWeight: 'bold',
-                    color: theme.palette.primary.main,
-                  },
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
-              >
-                <Badge badgeContent={spcAlertCount} color="error" max={99}>
-                  <TimelineIcon />
-                </Badge>
-              </ListItemIcon>
-              {open && <ListItemText primary="SPC Profiles" />}
-            </ListItemButton>
-          </ListItem>
-
-          {/* Digital Twins */}
-          <ListItem disablePadding>
-            <ListItemButton
-              component={Link}
-              to="/digital-twins"
-              selected={location.pathname.startsWith('/digital-twins')}
-              sx={{
-                py: 1.5,
-                justifyContent: open ? 'flex-start' : 'center',
-                '&.Mui-selected': {
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
-                  '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
-                  '& .MuiListItemText-primary': {
-                    fontWeight: 'bold',
-                    color: theme.palette.primary.main,
-                  },
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
-              >
-                <ViewInArIcon />
-              </ListItemIcon>
-              {open && <ListItemText primary="Digital Twins" />}
-            </ListItemButton>
-          </ListItem>
-
-          {/* Middle space */}
-          <Box sx={{ flexGrow: 1 }} />
-
-          {/* System status section */}
-          <ListItem disablePadding>
-            <ListItemButton
-              onClick={toggleStatus}
-              sx={{ py: 1.5, justifyContent: open ? 'flex-start' : 'center' }}
-            >
-              <ListItemIcon sx={{ minWidth: open ? 40 : 'auto' }}>
-                <Badge
-                  color={getOverallBadgeColor()}
-                  variant="dot"
-                  overlap="circular"
-                  anchorOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
-                  }}
-                >
-                  <NetworkCheckIcon color={socketConnected ? 'success' : 'action'} />
-                </Badge>
-              </ListItemIcon>
-              {open && (
-                <>
-                  <ListItemText
-                    primary="System Status"
-                    secondary={socketConnected ? null : 'Polling'}
-                  />
-                  {statusExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                </>
-              )}
-            </ListItemButton>
-          </ListItem>
-
-          {/* Collapsible status details */}
-          {open && (
-            <Collapse in={statusExpanded} timeout="auto" unmountOnExit>
-              <List component="div" disablePadding>
-                <ListItem sx={{ py: 0.5, pl: 4 }}>
-                  {/* Pass the whole status.database object */}
-                  <ListItemIcon
-                    sx={{
-                      minWidth: 40,
-                      color: status?.database?.statusColor || theme.palette.text.disabled,
-                    }}
-                  >
-                    {getStatusIcon(status?.database)}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Database"
-                    secondary={getDatabaseStatusText()} // Use helper
-                    primaryTypographyProps={{ fontSize: '0.875rem' }}
-                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
-                  />
-                </ListItem>
-                <ListItem sx={{ py: 0.5, pl: 4 }}>
-                  {/* Pass the whole status.opcua object */}
-                  <ListItemIcon
-                    sx={{
-                      minWidth: 40,
-                      color: status?.opcua?.statusColor || theme.palette.text.disabled,
-                    }}
-                  >
-                    {getStatusIcon(status?.opcua)}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="OPC UA"
-                    secondary={getOpcuaStatusText()} // Use helper
-                    primaryTypographyProps={{ fontSize: '0.875rem' }}
-                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
-                  />
-                </ListItem>
-              </List>
-            </Collapse>
-          )}
-
-          <Divider sx={{ my: 1 }} />
-
-          {/* Settings */}
-          <ListItem disablePadding>
-            <ListItemButton
-              component={Link}
-              to="/settings"
-              selected={location.pathname === '/settings'}
-              sx={{
-                py: 1.5,
-                justifyContent: open ? 'flex-start' : 'center',
-                '&.Mui-selected': {
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  '&:hover': {
-                    bgcolor: alpha(theme.palette.primary.main, 0.2),
-                  },
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
-              >
-                <SettingsIcon />
-              </ListItemIcon>
-              {open && <ListItemText primary="Settings" />}
-            </ListItemButton>
-          </ListItem>
-
-          {/* Help */}
-          <ListItem disablePadding>
-            <ListItemButton
-              component={Link}
-              to="/help"
-              selected={location.pathname === '/help'}
-              sx={{
-                py: 1.5,
-                justifyContent: open ? 'flex-start' : 'center',
-                '&.Mui-selected': {
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  '&:hover': {
-                    bgcolor: alpha(theme.palette.primary.main, 0.2),
-                  },
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
-              >
-                <HelpOutlineIcon />
-              </ListItemIcon>
-              {open && <ListItemText primary="Help" />}
-            </ListItemButton>
-          </ListItem>
-
-          {/* PWA Install */}
-          {canInstall && (
-            <ListItem disablePadding>
-              <Tooltip title="Install App" placement="right">
-                <ListItemButton
-                  onClick={promptInstall}
-                  sx={{
-                    py: 1.5,
-                    justifyContent: open ? 'flex-start' : 'center',
-                  }}
-                >
-                  <ListItemIcon
-                    sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.success.main }}
-                  >
-                    <InstallMobileIcon />
-                  </ListItemIcon>
-                  {open && <ListItemText primary="Install App" />}
-                </ListItemButton>
-              </Tooltip>
-            </ListItem>
-          )}
-
-          {/* Theme toggle */}
-          <ListItem disablePadding>
-            <Tooltip
-              title={`Switch to ${themeMode === 'dark' ? 'light' : 'dark'} mode`}
-              placement="right"
-            >
-              <ListItemButton
-                onClick={toggleTheme}
-                sx={{
-                  py: 1.5,
-                  justifyContent: open ? 'flex-start' : 'center',
-                }}
-              >
-                <ListItemIcon
-                  sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.text.primary }}
-                >
-                  {themeMode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
-                </ListItemIcon>
-                {open && (
-                  <ListItemText primary={`${themeMode === 'dark' ? 'Light' : 'Dark'} Mode`} />
-                )}
+                <ListItemIcon sx={{ minWidth: open ? 36 : 24 }}>{link.icon}</ListItemIcon>
+                {open && <ListItemText primary={t(link.label)} />}
               </ListItemButton>
             </Tooltip>
-          </ListItem>
-
-          {/* User info & logout */}
-          {user && (
-            <>
-              <Divider sx={{ my: 1 }} />
-              <ListItem disablePadding>
-                <Tooltip title={`${user.username} (${user.role})`} placement="right">
-                  <ListItemButton
-                    sx={{
-                      py: 1.5,
-                      justifyContent: open ? 'flex-start' : 'center',
-                      cursor: 'default',
-                      '&:hover': { bgcolor: 'transparent' },
-                    }}
-                    disableRipple
-                  >
-                    <ListItemIcon
-                      sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.primary.main }}
-                    >
-                      <PersonIcon />
-                    </ListItemIcon>
-                    {open && (
-                      <ListItemText
-                        primary={user.username}
-                        secondary={user.role}
-                        primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 600 }}
-                        secondaryTypographyProps={{
-                          fontSize: '0.75rem',
-                          textTransform: 'capitalize',
-                        }}
-                      />
-                    )}
-                  </ListItemButton>
-                </Tooltip>
-              </ListItem>
-              <ListItem disablePadding>
-                <Tooltip title="Sign out" placement="right">
-                  <ListItemButton
-                    onClick={logout}
-                    sx={{
-                      py: 1.5,
-                      justifyContent: open ? 'flex-start' : 'center',
-                    }}
-                  >
-                    <ListItemIcon
-                      sx={{ minWidth: open ? 40 : 'auto', color: theme.palette.error.main }}
-                    >
-                      <LogoutIcon />
-                    </ListItemIcon>
-                    {open && (
-                      <ListItemText
-                        primary="Sign Out"
-                        primaryTypographyProps={{ color: theme.palette.error.main }}
-                      />
-                    )}
-                  </ListItemButton>
-                </Tooltip>
-              </ListItem>
-            </>
-          )}
+          ))}
         </List>
+        {admin && open && (
+          <>
+            <Button
+              aria-expanded={advanced}
+              aria-controls="advanced-navigation"
+              onClick={() => setAdvanced((v) => !v)}
+            >
+              {t('Advanced')}
+            </Button>
+            <Collapse in={advanced}>
+              <List id="advanced-navigation">
+                {advancedLinks.map(([to, label]) => (
+                  <ListItemButton
+                    key={to}
+                    component={Link}
+                    to={to}
+                    onClick={navigate}
+                    selected={location.pathname === to}
+                    sx={{ minHeight: 48 }}
+                  >
+                    <ListItemText primary={t(label)} />
+                  </ListItemButton>
+                ))}
+              </List>
+            </Collapse>
+          </>
+        )}
+        <Box sx={{ flexGrow: 1 }} />
+        <Divider sx={{ my: 1 }} />
+        {admin && open && (
+          <Box sx={{ p: 1 }}>
+            <Typography variant="caption">{t('System Status')}</Typography>
+            <Chip
+              size="small"
+              label={status.overall.statusText || t('Unknown')}
+              color={status.overall.status === 'ERROR' ? 'error' : 'default'}
+            />
+            <Typography variant="caption" display="block">
+              {socket
+                ? t('Live connection', 'Live-Verbindung')
+                : t('Polling', 'Regelmäßige Abfrage')}
+            </Typography>
+          </Box>
+        )}
+        {open && (
+          <TextField
+            select
+            size="small"
+            label="Language / Sprache"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as 'en' | 'de')}
+            sx={{ my: 1, mx: 0.5 }}
+          >
+            <MenuItem value="en">English</MenuItem>
+            <MenuItem value="de">Deutsch</MenuItem>
+          </TextField>
+        )}
+        <Tooltip title={t('Toggle theme')}>
+          <ListItemButton
+            aria-label={t('Toggle theme')}
+            onClick={toggleTheme}
+            sx={{ minHeight: 48, px: 1.5 }}
+          >
+            <ListItemIcon sx={{ minWidth: open ? 36 : 24 }}>
+              <ContrastIcon />
+            </ListItemIcon>
+            {open && <ListItemText primary={t('Toggle theme')} />}
+          </ListItemButton>
+        </Tooltip>
+        {canInstall && open && (
+          <Button onClick={() => void promptInstall()}>{t('Install app')}</Button>
+        )}
+        {open && (
+          <Typography sx={{ p: 1, overflowWrap: 'anywhere' }} variant="body2">
+            {user?.username} ·{' '}
+            {t(
+              user?.role ?? '',
+              {
+                admin: 'Administration',
+                supervisor: 'Schichtleitung',
+                operator: 'Bedienung',
+                viewer: 'Lesen',
+                wallboard: 'Wandanzeige',
+              }[user?.role ?? 'viewer'],
+            )}
+          </Typography>
+        )}
+        <Tooltip title={t('Sign Out')}>
+          <ListItemButton
+            aria-label={t('Sign Out')}
+            onClick={() => void logout()}
+            sx={{ minHeight: 48, px: 1.5 }}
+          >
+            <ListItemIcon sx={{ minWidth: open ? 36 : 24 }}>
+              <LogoutIcon />
+            </ListItemIcon>
+            {open && <ListItemText primary={t('Sign Out')} />}
+          </ListItemButton>
+        </Tooltip>
       </Box>
     </Drawer>
   );
-};
-
-export default ResponsiveSidebar;
+}

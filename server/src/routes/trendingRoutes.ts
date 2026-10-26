@@ -1,3 +1,4 @@
+import { streamHistory } from "../services/historyExport.js";
 import { Router, type Request, type Response } from "express";
 import Joi from "joi";
 import { validateQuery, validateParams } from "../middleware/validation.js";
@@ -84,7 +85,7 @@ router.get(
       aggregation?: "avg" | "min" | "max" | "last";
     };
 
-    const csv = await trendingDataService.exportCsv({
+    await streamHistory(req, res, {
       nodeKeys: nodeKeys.split(",").map((k) => k.trim()),
       machineId: machineId != null ? Number(machineId) : undefined,
       startDate: new Date(startDate),
@@ -94,11 +95,6 @@ router.get(
         : undefined,
       aggregation,
     });
-
-    const filename = `trending-export-${new Date().toISOString().slice(0, 10)}.csv`;
-    res.setHeader("Content-Type", "text/csv");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.send(csv);
   }),
 );
 

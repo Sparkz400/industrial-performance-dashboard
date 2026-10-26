@@ -73,3 +73,12 @@ for upgrade, rollback, SMTP and report settings. Review the exact-image
 For nonlocal deployments, read [SECURITY.md](../SECURITY.md) and validate HTTPS,
 proxy trust, credentials, OPC UA certificate trust, backup restoration and access
 controls in your environment before exposing the service.
+
+## Daily work and access
+
+After commissioning, use **Settings → People & Access** to create operators,
+supervisors or read-only viewers and grant machines/sites. Configure each dashboard's
+asset list. New accounts have no implicit machine access. Existing viewers remain
+read-only after upgrade; assign operator explicitly where needed. **Daily operations**
+contains planning, maintenance, energy and history. Select English/Deutsch in the
+sidebar or login screen. See [daily operations](DAILY_OPERATIONS.md).

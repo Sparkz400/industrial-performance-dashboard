@@ -32,14 +32,14 @@ export class StatusSocketService {
     statusManager.on("statusChanged", () => {
       logger.info("[WebSocket] Broadcasting status update to clients.");
       const fullStatus = statusManager.getFullStatus() as SystemStatus;
-      this.io.emit("statusUpdate", fullStatus);
+      this.io.to("access:admin").emit("statusUpdate", fullStatus);
     });
   }
 
   /** Send current status to a specific socket (e.g. on connect) */
   sendCurrentStatus(socketId: string): void {
     const socket = this.io.sockets.sockets.get(socketId);
-    if (!socket) return;
+    if (!socket || socket.data.user.role !== "admin") return;
 
     try {
       const currentStatus = statusManager.getFullStatus() as SystemStatus;

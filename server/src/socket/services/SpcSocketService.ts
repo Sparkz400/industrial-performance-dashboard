@@ -23,7 +23,13 @@ export class SpcSocketService {
   }
 
   broadcastSpcAlert(alert: SpcAlertEvent): void {
-    this.io.emit("spcAlert", alert);
+    this.io
+      .to(
+        alert.machineId == null
+          ? ["access:admin"]
+          : ["access:admin", `access:machine:${alert.machineId}`],
+      )
+      .emit("spcAlert", alert);
     logger.info(
       `[SpcSocket] Broadcast spcAlert: ${alert.alertType} on profile ${alert.profileId}`,
     );

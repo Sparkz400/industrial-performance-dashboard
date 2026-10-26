@@ -22,6 +22,11 @@ import {
   ValidationError,
 } from "../utils/errors.js";
 import { liveProduction } from "../services/liveProductionService.js";
+import {
+  canSupervise,
+  loadAccessScope,
+  accessScope,
+} from "../services/accessScope.js";
 
 const router = Router();
 const id = Joi.number().integer().positive().required();
@@ -51,35 +56,57 @@ const mutable = {
   ownerId: Joi.number().integer().positive().allow(null).required(),
   dueAt: instant.required(),
 };
-async function validateOwner(ownerId: number | null) {
+async function validateOwner(ownerId: number | null, machineId: number) {
   if (ownerId === null) return;
   const [owner] = await db
-    .select({ id: users.id })
+    .select({ id: users.id, role: users.role })
     .from(users)
     .where(
       and(
         eq(users.id, ownerId),
         eq(users.isActive, true),
-        ne(users.role, "wallboard"),
+        sql`${users.role} IN ('admin', 'operator', 'supervisor')`,
       ),
     );
   if (!owner)
     throw new ValidationError(
       "Select an active operator or administrator as owner",
     );
+  const ownerAccess = await loadAccessScope(owner.id, owner!.role);
+  if (
+    ownerAccess.role !== "admin" &&
+    !ownerAccess.machineIds.includes(machineId)
+  )
+    throw new ValidationError("The action owner needs access to this machine");
 }
 
 router.get(
   "/operator/owners",
   asyncHandler(async (_req, res) => {
-    res.json(
-      await db
-        .select({ id: users.id, username: users.username })
-        .from(users)
-        .where(and(eq(users.isActive, true), ne(users.role, "wallboard")))
-        .orderBy(asc(users.username))
-        .limit(200),
-    );
+    const owners = await db
+      .select({ id: users.id, username: users.username, role: users.role })
+      .from(users)
+      .where(
+        and(
+          eq(users.isActive, true),
+          sql`${users.role} IN ('admin', 'operator', 'supervisor')`,
+        ),
+      )
+      .orderBy(asc(users.username))
+      .limit(200);
+    const scope = accessScope.getStore();
+    const visible = [];
+    for (const owner of owners) {
+      const target = await loadAccessScope(owner.id, owner.role);
+      if (
+        !scope ||
+        scope.role === "admin" ||
+        target.role === "admin" ||
+        target.machineIds.some((id) => scope.machineIds.includes(id))
+      )
+        visible.push({ id: owner.id, username: owner.username });
+    }
+    res.json(visible);
   }),
 );
 
@@ -135,7 +162,7 @@ router.post(
   ),
   asyncHandler(async (req, res) => {
     const body = req.body;
-    await validateOwner(body.ownerId);
+    await validateOwner(body.ownerId, body.machineId);
     if (body.kind === "action" && !body.ownerId)
       throw new ValidationError("Assign an owner to an action");
     if ((body.kind === "quantity") !== Boolean(body.quantity))
@@ -244,7 +271,6 @@ router.post(
     }),
   ),
   asyncHandler(async (req, res) => {
-    await validateOwner(req.body.ownerId);
     const entryId = Number(req.params.id);
     const result = await db.transaction(async (tx) => {
       const [entry] = await tx
@@ -253,11 +279,15 @@ router.post(
         .where(eq(operatorEntries.id, entryId))
         .for("update");
       if (!entry) throw new NotFoundError("Entry");
+      await validateOwner(req.body.ownerId, entry.machineId);
       if (entry.version !== req.body.version)
         throw new ConflictError(
           "This entry changed. Refresh and review the latest version before saving",
         );
-      if (entry.kind === "quantity" && req.session.userRole !== "admin")
+      if (
+        entry.kind === "quantity" &&
+        !canSupervise(req.session.userRole ?? "")
+      )
         throw new ForbiddenError(
           "An administrator must review quantity declarations",
         );

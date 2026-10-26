@@ -1,3 +1,5 @@
+import { translate as t, useLanguage } from '@/i18n';
+import LiveState from './LiveState';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -23,6 +25,7 @@ import { productionRequest } from './CommissioningPanel';
  *
  */
 export default function Wallboard() {
+  useLanguage((s) => s.language);
   const root = useRef<HTMLDivElement>(null);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -76,7 +79,7 @@ export default function Wallboard() {
       <Stack spacing={2}>
         <Stack direction="row" flexWrap="wrap" gap={2} alignItems="center">
           <Typography variant="h4" sx={{ flexGrow: 1 }}>
-            Production wallboard
+            {t('Production wallboard')}{' '}
           </Typography>
           <Button
             onClick={async () => {
@@ -88,18 +91,18 @@ export default function Wallboard() {
               }
             }}
           >
-            Toggle fullscreen
+            {t('Toggle fullscreen')}{' '}
           </Button>
           {user?.role !== 'wallboard' && (
             <Button component={Link} to="/production">
-              Back to workspace
+              {t('Back to workspace')}{' '}
             </Button>
           )}
-          <Button onClick={() => void logout()}>Sign out</Button>
+          <Button onClick={() => void logout()}>{t('Sign out')} </Button>
         </Stack>
         <TextField
           select
-          label="Wallboard machines (empty means all)"
+          label={t('Wallboard machines (empty means all)')}
           value={selected}
           slotProps={{ select: { multiple: true } }}
           onChange={(event) => {
@@ -119,23 +122,27 @@ export default function Wallboard() {
         <Stack direction="row" flexWrap="wrap" alignItems="center" gap={2}>
           <FormControlLabel
             control={<Checkbox checked={rotate} onChange={(e) => setRotate(e.target.checked)} />}
-            label="Rotate every 30 seconds"
+            label={t('Rotate every 30 seconds')}
           />
           <Button onClick={() => setPage((value) => (value + 1) % pages)} disabled={pages < 2}>
-            Next machines ({(page % pages) + 1}/{pages})
+            {t('Next machines (')}
+            {(page % pages) + 1}/{pages})
           </Button>
           <Typography>
-            Updated {live.data ? new Date(live.data.checkedAt).toLocaleTimeString() : '—'}
+            {t('Updated')} {live.data ? new Date(live.data.checkedAt).toLocaleTimeString() : '—'}
           </Typography>
         </Stack>
         {(error || assets.error) && <Alert severity="error">{error || String(assets.error)}</Alert>}
         {stale && (
           <Alert severity="warning">
-            Live status unavailable or overdue. Displayed measurements are historical; current
-            machine state is unknown.
+            {t(
+              'Live status unavailable or overdue. Displayed measurements are historical; current machine state is unknown.',
+            )}{' '}
           </Alert>
         )}
-        {!ids.length && !assets.isLoading && <Alert severity="info">No machines configured.</Alert>}
+        {!ids.length && !assets.isLoading && (
+          <Alert severity="info">{t('No machines configured.')} </Alert>
+        )}
         <Box
           sx={{
             display: 'grid',
@@ -167,17 +174,19 @@ export default function Wallboard() {
               <Typography variant="h5" sx={{ overflowWrap: 'anywhere' }}>
                 {machine.name}
               </Typography>
-              <Typography variant="h3" sx={{ textTransform: 'capitalize', my: 1 }}>
-                {stale ? 'Unknown' : machine.state}
-              </Typography>
-              <Typography>
-                {stale ? 'Display update overdue' : machine.freshness} · {machine.connection}
-              </Typography>
+              <LiveState
+                machine={machine}
+                updatedAt={live.dataUpdatedAt}
+                failed={!!live.error}
+                large
+              />
               <Typography variant="body2">
-                Last measurement:{' '}
+                {t('Last measurement:')}{' '}
                 {machine.lastMeasurement
-                  ? new Date(machine.lastMeasurement).toLocaleString()
-                  : 'None'}
+                  ? new Date(machine.lastMeasurement).toLocaleString(
+                      useLanguage.getState().language,
+                    )
+                  : t('None')}
               </Typography>
               <Typography variant="h6" sx={{ mt: 2 }}>
                 {machine.shift?.job.reference || 'No active work order'}
@@ -186,19 +195,22 @@ export default function Wallboard() {
                 {machine.shift?.job.product} {machine.shift ? `· ${machine.shift.name}` : ''}
               </Typography>
               <Typography variant="h5">
-                {machine.production.observed?.toLocaleString() ?? 'Unknown'} /{' '}
-                {machine.shift?.job.target?.toLocaleString() ?? '—'} target
+                {machine.production.observed?.toLocaleString(useLanguage.getState().language) ??
+                  'Unknown'}{' '}
+                /{' '}
+                {machine.shift?.job.target?.toLocaleString(useLanguage.getState().language) ?? '—'}{' '}
+                {t('target')}{' '}
               </Typography>
               <Typography variant="body2">
                 {machine.production.truncated
-                  ? 'Progress unavailable: sample limit reached'
+                  ? t('Progress unavailable: sample limit reached')
                   : machine.production.complete
-                    ? 'Observed production'
-                    : 'Partial observed production; gaps or incomplete boundaries'}
+                    ? t('Observed production')
+                    : t('Partial observed production; gaps or incomplete boundaries')}
               </Typography>
               {machine.production.asOf && (
                 <Typography variant="body2">
-                  Counts through {new Date(machine.production.asOf).toLocaleTimeString()}
+                  {t('Counts through')} {new Date(machine.production.asOf).toLocaleTimeString()}
                 </Typography>
               )}
               <Stack spacing={1} sx={{ mt: 2 }}>
@@ -208,19 +220,23 @@ export default function Wallboard() {
                     severity={issue.priority === 'high' ? 'warning' : 'info'}
                     sx={{ overflowWrap: 'anywhere' }}
                   >
-                    {issue.priority === 'high' ? 'HIGH · ' : ''}
+                    {issue.priority === 'high' ? t('HIGH · ') : ''}
                     {issue.text}
-                    {issue.dueAt ? ` · Due ${new Date(issue.dueAt).toLocaleString()}` : ''}
+                    {issue.dueAt
+                      ? ` · Due ${new Date(issue.dueAt).toLocaleString(useLanguage.getState().language)}`
+                      : ''}
                   </Alert>
                 ))}
-                {!machine.issues.length && <Typography>No outstanding handover items.</Typography>}
+                {!machine.issues.length && (
+                  <Typography>{t('No outstanding handover items.')} </Typography>
+                )}
               </Stack>
             </Paper>
           ))}
         </Box>
         {user?.role === 'admin' && !user.recoveryMode && (
           <Box component="details">
-            <summary>Create a read-only display account</summary>
+            <summary>{t('Create a read-only display account')} </summary>
             <Stack
               component="form"
               spacing={2}
@@ -229,9 +245,13 @@ export default function Wallboard() {
                 event.preventDefault();
                 setAccountMessage('');
                 try {
-                  await api.post(`${API_BASE_URL}/auth/register`, {
+                  const created = (await api.post(`${API_BASE_URL}/auth/register`, {
                     ...account,
                     role: 'wallboard',
+                  })) as { user: { id: number } };
+                  await api.put(`${API_BASE_URL}/access/users/${created.user.id}`, {
+                    machineIds: ids,
+                    plantIds: [],
                   });
                   setAccount({ username: '', email: '', password: '' });
                   setAccountMessage(
@@ -244,15 +264,15 @@ export default function Wallboard() {
             >
               <TextField
                 required
-                label="Display username"
-                helperText="Letters and numbers only, 3–50 characters"
+                label={t('Display username')}
+                helperText={t('Letters and numbers only, 3–50 characters')}
                 value={account.username}
                 onChange={(e) => setAccount({ ...account, username: e.target.value })}
               />
               <TextField
                 required
                 type="email"
-                label="Display email"
+                label={t('Display email')}
                 value={account.email}
                 onChange={(e) => setAccount({ ...account, email: e.target.value })}
               />
@@ -260,12 +280,12 @@ export default function Wallboard() {
                 required
                 type="password"
                 autoComplete="new-password"
-                label="Display password"
+                label={t('Display password')}
                 value={account.password}
                 onChange={(e) => setAccount({ ...account, password: e.target.value })}
               />
               <Button type="submit" variant="contained">
-                Create display account
+                {t('Create display account')}{' '}
               </Button>
               {accountMessage && <Typography role="status">{accountMessage}</Typography>}
             </Stack>

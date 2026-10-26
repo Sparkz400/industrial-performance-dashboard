@@ -1,3 +1,4 @@
+import { useT } from '@/i18n';
 import React from 'react';
 import { Tabs, Tab, Box, TextField, CircularProgress, Typography } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
@@ -169,6 +170,8 @@ const DashboardTabs: React.FC<DashboardTabsProps> = ({
   editingDashboardId = null,
   loading = false,
 }) => {
+  const t = useT();
+
   // Create tab elements
   const tabElements = dashboards.map((dashboard, index) => (
     <Tab
@@ -193,7 +196,7 @@ const DashboardTabs: React.FC<DashboardTabsProps> = ({
         onChange={onSelectDashboard}
         variant="scrollable"
         scrollButtons="auto"
-        aria-label="dashboard tabs"
+        aria-label={t('dashboard tabs')}
       >
         {tabElements}
       </Tabs>

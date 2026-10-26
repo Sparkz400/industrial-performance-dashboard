@@ -41,6 +41,12 @@ export class OpcuaSocketService {
   registerSocket(socket: TypedSocket): void {
     socket.on("joinRoom", (roomName: string) => {
       if (typeof roomName === "string" && roomName.startsWith("opcua-")) {
+        const machine = /^opcua-([1-9]\d*)-.+/.exec(roomName);
+        if (
+          socket.data.user.role !== "admin" &&
+          (!machine || !socket.data.machineIds?.includes(Number(machine[1])))
+        )
+          return;
         socket.join(roomName);
         logger.info(`Socket ${socket.id} joined room: ${roomName}`);
       } else {

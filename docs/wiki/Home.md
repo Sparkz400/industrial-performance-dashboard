@@ -43,3 +43,8 @@ and a restricted display account. Physical viewing-distance acceptance remains o
 [Unattended operation](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/UNATTENDED_OPERATION.md)
 covers durable report recovery, separate email retry status, measured alarm holds
 and collector/data-health incidents, including SMTP and self-monitoring limits.
+
+[Daily factory workflows](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DAILY_OPERATIONS.md)
+cover scoped roles, history retention, calendars/product runs, immutable reports,
+maintenance and energy. [Acceptance evidence](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DAILY_OPERATIONS_ACCEPTANCE.md)
+separates software checks from physical S7-1500 and operator acceptance.

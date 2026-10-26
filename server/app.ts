@@ -1,3 +1,7 @@
+import maintenanceRoutes from "./src/routes/maintenanceRoutes.js";
+import energyRoutes from "./src/routes/energyRoutes.js";
+import historyRoutes from "./src/routes/historyRoutes.js";
+import planningRoutes from "./src/routes/planningRoutes.js";
 import "dotenv/config";
 
 // Initialize OpenTelemetry tracing BEFORE importing any instrumented modules
@@ -13,6 +17,8 @@ import config from "./src/config/config.js";
 import dbClient from "./src/database/dbConnection.js";
 import logger from "./src/utils/logger.js";
 import statusManager from "./src/utils/status.js";
+import { requireAssetAccess } from "./src/middleware/assetAccess.js";
+import accessRoutes from "./src/routes/accessRoutes.js";
 import StatusConstants from "./src/utils/statusConstants.js";
 
 import { setupMiddleware } from "./src/middleware/setupMiddleware.js";
@@ -127,7 +133,12 @@ export function createApp() {
   });
   app.use("/api/v1/auth", authRoutes);
   app.use("/api/v1/share", shareRoutes);
-  app.use("/api/v1", requireAuth, requireMutationAccess);
+  app.use("/api/v1", requireAuth, requireMutationAccess, requireAssetAccess);
+  app.use("/api/v1/access", accessRoutes);
+  app.use("/api/v1/history", historyRoutes);
+  app.use("/api/v1/planning", planningRoutes);
+  app.use("/api/v1/maintenance", maintenanceRoutes);
+  app.use("/api/v1/energy", energyRoutes);
   app.use("/api/v1/production", productionRoutes);
   app.use("/api/v1/production", operatorRoutes);
   app.use("/api/v1/system", requireAuth, systemRoutes);

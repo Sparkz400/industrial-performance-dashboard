@@ -23,17 +23,35 @@ export class AlarmSocketService {
   }
 
   broadcastAlarmTriggered(alarm: AlarmEvent): void {
-    this.io.emit("alarmTriggered", alarm);
+    this.io
+      .to(
+        alarm.machineId == null
+          ? ["access:admin"]
+          : ["access:admin", `access:machine:${alarm.machineId}`],
+      )
+      .emit("alarmTriggered", alarm);
     logger.info(`[AlarmSocket] Broadcast alarmTriggered: ${alarm.message}`);
   }
 
   broadcastAlarmAcknowledged(alarm: AlarmEvent): void {
-    this.io.emit("alarmAcknowledged", alarm);
+    this.io
+      .to(
+        alarm.machineId == null
+          ? ["access:admin"]
+          : ["access:admin", `access:machine:${alarm.machineId}`],
+      )
+      .emit("alarmAcknowledged", alarm);
     logger.info(`[AlarmSocket] Broadcast alarmAcknowledged: id=${alarm.id}`);
   }
 
   broadcastAlarmCleared(alarm: AlarmEvent): void {
-    this.io.emit("alarmCleared", alarm);
+    this.io
+      .to(
+        alarm.machineId == null
+          ? ["access:admin"]
+          : ["access:admin", `access:machine:${alarm.machineId}`],
+      )
+      .emit("alarmCleared", alarm);
     logger.info(`[AlarmSocket] Broadcast alarmCleared: id=${alarm.id}`);
   }
 }

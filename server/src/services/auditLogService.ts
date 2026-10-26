@@ -10,7 +10,7 @@ import { ValidationError } from "../utils/errors.js";
 export interface AuditActor {
   userId?: number;
   username?: string;
-  userRole?: "admin" | "viewer" | "wallboard";
+  userRole?: "admin" | "viewer" | "wallboard" | "operator" | "supervisor";
   ipAddress?: string;
 }
 

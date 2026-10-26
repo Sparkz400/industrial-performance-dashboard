@@ -16,6 +16,14 @@ test("creates a dashboard that survives reload", async ({ page }) => {
   await page.reload();
   await expect(tabs.getByRole("tab")).toHaveCount(originalCount + 1);
   const created = tabs.getByRole("tab").last();
+  await page
+    .getByRole("button", { name: "Add Widget", exact: true })
+    .first()
+    .click();
+  await expect(page.getByText("Widget Library", { exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "close widget library", exact: true })
+    .click();
   await created.locator('[data-testid="CloseIcon"]').click();
   await page
     .getByRole("dialog")

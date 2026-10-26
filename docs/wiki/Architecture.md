@@ -32,3 +32,8 @@ separate; missing quality/time and truncated history are explicit.
 Scheduled PDFs use PDFKit and embedded fonts on Node 24/Wolfi, without a production
 browser. Existing database/volume paths remain intact. See the
 [reporting contracts and evidence](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/REPORTING.md).
+
+[Daily factory workflows](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DAILY_OPERATIONS.md)
+cover scoped roles, history retention, calendars/product runs, immutable reports,
+maintenance and energy. [Acceptance evidence](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DAILY_OPERATIONS_ACCEPTANCE.md)
+separates software checks from physical S7-1500 and operator acceptance.

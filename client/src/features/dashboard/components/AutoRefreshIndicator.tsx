@@ -1,3 +1,4 @@
+import { useT } from '@/i18n';
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -22,6 +23,8 @@ const intervals = [
 ];
 
 const AutoRefreshIndicator: React.FC = () => {
+  const t = useT();
+
   const {
     autoRefresh,
     refreshInterval,
@@ -108,7 +111,7 @@ const AutoRefreshIndicator: React.FC = () => {
         </IconButton>
       </Tooltip>
 
-      <Tooltip title="Refresh now">
+      <Tooltip title={t('Refresh now')}>
         <IconButton
           size="small"
           onClick={triggerRefresh}
@@ -124,7 +127,7 @@ const AutoRefreshIndicator: React.FC = () => {
         </IconButton>
       </Tooltip>
 
-      <Tooltip title="Change refresh interval">
+      <Tooltip title={t('Change refresh interval')}>
         <Typography
           variant="caption"
           onClick={(e) => setAnchorEl(e.currentTarget as HTMLElement)}

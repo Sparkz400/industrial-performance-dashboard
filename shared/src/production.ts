@@ -26,12 +26,35 @@ export interface MachineLiveSummary {
   name: string;
   connection: string;
   state: ProductionState;
-  freshness: "fresh" | "stale" | "missing" | "bad-quality" | "disconnected" | "clock-skew";
+  freshness:
+    | "fresh"
+    | "stale"
+    | "missing"
+    | "bad-quality"
+    | "disconnected"
+    | "clock-skew";
   lastMeasurement: string | null;
   receivedAt: string | null;
-  shift: { id: number; name: string; start: string; end: string; job: { reference: string; product: string; target: number | null } } | null;
-  production: { observed: number | null; complete: boolean; asOf: string | null; truncated: boolean };
-  issues: { id: number; text: string; priority: string; dueAt: string | null; kind: string }[];
+  shift: {
+    id: number;
+    name: string;
+    start: string;
+    end: string;
+    job: { reference: string; product: string; target: number | null };
+  } | null;
+  production: {
+    observed: number | null;
+    complete: boolean;
+    asOf: string | null;
+    truncated: boolean;
+  };
+  issues: {
+    id: number;
+    text: string;
+    priority: string;
+    dueAt: string | null;
+    kind: string;
+  }[];
 }
 export interface ProductionSignal {
   nodeKey: string;
@@ -59,7 +82,17 @@ export interface ProductionProfile {
   };
   idealCycleMs: number;
   maxGapSeconds: number;
-  counterPolicy: "reset-to-zero" | "reject-decrease";
+  counterPolicy: "reset-to-zero" | "reject-decrease" | "rollover";
+  /** Exclusive upper bound in the unscaled PLC counter domain. */
+  counterModulus?: number;
+}
+export interface ProductRun {
+  start: string;
+  end: string;
+  reference: string;
+  product: string;
+  target: number | null;
+  idealCycleMs: number;
 }
 export interface ProductionInterval {
   start: string;
@@ -70,13 +103,15 @@ export interface DowntimeReason {
   id: number;
   start: string;
   end: string;
-  category: "planned" | "unplanned";
+  category: "planned" | "unplanned" | "changeover";
   reason: string;
   actorId: number;
   createdAt: string;
   supersedesId: number | null;
 }
 export interface ShiftReport {
+  runs?: { plan: ProductRun; report: ShiftReport }[];
+  planVersion?: number;
   revision: "shift-v1";
   id: number;
   name: string;

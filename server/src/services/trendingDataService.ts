@@ -30,7 +30,7 @@ export type TrendingResult = GetTrendingDataResponse;
 const MAX_POINTS_PER_SERIES = 2000;
 const MIN_AUTO_BUCKET_SECONDS = 60;
 
-function validateWindow(
+export function validateWindow(
   params: TrendingQueryParams,
 ): asserts params is TrendingQueryParams & { machineId: number } {
   if (!Number.isInteger(params.machineId) || params.machineId! <= 0) {
@@ -236,92 +236,6 @@ export const trendingDataService = {
       seriesList.push(series);
     }
     return { series: seriesList };
-  },
-
-  /**
-   * Export trending data as a CSV string. No per-series cap is applied so
-   * that exports include the full dataset.
-   */
-  async exportCsv(params: TrendingQueryParams): Promise<string> {
-    validateWindow(params);
-    const { nodeKeys, machineId, startDate, endDate, aggregation } = params;
-
-    if (nodeKeys.length === 0) {
-      throw new ValidationError("At least one nodeKey is required");
-    }
-
-    const readDb = getReadDb();
-    const bucketSeconds = computeBucketSeconds(
-      startDate,
-      endDate,
-      params.downsampleBucketSeconds,
-    );
-
-    // Collect all data points keyed by timestamp per nodeKey
-    const dataByTimestamp = new Map<string, Record<string, number | null>>();
-
-    for (const nodeKey of nodeKeys) {
-      const conditions = [
-        eq(opcuaData.nodeKey, nodeKey),
-        gte(opcuaData.timestamp, startDate),
-        lte(opcuaData.timestamp, endDate),
-      ];
-      if (machineId != null) {
-        conditions.push(eq(opcuaData.machineId, machineId));
-      }
-
-      let rows: { timestamp: unknown; value: number | null }[];
-
-      if (bucketSeconds != null) {
-        const bucketExpr = sql`to_timestamp(floor(extract(epoch from ${opcuaData.timestamp}) / ${bucketSeconds}) * ${bucketSeconds})`;
-        const aggExpr = aggregationExpression(aggregation);
-
-        rows = await readDb
-          .select({
-            timestamp: bucketExpr.as("bucket"),
-            value: aggExpr.as("value"),
-          })
-          .from(opcuaData)
-          .where(and(...conditions))
-          .groupBy(sql`1`)
-          .orderBy(sql`1`);
-      } else {
-        rows = await readDb
-          .select({
-            timestamp: opcuaData.timestamp,
-            value: opcuaData.value,
-          })
-          .from(opcuaData)
-          .where(and(...conditions))
-          .orderBy(asc(opcuaData.timestamp));
-      }
-
-      for (const row of rows) {
-        const ts =
-          row.timestamp instanceof Date
-            ? row.timestamp.toISOString()
-            : String(row.timestamp);
-        if (!dataByTimestamp.has(ts)) {
-          dataByTimestamp.set(ts, {});
-        }
-        dataByTimestamp.get(ts)![nodeKey] = row.value;
-      }
-    }
-
-    // Build CSV
-    const header = ["timestamp", ...nodeKeys].join(",");
-    const sortedTimestamps = Array.from(dataByTimestamp.keys()).sort();
-
-    const lines = [header];
-    for (const ts of sortedTimestamps) {
-      const record = dataByTimestamp.get(ts)!;
-      const values = nodeKeys.map((k) =>
-        record[k] != null ? String(record[k]) : "",
-      );
-      lines.push([ts, ...values].join(","));
-    }
-
-    return lines.join("\n");
   },
 
   /**

@@ -50,3 +50,14 @@ its reserve is exhausted rather than acknowledging lost data. Size storage for t
 required outage window and tested backup/restore duration. A rising queue or stale
 signal requires investigation; a successful reconnect does not reconstruct missed
 measurements.
+
+## Daily historian follow-through
+
+The daily workflow test streams 200,000 raw rows while queries and ingestion continue
+for at least one minute. The final local run completed 338 reads and 338 new rows in
+63.167 seconds with query p95 230 ms. Retention then removed reviewed batches while
+retaining 180,000 good summary samples, bad-quality counts and late arrivals.
+See [daily acceptance](DAILY_OPERATIONS_ACCEPTANCE.md) for reproduction and limits.
+Storage forecasting uses measured row bytes and receipt rate; it does not infer free
+disk or future index/compression overhead. Protected shift/service evidence can prevent
+retention from reclaiming all old data.

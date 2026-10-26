@@ -1,3 +1,12 @@
+vi.mock("../../services/accessScope.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../services/accessScope.js")>()),
+  loadAccessScope: async (userId: number, role: string) => ({
+    userId,
+    role,
+    machineIds: [],
+    dashboardIds: [],
+  }),
+}));
 import { expect, it, vi } from "vitest";
 import { createServer } from "node:http";
 import { once } from "node:events";

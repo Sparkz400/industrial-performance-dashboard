@@ -1,3 +1,4 @@
+import { usePlantStore } from './usePlantStore';
 import { create } from 'zustand';
 import io, { type Socket } from 'socket.io-client';
 import type { SystemStatus, ServerToClientEvents, ClientToServerEvents } from '../types';
@@ -5,6 +6,7 @@ import { API_ENDPOINTS, WEBSOCKET_ADDR } from '../config/config';
 import { getStoredCsrfToken } from '../utils/csrf';
 import { useNotificationStore } from './useNotificationStore';
 import { useSpcStore } from './useSpcStore';
+import { useAuthStore } from './useAuthStore';
 
 type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -36,6 +38,7 @@ export const useStatusStore = create<StatusState>((set, get) => {
   let cleanupSpcListeners: (() => void) | null = null;
 
   const refreshStatus = async () => {
+    if (useAuthStore.getState().user?.role !== 'admin') return;
     if (isPolling) return;
     isPolling = true;
     try {
@@ -108,14 +111,22 @@ export const useStatusStore = create<StatusState>((set, get) => {
           }
         });
 
-        socketInstance.on('disconnect', () => {
+        socketInstance.on('disconnect', (reason) => {
           set({ socketConnected: false });
+          if (reason === 'io server disconnect') {
+            window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+            return;
+          }
           setupPolling();
           refreshStatus();
         });
 
-        socketInstance.on('connect_error', () => {
+        socketInstance.on('connect_error', (error) => {
           set({ socketConnected: false });
+          if (/^Authentication/.test(error.message)) {
+            window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+            return;
+          }
           setupPolling();
           refreshStatus();
         });
@@ -162,7 +173,18 @@ export const useStatusStore = create<StatusState>((set, get) => {
         clearInterval(pollingInterval);
         pollingInterval = null;
       }
-      set({ socketConnected: false, socket: null });
+      usePlantStore.setState({ plants: [], currentPlant: null });
+      useSpcStore.getState().setAlertCount(0);
+      useNotificationStore.getState().clearAll();
+      set({
+        socketConnected: false,
+        socket: null,
+        status: defaultStatus,
+        lastChecked: null,
+        isError: false,
+        isConnected: false,
+        statusText: 'Unknown',
+      });
     },
   };
 });

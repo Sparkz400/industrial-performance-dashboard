@@ -1,3 +1,4 @@
+import { translate as t, useLanguage } from '@/i18n';
 /* eslint-disable security/detect-object-injection -- Dynamic keys below come from fixed field/role lists; imported profiles are validated by the API. */
 import React, { useEffect, useState } from 'react';
 import {
@@ -36,13 +37,18 @@ interface Shift {
 const iso = (time: number) => new Date(time).toISOString();
 const percent = (value: number | null) =>
   value == null ? 'Unavailable' : `${(value * 100).toFixed(1)}%`;
-const number = (value: number | null) => (value == null ? 'Unknown' : value.toLocaleString());
+const number = (value: number | null) =>
+  value == null ? 'Unknown' : value.toLocaleString(useLanguage.getState().language);
 
 /**
  *
  */
 export default function ProductionPage() {
-  const admin = useAuthStore((s) => s.user?.role === 'admin');
+  useLanguage((s) => s.language);
+  const role = useAuthStore((s) => s.user?.role);
+  const admin = role === 'admin';
+  const supervisor = admin || role === 'supervisor';
+  const operator = supervisor || role === 'operator';
   const [tab, setTab] = useState(0);
   const [selected, setSelected] = useState('');
   const [error, setError] = useState('');
@@ -59,7 +65,7 @@ export default function ProductionPage() {
   const [reason, setReason] = useState<{
     start: string;
     end: string;
-    category: 'planned' | 'unplanned';
+    category: DowntimeReason['category'];
     reason: string;
     supersedesId: number | null;
   }>({ start: '', end: '', category: 'unplanned', reason: '', supersedesId: null });
@@ -107,7 +113,7 @@ export default function ProductionPage() {
   const activeReasons =
     data?.reasons.filter((r) => !data.reasons.some((next) => next.supersedesId === r.id)) ?? [];
   const local = (instant: string) =>
-    new Date(instant).toLocaleString(undefined, {
+    new Date(instant).toLocaleString(useLanguage.getState().language, {
       timeZone: data?.timezone,
       timeZoneName: 'short',
     });
@@ -123,9 +129,9 @@ export default function ProductionPage() {
     <Box sx={{ p: { xs: 1, md: 3 }, height: '100%', overflow: 'auto' }}>
       <style>{`@page { margin: 12mm; } @media print { main { margin-left:0!important; width:100%!important; padding:0!important } .production-report * { color:#000!important; background:transparent!important } .MuiFab-root, [aria-label="Open AI suggestions"], .MuiSnackbar-root {display:none!important} body, #root, main, main > div { height:auto!important; overflow:visible!important; } .MuiDrawer-root, [data-print-hide] {display:none!important} .production-report {color:#000!important;background:white!important} .production-report .MuiPaper-root {box-shadow:none!important;color:#000!important;background:white!important} table {break-inside:auto} tr {break-inside:avoid} }`}</style>
       <Box data-print-hide>
-        <Typography variant="h4">Production shift</Typography>
+        <Typography variant="h4">{t('Production shift')} </Typography>
         <Button component={Link} to="/wallboard">
-          Open supervisor wallboard
+          {t('Open supervisor wallboard')}{' '}
         </Button>
         {admin && (
           <Button
@@ -137,7 +143,7 @@ export default function ProductionPage() {
               }
             }}
           >
-            Download support diagnostics
+            {t('Download support diagnostics')}{' '}
           </Button>
         )}
         <Tabs
@@ -147,10 +153,10 @@ export default function ProductionPage() {
           scrollButtons="auto"
           allowScrollButtonsMobile
         >
-          <Tab value={0} label="Shift workspace" />
-          <Tab value={2} label="Operator handover" />
-          <Tab value={3} label="Incident replay" />
-          {admin && <Tab value={1} label="Commission machine" />}
+          <Tab value={0} label={t('Shift workspace')} />
+          <Tab value={2} label={t('Operator handover')} />
+          <Tab value={3} label={t('Incident replay')} />
+          {admin && <Tab value={1} label={t('Commission machine')} />}
         </Tabs>
       </Box>
       {tab === 3 ? (
@@ -181,24 +187,25 @@ export default function ProductionPage() {
                     : 'info'
               }
             >
-              Collector backlog: {health.data.pendingMeasurements} measurements.{' '}
+              {t('Collector backlog:')} {health.data.pendingMeasurements} {t('measurements.')}{' '}
               {health.data.storageFailure
                 ? `${health.data.storageFailure.message} at ${health.data.storageFailure.at}. Restore storage and restart collection; unreceived time is unknown.`
-                : 'Unreceived intervals remain unknown.'}
+                : t('Unreceived intervals remain unknown.')}
             </Alert>
           )}
           <Stack direction="row" flexWrap="wrap" gap={2} data-print-hide>
             <TextField
               select
-              label="Select shift"
+              label={t('Select shift')}
               value={selected}
               sx={{ minWidth: 300 }}
               onChange={(e) => setSelected(e.target.value)}
             >
-              <MenuItem value="">Choose a shift</MenuItem>
+              <MenuItem value="">{t('Choose a shift')} </MenuItem>
               {shifts.data?.map((shift) => (
                 <MenuItem key={shift.id} value={shift.id}>
-                  {shift.name} · {new Date(shift.start).toLocaleString()}
+                  {shift.name} ·{' '}
+                  {new Date(shift.start).toLocaleString(useLanguage.getState().language)}
                 </MenuItem>
               ))}
             </TextField>
@@ -208,20 +215,21 @@ export default function ProductionPage() {
                 void report.refetch();
               }}
             >
-              Refresh
+              {t('Refresh')}{' '}
             </Button>
           </Stack>
           {admin && (
             <Paper sx={{ p: 2 }} data-print-hide>
-              <Typography variant="h6">Plan a shift</Typography>
+              <Typography variant="h6">{t('Plan a shift')} </Typography>
               <Typography variant="body2" sx={{ mb: 2 }}>
-                Commission the machine first. Each shift preserves its mapping and cycle standard.
-                Include an explicit offset for overnight shifts and daylight-saving changes.
+                {t(
+                  'Commission the machine first. Each shift preserves its mapping and cycle standard. Include an explicit offset for overnight shifts and daylight-saving changes.',
+                )}{' '}
               </Typography>
               <Stack direction="row" flexWrap="wrap" gap={2}>
                 <TextField
                   select
-                  label="Shift machine"
+                  label={t('Shift machine')}
                   value={draft.machineId}
                   onChange={(e) => setDraft((d) => ({ ...d, machineId: e.target.value }))}
                   sx={{ minWidth: 220 }}
@@ -282,7 +290,7 @@ export default function ProductionPage() {
                     />
                   ))}
                   <Button onClick={() => setBreaks((b) => b.filter((_, i) => i !== index))}>
-                    Remove break
+                    {t('Remove break')}{' '}
                   </Button>
                 </Stack>
               ))}
@@ -290,7 +298,7 @@ export default function ProductionPage() {
                 <Button
                   onClick={() => setBreaks((b) => [...b, { start: draft.start, end: draft.end }])}
                 >
-                  Add planned break
+                  {t('Add planned break')}{' '}
                 </Button>
                 <Button
                   variant="contained"
@@ -317,7 +325,7 @@ export default function ProductionPage() {
                     })
                   }
                 >
-                  Create shift
+                  {t('Create shift')}{' '}
                 </Button>
               </Stack>
             </Paper>
@@ -329,13 +337,13 @@ export default function ProductionPage() {
                 {local(data.start)} – {local(data.end)} · {data.timezone}
               </Typography>
               <Typography>
-                Work order {data.job.reference} · {data.job.product} · target{' '}
+                {t('Work order')} {data.job.reference} · {data.job.product} {t('· target')}{' '}
                 {number(data.job.target)} · {data.profile.name}
               </Typography>
               <Alert severity={data.verified ? 'success' : 'warning'}>
                 {data.verified
-                  ? 'Reconciled against recorded independent counts'
-                  : 'Incomplete — review the issues below. This report is not verified.'}
+                  ? t('Reconciled against recorded independent counts')
+                  : t('Incomplete — review the issues below. This report is not verified.')}
               </Alert>
               <Stack direction="row" flexWrap="wrap" gap={1}>
                 {Object.entries(data.oee).map(([key, value]) => (
@@ -346,10 +354,10 @@ export default function ProductionPage() {
                 ))}
               </Stack>
               <Typography>
-                Scheduled production: {(data.scheduledSeconds / 60).toFixed(1)} min · planned
-                exclusions: {(data.plannedSeconds / 60).toFixed(1)} min · observed:{' '}
-                {(data.observedSeconds / 60).toFixed(1)} min · unknown:{' '}
-                {(data.seconds.unknown / 60).toFixed(1)} min
+                {t('Scheduled production:')} {(data.scheduledSeconds / 60).toFixed(1)}{' '}
+                {t('min · planned exclusions:')} {(data.plannedSeconds / 60).toFixed(1)}{' '}
+                {t('min · observed:')} {(data.observedSeconds / 60).toFixed(1)}{' '}
+                {t('min · unknown:')} {(data.seconds.unknown / 60).toFixed(1)} {t('min')}{' '}
               </Typography>
               {data.issues.length > 0 && (
                 <Box component="ul">
@@ -358,21 +366,21 @@ export default function ProductionPage() {
                   ))}
                 </Box>
               )}
-              <Typography variant="h6">Largest losses and data gaps</Typography>
+              <Typography variant="h6">{t('Largest losses and data gaps')} </Typography>
               {data.losses.map((loss) => (
                 <Typography key={loss.reason}>
-                  {loss.reason}: {(loss.seconds / 60).toFixed(2)} min
+                  {loss.reason}: {(loss.seconds / 60).toFixed(2)} {t('min')}{' '}
                 </Typography>
               ))}
-              <Typography variant="h6">Machine timeline</Typography>
+              <Typography variant="h6">{t('Machine timeline')} </Typography>
               <Box sx={{ overflowX: 'auto' }}>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell>From</TableCell>
-                      <TableCell>Until</TableCell>
-                      <TableCell>State</TableCell>
-                      <TableCell data-print-hide>Operator action</TableCell>
+                      <TableCell>{t('From')} </TableCell>
+                      <TableCell>{t('Until')} </TableCell>
+                      <TableCell>{t('State')} </TableCell>
+                      <TableCell data-print-hide>{t('Operator action')} </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -383,9 +391,10 @@ export default function ProductionPage() {
                         <TableCell>{interval.state}</TableCell>
                         <TableCell data-print-hide>
                           {!['running', 'unknown'].includes(interval.state) &&
+                            operator &&
                             Date.parse(interval.end) <= Date.now() && (
                               <Button onClick={() => classify(interval.start, interval.end)}>
-                                Classify stop
+                                {t('Classify stop')}{' '}
                               </Button>
                             )}
                         </TableCell>
@@ -394,72 +403,83 @@ export default function ProductionPage() {
                   </TableBody>
                 </Table>
               </Box>
-              <Typography variant="h6">Operator reasons</Typography>
+              <Typography variant="h6">{t('Operator reasons')} </Typography>
               {activeReasons.map((item) => (
                 <Stack direction="row" spacing={1} key={item.id}>
                   <Typography>
-                    {local(item.start)} – {local(item.end)}: {item.reason} ({item.category}) · actor{' '}
-                    {item.actorId}
+                    {local(item.start)} – {local(item.end)}: {item.reason} ({item.category}
+                    {t(') · actor')} {item.actorId}
                   </Typography>
-                  <Button data-print-hide onClick={() => classify(item.start, item.end, item)}>
-                    Correct reason
+                  <Button
+                    disabled={!operator}
+                    data-print-hide
+                    onClick={() => classify(item.start, item.end, item)}
+                  >
+                    {t('Correct reason')}{' '}
                   </Button>
                 </Stack>
               ))}
               <Typography variant="body2">
-                {data.reasons.length} preserved reason records, including corrections. Original
-                machine observations are unchanged.
+                {data.reasons.length}{' '}
+                {t(
+                  'preserved reason records, including corrections. Original machine observations are unchanged.',
+                )}{' '}
               </Typography>
-              <Typography variant="h6">Calculation inputs</Typography>
+              <Typography variant="h6">{t('Calculation inputs')} </Typography>
               <Typography variant="body2">
-                Revision {data.revision}; ideal cycle {data.profile.idealCycleMs} ms; unknown after{' '}
-                {data.profile.maxGapSeconds} s; counter decrease policy {data.profile.counterPolicy}
-                . Values above 100% remain visible.
+                {t('Revision')} {data.revision}
+                {t('; ideal cycle')} {data.profile.idealCycleMs} {t('ms; unknown after')}{' '}
+                {data.profile.maxGapSeconds} {t('s; counter decrease policy')}{' '}
+                {data.profile.counterPolicy}
+                {t('. Values above 100% remain visible.')}{' '}
               </Typography>
               {Object.entries(data.profile.signals).map(([role, signal]) => (
                 <Typography variant="body2" key={role}>
-                  {role}: {signal.nodeKey} · {signal.namespaceUri} / {signal.identifier} · scale{' '}
-                  {signal.scale} · unit {signal.unit ?? 'undeclared'}
+                  {role}: {signal.nodeKey} · {signal.namespaceUri} / {signal.identifier}{' '}
+                  {t('· scale')} {signal.scale} {t('· unit')} {signal.unit ?? 'undeclared'}
                 </Typography>
               ))}
               {data.evidence && (
                 <Typography>
-                  Independent evidence: {data.evidence.reference}; total {data.evidence.total}, good{' '}
-                  {data.evidence.good}, reject {data.evidence.reject}; recorded by{' '}
-                  {data.evidence.actorId}.
+                  {t('Independent evidence:')} {data.evidence.reference}
+                  {t('; total')} {data.evidence.total}
+                  {t(', good')} {data.evidence.good}
+                  {t(', reject')} {data.evidence.reject}
+                  {t('; recorded by')} {data.evidence.actorId}.
                 </Typography>
               )}
               <Typography variant="caption">
-                Generated {new Date(data.generatedAt).toLocaleString()}. This is application
-                evidence, not physical-machine qualification.
+                {t('Generated')}{' '}
+                {new Date(data.generatedAt).toLocaleString(useLanguage.getState().language)}
+                {t('. This is application evidence, not physical-machine qualification.')}{' '}
               </Typography>
               <Stack direction="row" spacing={2} data-print-hide>
-                <Button onClick={() => window.print()}>Print shift report</Button>
+                <Button onClick={() => window.print()}>{t('Print shift report')} </Button>
                 <Button onClick={() => downloadJson(data, `shift-${data.id}.json`)}>
-                  Export report and history
+                  {t('Export report and history')}{' '}
                 </Button>
               </Stack>
             </Stack>
           )}
-          {selected && reason.start && (
+          {operator && selected && reason.start && (
             <Paper sx={{ p: 2 }} data-print-hide>
               <Typography variant="h6">
-                {reason.supersedesId ? 'Correct recorded reason' : 'Classify observed stop'}
+                {reason.supersedesId ? t('Correct recorded reason') : t('Classify observed stop')}
               </Typography>
               <Stack spacing={2} sx={{ mt: 2 }}>
                 <TextField
-                  label="Stop start (UTC offset)"
+                  label={t('Stop start (UTC offset)')}
                   value={reason.start}
                   onChange={(e) => setReason((r) => ({ ...r, start: e.target.value }))}
                 />
                 <TextField
-                  label="Stop end (UTC offset)"
+                  label={t('Stop end (UTC offset)')}
                   value={reason.end}
                   onChange={(e) => setReason((r) => ({ ...r, end: e.target.value }))}
                 />
                 <TextField
                   select
-                  label="Loss category"
+                  label={t('Loss category')}
                   value={reason.category}
                   onChange={(e) =>
                     setReason((r) => ({
@@ -468,11 +488,12 @@ export default function ProductionPage() {
                     }))
                   }
                 >
-                  <MenuItem value="unplanned">Unplanned</MenuItem>
-                  <MenuItem value="planned">Planned</MenuItem>
+                  <MenuItem value="unplanned">{t('Unplanned')} </MenuItem>
+                  <MenuItem value="changeover">{t('Changeover')} </MenuItem>
+                  <MenuItem value="planned">{t('Planned')} </MenuItem>
                 </TextField>
                 <TextField
-                  label="Reason / correction explanation"
+                  label={t('Reason / correction explanation')}
                   value={reason.reason}
                   onChange={(e) => setReason((r) => ({ ...r, reason: e.target.value }))}
                 />
@@ -487,17 +508,18 @@ export default function ProductionPage() {
                     })
                   }
                 >
-                  Save operator reason
+                  {t('Save operator reason')}{' '}
                 </Button>
               </Stack>
             </Paper>
           )}
-          {admin && data && !data.evidence && (
+          {supervisor && data && !data.evidence && (
             <Paper sx={{ p: 2 }} data-print-hide>
-              <Typography variant="h6">Reconcile independent counts</Typography>
+              <Typography variant="h6">{t('Reconcile independent counts')} </Typography>
               <Typography variant="body2">
-                Record the original shift-sheet or source-system totals and its reference. Evidence
-                is preserved once saved; mismatches remain visible.
+                {t(
+                  'Record the original shift-sheet or source-system totals and its reference. Evidence is preserved once saved; mismatches remain visible.',
+                )}{' '}
               </Typography>
               <Stack direction="row" flexWrap="wrap" gap={2} sx={{ mt: 2 }}>
                 {(['total', 'good', 'reject', 'reference'] as const).map((key) => (
@@ -523,7 +545,7 @@ export default function ProductionPage() {
                     })
                   }
                 >
-                  Record reconciliation
+                  {t('Record reconciliation')}{' '}
                 </Button>
               </Stack>
             </Paper>

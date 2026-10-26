@@ -31,9 +31,15 @@ const t = initTRPC.context<TrpcContext>().create();
 export const router = t.router;
 
 import { getSessionUser } from "../services/sessionAccess.js";
+import {
+  accessScope,
+  loadAccessScope,
+  canOperate,
+} from "../services/accessScope.js";
+import { authorizeAssetRequest } from "../middleware/assetAccess.js";
 
 export const authedProcedure = t.procedure.use(
-  async ({ ctx, next, type, path }) => {
+  async ({ ctx, next, type, path, getRawInput }) => {
     if (config.RECOVERY_MODE && type === "mutation")
       throw new TRPCError({
         code: "FORBIDDEN",
@@ -48,22 +54,55 @@ export const authedProcedure = t.procedure.use(
     }
     if (
       type === "mutation" &&
-      !(path === "alarm.acknowledge" && user.role === "viewer") &&
+      !(path === "alarm.acknowledge" && canOperate(user.role)) &&
       user.role !== "admin"
     )
       throw new TRPCError({
         code: "FORBIDDEN",
         message: "Admin access required",
       });
-    ctx.session.userRole = user.role;
-    return next({
-      ctx: {
-        session: ctx.session as {
-          userId: number;
-          username: string;
-          userRole: string;
+    const scope = await loadAccessScope(user.id, user.role);
+    return accessScope.run(scope, async () => {
+      const input = ((await getRawInput()) ?? {}) as Record<string, unknown>;
+      if (user.role !== "admin") {
+        const route = {
+          "dashboard.list": "/dashboards",
+          "dashboard.getById": `/dashboards/${encodeURIComponent(String(input.id))}`,
+          "alarm.list": "/alarms",
+          "alarm.listRules": "/alarms/rules",
+          "alarm.acknowledge": `/alarms/${input.id}/acknowledge`,
+          "nodeData.history": "/node-data",
+          "nodeData.aggregates": "/aggregates",
+          "annotation.list": "/annotations",
+        }[path];
+        if (!route)
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Administrator access required",
+          });
+        try {
+          await authorizeAssetRequest(
+            type === "mutation" ? "POST" : "GET",
+            route,
+            input,
+            input,
+          );
+        } catch {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Asset access denied",
+          });
+        }
+      }
+      return next({
+        ctx: {
+          session: { ...ctx.session, userRole: user.role } as {
+            userId: number;
+            username: string;
+            userRole: string;
+          },
         },
-      },
+      });
     });
   },
 );
