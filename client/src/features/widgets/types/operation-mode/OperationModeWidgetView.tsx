@@ -46,7 +46,7 @@ const OperationModeWidgetView: React.FC<OperationModeWidgetViewProps> = ({
 
   const nivoTheme = useMemo(
     () => ({
-      text: { fill: isDark ? '#9DA3B4' : '#6B7280' },
+      text: { fontFamily: 'var(--font-family)', fill: isDark ? '#9DA3B4' : '#6B7280' },
       axis: {
         ticks: { text: { fill: isDark ? '#9DA3B4' : '#6B7280', fontSize: 10 } },
       },

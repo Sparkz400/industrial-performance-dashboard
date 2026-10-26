@@ -1,0 +1,21 @@
+@font-face {
+  font-family: 'Figtree';
+  src: url('/fonts/figtree/Figtree-Variable.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Figtree';
+  src: url('/fonts/figtree/Figtree-Italic-Variable.woff2') format('woff2');
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+:root {
+  --font-family: 'Figtree', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-family);
+  font-variant-numeric: tabular-nums;
+}

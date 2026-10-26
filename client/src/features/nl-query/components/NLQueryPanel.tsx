@@ -79,7 +79,10 @@ function NLChart({ config }: { config: NLChartConfig }) {
           enableArea
           areaOpacity={0.1}
           useMesh
-          theme={{ text: { fill: '#ccc' }, grid: { line: { stroke: '#444' } } }}
+          theme={{
+            text: { fontFamily: 'var(--font-family)', fill: '#ccc' },
+            grid: { line: { stroke: '#444' } },
+          }}
         />
       </Box>
     );
@@ -96,7 +99,10 @@ function NLChart({ config }: { config: NLChartConfig }) {
           padding={0.3}
           colors={{ scheme: 'nivo' }}
           axisBottom={{ tickRotation: -45, truncateTickAt: 10 }}
-          theme={{ text: { fill: '#ccc' }, grid: { line: { stroke: '#444' } } }}
+          theme={{
+            text: { fontFamily: 'var(--font-family)', fill: '#ccc' },
+            grid: { line: { stroke: '#444' } },
+          }}
         />
       </Box>
     );
@@ -117,7 +123,7 @@ function NLChart({ config }: { config: NLChartConfig }) {
           padAngle={0.7}
           cornerRadius={3}
           colors={{ scheme: 'nivo' }}
-          theme={{ text: { fill: '#ccc' } }}
+          theme={{ text: { fontFamily: 'var(--font-family)', fill: '#ccc' } }}
         />
       </Box>
     );

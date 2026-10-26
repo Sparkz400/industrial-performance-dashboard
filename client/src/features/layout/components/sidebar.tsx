@@ -252,7 +252,7 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ open, onToggle, o
                     color: theme.palette.primary.main,
                   },
                   '& .MuiListItemText-primary': {
-                    fontWeight: 'bold',
+                    fontWeight: 600,
                     color: theme.palette.primary.main,
                   },
                 },
@@ -298,7 +298,7 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ open, onToggle, o
                       color: theme.palette.primary.main,
                     },
                     '& .MuiListItemText-primary': {
-                      fontWeight: 'bold',
+                      fontWeight: 600,
                       color: theme.palette.primary.main,
                     },
                   },
@@ -329,7 +329,7 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ open, onToggle, o
                     '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
                     '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
                     '& .MuiListItemText-primary': {
-                      fontWeight: 'bold',
+                      fontWeight: 600,
                       color: theme.palette.primary.main,
                     },
                   },
@@ -360,7 +360,7 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ open, onToggle, o
                     '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
                     '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
                     '& .MuiListItemText-primary': {
-                      fontWeight: 'bold',
+                      fontWeight: 600,
                       color: theme.palette.primary.main,
                     },
                   },
@@ -390,7 +390,7 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ open, onToggle, o
                   '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
                   '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
                   '& .MuiListItemText-primary': {
-                    fontWeight: 'bold',
+                    fontWeight: 600,
                     color: theme.palette.primary.main,
                   },
                 },
@@ -419,7 +419,7 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ open, onToggle, o
                   '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
                   '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
                   '& .MuiListItemText-primary': {
-                    fontWeight: 'bold',
+                    fontWeight: 600,
                     color: theme.palette.primary.main,
                   },
                 },
@@ -449,7 +449,7 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ open, onToggle, o
                     '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
                     '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
                     '& .MuiListItemText-primary': {
-                      fontWeight: 'bold',
+                      fontWeight: 600,
                       color: theme.palette.primary.main,
                     },
                   },
@@ -479,7 +479,7 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ open, onToggle, o
                   '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
                   '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
                   '& .MuiListItemText-primary': {
-                    fontWeight: 'bold',
+                    fontWeight: 600,
                     color: theme.palette.primary.main,
                   },
                 },
@@ -510,7 +510,7 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ open, onToggle, o
                   '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) },
                   '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
                   '& .MuiListItemText-primary': {
-                    fontWeight: 'bold',
+                    fontWeight: 600,
                     color: theme.palette.primary.main,
                   },
                 },

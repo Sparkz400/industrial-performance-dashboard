@@ -50,7 +50,7 @@ const OperationModePieWidget = memo(() => {
 
   const nivoTheme = useMemo(
     () => ({
-      text: { fill: isDark ? '#9DA3B4' : '#6B7280' },
+      text: { fontFamily: 'var(--font-family)', fill: isDark ? '#9DA3B4' : '#6B7280' },
       labels: { text: { fill: isDark ? '#E8E8ED' : '#1A1A2E', fontSize: 11, fontWeight: 600 } },
       tooltip: {
         container: {
