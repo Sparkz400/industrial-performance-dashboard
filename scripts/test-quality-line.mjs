@@ -174,9 +174,26 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
     },
     201,
   );
+  const referenceOrigin = new Date(Date.now() - 3600000);
   await pool.query(
-    "INSERT INTO opcua_data(machine_id,node_key,timestamp,value,status_code) SELECT $1,'Reference',now()-interval '1 hour'+i*interval '1 second',CASE WHEN i%2=0 THEN 9 ELSE 11 END,'Good' FROM generate_series(1,100)i",
-    [m[0]],
+    "INSERT INTO opcua_data(machine_id,node_key,timestamp,value,status_code) SELECT $1,'Reference',$2::timestamptz+i*interval '1 second',CASE WHEN i%2=0 THEN 9 ELSE 11 END,'Good' FROM generate_series(1,100)i",
+    [m[0], referenceOrigin],
+  );
+  const undersized = await request("POST", `/spc/profiles/${spc.id}/compute`, {
+    start: new Date(referenceOrigin.getTime() + 3000).toISOString(),
+    end: new Date(referenceOrigin.getTime() + 101000).toISOString(),
+  });
+  assert.equal(undersized.evidence.sampleCount, 98);
+  await request(
+    "POST",
+    `/spc/baselines/${undersized.id}/approve`,
+    {
+      review:
+        "An undersized reference must still fail even with reviewer attestations",
+      stableProcess: true,
+      independentNormalObservations: true,
+    },
+    400,
   );
   const candidate = await request(
     "POST",
@@ -627,6 +644,23 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   await page
     .getByRole("option", { name: "Reference fixture", exact: true })
     .click();
+  // Bound the fixture explicitly; the UI's moving default can lose readings on a slow runner.
+  const referenceInputs = await page.evaluate(
+    (origin) =>
+      [origin - 60000, origin + 180000].map((at) => {
+        const date = new Date(at);
+        return new Date(at - date.getTimezoneOffset() * 60000)
+          .toISOString()
+          .slice(0, 16);
+      }),
+    referenceOrigin.getTime(),
+  );
+  await page
+    .getByLabel("Reference period start", { exact: true })
+    .fill(referenceInputs[0]);
+  await page
+    .getByLabel("Reference period end", { exact: true })
+    .fill(referenceInputs[1]);
   await page
     .getByRole("button", { name: "Prepare baseline for review", exact: true })
     .click();
@@ -637,6 +671,9 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
     .getByRole("option", { name: /pending review/ })
     .first()
     .click();
+  await expect(
+    page.getByRole("combobox", { name: /^Reference baseline/ }),
+  ).toContainText("100 readings");
   await page
     .getByLabel("Stability review and reference evidence", { exact: true })
     .fill(
