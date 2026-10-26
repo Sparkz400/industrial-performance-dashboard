@@ -1,3 +1,4 @@
+import { translate as t, useLanguage } from '@/i18n';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -22,6 +23,7 @@ import TrendingExplorerWidgetView from '@/features/widgets/types/trending-explor
 
 /** Review a bounded historical snapshot without changing operational data. */
 export default function IncidentReplayPanel() {
+  useLanguage((s) => s.language);
   const [machine, setMachine] = useState('');
   const [keys, setKeys] = useState('ProductionState, ProductionCount');
   const [start, setStart] = useState(new Date(Date.now() - 3600000).toISOString());
@@ -78,15 +80,16 @@ export default function IncidentReplayPanel() {
   };
   return (
     <Stack spacing={2} sx={{ pt: 2, minWidth: 0 }}>
-      <Typography variant="h5">Incident replay</Typography>
+      <Typography variant="h5">{t('Incident replay')} </Typography>
       <Typography>
-        Review recorded observations, alarm transitions and operator history together. Nearby events
-        are investigation leads; they do not establish a cause.
+        {t(
+          'Review recorded observations, alarm transitions and operator history together. Nearby events are investigation leads; they do not establish a cause.',
+        )}{' '}
       </Typography>
       <Stack direction="row" flexWrap="wrap" gap={2}>
         <TextField
           select
-          label="Replay machine"
+          label={t('Replay machine')}
           value={machine}
           disabled={busy}
           sx={{ minWidth: 220 }}
@@ -102,7 +105,7 @@ export default function IncidentReplayPanel() {
           ))}
         </TextField>
         <TextField
-          label="Signal keys (comma separated, up to 8)"
+          label={t('Signal keys (comma separated, up to 8)')}
           value={keys}
           disabled={busy}
           sx={{ flex: '1 1 300px' }}
@@ -112,7 +115,7 @@ export default function IncidentReplayPanel() {
           }}
         />
         <TextField
-          label="Unknown after (seconds)"
+          label={t('Unknown after (seconds)')}
           type="number"
           value={gap}
           disabled={busy}
@@ -122,7 +125,7 @@ export default function IncidentReplayPanel() {
           }}
         />
         <TextField
-          label="Replay start (ISO with offset)"
+          label={t('Replay start (ISO with offset)')}
           value={start}
           disabled={busy}
           sx={{ flex: '1 1 290px' }}
@@ -132,7 +135,7 @@ export default function IncidentReplayPanel() {
           }}
         />
         <TextField
-          label="Replay end (ISO with offset)"
+          label={t('Replay end (ISO with offset)')}
           value={end}
           disabled={busy}
           sx={{ flex: '1 1 290px' }}
@@ -167,26 +170,29 @@ export default function IncidentReplayPanel() {
             }
           }}
         >
-          {busy ? 'Loading observations…' : 'Load replay'}
+          {busy ? t('Loading observations…') : t('Load replay')}
         </Button>
       </Stack>
       {(error || assets.error) && <Alert severity="error">{error || String(assets.error)}</Alert>}
       {data && (
         <>
           <Alert severity="info">
-            History uses stored observation time. Source and receive clocks are shown separately and
-            may differ. Missing source time or identity stays unknown. The gap threshold is a review
-            setting, not a production profile change.
+            {t(
+              'History uses stored observation time. Source and receive clocks are shown separately and may differ. Missing source time or identity stays unknown. The gap threshold is a review setting, not a production profile change.',
+            )}{' '}
           </Alert>
           {(data.signals.some((signal) => signal.truncated) ||
             Object.values(data.truncated).some(Boolean)) && (
             <Alert severity="warning">
-              Replay is truncated. Narrow the time window: limits are 2,000 samples per signal and
-              200 records per event category. Exports contain the same bounded result.
+              {t(
+                'Replay is truncated. Narrow the time window: limits are 2,000 samples per signal and 200 records per event category. Exports contain the same bounded result.',
+              )}{' '}
             </Alert>
           )}
           <Paper sx={{ p: 2 }}>
-            <Typography variant="h6">{data.machine.name} · full window trends</Typography>
+            <Typography variant="h6">
+              {data.machine.name} {t('· full window trends')}{' '}
+            </Typography>
             <Box sx={{ height: 370, minWidth: 0 }}>
               <TrendingExplorerWidgetView series={series} isLoading={false} />
             </Box>
@@ -197,18 +203,18 @@ export default function IncidentReplayPanel() {
                   setPlaying(!playing);
                 }}
               >
-                {playing ? 'Pause replay' : 'Play at 60×'}
+                {playing ? t('Pause replay') : t('Play at 60×')}
               </Button>
-              <Button onClick={() => seek(data.start)}>Start of window</Button>
+              <Button onClick={() => seek(data.start)}>{t('Start of window')} </Button>
               <Button onClick={() => downloadJson(data, `incident-replay-${data.machine.id}.json`)}>
-                Export replay JSON
+                {t('Export replay JSON')}{' '}
               </Button>
-              <Typography component="output" aria-label="Replay cursor">
+              <Typography component="output" aria-label={t('Replay cursor')}>
                 {new Date(cursor).toISOString()}
               </Typography>
             </Stack>
             <Slider
-              aria-label="Replay position"
+              aria-label={t('Replay position')}
               min={Date.parse(data.start)}
               max={Date.parse(data.end)}
               step={1000}
@@ -220,7 +226,7 @@ export default function IncidentReplayPanel() {
               }}
             />
           </Paper>
-          <Typography variant="h6">Observations at cursor</Typography>
+          <Typography variant="h6">{t('Observations at cursor')} </Typography>
           <Stack direction="row" flexWrap="wrap" gap={2}>
             {data.signals.map((signal) => {
               const observation = replayObservation(signal.samples, cursor, data.maxGapSeconds),
@@ -233,7 +239,7 @@ export default function IncidentReplayPanel() {
                 >
                   <Typography variant="h6">{signal.key}</Typography>
                   <Typography variant="h5">
-                    {observation.known ? String(sample?.raw ?? sample?.value) : 'Unknown'}
+                    {observation.known ? String(sample?.raw ?? sample?.value) : t('Unknown')}
                   </Typography>
                   <Chip
                     size="small"
@@ -241,45 +247,52 @@ export default function IncidentReplayPanel() {
                     color={observation.known ? 'default' : 'warning'}
                   />
                   <Typography variant="body2">
-                    Quality: {sample?.quality ?? 'Unknown'} · Unit:{' '}
+                    {t('Quality:')} {sample?.quality ?? 'Unknown'} {t('· Unit:')}{' '}
                     {sample?.identity?.unit ?? 'Unknown'}
                   </Typography>
-                  <Typography variant="body2">Observation: {sample?.at ?? 'None'}</Typography>
-                  <Typography variant="body2">Source: {sample?.sourceAt ?? 'Unknown'}</Typography>
                   <Typography variant="body2">
-                    Received: {sample?.receivedAt ?? 'Unknown'}
+                    {t('Observation:')} {sample?.at ?? 'None'}
+                  </Typography>
+                  <Typography variant="body2">
+                    {t('Source:')} {sample?.sourceAt ?? 'Unknown'}
+                  </Typography>
+                  <Typography variant="body2">
+                    {t('Received:')} {sample?.receivedAt ?? 'Unknown'}
                   </Typography>
                   {sample && !observation.known && (
                     <Typography variant="body2">
-                      Last raw value (not current):{' '}
+                      {t('Last raw value (not current):')}{' '}
                       {String(sample.raw ?? sample.value ?? 'Unknown')}
                     </Typography>
                   )}
                   {sample?.rawTruncated && (
                     <Typography color="warning.main">
-                      Raw text shortened to 512 characters.
+                      {t('Raw text shortened to 512 characters.')}{' '}
                     </Typography>
                   )}
                   <Typography variant="caption">
                     {sample?.identity
                       ? `${sample.identity.namespaceUri} · ${sample.identity.identifier} · mapping ${sample.identity.mappingRevision ?? 'Unknown'}`
-                      : 'Source identity unknown'}
+                      : t('Source identity unknown')}
                   </Typography>
                 </Paper>
               );
             })}
           </Stack>
           <Typography variant="h6">
-            Recorded events and annotations ({data.events.length})
+            {t('Recorded events and annotations (')}
+            {data.events.length})
           </Typography>
           <Typography variant="body2">
-            Opening alarms before the window and later stop classifications are included as context.
-            Every operator revision retains its recorded time and author. Classification corrections
-            retain the replaced record.
+            {t(
+              'Opening alarms before the window and later stop classifications are included as context. Every operator revision retains its recorded time and author. Classification corrections retain the replaced record.',
+            )}{' '}
           </Typography>
           {data.events.length === 0 && (
             <Alert severity="info">
-              No recorded events in this result. Absence of events does not prove normal operation.
+              {t(
+                'No recorded events in this result. Absence of events does not prove normal operation.',
+              )}{' '}
             </Alert>
           )}
           {data.events.slice(eventPage * 50, (eventPage + 1) * 50).map((event) => (
@@ -290,16 +303,20 @@ export default function IncidentReplayPanel() {
                   {event.at}
                 </Button>
                 <Typography variant="caption">
-                  {event.clock} time · actor {event.actorId ?? 'system'}
+                  {event.clock} {t('time · actor')} {event.actorId ?? 'system'}
                 </Typography>
                 {(event.at < data.start || event.at > data.end) && (
-                  <Chip size="small" label="Outside window context" />
+                  <Chip size="small" label={t('Outside window context')} />
                 )}
               </Stack>
               <Typography>{event.text}</Typography>
-              {event.sourceAt && <Typography variant="body2">Source: {event.sourceAt}</Typography>}
+              {event.sourceAt && (
+                <Typography variant="body2">
+                  {t('Source:')} {event.sourceAt}
+                </Typography>
+              )}
               <details>
-                <summary>Recorded details</summary>
+                <summary>{t('Recorded details')} </summary>
                 <Box component="pre" sx={{ whiteSpace: 'pre-wrap' }}>
                   {JSON.stringify(event.details, null, 2)}
                 </Box>
@@ -309,16 +326,16 @@ export default function IncidentReplayPanel() {
           {data.events.length > 50 && (
             <Stack direction="row" gap={1}>
               <Button disabled={eventPage === 0} onClick={() => setEventPage(eventPage - 1)}>
-                Previous events
+                {t('Previous events')}{' '}
               </Button>
               <Typography>
-                Page {eventPage + 1} of {Math.ceil(data.events.length / 50)}
+                {t('Page')} {eventPage + 1} {t('of')} {Math.ceil(data.events.length / 50)}
               </Typography>
               <Button
                 disabled={(eventPage + 1) * 50 >= data.events.length}
                 onClick={() => setEventPage(eventPage + 1)}
               >
-                Next events
+                {t('Next events')}{' '}
               </Button>
             </Stack>
           )}

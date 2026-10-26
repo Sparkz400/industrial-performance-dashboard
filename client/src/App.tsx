@@ -1,3 +1,4 @@
+import { translate as t, useLanguage } from '@/i18n';
 import React, { useEffect, useState, Suspense, useMemo, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Alert, Box, CircularProgress, Typography, Button } from '@mui/material';
@@ -11,6 +12,7 @@ import { useSnackbar, closeSnackbar } from 'notistack';
 import { useStatusStore } from './stores/useStatusStore';
 import { useAuthStore } from './stores/useAuthStore';
 
+const OperationsPage = React.lazy(() => import('./features/operations/OperationsPage'));
 const ProductionPage = React.lazy(() => import('./features/production/ProductionPage'));
 const Wallboard = React.lazy(() => import('./features/production/Wallboard'));
 
@@ -81,7 +83,7 @@ const PageLoader = () => (
           <CircularProgress size={24} sx={{ color: '#fff' }} />
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-          Loading...
+          {t('Loading...')}{' '}
         </Typography>
       </Box>
     </motion.div>
@@ -106,13 +108,13 @@ const ErrorFallback = ({ error, resetErrorBoundary }: ErrorFallbackProps) => (
     }}
   >
     <Typography variant="h4" color="error" gutterBottom>
-      Something went wrong
+      {t('Something went wrong')}{' '}
     </Typography>
     <Typography variant="body1" paragraph align="center" sx={{ maxWidth: 500, mb: 3 }}>
       {error?.message || 'An unexpected error occurred. Please try refreshing the page.'}
     </Typography>
     <Button variant="contained" color="primary" onClick={resetErrorBoundary}>
-      Try Again
+      {t('Try Again')}{' '}
     </Button>
   </Box>
 );
@@ -138,6 +140,7 @@ const PageTransition = ({ children }: PageTransitionProps) => (
  *
  */
 function App() {
+  useLanguage((s) => s.language);
   const [sidebarOpen, setSidebarOpen] = useState(
     window.innerWidth >= 600 && localStorage.getItem('sidebarOpen') !== 'false',
   );
@@ -236,6 +239,19 @@ function App() {
     <Router>
       <ErrorBoundary FallbackComponent={ErrorFallback}>
         <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+          <Button
+            component="a"
+            href="#main-content"
+            sx={{
+              position: 'fixed',
+              top: -100,
+              left: 60,
+              zIndex: 2000,
+              '&:focus': { top: 8, bgcolor: 'background.paper' },
+            }}
+          >
+            {t('Skip to content')}{' '}
+          </Button>
           <ErrorBoundary FallbackComponent={ErrorFallback}>
             <ResponsiveSidebar
               open={sidebarOpen}
@@ -244,17 +260,19 @@ function App() {
             />
           </ErrorBoundary>
 
-          <Box component="main" sx={contentBoxStyles}>
+          <Box component="main" id="main-content" tabIndex={-1} sx={contentBoxStyles}>
             {user.recoveryMode && (
               <Alert severity="warning" sx={{ mb: 2 }}>
-                Recovery preview: machine connections and deliveries are paused. Data is read-only
-                until this installation is activated.
+                {t(
+                  'Recovery preview: machine connections and deliveries are paused. Data is read-only until this installation is activated.',
+                )}{' '}
               </Alert>
             )}
             <ErrorBoundary FallbackComponent={ErrorFallback}>
               <Suspense fallback={<PageLoader />}>
                 <AnimatePresence mode="wait">
                   <Routes>
+                    <Route path="/operations" element={<OperationsPage />} />
                     <Route path="/wallboard" element={<Wallboard />} />
                     <Route
                       path="/production"
@@ -298,7 +316,9 @@ function App() {
                       path="/settings"
                       element={
                         <PageTransition>
-                          <SettingsPage />
+                          <PrivateRoute requiredRole="admin">
+                            <SettingsPage />
+                          </PrivateRoute>
                         </PageTransition>
                       }
                     />
@@ -386,7 +406,9 @@ function App() {
                       path="/reports/history"
                       element={
                         <PageTransition>
-                          <ReportHistoryPage />
+                          <PrivateRoute requiredRole="admin">
+                            <ReportHistoryPage />
+                          </PrivateRoute>
                         </PageTransition>
                       }
                     />
@@ -416,7 +438,9 @@ function App() {
                       path="/spc/chart/:id"
                       element={
                         <PageTransition>
-                          <SpcChartPage />
+                          <PrivateRoute requiredRole="admin">
+                            <SpcChartPage />
+                          </PrivateRoute>
                         </PageTransition>
                       }
                     />
@@ -456,7 +480,9 @@ function App() {
                       path="/batches"
                       element={
                         <PageTransition>
-                          <BatchesPage />
+                          <PrivateRoute requiredRole="admin">
+                            <BatchesPage />
+                          </PrivateRoute>
                         </PageTransition>
                       }
                     />
@@ -472,7 +498,7 @@ function App() {
         </Box>
       </ErrorBoundary>
 
-      <CertificateNotification />
+      {user.role === 'admin' && <CertificateNotification />}
       <CsrfErrorHandler />
     </Router>
   );

@@ -13,7 +13,7 @@ resubmitting. Retrying a failed submission uses the same request identity and do
 not create a second entry. Attachments are not enabled.
 
 Operators may declare total/good/reject counts. Good plus reject must equal total,
-and the declaration must link to a shift. Only administrators can mark a declaration
+and the declaration must link to a shift. Supervisors and administrators can mark a declaration
 reviewed. Review does **not** change measured counts or verify a shift report: use
 the separate reconciliation flow with independent evidence. Notes and actions can
 be edited collaboratively by signed-in operators; this is a single-company policy,
@@ -29,7 +29,7 @@ stale, future-dated or disconnected signals produce **unknown**, never a healthy
 running state. Failed or overdue display updates also replace states with unknown.
 
 Administrators can create a dedicated `wallboard` account from the wallboard.
-It uses ordinary expiring login sessions and can read this installation's data,
+It uses ordinary expiring login sessions and can read only its granted machine/site data,
 but cannot acknowledge alarms, classify stops, create entries or alter settings
 through REST, tRPC or alarm sockets. Use it on shared displays instead of an admin
 account. Session expiry requires sign-in again; there are no permanent public links.
@@ -45,3 +45,6 @@ cover freshness boundaries and delayed replay. Screenshots are local test eviden
 This does not qualify production operator acceptance, accessibility compliance,
 long-running wall-display sessions or readability at a particular viewing distance.
 No machine-control command is introduced.
+
+Machine grants and supervisor roles are administered under People & Access. See
+[daily operations](DAILY_OPERATIONS.md) for inspections, recurring plans and energy.

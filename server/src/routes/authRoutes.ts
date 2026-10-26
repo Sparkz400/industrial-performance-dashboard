@@ -1,5 +1,5 @@
 import express, { type Request, type Response } from "express";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import Joi from "joi";
 import { validateBody } from "../middleware/validation.js";
@@ -35,12 +35,16 @@ const registerSchema = Joi.object({
   username: Joi.string().alphanum().min(3).max(100).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(8).max(255).required(),
-  role: Joi.string().valid("admin", "viewer", "wallboard").default("viewer"),
+  role: Joi.string()
+    .valid("admin", "viewer", "wallboard", "operator", "supervisor")
+    .default("viewer"),
 });
 
 const updateUserSchema = Joi.object({
   email: Joi.string().email().optional(),
-  role: Joi.string().valid("admin", "viewer", "wallboard").optional(),
+  role: Joi.string()
+    .valid("admin", "viewer", "wallboard", "operator", "supervisor")
+    .optional(),
   isActive: Joi.boolean().optional(),
 });
 
@@ -218,7 +222,10 @@ router.post(
     const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
     await db
       .update(users)
-      .set({ passwordHash: newHash, updatedAt: new Date() })
+      .set({
+        passwordHash: newHash,
+        updatedAt: sql`greatest(now(), ${users.updatedAt} + interval '1 millisecond')`,
+      })
       .where(eq(users.id, req.session.userId!));
 
     sessionEvents.emit("userRevoked", req.session.userId);
@@ -319,12 +326,16 @@ router.put(
   asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id as string, 10);
     const { email, role, isActive } = req.body;
+    if (id === req.session.userId && isActive === false)
+      throw new ValidationError("You cannot deactivate your own account.");
 
     if (id === req.session.userId && role && role !== "admin") {
       throw new ValidationError("You cannot change your own role.");
     }
 
-    const updates: Record<string, any> = { updatedAt: new Date() };
+    const updates: Record<string, any> = {
+      updatedAt: sql`greatest(now(), ${users.updatedAt} + interval '1 millisecond')`,
+    };
     if (email !== undefined) updates.email = email;
     if (role !== undefined) updates.role = role;
     if (isActive !== undefined) updates.isActive = isActive;

@@ -1,3 +1,4 @@
+import { useT } from '@/i18n';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Typography,
@@ -34,6 +35,7 @@ import CertificatesTab from '../components/CertificateManagement';
 import BackupRestoreTab from '../tabs/BackupRestoreTab';
 import SystemInfoTab from '../tabs/SystemInfoTab';
 import AuditTrailTab from '../tabs/AuditTrailTab';
+import AccessTab from '../tabs/AccessTab';
 import WebhookManager from '../../webhooks/components/WebhookManager';
 import CustomWidgetManager from '../../widgets/sdk/CustomWidgetManager';
 import EdgeSettingsPanel from '../../edge/components/EdgeSettingsPanel';
@@ -47,6 +49,8 @@ import { useAuthStore } from '@/stores/useAuthStore';
 
 // Main settings page component
 const SettingsPage: React.FC = () => {
+  const t = useT();
+
   // Tab state
   const [tabValue, setTabValue] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
@@ -79,6 +83,7 @@ const SettingsPage: React.FC = () => {
       },
       ...(user?.role === 'admin'
         ? [
+            { label: 'People & Access', icon: <SecurityIcon />, content: <AccessTab /> },
             {
               label: 'Certificates',
               icon: <SecurityIcon />,
@@ -163,8 +168,8 @@ const SettingsPage: React.FC = () => {
       }}
     >
       <Typography variant="h4" gutterBottom sx={{ mb: 2 }}>
-        Settings
-        <Tooltip title="Refresh Status">
+        {t('Settings')}
+        <Tooltip title={t('Refresh Status')}>
           <span>
             <IconButton
               onClick={handleRefreshStatus}
@@ -180,9 +185,9 @@ const SettingsPage: React.FC = () => {
 
       {/* Status overview */}
       <Typography variant="h6" gutterBottom>
-        System Status
+        {t('System Status')}
         <Typography variant="body2" color="text.secondary" component="span" sx={{ ml: 2 }}>
-          Last updated: {formatDate(lastChecked)}
+          {t('Last updated:')} {formatDate(lastChecked)}
         </Typography>
       </Typography>
 
@@ -192,7 +197,7 @@ const SettingsPage: React.FC = () => {
             status={
               status?.database?.statusText || (status?.database as unknown as string) || 'Unknown'
             }
-            label="Database Connection"
+            label={t('Database Connection')}
             description={dbOnline ? `Connected to ${dbHost}:${dbPort}` : 'Not connected'}
             icon={<StorageIcon />}
             loading={loading}
@@ -201,7 +206,7 @@ const SettingsPage: React.FC = () => {
         <Grid size={{ xs: 12, sm: 6 }}>
           <StatusIndicator
             status={status?.opcua?.statusText || (status?.opcua as unknown as string) || 'Unknown'}
-            label="OPC UA Connection"
+            label={t('OPC UA Connection')}
             description={
               opcuaConnected
                 ? `Connected to ${connectedAddress} (${securityMode}/${securityPolicy})`
@@ -220,13 +225,13 @@ const SettingsPage: React.FC = () => {
           onChange={handleTabChange}
           variant="scrollable"
           scrollButtons="auto"
-          aria-label="settings tabs"
+          aria-label={t('settings tabs')}
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
           {tabs.map((tab, index) => (
             <Tab
               key={tab.label}
-              label={tab.label}
+              label={t(tab.label)}
               id={`settings-tab-${index}`}
               icon={tab.icon}
               iconPosition="start"

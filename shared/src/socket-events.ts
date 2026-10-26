@@ -186,6 +186,7 @@ export interface InterServerEvents {}
 
 /** Custom data attached to each socket */
 export interface SocketData {
+  machineIds?: number[];
   user: {
     authenticated: boolean;
     id: number;

@@ -1,3 +1,4 @@
+import { useT } from '@/i18n';
 import React from 'react';
 import {
   Box,
@@ -36,6 +37,8 @@ const severityConfig: Record<string, { icon: React.ReactNode; color: string }> =
 };
 
 const NotificationCenter: React.FC = () => {
+  const t = useT();
+
   const {
     notifications,
     unreadCount,
@@ -106,7 +109,7 @@ const NotificationCenter: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <NotificationsIcon sx={{ color: 'primary.main' }} />
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              Notifications
+              {t('Notifications')}
             </Typography>
             {unreadCount > 0 && (
               <Chip label={unreadCount} color="error" size="small" sx={{ height: 22 }} />
@@ -126,7 +129,7 @@ const NotificationCenter: React.FC = () => {
             disabled={unreadCount === 0}
             sx={{ fontSize: '0.75rem' }}
           >
-            Mark all read
+            {t('Mark all read')}
           </Button>
           <Button
             size="small"
@@ -136,7 +139,7 @@ const NotificationCenter: React.FC = () => {
             color="error"
             sx={{ fontSize: '0.75rem' }}
           >
-            Clear all
+            {t('Clear all')}
           </Button>
         </Box>
 
@@ -148,7 +151,7 @@ const NotificationCenter: React.FC = () => {
             {notifications.length === 0 ? (
               <Box sx={{ p: 4, textAlign: 'center' }}>
                 <NotificationsIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
-                <Typography color="text.secondary">No notifications</Typography>
+                <Typography color="text.secondary">{t('No notifications')}</Typography>
               </Box>
             ) : (
               notifications.map((notif, index) => {

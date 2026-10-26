@@ -10,6 +10,7 @@ import { asyncHandler } from "../middleware/errorHandler.js";
 const router = Router();
 
 const operationModeSchema = Joi.object({
+  machineId: Joi.number().integer().positive().optional(),
   limit: Joi.number().integer().min(1).max(5000).default(1000),
   offset: Joi.number().integer().min(0).default(0),
   startDate: Joi.date().iso().optional(),
@@ -29,6 +30,8 @@ router.get(
     const readDb = getReadDb();
 
     const conditions = [eq(opcuaData.nodeKey, "OperationMode")];
+    if (req.query.machineId != null)
+      conditions.push(eq(opcuaData.machineId, Number(req.query.machineId)));
     if (startDate)
       conditions.push(gte(opcuaData.timestamp, new Date(startDate)));
     if (endDate) conditions.push(lte(opcuaData.timestamp, new Date(endDate)));

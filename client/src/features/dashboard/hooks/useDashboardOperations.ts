@@ -1,3 +1,4 @@
+import { useAuthStore } from '@/stores/useAuthStore';
 import { useCallback, useRef, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
@@ -42,7 +43,9 @@ export function useDashboardOperations({ state, dispatch }: UseDashboardOperatio
     if (!isComponentMounted.current) return;
     try {
       const localData = { dashboards: dashboardsToSave, lastSavedLocal: new Date().toISOString() };
-      localStorage.setItem('dashboardData', JSON.stringify(localData));
+      const user = useAuthStore.getState().user;
+      if (user?.role === 'admin')
+        localStorage.setItem(`dashboardData:${user.id}`, JSON.stringify(localData));
     } catch (error) {
       console.error('Failed to save to local storage:', error);
     }
@@ -104,9 +107,11 @@ export function useDashboardOperations({ state, dispatch }: UseDashboardOperatio
       console.error('Error fetching dashboards from server:', serverError);
     }
 
-    if (loadSource !== 'server') {
+    if (loadSource !== 'server' && useAuthStore.getState().user?.role === 'admin') {
       try {
-        const localDataStr = localStorage.getItem('dashboardData');
+        const localDataStr = localStorage.getItem(
+          `dashboardData:${useAuthStore.getState().user?.id}`,
+        );
         if (localDataStr) {
           const localData = JSON.parse(localDataStr);
           if (Array.isArray(localData.dashboards) && localData.dashboards.length > 0) {
@@ -120,7 +125,7 @@ export function useDashboardOperations({ state, dispatch }: UseDashboardOperatio
       }
     }
 
-    if (loadedDashboards.length === 0) {
+    if (loadedDashboards.length === 0 && useAuthStore.getState().user?.role === 'admin') {
       const defaultDashboard: Dashboard = {
         id: 'dashboard-' + Date.now(),
         name: 'My Dashboard',
@@ -416,6 +421,9 @@ export function useDashboardOperations({ state, dispatch }: UseDashboardOperatio
     loadInitialDashboards();
     return () => {
       isComponentMounted.current = false;
+      setWidgets([]);
+      setLayout([]);
+      useWidgetStore.getState().setFullscreenWidget(null);
       if (syncTimerId.current) clearInterval(syncTimerId.current);
     };
   }, []); // eslint-disable-line

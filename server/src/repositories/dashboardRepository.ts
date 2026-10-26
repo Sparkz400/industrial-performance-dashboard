@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { dashboardScope } from "../services/accessScope.js";
 import db, { getReadDb } from "../database/db.js";
 import { dashboards, dashboardHistory } from "../database/schema.js";
 
@@ -10,7 +11,11 @@ export interface DashboardRecordInput {
 }
 
 const selectAllDashboards = async (database: typeof db) =>
-  database.select().from(dashboards).orderBy(dashboards.name);
+  database
+    .select()
+    .from(dashboards)
+    .where(dashboardScope(dashboards.id))
+    .orderBy(dashboards.name);
 
 export const dashboardRepository = {
   async listFromReadDb() {
@@ -25,7 +30,7 @@ export const dashboardRepository = {
     const result = await getReadDb()
       .select()
       .from(dashboards)
-      .where(eq(dashboards.id, id));
+      .where(and(eq(dashboards.id, id), dashboardScope(dashboards.id)));
 
     return result[0] ?? null;
   },
@@ -34,7 +39,7 @@ export const dashboardRepository = {
     const result = await db
       .select()
       .from(dashboards)
-      .where(eq(dashboards.id, id));
+      .where(and(eq(dashboards.id, id), dashboardScope(dashboards.id)));
     return result[0] ?? null;
   },
 

@@ -100,8 +100,8 @@ Useful differentiation would come from:
 2. A guided route from an OPC UA endpoint to a usable machine template and shift report.
 3. A practical path for older machines through gateways or explicitly labeled manual input.
 4. Local operation, exportable data and clear boundaries for optional cloud services.
-5. An engineering handoff from TIA MCP exports to monitoring mappings, with provenance
-   and human review. This is a proposed integration, not an existing shared API.
+The earlier TIA MCP handoff proposal was withdrawn on 2026-10-26. Performance
+Dashboard is an independent product with no planned TIA MCP integration.
 
 The product should grow from monitoring into selected operations workflows where
 the same collected data creates value: downtime, quality, maintenance and energy.

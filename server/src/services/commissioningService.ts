@@ -62,8 +62,17 @@ export const profileSchema = Joi.object({
   idealCycleMs: Joi.number().positive().max(86400000).required(),
   maxGapSeconds: Joi.number().min(1).max(300).required(),
   counterPolicy: Joi.string()
-    .valid("reset-to-zero", "reject-decrease")
+    .valid("reset-to-zero", "reject-decrease", "rollover")
     .required(),
+  counterModulus: Joi.number()
+    .integer()
+    .min(2)
+    .max(Number.MAX_SAFE_INTEGER)
+    .when("counterPolicy", {
+      is: "rollover",
+      then: Joi.required(),
+      otherwise: Joi.forbidden(),
+    }),
 });
 
 export function validateProfile(input: unknown): ProductionProfile {

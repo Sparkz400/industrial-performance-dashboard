@@ -1,6 +1,7 @@
 import { and, eq, desc, gte, lte, sql } from "drizzle-orm";
 import { validateAlarmRule } from "../services/alarmRuleValidation.js";
 import db, { getReadDb } from "../database/db.js";
+import { machineScope } from "../services/accessScope.js";
 import {
   alertRules,
   alertHistory,
@@ -69,7 +70,7 @@ export const alertRepository = {
   // ---- Rules ----
 
   async listRules(filters?: { machineId?: number; isActive?: boolean }) {
-    const conditions = [];
+    const conditions = [machineScope(alertRules.machineId)];
 
     if (filters?.machineId) {
       conditions.push(eq(alertRules.machineId, filters.machineId));
@@ -156,7 +157,7 @@ export const alertRepository = {
   },
 
   async listAlertHistory(filters: AlertHistoryFilters) {
-    const conditions = [];
+    const conditions = [machineScope(alertHistory.machineId)];
 
     if (filters.ruleId) {
       conditions.push(eq(alertHistory.ruleId, filters.ruleId));
@@ -187,7 +188,7 @@ export const alertRepository = {
   },
 
   async countAlertHistory(filters: AlertHistoryFilters) {
-    const conditions = [];
+    const conditions = [machineScope(alertHistory.machineId)];
 
     if (filters.ruleId) {
       conditions.push(eq(alertHistory.ruleId, filters.ruleId));

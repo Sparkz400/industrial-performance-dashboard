@@ -1,5 +1,6 @@
 import { eq, and } from "drizzle-orm";
 import db from "../database/db.js";
+import { changeAccess } from "../services/accessScope.js";
 import {
   plants,
   plantMemberships,
@@ -37,25 +38,29 @@ export const plantRepository = {
   },
 
   async updatePlant(plantId: number, input: PlantInput) {
-    const result = await db
-      .update(plants)
-      .set({
-        ...input,
-        updatedAt: new Date(),
-      })
-      .where(eq(plants.id, plantId))
-      .returning();
+    return changeAccess(async (tx) => {
+      const result = await tx
+        .update(plants)
+        .set({
+          ...input,
+          updatedAt: new Date(),
+        })
+        .where(eq(plants.id, plantId))
+        .returning();
 
-    return result[0] ?? null;
+      return result[0] ?? null;
+    });
   },
 
   async deletePlant(plantId: number) {
-    const result = await db
-      .delete(plants)
-      .where(eq(plants.id, plantId))
-      .returning();
+    return changeAccess(async (tx) => {
+      const result = await tx
+        .delete(plants)
+        .where(eq(plants.id, plantId))
+        .returning();
 
-    return result[0] ?? null;
+      return result[0] ?? null;
+    });
   },
 
   async listMembersByPlantId(plantId: number) {
@@ -76,35 +81,41 @@ export const plantRepository = {
   },
 
   async addMember(plantId: number, userId: number, role: "admin" | "viewer") {
-    const [created] = await db
-      .insert(plantMemberships)
-      .values({
-        plantId,
-        userId,
-        role,
-      } satisfies NewPlantMembership)
-      .returning();
+    return changeAccess(async (tx) => {
+      const [created] = await tx
+        .insert(plantMemberships)
+        .values({
+          plantId,
+          userId,
+          role,
+        } satisfies NewPlantMembership)
+        .returning();
 
-    return created;
+      return created;
+    });
   },
 
   async updateMember(membershipId: number, role: "admin" | "viewer") {
-    const result = await db
-      .update(plantMemberships)
-      .set({ role })
-      .where(eq(plantMemberships.id, membershipId))
-      .returning();
+    return changeAccess(async (tx) => {
+      const result = await tx
+        .update(plantMemberships)
+        .set({ role })
+        .where(eq(plantMemberships.id, membershipId))
+        .returning();
 
-    return result[0] ?? null;
+      return result[0] ?? null;
+    });
   },
 
   async removeMember(membershipId: number) {
-    const result = await db
-      .delete(plantMemberships)
-      .where(eq(plantMemberships.id, membershipId))
-      .returning();
+    return changeAccess(async (tx) => {
+      const result = await tx
+        .delete(plantMemberships)
+        .where(eq(plantMemberships.id, membershipId))
+        .returning();
 
-    return result[0] ?? null;
+      return result[0] ?? null;
+    });
   },
 
   async findUserPlants(userId: number) {

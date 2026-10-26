@@ -29,6 +29,30 @@ functionality.
 
 ## Execution update — 2026-10-26
 
+### Daily factory workflows — current implementation
+
+The authorized scope is priorities **1–4, 6 and 7** from the next-wave review.
+Performance Dashboard is an independent product. TIA MCP integration is excluded.
+Software implementation is complete on `codex/daily-factory-workflows`.
+[Daily workflow acceptance](docs/DAILY_OPERATIONS_ACCEPTANCE.md) records tests and
+remaining hardware/operator boundaries; [PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59) supplies integration evidence.
+
+- [x] **DF01 — Access controls:** explicit operator/supervisor roles, machine/site
+  grants, consistent REST/tRPC/socket/export boundaries and immediate revocation.
+- [x] **DF02 — Historian:** bounded streaming exports, opt-in retention with exact
+  previews, quality-aware summaries, disk forecasting and sustained-load evidence.
+- [x] **DF03 — Production:** recurring calendars/holidays, multiple product runs,
+  counter rollover policies and immutable report revisions.
+- [x] **DF04 — Usability:** English/German, consistent freshness, focused navigation,
+  measured loading improvements, keyboard/touch/accessibility acceptance.
+- [x] **DF06 — Maintenance:** attributable service history, usage-based intervals,
+  inspection actions and incident links.
+- [x] **DF07 — Energy and loss:** meter accounting, energy per good part, idle and
+  changeover losses, ranked downtime with coverage and independent reconciliation.
+
+All existing data must survive additive migrations. Acceptance uses isolated
+databases and owned simulators; physical S7-1500 qualification remains separate.
+
 Factory-pilot software implemented and locally validated: the nominated controller family is **Siemens
 SIMATIC S7-1500**. Implementation covers secure onboarding, installation/recovery,
 operator and supervisor flows, unattended operation, a read-only gateway and
@@ -59,7 +83,8 @@ scope are recorded in [P0 acceptance](docs/P0_ACCEPTANCE.md).
 The production-workflow wave completes F03/F06/A01 and the bounded stop-reason,
 explainable-OEE and reconciled-report slice O02/O03/R01. See
 [production acceptance evidence](docs/P0_ACCEPTANCE.md#production-workflow-wave).
-F07 has tested controls but remains open for the full route/role matrix; F08 is
+DF01 adds the scoped REST/tRPC/socket/export role matrix to F07; broader release
+review remains tracked separately. F08 is
 contained by disabling sharing. Next gates are C01/C02 endpoint identity/trust,
 F09 release security, and D01-D03 installation/backup/upgrade qualification.
 
@@ -531,10 +556,7 @@ below retain their unfulfilled acceptance criteria.
   Done: bundle dashboards, mappings, rules and relevant revisions with schema version,
   secret exclusion, conflict preview and rollback; imports cannot overwrite unrelated
   configuration silently. Cross-version import and invalid-file cases have fixtures.
-- [ ] **I06 — Research a TIA MCP engineering handoff** · P2 · M5 · Research · L. Depends: C04, I02.
-  Done: agree a versioned export containing asset/tag metadata, namespace/type information
-  and provenance; demonstrate reviewed mapping suggestions from a sanitized fixture.
-  No assumption of an existing shared schema, automatic PLC attachment or write permission.
+- **I06 — Withdrawn:** TIA MCP is a separate product. No integration is planned.
 - [ ] **I07 — Qualify the custom-widget runtime** · P3 · M5 · Improve · L. Depends: F07, U06.
   Done: prove actual rendering, iframe isolation, origin-checked messaging, permissions,
   versioning and removal; a malicious test widget cannot access unrelated data or parent

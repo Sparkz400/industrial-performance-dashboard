@@ -1,3 +1,6 @@
+import { useT } from '@/i18n';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { Tabs, Tab } from '@mui/material';
 import React from 'react';
 import {
   Box,
@@ -73,6 +76,9 @@ const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
   onOpenTemplates,
   onDashboardImported,
 }) => {
+  const t = useT();
+
+  const editable = useAuthStore((s) => s.user?.role === 'admin');
   const [shareOpen, setShareOpen] = React.useState(false);
   const selectedDashboard = dashboards.find((d) => d.id === selectedDashboardId);
 
@@ -81,6 +87,28 @@ const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
     return d ? { id: d.id, name: d.name, widgets, layout } : undefined;
   })();
 
+  if (!editable)
+    return (
+      <Box sx={{ p: 2, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+        <Tabs
+          value={dashboards.length ? Math.max(0, selectedIndex) : false}
+          onChange={(event, value) => onSelectDashboard(event, value)}
+          variant="scrollable"
+          aria-label={t('Dashboards')}
+        >
+          {dashboards.map((d) => (
+            <Tab key={d.id} label={d.name} />
+          ))}
+        </Tabs>
+        <TimeRangePicker />
+        <NotificationCenter />
+        {dashboards.length === 0 && (
+          <Typography>
+            {t('No dashboards assigned. Use Production or Daily operations for your machines.')}
+          </Typography>
+        )}
+      </Box>
+    );
   return (
     <Box
       sx={{
@@ -118,7 +146,7 @@ const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
       {selectedDashboardId && (
         <>
           <ExportMenu dashboard={exportDashboard} onDashboardImported={onDashboardImported} />
-          <Tooltip title="Share Dashboard">
+          <Tooltip title={t('Share Dashboard')}>
             <IconButton
               size="small"
               onClick={() => setShareOpen(true)}
@@ -142,7 +170,7 @@ const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
         </>
       )}
 
-      <Tooltip title="Dashboard Templates">
+      <Tooltip title={t('Dashboard Templates')}>
         <IconButton
           size="small"
           onClick={onOpenTemplates}
@@ -160,7 +188,7 @@ const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
 
       <Box sx={{ width: 1, height: 24, bgcolor: 'divider', mx: 0.5 }} />
 
-      <Tooltip title="Save Changes to Server">
+      <Tooltip title={t('Save Changes to Server')}>
         <span>
           <ButtonLoader
             variant="contained"
@@ -171,11 +199,11 @@ const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
             startIcon={<SaveIcon />}
             size="small"
           >
-            Save
+            {t('Save')}
           </ButtonLoader>
         </span>
       </Tooltip>
-      <Tooltip title="Add New Dashboard">
+      <Tooltip title={t('Add New Dashboard')}>
         <span>
           <ButtonLoader
             variant="outlined"
@@ -185,7 +213,7 @@ const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
             startIcon={<AddIcon />}
             size="small"
           >
-            New
+            {t('New')}
           </ButtonLoader>
         </span>
       </Tooltip>
@@ -199,7 +227,7 @@ const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
             size="small"
           />
         }
-        label={<Typography variant="caption">Auto Sync</Typography>}
+        label={<Typography variant="caption">{t('Auto Sync')}</Typography>}
         sx={{ ml: 0, mr: 0 }}
       />
     </Box>

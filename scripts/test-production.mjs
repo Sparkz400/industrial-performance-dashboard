@@ -84,8 +84,15 @@ try {
     database,
   });
   await migrate(drizzle(pool), { migrationsFolder: "server/drizzle" });
-  const journal = JSON.parse(await readFile("server/drizzle/meta/_journal.json", "utf8"));
-  const snapshot = JSON.parse(await readFile(`server/drizzle/meta/${String(journal.entries.at(-1).idx).padStart(4, "0")}_snapshot.json`, "utf8"));
+  const journal = JSON.parse(
+    await readFile("server/drizzle/meta/_journal.json", "utf8"),
+  );
+  const snapshot = JSON.parse(
+    await readFile(
+      `server/drizzle/meta/${String(journal.entries.at(-1).idx).padStart(4, "0")}_snapshot.json`,
+      "utf8",
+    ),
+  );
   const tables = new Set(
     (
       await pool.query(
@@ -99,7 +106,7 @@ try {
   const hash = await bcrypt.hash(password, 4);
   const users = (
     await pool.query(
-      "INSERT INTO users(username,email,password_hash,role) VALUES ('shiftadmin','admin@example.invalid',$1,'admin'),('shiftviewer','viewer@example.invalid',$1,'viewer') RETURNING id,username",
+      "INSERT INTO users(username,email,password_hash,role) VALUES ('shiftadmin','admin@example.invalid',$1,'admin'),('shiftviewer','viewer@example.invalid',$1,'operator') RETURNING id,username",
       [hash],
     )
   ).rows;
@@ -156,7 +163,7 @@ try {
   page.on("pageerror", (e) => pageErrors.push(e.message));
   await page.goto(`${frontend}/login`);
   await page.getByLabel("Username").fill("shiftadmin");
-  await page.getByLabel(/password/i).fill(password);
+  await page.getByLabel(/^password/i).fill(password);
   await page.getByRole("button", { name: /sign in|log in/i }).click();
   await page.waitForURL((url) => !url.pathname.includes("login"));
   const csrf = async (request) =>
@@ -284,7 +291,9 @@ try {
     serverCertificateManager: new opcua.OPCUACertificateManager({
       rootFolder: join(directory, "server-pki"),
     }),
-    userCertificateManager: new opcua.OPCUACertificateManager({ rootFolder: join(directory, "user-pki") }),
+    userCertificateManager: new opcua.OPCUACertificateManager({
+      rootFolder: join(directory, "user-pki"),
+    }),
   });
   await uaServer.initialize();
   const namespace = uaServer.engine.addressSpace.getOwnNamespace();
@@ -322,6 +331,10 @@ try {
   });
   assert.equal(machineResponse.status(), 201, await machineResponse.text());
   const machine = await machineResponse.json();
+  await pool.query(
+    "INSERT INTO machine_grants(user_id,machine_id) VALUES($1,$2)",
+    [viewerId, machine.id],
+  );
   await page.goto(`${frontend}/production`);
   const supportDownload = page.waitForEvent("download");
   await page
@@ -863,7 +876,18 @@ try {
   assert.deepEqual(pageErrors, []);
 
   const { testOperator } = await import("./test-operator.mjs");
-  await testOperator({ call, page, frontend, pool, browser, viewer, machine, shift, adminId, viewerId });
+  await testOperator({
+    call,
+    page,
+    frontend,
+    pool,
+    browser,
+    viewer,
+    machine,
+    shift,
+    adminId,
+    viewerId,
+  });
   console.log(
     "PASS: browser shift creation, operator classification, immutable reconciliation, corrections and printed report; exact independent OEE = 43.333333%",
   );
@@ -1023,13 +1047,48 @@ try {
   );
   // Logout and account revocation deny both subsequent requests and live sockets.
   const { testReportJobs } = await import("./test-report-jobs.mjs");
-  await testReportJobs({ call, pool, page, frontend, smtp, waitFor, reportScheduler, machine });
+  await testReportJobs({
+    call,
+    pool,
+    page,
+    frontend,
+    smtp,
+    waitFor,
+    reportScheduler,
+    machine,
+  });
   const { testUnattendedAlarms } = await import("./test-unattended-alarms.mjs");
-  await testUnattendedAlarms({ page, frontend, call, pool, machine, adminId, worker });
+  await testUnattendedAlarms({
+    page,
+    frontend,
+    call,
+    pool,
+    machine,
+    adminId,
+    worker,
+  });
   const { testGateway } = await import("./test-gateway.mjs");
-  await testGateway({ call, page, frontend, pool, directory, multiMachine, worker, waitFor });
+  await testGateway({
+    call,
+    page,
+    frontend,
+    pool,
+    directory,
+    multiMachine,
+    worker,
+    waitFor,
+  });
   const { testIncidentReplay } = await import("./test-incident-replay.mjs");
-  await testIncidentReplay({ call, pool, page, frontend, machine, shift, adminId, viewer });
+  await testIncidentReplay({
+    call,
+    pool,
+    page,
+    frontend,
+    machine,
+    shift,
+    adminId,
+    viewer,
+  });
   assert.deepEqual(pageErrors, []);
   await call("POST", "/api/v1/auth/logout", {}, viewer.request);
   await waitFor(() => !liveClient.connected, "Logout left socket connected");

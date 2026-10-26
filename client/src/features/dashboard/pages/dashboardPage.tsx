@@ -1,3 +1,5 @@
+import { useT, translate as t } from '@/i18n';
+import { useAuthStore } from '@/stores/useAuthStore';
 import React, { useRef, useMemo, useState } from 'react';
 import {
   CircularProgress,
@@ -70,7 +72,7 @@ class GridErrorBoundary extends React.Component<GridErrorBoundaryProps, GridErro
           }}
         >
           <Typography variant="h6" color="error" gutterBottom>
-            Dashboard layout error
+            {t('Dashboard layout error')}
           </Typography>
           <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
             {this.state.error?.message || 'An error occurred rendering the dashboard grid.'}
@@ -79,7 +81,7 @@ class GridErrorBoundary extends React.Component<GridErrorBoundaryProps, GridErro
             variant="contained"
             onClick={() => this.setState({ hasError: false, error: null })}
           >
-            Retry
+            {t('Retry')}
           </Button>
         </Box>
       );
@@ -93,6 +95,9 @@ class GridErrorBoundary extends React.Component<GridErrorBoundaryProps, GridErro
  *
  */
 function DashboardPageInternal(): React.JSX.Element {
+  const t = useT();
+
+  const editable = useAuthStore((s) => s.user?.role === 'admin');
   const { state, dispatch } = useDashboardState();
   const {
     widgets,
@@ -164,7 +169,7 @@ function DashboardPageInternal(): React.JSX.Element {
         >
           <CircularProgress color="secondary" sx={{ mb: 3 }} />
           <Typography variant="h6" color="textSecondary">
-            Loading Dashboards...
+            {t('Loading Dashboards...')}
           </Typography>
         </motion.div>
       </Box>
@@ -174,7 +179,7 @@ function DashboardPageInternal(): React.JSX.Element {
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* KPI Summary Bar */}
-      <KpiSummaryBar />
+      {editable && <KpiSummaryBar />}
 
       {/* Dashboard Header with Tabs, Time Range, Controls */}
       <DashboardToolbar
@@ -205,13 +210,15 @@ function DashboardPageInternal(): React.JSX.Element {
       {/* Grid Layout with Widgets - Drop Zone */}
       <Box
         ref={gridRef}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
+        onDrop={editable ? handleDrop : undefined}
+        onDragOver={editable ? handleDragOver : undefined}
         sx={{ flexGrow: 1, p: 2, overflow: 'auto', position: 'relative' }}
       >
         {state.dashboards.length > 0 && state.selectedDashboardId && (
           <GridErrorBoundary>
             <ResponsiveGridLayout
+              isDraggable={editable}
+              isResizable={editable}
               draggableCancel=".MuiIconButton-root, .no-drag"
               className="layout"
               layouts={{ lg: layout, md: layout, sm: layout, xs: layout, xxs: layout }}
@@ -219,6 +226,7 @@ function DashboardPageInternal(): React.JSX.Element {
               cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
               rowHeight={35}
               onLayoutChange={(currentLayout: LayoutItem[]) => {
+                if (!editable) return;
                 const normalize = (items: LayoutItem[]) =>
                   items
                     .map(({ i, x, y, w, h, minW, minH, maxW, maxH }) => ({
@@ -247,6 +255,7 @@ function DashboardPageInternal(): React.JSX.Element {
                 return (
                   <div key={widget.id}>
                     <WidgetContainer
+                      readOnly={!editable}
                       widget={widget}
                       onDelete={handleRemoveWidget}
                       layoutItem={layoutItem}
@@ -259,16 +268,18 @@ function DashboardPageInternal(): React.JSX.Element {
           </GridErrorBoundary>
         )}
 
-        <WidgetManagementPanel
-          hasDashboards={state.dashboards.length > 0}
-          hasWidgets={widgets.length > 0}
-          initialized={state.initialized}
-          previewOpen={state.previewOpen}
-          onOpenPreview={() => dispatch({ type: ActionTypes.SET_PREVIEW_OPEN, payload: true })}
-          onClosePreview={() => dispatch({ type: ActionTypes.SET_PREVIEW_OPEN, payload: false })}
-          onAddWidget={handleAddWidget}
-          onOpenTemplates={() => setTemplateDialogOpen(true)}
-        />
+        {editable && (
+          <WidgetManagementPanel
+            hasDashboards={state.dashboards.length > 0}
+            hasWidgets={widgets.length > 0}
+            initialized={state.initialized}
+            previewOpen={state.previewOpen}
+            onOpenPreview={() => dispatch({ type: ActionTypes.SET_PREVIEW_OPEN, payload: true })}
+            onClosePreview={() => dispatch({ type: ActionTypes.SET_PREVIEW_OPEN, payload: false })}
+            onAddWidget={handleAddWidget}
+            onOpenTemplates={() => setTemplateDialogOpen(true)}
+          />
+        )}
       </Box>
 
       {/* Dashboard Templates Dialog */}
@@ -316,7 +327,7 @@ function DashboardPageInternal(): React.JSX.Element {
               }}
             >
               <Typography variant="body2" sx={{ mr: 2 }} color="text.secondary">
-                Unsaved changes
+                {t('Unsaved changes')}
               </Typography>
               <ButtonLoader
                 variant="contained"
@@ -324,7 +335,7 @@ function DashboardPageInternal(): React.JSX.Element {
                 onClick={syncWithServer}
                 loading={state.isSaving || state.serverSyncStatus === 'syncing'}
               >
-                Save Now
+                {t('Save Now')}
               </ButtonLoader>
             </Box>
           </motion.div>
@@ -333,19 +344,20 @@ function DashboardPageInternal(): React.JSX.Element {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={state.confirmDeleteDialogOpen} onClose={handleCloseConfirmDelete}>
-        <DialogTitle>Confirm Deletion</DialogTitle>
+        <DialogTitle>{t('Confirm Deletion')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete the dashboard &quot;{dashboardNameToDelete}&quot;? This
-            action cannot be undone.
+            {t('Are you sure you want to delete the dashboard "')}
+            {dashboardNameToDelete}
+            {t('"? This action cannot be undone.')}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseConfirmDelete} color="primary">
-            Cancel
+            {t('Cancel')}
           </Button>
           <Button onClick={handleConfirmDeleteDashboard} color="error" autoFocus>
-            Delete
+            {t('Delete')}
           </Button>
         </DialogActions>
       </Dialog>

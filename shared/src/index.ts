@@ -348,6 +348,7 @@ export type {
   MachineLiveSummary,
   ProductionSignal,
   ProductionProfile,
+  ProductRun,
   ProductionInterval,
   DowntimeReason,
   ShiftReport,

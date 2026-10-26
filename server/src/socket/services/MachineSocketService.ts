@@ -28,6 +28,8 @@ export class MachineSocketService {
 
   /** Broadcast a machine status change to all clients */
   broadcastStatusChange(data: MachineStatusUpdate): void {
-    this.io.emit("machineStatusUpdate", data);
+    this.io
+      .to(["access:admin", `access:machine:${data.machineId}`])
+      .emit("machineStatusUpdate", data);
   }
 }

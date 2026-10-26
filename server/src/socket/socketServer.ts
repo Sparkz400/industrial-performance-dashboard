@@ -15,6 +15,12 @@ import logger from "../utils/logger.js";
 import connectionTracker from "../utils/connectionTracker.js";
 import config from "../config/config.js";
 import { getSessionUser, sessionEvents } from "../services/sessionAccess.js";
+import {
+  accessScope,
+  loadAccessScope,
+  assertResource,
+  canOperate,
+} from "../services/accessScope.js";
 import alarmEvaluator from "../services/alarmService.js";
 
 import { StatusSocketService } from "./services/StatusSocketService.js";
@@ -122,7 +128,7 @@ export function createSocketServer(
         }
 
         void getSessionUser(req.session)
-          .then((user) => {
+          .then(async (user) => {
             if (
               !user ||
               !req.session.cookie.expires ||
@@ -135,6 +141,12 @@ export function createSocketServer(
               username: req.session.username ?? "",
               role: user.role,
             };
+            const scope = await loadAccessScope(user.id, user.role);
+            socket.data.machineIds = scope.machineIds;
+            if (user.role === "admin") await socket.join("access:admin");
+            else
+              for (const id of scope.machineIds)
+                await socket.join(`access:machine:${id}`);
 
             logger.info(
               `Socket.IO: Authenticated user "${req.session.username}" (${socket.id}).`,
@@ -198,10 +210,16 @@ export function createSocketServer(
         });
     });
     socket.on("acknowledgeAlert", async ({ id }) => {
-      if (config.RECOVERY_MODE || socket.data.user.role === "wallboard") return;
+      if (config.RECOVERY_MODE || !canOperate(socket.data.user.role)) return;
       if (!Number.isSafeInteger(id) || id <= 0) return;
       try {
-        await alarmEvaluator.acknowledge(id, socket.data.user.id);
+        const user = await getSessionUser(req.session);
+        if (!user) return;
+        const scope = await loadAccessScope(user.id, user.role);
+        await accessScope.run(scope, async () => {
+          await assertResource("alarm", id);
+          await alarmEvaluator.acknowledge(id, user.id);
+        });
       } catch (error) {
         logger.error("Alarm acknowledgment failed", error);
       }

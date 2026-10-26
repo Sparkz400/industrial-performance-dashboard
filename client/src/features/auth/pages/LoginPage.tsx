@@ -1,3 +1,4 @@
+import { translate as t, useLanguage } from '@/i18n';
 import React, { useState, type FormEvent } from 'react';
 import {
   Box,
@@ -10,6 +11,7 @@ import {
   CircularProgress,
   InputAdornment,
   IconButton,
+  MenuItem,
 } from '@mui/material';
 import { Visibility, VisibilityOff, Lock } from '@mui/icons-material';
 import { motion } from 'framer-motion';
@@ -19,6 +21,7 @@ import { useAuthStore } from '../../../stores/useAuthStore';
  *
  */
 export default function LoginPage() {
+  useLanguage((s) => s.language);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -59,6 +62,18 @@ export default function LoginPage() {
           }}
         >
           <CardContent sx={{ p: 4 }}>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Language / Sprache"
+              value={useLanguage.getState().language}
+              onChange={(e) => useLanguage.getState().setLanguage(e.target.value as 'en' | 'de')}
+              sx={{ mb: 2 }}
+            >
+              <MenuItem value="en">English</MenuItem>
+              <MenuItem value="de">Deutsch</MenuItem>
+            </TextField>
             <Box sx={{ textAlign: 'center', mb: 3 }}>
               <Box
                 sx={{
@@ -76,10 +91,10 @@ export default function LoginPage() {
                 <Lock sx={{ color: '#fff', fontSize: 28 }} />
               </Box>
               <Typography variant="h5" fontWeight={700}>
-                Performance Dashboard
+                {t('Performance Dashboard')}{' '}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                Sign in to continue
+                {t('Sign in to continue')}{' '}
               </Typography>
             </Box>
 
@@ -91,7 +106,7 @@ export default function LoginPage() {
 
             <Box component="form" onSubmit={handleSubmit} noValidate>
               <TextField
-                label="Username"
+                label={t('Username')}
                 fullWidth
                 required
                 autoFocus
@@ -102,7 +117,7 @@ export default function LoginPage() {
                 disabled={isLoading}
               />
               <TextField
-                label="Password"
+                label={t('Password')}
                 type={showPassword ? 'text' : 'password'}
                 fullWidth
                 required
@@ -116,6 +131,11 @@ export default function LoginPage() {
                     endAdornment: (
                       <InputAdornment position="end">
                         <IconButton
+                          aria-label={
+                            showPassword
+                              ? t('Hide password', 'Passwort verbergen')
+                              : t('Show password', 'Passwort anzeigen')
+                          }
                           onClick={() => setShowPassword(!showPassword)}
                           edge="end"
                           size="small"
@@ -142,7 +162,7 @@ export default function LoginPage() {
                   },
                 }}
               >
-                {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
+                {isLoading ? <CircularProgress size={24} color="inherit" /> : t('Sign In')}
               </Button>
             </Box>
           </CardContent>

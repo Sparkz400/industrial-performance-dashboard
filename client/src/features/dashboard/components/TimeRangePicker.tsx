@@ -1,3 +1,4 @@
+import { useT } from '@/i18n';
 import React, { useState } from 'react';
 import {
   Box,
@@ -24,6 +25,8 @@ const presets: { value: TimeRangePreset; label: string }[] = [
 ];
 
 const TimeRangePicker: React.FC = () => {
+  const t = useT();
+
   const { timeRange, setPreset, setCustomRange } = useTimeRangeStore();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [customStart, setCustomStart] = useState('');
@@ -81,7 +84,7 @@ const TimeRangePicker: React.FC = () => {
         </ButtonGroup>
       </motion.div>
 
-      <Tooltip title="Custom range">
+      <Tooltip title={t('Custom range')}>
         <IconButton
           size="small"
           onClick={(e) => setAnchorEl(e.currentTarget)}
@@ -112,10 +115,10 @@ const TimeRangePicker: React.FC = () => {
       >
         <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 280 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-            Custom Time Range
+            {t('Custom Time Range')}
           </Typography>
           <TextField
-            label="Start"
+            label={t('Start')}
             type="datetime-local"
             size="small"
             value={customStart}
@@ -123,7 +126,7 @@ const TimeRangePicker: React.FC = () => {
             InputLabelProps={{ shrink: true }}
           />
           <TextField
-            label="End"
+            label={t('End')}
             type="datetime-local"
             size="small"
             value={customEnd}
@@ -131,7 +134,7 @@ const TimeRangePicker: React.FC = () => {
             InputLabelProps={{ shrink: true }}
           />
           <Button variant="contained" size="small" onClick={handleCustomApply}>
-            Apply
+            {t('Apply')}
           </Button>
         </Box>
       </Popover>

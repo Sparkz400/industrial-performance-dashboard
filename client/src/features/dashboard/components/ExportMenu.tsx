@@ -1,3 +1,4 @@
+import { useT } from '@/i18n';
 import React, { useState, useRef } from 'react';
 import {
   IconButton,
@@ -16,7 +17,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import DataObjectIcon from '@mui/icons-material/DataObject';
 import LinkIcon from '@mui/icons-material/Link';
-import { toPng, toSvg } from 'html-to-image';
+
 import { saveAs } from 'file-saver';
 import { API_ENDPOINTS } from '@/config/config';
 import api from '@/utils/api';
@@ -46,6 +47,8 @@ const ExportMenu: React.FC<ExportMenuProps> = ({
   dashboard,
   onDashboardImported,
 }) => {
+  const t = useT();
+
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -53,6 +56,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({
     setAnchorEl(null);
     if (!widgetRef?.current) return;
     try {
+      const { toPng } = await import('html-to-image');
       const dataUrl = await toPng(widgetRef.current, {
         backgroundColor: '#1A1D27',
         pixelRatio: 2,
@@ -67,6 +71,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({
     setAnchorEl(null);
     if (!widgetRef?.current) return;
     try {
+      const { toSvg } = await import('html-to-image');
       const dataUrl = await toSvg(widgetRef.current);
       saveAs(dataUrl, `${widgetTitle.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.svg`);
     } catch (err) {
@@ -170,7 +175,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({
         onChange={handleFileSelected}
       />
 
-      <Tooltip title="Export / Share">
+      <Tooltip title={t('Export / Share')}>
         <IconButton
           size="small"
           onClick={(e) => setAnchorEl(e.currentTarget)}
@@ -194,25 +199,25 @@ const ExportMenu: React.FC<ExportMenuProps> = ({
           variant="caption"
           sx={{ px: 2, py: 0.5, color: 'text.disabled', fontWeight: 600 }}
         >
-          EXPORT
+          {t('EXPORT')}
         </Typography>
         <MenuItem onClick={handleExportPng} disabled={!widgetRef?.current}>
           <ListItemIcon>
             <ImageIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Export as PNG</ListItemText>
+          <ListItemText>{t('Export as PNG')}</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleExportSvg} disabled={!widgetRef?.current}>
           <ListItemIcon>
             <ImageIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Export as SVG</ListItemText>
+          <ListItemText>{t('Export as SVG')}</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleExportCsv} disabled={!data || data.length === 0}>
           <ListItemIcon>
             <TableChartIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Export as CSV</ListItemText>
+          <ListItemText>{t('Export as CSV')}</ListItemText>
         </MenuItem>
 
         {hasDashboard && [
@@ -222,19 +227,19 @@ const ExportMenu: React.FC<ExportMenuProps> = ({
             variant="caption"
             sx={{ px: 2, py: 0.5, color: 'text.disabled', fontWeight: 600 }}
           >
-            DASHBOARD
+            {t('DASHBOARD')}
           </Typography>,
           <MenuItem key="export-json" onClick={handleExportDashboardJson}>
             <ListItemIcon>
               <DataObjectIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>Export dashboard as JSON</ListItemText>
+            <ListItemText>{t('Export dashboard as JSON')}</ListItemText>
           </MenuItem>,
           <MenuItem key="import-json" onClick={handleImportDashboardJson}>
             <ListItemIcon>
               <FileUploadIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>Import dashboard from JSON</ListItemText>
+            <ListItemText>{t('Import dashboard from JSON')}</ListItemText>
           </MenuItem>,
         ]}
 
@@ -243,7 +248,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({
           variant="caption"
           sx={{ px: 2, py: 0.5, color: 'text.disabled', fontWeight: 600 }}
         >
-          SHARE
+          {t('SHARE')}
         </Typography>
         <MenuItem onClick={handleCopyLink}>
           <ListItemIcon>

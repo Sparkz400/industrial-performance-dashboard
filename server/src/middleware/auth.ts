@@ -3,7 +3,8 @@ import logger from "../utils/logger.js";
 import { UnauthorizedError, ForbiddenError } from "../utils/errors.js";
 import { getSessionUser } from "../services/sessionAccess.js";
 
-export type UserRole = "admin" | "viewer" | "wallboard";
+export type UserRole =
+  "admin" | "viewer" | "wallboard" | "operator" | "supervisor";
 
 declare module "express-session" {
   interface SessionData {
@@ -39,17 +40,17 @@ export const requireAuth = async (
   }
 };
 
-/** Viewers can acknowledge incidents and classify stops, but cannot change configuration. */
+/** Role gates are followed by explicit resource authorization in assetAccess. */
 export const requireMutationAccess = (
   req: Request,
   res: Response,
   next: NextFunction,
 ): void => {
   if (
-    req.session.userRole === "wallboard" &&
+    ["wallboard", "viewer"].includes(req.session.userRole ?? "") &&
     !["GET", "HEAD", "OPTIONS"].includes(req.method)
   ) {
-    next(new ForbiddenError("Wallboard accounts are read-only"));
+    next(new ForbiddenError("This account is read-only"));
     return;
   }
   if (
@@ -59,6 +60,10 @@ export const requireMutationAccess = (
     return;
   }
   if (
+    req.session.userRole === "supervisor" ||
+    (req.session.userRole === "operator" &&
+      req.method === "POST" &&
+      /^\/maintenance\/plans\/\d+\/events\/?$/.test(req.path)) ||
     ["GET", "HEAD", "OPTIONS"].includes(req.method) ||
     (req.method === "POST" &&
       /^\/alarms\/\d+\/acknowledge\/?$/.test(req.path)) ||
