@@ -6,7 +6,7 @@ interface AddWidgetButtonProps {
 }
 
 const AddWidgetButton: React.FC<AddWidgetButtonProps> = ({ onClick }) => (
-  <button className="BtnAddWidget" onClick={onClick}>
+  <button className="BtnAddWidget" aria-label="Add Widget" onClick={onClick}>
     <div className="BtnAddWidgetSign">+</div>
     <div className="BtnAddWidgetText">Add Widget</div>
   </button>

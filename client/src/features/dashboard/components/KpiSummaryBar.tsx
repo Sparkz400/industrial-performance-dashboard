@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, alpha } from '@mui/material';
+import { Box, Typography, alpha, useTheme } from '@mui/material';
 import { motion } from 'framer-motion';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
@@ -29,11 +29,11 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, icon, color, delay = 0 
         gap: 1.5,
         py: 1.5,
         px: 2,
-        borderRadius: 3,
-        background: () => `linear-gradient(135deg, ${alpha(color, 0.12)}, ${alpha(color, 0.04)})`,
+        borderRadius: 1,
+        bgcolor: 'background.paper',
         border: '1px solid',
-        borderColor: () => alpha(color, 0.15),
-        backdropFilter: 'blur(8px)',
+        borderColor: 'divider',
+        boxShadow: 'inset 0 1px var(--industrial-shine), 0 2px 3px #00000012',
         transition: 'all 0.3s ease',
         '&:hover': {
           transform: 'translateY(-2px)',
@@ -62,7 +62,10 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, icon, color, delay = 0 
         >
           {label}
         </Typography>
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.3, color }}>
+        <Typography
+          variant="subtitle1"
+          sx={{ fontWeight: 700, lineHeight: 1.3, color: 'text.primary' }}
+        >
           {value}
         </Typography>
       </Box>
@@ -71,22 +74,29 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, icon, color, delay = 0 
 );
 
 const KpiSummaryBar: React.FC = () => {
+  const theme = useTheme();
   const status = useStatusStore((s) => s.status);
   const isConnected = useStatusStore((s) => s.isConnected);
   const isError = useStatusStore((s) => s.isError);
 
   const systemHealth = isConnected ? 'Healthy' : isError ? 'Error' : 'Degraded';
-  const systemColor = isConnected ? '#66BB6A' : isError ? '#F44336' : '#FF9800';
+  const systemColor = isConnected
+    ? theme.palette.success.main
+    : isError
+      ? theme.palette.error.main
+      : theme.palette.warning.main;
 
   const dbStatus = status?.database?.statusText || 'Unknown';
   const dbColor =
     status?.database?.status === 'CONNECTED' || status?.database?.status === 'OK'
-      ? '#66BB6A'
-      : '#F44336';
+      ? theme.palette.success.main
+      : theme.palette.error.main;
 
   const opcuaStatus = status?.opcua?.statusText || 'Unknown';
   const opcuaColor =
-    status?.opcua?.status === 'CONNECTED' || status?.opcua?.status === 'OK' ? '#66BB6A' : '#F44336';
+    status?.opcua?.status === 'CONNECTED' || status?.opcua?.status === 'OK'
+      ? theme.palette.success.main
+      : theme.palette.error.main;
 
   return (
     <Box
@@ -130,7 +140,7 @@ const KpiSummaryBar: React.FC = () => {
         label="Uptime"
         value="99.2%"
         icon={<AccessTimeIcon sx={{ fontSize: 20 }} />}
-        color="#6C63FF"
+        color={theme.palette.primary.main}
         delay={0.15}
       />
     </Box>

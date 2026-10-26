@@ -300,16 +300,19 @@ function DashboardPageInternal(): React.JSX.Element {
       {/* Unsaved Changes Indicator */}
       <AnimatePresence>
         {state.hasLocalChanges && !state.isSaving && (
-          <motion.div
+          <Box
+            component={motion.div}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.3 }}
-            style={{
+            style={{ x: '-50%' }}
+            sx={{
               position: 'fixed',
-              bottom: 20,
+              bottom: { xs: 80, sm: 20 },
               left: '50%',
-              transform: 'translateX(-50%)',
+              width: 'max-content',
+              maxWidth: 'calc(100vw - 32px)',
               zIndex: 1000,
             }}
           >
@@ -317,13 +320,12 @@ function DashboardPageInternal(): React.JSX.Element {
               sx={{
                 bgcolor: 'background.paper',
                 boxShadow: (theme) => `0 8px 32px ${alpha(theme.palette.common.black, 0.3)}`,
-                borderRadius: 3,
+                borderRadius: 1,
                 p: 1.5,
                 display: 'flex',
                 alignItems: 'center',
                 border: '1px solid',
                 borderColor: 'warning.main',
-                backdropFilter: 'blur(12px)',
               }}
             >
               <Typography variant="body2" sx={{ mr: 2 }} color="text.secondary">
@@ -338,7 +340,7 @@ function DashboardPageInternal(): React.JSX.Element {
                 {t('Save Now')}
               </ButtonLoader>
             </Box>
-          </motion.div>
+          </Box>
         )}
       </AnimatePresence>
 

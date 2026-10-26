@@ -19,7 +19,7 @@ export interface CategoryColor {
 
 export const CATEGORY_COLORS: Record<string, CategoryColor> = {
   [WIDGET_CATEGORIES.MONITORING]: { main: '#ef5350', light: '#ffebee', dark: '#c62828' },
-  [WIDGET_CATEGORIES.ANALYTICS]: { main: '#7c4dff', light: '#ede7f6', dark: '#4a148c' },
+  [WIDGET_CATEGORIES.ANALYTICS]: { main: '#527783', light: '#E2EBEE', dark: '#304D58' },
   [WIDGET_CATEGORIES.SYSTEM]: { main: '#26a69a', light: '#e0f2f1', dark: '#00695c' },
   [WIDGET_CATEGORIES.CONTROL]: { main: '#ffa726', light: '#fff3e0', dark: '#e65100' },
   [WIDGET_CATEGORIES.PRODUCTION]: { main: '#42a5f5', light: '#e3f2fd', dark: '#1565c0' },

@@ -56,9 +56,9 @@ export default function LoginPage() {
       >
         <Card
           sx={{
-            width: 400,
+            width: 'min(400px, calc(100vw - 32px))',
             maxWidth: '100%',
-            boxShadow: 8,
+            boxShadow: 'inset 0 1px var(--industrial-shine), 0 3px 8px #00000018',
           }}
         >
           <CardContent sx={{ p: 4 }}>
@@ -79,8 +79,9 @@ export default function LoginPage() {
                 sx={{
                   width: 56,
                   height: 56,
-                  borderRadius: '16px',
-                  background: 'linear-gradient(135deg, #6C63FF, #FF6B9D)',
+                  borderRadius: '6px',
+                  bgcolor: 'primary.main',
+                  color: 'primary.contrastText',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -88,7 +89,7 @@ export default function LoginPage() {
                   mb: 2,
                 }}
               >
-                <Lock sx={{ color: '#fff', fontSize: 28 }} />
+                <Lock sx={{ color: 'primary.contrastText', fontSize: 28 }} />
               </Box>
               <Typography variant="h5" fontWeight={700}>
                 {t('Performance Dashboard')}{' '}
@@ -156,9 +157,10 @@ export default function LoginPage() {
                 sx={{
                   py: 1.5,
                   fontWeight: 600,
-                  background: 'linear-gradient(135deg, #6C63FF, #FF6B9D)',
+                  bgcolor: 'primary.main',
+                  color: 'primary.contrastText',
                   '&:hover': {
-                    background: 'linear-gradient(135deg, #5A52E0, #E05A8A)',
+                    bgcolor: 'primary.dark',
                   },
                 }}
               >

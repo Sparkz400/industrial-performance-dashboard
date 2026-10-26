@@ -74,13 +74,14 @@ const PageLoader = () => (
             width: 48,
             height: 48,
             borderRadius: '12px',
-            background: 'linear-gradient(135deg, #6C63FF, #FF6B9D)',
+            bgcolor: 'primary.main',
+            color: 'primary.contrastText',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <CircularProgress size={24} sx={{ color: '#fff' }} />
+          <CircularProgress size={24} sx={{ color: 'primary.contrastText' }} />
         </Box>
         <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
           {t('Loading...')}{' '}

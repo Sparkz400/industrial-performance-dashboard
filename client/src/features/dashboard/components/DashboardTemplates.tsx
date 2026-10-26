@@ -110,9 +110,9 @@ const iconMap: Record<string, React.ReactNode> = {
 };
 
 const categoryColors: Record<string, string> = {
-  General: '#6C63FF',
+  General: '#B83D0C',
   Monitoring: '#F44336',
-  Analytics: '#7C4DFF',
+  Analytics: '#527783',
   Operations: '#FF9800',
 };
 
@@ -151,7 +151,7 @@ const DashboardTemplates: React.FC<DashboardTemplatesProps> = ({
         }}
       >
         {templates.map((template, index) => {
-          const color = categoryColors[template.category] || '#6C63FF';
+          const color = categoryColors[template.category] || '#B83D0C';
           return (
             <motion.div
               key={template.id}

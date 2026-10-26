@@ -18,8 +18,8 @@ const ThemePreview: React.FC<ThemePreviewProps> = ({ mode }) => (
     sx={{
       p: 2,
       mt: 2,
-      bgcolor: mode === 'dark' ? '#2b2d30' : '#ffffff',
-      color: mode === 'dark' ? '#ffffff' : '#000000',
+      bgcolor: 'background.paper',
+      color: 'text.primary',
     }}
   >
     <Typography variant="h6" gutterBottom>

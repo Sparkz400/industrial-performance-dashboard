@@ -44,7 +44,7 @@ const WidgetCard = React.memo<WidgetCardProps>(
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.3, delay: index * 0.05 }}
-        whileHover={{ y: -4 }}
+        whileHover={{ y: -1 }}
         whileTap={{ scale: 0.98 }}
       >
         <Box
@@ -55,13 +55,13 @@ const WidgetCard = React.memo<WidgetCardProps>(
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            borderRadius: 3,
+            borderRadius: 1,
             border: '1px solid',
             borderColor: 'divider',
             cursor: draggable ? 'grab' : 'pointer',
             overflow: 'hidden',
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            backdropFilter: 'blur(12px)',
+            bgcolor: 'background.paper',
             '&:hover': {
               boxShadow: () => `0 8px 24px ${alpha(color.main, 0.25)}`,
               borderColor: color.main,
@@ -69,7 +69,7 @@ const WidgetCard = React.memo<WidgetCardProps>(
                 backgroundColor: alpha(color.main, 0.12),
               },
               '& .widget-card-icon': {
-                transform: 'scale(1.15) rotate(5deg)',
+                transform: 'scale(1.03)',
               },
             },
             '&:active': {
@@ -94,12 +94,14 @@ const WidgetCard = React.memo<WidgetCardProps>(
               sx={{
                 width: 52,
                 height: 52,
-                background: `linear-gradient(135deg, ${color.main}, ${alpha(color.main, 0.7)})`,
+                bgcolor: 'var(--industrial-well)',
+                color: 'text.primary',
+                borderRadius: 1,
                 transition: 'transform 0.3s ease',
                 boxShadow: `0 4px 12px ${alpha(color.main, 0.3)}`,
               }}
             >
-              <IconComponent sx={{ fontSize: 26, color: '#fff' }} />
+              <IconComponent sx={{ fontSize: 26, color: 'inherit' }} />
             </Avatar>
           </Box>
 

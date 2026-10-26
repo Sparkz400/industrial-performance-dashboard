@@ -10,6 +10,12 @@ fonts and their stylesheet are precached for offline use without an external fon
 service. See
 [font source and license](https://github.com/Sparkz400/performance_dashboard/blob/main/client/public/fonts/figtree/README.md).
 
+Light and dark modes use grey/charcoal industrial surfaces and orange accents,
+with raised controls, recessed charts and distinct status colors. The
+[shared UI theme](https://github.com/Sparkz400/performance_dashboard/blob/main/client/src/theme/modernTheme.ts)
+and [chart theme](https://github.com/Sparkz400/performance_dashboard/blob/main/client/src/theme/chartTheme.ts)
+keep controls, axes and tooltips consistent while preserving measurement behavior.
+
 New measurements preserve namespace-aware identity and receive time. Dense trend
 queries span the selected interval with quality gaps and explicit resolution.
 Edge transfer remains disabled. The AI assistant and provider integration have been removed.

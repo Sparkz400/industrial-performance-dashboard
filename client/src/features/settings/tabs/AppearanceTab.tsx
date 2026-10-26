@@ -48,6 +48,9 @@ const AppearanceTab: React.FC = () => {
               <Grid size={{ xs: 4 }}>
                 <Card
                   variant="outlined"
+                  component="button"
+                  type="button"
+                  aria-pressed={themeMode === 'light' && !useSystemTheme}
                   onClick={() => {
                     setThemeMode('light');
                     enqueueSnackbar('Light theme applied', { variant: 'success' });
@@ -72,6 +75,9 @@ const AppearanceTab: React.FC = () => {
               <Grid size={{ xs: 4 }}>
                 <Card
                   variant="outlined"
+                  component="button"
+                  type="button"
+                  aria-pressed={themeMode === 'dark' && !useSystemTheme}
                   onClick={() => {
                     setThemeMode('dark');
                     enqueueSnackbar('Dark theme applied', { variant: 'success' });
@@ -96,6 +102,9 @@ const AppearanceTab: React.FC = () => {
               <Grid size={{ xs: 4 }}>
                 <Card
                   variant="outlined"
+                  component="button"
+                  type="button"
+                  aria-pressed={useSystemTheme}
                   onClick={() => {
                     setUseSystemTheme(true);
                     enqueueSnackbar('System theme applied — follows OS preference', {

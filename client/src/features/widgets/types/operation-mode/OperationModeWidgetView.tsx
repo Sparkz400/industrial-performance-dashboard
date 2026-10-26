@@ -1,3 +1,4 @@
+import { createChartTheme } from '@/theme/chartTheme';
 import React, { useMemo } from 'react';
 import { ResponsiveLine } from '@nivo/line';
 import { Typography, Box, CircularProgress, useTheme } from '@mui/material';
@@ -42,28 +43,8 @@ const OperationModeWidgetView: React.FC<OperationModeWidgetViewProps> = ({
   onRefresh = () => {},
 }) => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
 
-  const nivoTheme = useMemo(
-    () => ({
-      text: { fontFamily: 'var(--font-family)', fill: isDark ? '#9DA3B4' : '#6B7280' },
-      axis: {
-        ticks: { text: { fill: isDark ? '#9DA3B4' : '#6B7280', fontSize: 10 } },
-      },
-      grid: { line: { stroke: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)' } },
-      crosshair: { line: { stroke: '#66BB6A', strokeWidth: 1, strokeDasharray: '6 6' } },
-      tooltip: {
-        container: {
-          background: isDark ? '#1E2130' : '#ffffff',
-          color: isDark ? '#E8E8ED' : '#1A1A2E',
-          borderRadius: '8px',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-          fontSize: '12px',
-        },
-      },
-    }),
-    [isDark],
-  );
+  const nivoTheme = useMemo(() => createChartTheme(theme), [theme]);
 
   const chartData = useMemo((): NivoLineSeries[] => {
     if (!data || data.length === 0) return [];
@@ -168,7 +149,7 @@ const OperationModeWidgetView: React.FC<OperationModeWidgetViewProps> = ({
             }) => (
               <Box
                 sx={{
-                  background: isDark ? '#1E2130' : '#fff',
+                  background: theme.palette.background.paper,
                   border: '1px solid',
                   borderColor: 'divider',
                   borderRadius: 2,

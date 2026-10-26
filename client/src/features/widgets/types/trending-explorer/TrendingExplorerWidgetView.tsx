@@ -1,3 +1,4 @@
+import { createChartTheme } from '@/theme/chartTheme';
 import React, { useMemo, useState } from 'react';
 import { ResponsiveLine } from '@nivo/line';
 import {
@@ -16,10 +17,10 @@ interface TrendingExplorerWidgetViewProps {
 }
 
 const SERIES_COLORS = [
-  '#2196f3',
+  '#B83D0C',
   '#4caf50',
   '#ff9800',
-  '#9c27b0',
+  '#8A7925',
   '#f44336',
   '#00bcd4',
   '#795548',
@@ -31,29 +32,9 @@ const TrendingExplorerWidgetView: React.FC<TrendingExplorerWidgetViewProps> = ({
   isLoading,
 }) => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
   const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
 
-  const nivoTheme = useMemo(
-    () => ({
-      text: { fontFamily: 'var(--font-family)', fill: isDark ? '#9DA3B4' : '#6B7280' },
-      axis: {
-        ticks: { text: { fill: isDark ? '#9DA3B4' : '#6B7280', fontSize: 10 } },
-      },
-      grid: { line: { stroke: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)' } },
-      crosshair: { line: { stroke: '#2196f3', strokeWidth: 1, strokeDasharray: '6 6' } },
-      tooltip: {
-        container: {
-          background: isDark ? '#1E2130' : '#ffffff',
-          color: isDark ? '#E8E8ED' : '#1A1A2E',
-          borderRadius: '8px',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-          fontSize: '12px',
-        },
-      },
-    }),
-    [isDark],
-  );
+  const nivoTheme = useMemo(() => createChartTheme(theme), [theme]);
 
   const filteredData = useMemo(
     () =>
@@ -62,9 +43,9 @@ const TrendingExplorerWidgetView: React.FC<TrendingExplorerWidgetViewProps> = ({
         .map((s, idx) => ({
           ...s,
           data: s.data.map((point) => ({ ...point, x: new Date(point.x) })),
-          color: SERIES_COLORS[idx % SERIES_COLORS.length],
+          color: idx === 0 ? theme.palette.primary.main : SERIES_COLORS[idx % SERIES_COLORS.length],
         })),
-    [series, hiddenSeries],
+    [series, hiddenSeries, theme.palette.primary.main],
   );
 
   const toggleSeries = (id: string) => {
@@ -138,9 +119,15 @@ const TrendingExplorerWidgetView: React.FC<TrendingExplorerWidgetViewProps> = ({
                   onChange={() => toggleSeries(s.id)}
                   size="small"
                   sx={{
-                    color: SERIES_COLORS[idx % SERIES_COLORS.length],
+                    color:
+                      idx === 0
+                        ? theme.palette.primary.main
+                        : SERIES_COLORS[idx % SERIES_COLORS.length],
                     '&.Mui-checked': {
-                      color: SERIES_COLORS[idx % SERIES_COLORS.length],
+                      color:
+                        idx === 0
+                          ? theme.palette.primary.main
+                          : SERIES_COLORS[idx % SERIES_COLORS.length],
                     },
                     p: 0.5,
                   }}

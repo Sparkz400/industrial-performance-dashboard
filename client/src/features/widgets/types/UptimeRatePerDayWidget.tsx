@@ -1,3 +1,4 @@
+import { createChartTheme } from '@/theme/chartTheme';
 import React, { memo, useMemo } from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
 import { ResponsiveLine } from '@nivo/line';
@@ -21,7 +22,6 @@ interface UptimeLineChartWidgetProps {
 const UptimeLineChartWidget = memo<UptimeLineChartWidgetProps>(({ config }) => {
   const expectedUptime = (config?.expectedUptime as number) || 99;
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
 
   const uptimeData = useMemo((): UptimeDataPoint[] => {
     const today = new Date();
@@ -41,36 +41,17 @@ const UptimeLineChartWidget = memo<UptimeLineChartWidgetProps>(({ config }) => {
 
   const chartData = useMemo(
     (): NivoLineSeries[] => [
-      { id: 'Uptime', color: '#6C63FF', data: uptimeData },
+      { id: 'Uptime', color: theme.palette.primary.main, data: uptimeData },
       {
         id: 'Expected',
         color: '#F44336',
         data: uptimeData.map((p) => ({ x: p.x, y: expectedUptime })),
       },
     ],
-    [uptimeData, expectedUptime],
+    [uptimeData, expectedUptime, theme.palette.primary.main],
   );
 
-  const nivoTheme = useMemo(
-    () => ({
-      text: { fontFamily: 'var(--font-family)', fill: isDark ? '#9DA3B4' : '#6B7280' },
-      axis: {
-        ticks: { text: { fill: isDark ? '#9DA3B4' : '#6B7280', fontSize: 11 } },
-      },
-      grid: { line: { stroke: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)' } },
-      crosshair: { line: { stroke: '#6C63FF', strokeWidth: 1, strokeDasharray: '6 6' } },
-      tooltip: {
-        container: {
-          background: isDark ? '#1E2130' : '#ffffff',
-          color: isDark ? '#E8E8ED' : '#1A1A2E',
-          borderRadius: '8px',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-          fontSize: '12px',
-        },
-      },
-    }),
-    [isDark],
-  );
+  const nivoTheme = useMemo(() => createChartTheme(theme), [theme]);
 
   const allValues = uptimeData.map((d) => d.y).concat(expectedUptime);
   const minY = Math.max(Math.min(...allValues) - 2, 0);
@@ -119,7 +100,7 @@ const UptimeLineChartWidget = memo<UptimeLineChartWidgetProps>(({ config }) => {
               translateY: 36,
               itemWidth: 100,
               itemHeight: 16,
-              itemTextColor: isDark ? '#9DA3B4' : '#6B7280',
+              itemTextColor: theme.palette.text.secondary,
               symbolSize: 8,
               symbolShape: 'circle',
             },

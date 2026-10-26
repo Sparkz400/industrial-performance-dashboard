@@ -1,3 +1,4 @@
+import { createChartTheme } from '@/theme/chartTheme';
 import React, { useState, useMemo, useCallback, memo } from 'react';
 import { Typography, ToggleButton, ToggleButtonGroup, Box, useTheme } from '@mui/material';
 import { ResponsivePie } from '@nivo/pie';
@@ -37,7 +38,6 @@ const TOTAL_DATA: PieDataItem[] = generateDummyPieDataTotal();
 const OperationModePieWidget = memo(() => {
   const [view, setView] = useState<ViewType>('total');
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
 
   const handleViewChange = useCallback(
     (_event: React.MouseEvent<HTMLElement>, newView: ViewType | null) => {
@@ -48,22 +48,7 @@ const OperationModePieWidget = memo(() => {
 
   const data = useMemo((): PieDataItem[] => (view === 'today' ? TODAY_DATA : TOTAL_DATA), [view]);
 
-  const nivoTheme = useMemo(
-    () => ({
-      text: { fontFamily: 'var(--font-family)', fill: isDark ? '#9DA3B4' : '#6B7280' },
-      labels: { text: { fill: isDark ? '#E8E8ED' : '#1A1A2E', fontSize: 11, fontWeight: 600 } },
-      tooltip: {
-        container: {
-          background: isDark ? '#1E2130' : '#ffffff',
-          color: isDark ? '#E8E8ED' : '#1A1A2E',
-          borderRadius: '8px',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-          fontSize: '12px',
-        },
-      },
-    }),
-    [isDark],
-  );
+  const nivoTheme = useMemo(() => createChartTheme(theme), [theme]);
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 2 }}>
@@ -103,7 +88,7 @@ const OperationModePieWidget = memo(() => {
           arcLabelsTextColor={{ from: 'color', modifiers: [['brighter', 3]] }}
           enableArcLinkLabels={true}
           arcLinkLabelsSkipAngle={10}
-          arcLinkLabelsTextColor={isDark ? '#9DA3B4' : '#6B7280'}
+          arcLinkLabelsTextColor={theme.palette.text.secondary}
           arcLinkLabelsThickness={1}
           arcLinkLabelsColor={{ from: 'color' }}
           arcLinkLabelsDiagonalLength={12}

@@ -6,7 +6,7 @@ import NoteIcon from '@mui/icons-material/StickyNote2';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useAnnotationStore } from '@/stores/useAnnotationStore';
 
-const COLORS = ['#ff9800', '#4caf50', '#2196f3', '#f44336', '#9c27b0', '#00bcd4'];
+const COLORS = ['#ff9800', '#4caf50', '#2196f3', '#f44336', '#8A7925', '#00bcd4'];
 
 interface AnnotationPanelProps {
   widgetId: string;
@@ -43,9 +43,12 @@ const AnnotationPanel: React.FC<AnnotationPanelProps> = ({ widgetId }) => {
           size="small"
           onClick={() => setExpanded(!expanded)}
           sx={{
-            background: annotations.length > 0 ? 'rgba(255,152,0,0.8)' : 'rgba(131,131,131,0.8)',
+            bgcolor: 'background.paper',
+            color: annotations.length > 0 ? 'primary.main' : 'text.secondary',
+            border: '1px solid',
+            borderColor: 'divider',
             '&:hover': {
-              background: annotations.length > 0 ? 'rgba(255,152,0,0.9)' : 'rgba(100,100,100,0.9)',
+              bgcolor: 'action.hover',
             },
           }}
         >
@@ -116,7 +119,8 @@ const AnnotationPanel: React.FC<AnnotationPanelProps> = ({ widgetId }) => {
                       width: 4,
                       minHeight: 20,
                       borderRadius: 1,
-                      bgcolor: ann.color || '#ff9800',
+                      bgcolor:
+                        ann.color?.toLowerCase() === '#9c27b0' ? '#8A7925' : ann.color || '#ff9800',
                       mt: 0.25,
                       flexShrink: 0,
                     }}

@@ -11,7 +11,6 @@ import {
   Tooltip,
   Fade,
   Box,
-  alpha,
 } from '@mui/material';
 import WidgetSkeleton from '@/shared/components/loading/WidgetSkeleton';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -157,7 +156,7 @@ interface WidgetContainerProps {
   commonData?: Record<string, unknown>;
 }
 
-// Main Widget Container with glassmorphism, fullscreen, export, and animation
+// Main Widget Container with industrial surfaces, fullscreen, export, and animation
 const WidgetContainer = memo<WidgetContainerProps>(
   ({ widget, onDelete, layoutItem, commonData, readOnly = false }) => {
     const updateWidgetConfig = useWidgetStore((s) => s.updateWidgetConfig);
@@ -226,7 +225,15 @@ const WidgetContainer = memo<WidgetContainerProps>(
       return (
         <Suspense fallback={<WidgetLoader />}>
           <WidgetErrorBoundary onError={handleError} widgetId={widget.id}>
-            <Box sx={{ flexGrow: 1, width: '100%', position: 'relative', overflow: 'hidden' }}>
+            <Box
+              sx={{
+                flexGrow: 1,
+                minHeight: 0,
+                width: '100%',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
               <WidgetComponent
                 config={widget.config || {}}
                 commonData={commonData}
@@ -247,16 +254,21 @@ const WidgetContainer = memo<WidgetContainerProps>(
       handleError,
     ]);
 
-    // Controls overlay
+    // Keep controls reachable by touch and keyboard without covering chart inputs.
     const controls = useMemo(
       () => (
-        <Fade in={isHovered || !!error} timeout={200}>
+        <Fade in timeout={200}>
           <Box
             sx={{
-              position: 'absolute',
-              top: 6,
-              right: 6,
+              position: 'relative',
               display: 'flex',
+              justifyContent: 'flex-end',
+              flexWrap: 'wrap',
+              flexShrink: 0,
+              p: 0.5,
+              bgcolor: 'background.paper',
+              borderBottom: '1px solid',
+              borderColor: 'divider',
               gap: '4px',
               zIndex: 10,
             }}
@@ -267,8 +279,10 @@ const WidgetContainer = memo<WidgetContainerProps>(
               <IconButton
                 onClick={toggleFullscreen}
                 sx={{
-                  background: 'rgba(131,131,131,0.8)',
-                  '&:hover': { background: 'rgba(100,100,100,0.9)' },
+                  bgcolor: 'background.paper',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  '&:hover': { bgcolor: 'action.hover' },
                 }}
                 size="small"
                 className="no-drag"
@@ -286,8 +300,10 @@ const WidgetContainer = memo<WidgetContainerProps>(
                   <IconButton
                     onClick={handleOpenSettings}
                     sx={{
-                      background: 'rgba(131,131,131,0.8)',
-                      '&:hover': { background: 'rgba(100,100,100,0.9)' },
+                      bgcolor: 'background.paper',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      '&:hover': { bgcolor: 'action.hover' },
                     }}
                     size="small"
                     className="no-drag"
@@ -299,7 +315,9 @@ const WidgetContainer = memo<WidgetContainerProps>(
                   <IconButton
                     onClick={handleDeleteClick}
                     sx={{
-                      background: 'rgba(131,131,131,0.8)',
+                      bgcolor: 'background.paper',
+                      border: '1px solid',
+                      borderColor: 'divider',
                       '&:hover': { background: 'rgba(200,0,0,0.7)' },
                     }}
                     size="small"
@@ -315,8 +333,6 @@ const WidgetContainer = memo<WidgetContainerProps>(
       ),
       [
         readOnly,
-        isHovered,
-        error,
         handleOpenSettings,
         handleDeleteClick,
         toggleFullscreen,
@@ -338,11 +354,10 @@ const WidgetContainer = memo<WidgetContainerProps>(
               left: '4px',
               fontSize: '10px',
               color: 'text.disabled',
-              background: (theme) => alpha(theme.palette.background.paper, 0.8),
+              bgcolor: 'background.paper',
               padding: '2px 6px',
               borderRadius: '4px',
               zIndex: 10,
-              backdropFilter: 'blur(4px)',
             }}
           >
             {`${layoutItem.w} x ${layoutItem.h}`}
@@ -390,10 +405,17 @@ const WidgetContainer = memo<WidgetContainerProps>(
               ref={containerRef}
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
-              sx={{ height: '100%', position: 'relative', p: 2 }}
+              sx={{
+                height: '100%',
+                position: 'relative',
+                p: 2,
+                display: 'flex',
+                flexDirection: 'column',
+                bgcolor: 'var(--industrial-field)',
+              }}
             >
-              {widgetContent}
               {controls}
+              {widgetContent}
             </Box>
           </Dialog>
           <SettingsDialog
@@ -428,11 +450,14 @@ const WidgetContainer = memo<WidgetContainerProps>(
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               display: 'flex',
               flexDirection: 'column',
-              borderRadius: 3,
+              borderRadius: '7px',
+              bgcolor: 'var(--industrial-field)',
+              border: '4px solid var(--industrial-well)',
+              boxShadow: '0 0 0 1px var(--industrial-edge), inset 0 1px 2px #00000018',
             }}
           >
-            {widgetContent}
             {controls}
+            {widgetContent}
             {sizeIndicator}
           </Paper>
         </motion.div>

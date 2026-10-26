@@ -1,3 +1,5 @@
+import { useTheme } from '@mui/material/styles';
+import { createChartTheme } from '@/theme/chartTheme';
 import React, { useEffect, useMemo } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { ResponsiveLine, type LineSeries, type LineCustomSvgLayerProps } from '@nivo/line';
@@ -10,6 +12,7 @@ interface SpcChartWidgetProps {
 }
 
 const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError }) => {
+  const theme = useTheme();
   const profileId = (config.profileId as number) ?? 0;
   const { data, isLoading, error } = useSpcChartData(profileId);
 
@@ -170,11 +173,11 @@ const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError })
           pointSize={6}
           pointColor={(point: Record<string, unknown>) => {
             const d = (point as { data?: { isAnomaly?: boolean } }).data;
-            return d?.isAnomaly ? '#f44336' : '#2196f3';
+            return d?.isAnomaly ? theme.palette.error.main : theme.palette.primary.main;
           }}
           pointBorderWidth={1}
           pointBorderColor={{ from: 'serieColor' }}
-          colors={['#2196f3']}
+          colors={[theme.palette.primary.main]}
           lineWidth={1.5}
           useMesh
           enableSlices={false}
@@ -198,13 +201,7 @@ const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError })
             </Box>
           )}
           layers={layers as unknown as undefined}
-          theme={{
-            text: { fontFamily: 'var(--font-family)' },
-            axis: {
-              ticks: { text: { fontSize: 10 } },
-              legend: { text: { fontSize: 12 } },
-            },
-          }}
+          theme={createChartTheme(theme)}
         />
       </Box>
     </Box>

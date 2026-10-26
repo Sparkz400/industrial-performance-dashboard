@@ -1,3 +1,4 @@
+import { createChartTheme } from '@/theme/chartTheme';
 import React, { useMemo } from 'react';
 import { ResponsiveLine } from '@nivo/line';
 import { Box, Typography, CircularProgress, useTheme } from '@mui/material';
@@ -8,41 +9,23 @@ interface OeeTrendWidgetViewProps {
   isLoading: boolean;
 }
 
-const SERIES_CONFIG = [
-  { key: 'oee' as const, label: 'OEE', color: '#2196f3' },
-  { key: 'availability' as const, label: 'Availability', color: '#4caf50' },
-  { key: 'performance' as const, label: 'Performance', color: '#ff9800' },
-  { key: 'quality' as const, label: 'Quality', color: '#9c27b0' },
-];
-
 const OeeTrendWidgetView: React.FC<OeeTrendWidgetViewProps> = ({ data, isLoading }) => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-
-  const nivoTheme = useMemo(
-    () => ({
-      text: { fontFamily: 'var(--font-family)', fill: isDark ? '#9DA3B4' : '#6B7280' },
-      axis: {
-        ticks: { text: { fill: isDark ? '#9DA3B4' : '#6B7280', fontSize: 10 } },
-      },
-      grid: { line: { stroke: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)' } },
-      crosshair: { line: { stroke: '#2196f3', strokeWidth: 1, strokeDasharray: '6 6' } },
-      tooltip: {
-        container: {
-          background: isDark ? '#1E2130' : '#ffffff',
-          color: isDark ? '#E8E8ED' : '#1A1A2E',
-          borderRadius: '8px',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-          fontSize: '12px',
-        },
-      },
-    }),
-    [isDark],
+  const seriesConfig = useMemo(
+    () => [
+      { key: 'oee' as const, label: 'OEE', color: theme.palette.primary.main },
+      { key: 'availability' as const, label: 'Availability', color: theme.palette.success.main },
+      { key: 'performance' as const, label: 'Performance', color: theme.palette.info.main },
+      { key: 'quality' as const, label: 'Quality', color: theme.palette.warning.main },
+    ],
+    [theme],
   );
+
+  const nivoTheme = useMemo(() => createChartTheme(theme), [theme]);
 
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return [];
-    return SERIES_CONFIG.map((series) => ({
+    return seriesConfig.map((series) => ({
       id: series.label,
       color: series.color,
       data: data.map((point) => ({
@@ -55,7 +38,7 @@ const OeeTrendWidgetView: React.FC<OeeTrendWidgetViewProps> = ({ data, isLoading
         y: point.dataComplete ? point[series.key] : null,
       })),
     }));
-  }, [data]);
+  }, [data, seriesConfig]);
 
   if (isLoading && data.length === 0) {
     return (
@@ -98,7 +81,7 @@ const OeeTrendWidgetView: React.FC<OeeTrendWidgetViewProps> = ({ data, isLoading
             xScale={{ type: 'point' }}
             yScale={{ type: 'linear', min: 0, max: 100 }}
             curve="monotoneX"
-            colors={SERIES_CONFIG.map((s) => s.color)}
+            colors={seriesConfig.map((s) => s.color)}
             lineWidth={2}
             enablePoints={true}
             pointSize={4}
@@ -130,7 +113,7 @@ const OeeTrendWidgetView: React.FC<OeeTrendWidgetViewProps> = ({ data, isLoading
                 itemHeight: 20,
                 symbolSize: 10,
                 symbolShape: 'circle',
-                itemTextColor: isDark ? '#9DA3B4' : '#6B7280',
+                itemTextColor: theme.palette.text.secondary,
               },
             ]}
           />

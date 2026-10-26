@@ -25,6 +25,12 @@ retain monospace. The service worker precaches the font stylesheet and both font
 files. No external font service is needed; provenance and license are in
 [the font directory](../client/public/fonts/figtree/README.md).
 
+`client/src/theme/modernTheme.ts` defines both industrial palettes and component
+surfaces. Orange marks primary actions and focus; neutral secondary controls and
+semantic status colors remain distinct. `chartTheme.ts` shares readable axes,
+legends and tooltips across chart views. Theme selection, system appearance and
+reduced-motion preferences apply without changing measurement processing.
+
 The collector stores each scalar sample in a synchronous, durable local SQLite
 queue before broadcasting it. PostgreSQL receives a stable event ID, server and
 source timestamps, raw scalar value, quality and numeric projection. Good Boolean

@@ -2,6 +2,7 @@
 import React, { useMemo, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
+import { MotionConfig } from 'framer-motion';
 import App from './App';
 import { CsrfProvider } from './utils/csrfContext';
 import { SnackbarProvider, SnackbarKey } from 'notistack';
@@ -30,10 +31,18 @@ const ThemeWrapper = ({ children }: ThemeWrapperProps) => {
   const themeMode = useThemeStore((s) => s.themeMode);
   const theme = useMemo(() => createModernTheme(themeMode), [themeMode]);
 
+  useEffect(() => {
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', theme.palette.background.default);
+  }, [theme]);
+
   return (
     <MuiThemeProvider theme={theme}>
-      <CssBaseline />
-      {children}
+      <MotionConfig reducedMotion="user">
+        <CssBaseline />
+        {children}
+      </MotionConfig>
     </MuiThemeProvider>
   );
 };

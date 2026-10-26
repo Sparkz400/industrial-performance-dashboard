@@ -43,6 +43,11 @@ The interface uses locally bundled Figtree fonts, including charts and wallboard
 with tabular numerals for stable measurements and monospace technical identifiers.
 Fonts require no internet access; see [font source and license](client/public/fonts/figtree/README.md).
 
+Light and dark modes share a restrained industrial theme: grey/charcoal surfaces,
+raised controls, recessed charts and orange accents. Status indicators retain
+their distinct colors and labels. Keyboard focus and reduced-motion preferences
+are supported; the style does not change measurement or quality semantics.
+
 Edge synchronization is disabled until canonical central ingestion is implemented.
 The AI assistant and external AI-provider integration have been removed.
 Public links/embeds and legacy alarm email/chat/SMS channels are disabled.

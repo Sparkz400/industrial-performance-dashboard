@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { Box, Typography, CircularProgress, alpha } from '@mui/material';
+import { Box, Typography, CircularProgress } from '@mui/material';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -112,8 +112,7 @@ export default function EmbedPage({ mode }: EmbedPageProps) {
             mb: 2,
             p: 2,
             borderRadius: 2,
-            bgcolor: (theme) => alpha(theme.palette.background.paper, 0.8),
-            backdropFilter: 'blur(8px)',
+            bgcolor: 'background.paper',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',

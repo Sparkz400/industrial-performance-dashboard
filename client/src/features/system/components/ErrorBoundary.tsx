@@ -62,10 +62,10 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
           style={{
             padding: '20px',
             margin: '20px',
-            border: '1px solid #f5c6cb',
+            border: '1px solid var(--industrial-edge)',
             borderRadius: '4px',
-            backgroundColor: '#f8d7da',
-            color: '#721c24',
+            backgroundColor: 'var(--industrial-raised)',
+            color: 'var(--industrial-ink)',
           }}
         >
           <h2>Something went wrong.</h2>
@@ -77,8 +77,8 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             onClick={this.resetErrorBoundary}
             style={{
               padding: '8px 16px',
-              backgroundColor: '#0066cc',
-              color: 'white',
+              backgroundColor: 'var(--industrial-accent)',
+              color: 'var(--industrial-on-accent)',
               border: 'none',
               borderRadius: '4px',
               cursor: 'pointer',

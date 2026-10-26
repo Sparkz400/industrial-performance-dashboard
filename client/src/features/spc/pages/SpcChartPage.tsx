@@ -1,3 +1,5 @@
+import { useTheme } from '@mui/material/styles';
+import { createChartTheme } from '@/theme/chartTheme';
 import React, { useState, useMemo } from 'react';
 import {
   Box,
@@ -19,6 +21,7 @@ import SpcAlertsList from '../components/SpcAlertsList';
 const SpcChartPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const theme = useTheme();
   const profileId = Number(id) || 0;
 
   const now = new Date();
@@ -217,11 +220,11 @@ const SpcChartPage: React.FC = () => {
               pointSize={6}
               pointColor={(point: Record<string, unknown>) => {
                 const d = (point as { data?: { isAnomaly?: boolean } }).data;
-                return d?.isAnomaly ? '#f44336' : '#2196f3';
+                return d?.isAnomaly ? theme.palette.error.main : theme.palette.primary.main;
               }}
               pointBorderWidth={1}
               pointBorderColor={{ from: 'serieColor' }}
-              colors={['#2196f3']}
+              colors={[theme.palette.primary.main]}
               lineWidth={1.5}
               useMesh
               enableSlices={false}
@@ -245,13 +248,7 @@ const SpcChartPage: React.FC = () => {
                 </Box>
               )}
               layers={layers as unknown as undefined}
-              theme={{
-                text: { fontFamily: 'var(--font-family)' },
-                axis: {
-                  ticks: { text: { fontSize: 10 } },
-                  legend: { text: { fontSize: 12 } },
-                },
-              }}
+              theme={createChartTheme(theme)}
             />
           </Box>
         ) : (
