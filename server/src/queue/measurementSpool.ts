@@ -98,6 +98,27 @@ export class MeasurementSpool {
     );
   }
 
+  health() {
+    const row = this.database
+      .prepare(
+        "SELECT min(json_extract(payload, '$.receivedAt')) AS oldest, sum(CASE WHEN json_extract(payload, '$.receivedAt') IS NULL THEN 1 ELSE 0 END) AS unknown FROM measurements",
+      )
+      .get()!;
+    const oldestReceivedAt = typeof row.oldest === "string" ? row.oldest : null;
+    const space =
+      this.filename === ":memory:" ? null : statfsSync(dirname(this.filename));
+    return {
+      pendingMeasurements: this.count(),
+      oldestReceivedAt,
+      oldestReceivedAgeSeconds: oldestReceivedAt
+        ? Math.max(0, (Date.now() - Date.parse(oldestReceivedAt)) / 1000)
+        : null,
+      unknownReceiveTimes: Number(row.unknown ?? 0),
+      freeStorageBytes: space ? space.bavail * space.bsize : null,
+      storageReserveBytes: this.limits.minFreeBytes,
+    };
+  }
+
   acknowledge(entries: SpoolEntry[]): void {
     const remove = this.database.prepare(
       "DELETE FROM measurements WHERE id = ?",

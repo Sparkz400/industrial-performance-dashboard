@@ -30,3 +30,8 @@ owned-server tests; see the [S7-1500 pilot guide](https://github.com/Sparkz400/p
 The full npm audit and migrated Node 24/Wolfi image scan are clear in this wave.
 Scheduled reports use direct PDF generation; see the [reporting guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/REPORTING.md)
 and [security review](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DEPENDENCY_REVIEW.md).
+
+The [operations guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/OPERATIONS.md)
+covers isolated installation previews, complete backups and restore/upgrade checks.
+[Capacity evidence](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/CAPACITY.md)
+declares the synthetic workload and its limits; it is not physical PLC qualification.

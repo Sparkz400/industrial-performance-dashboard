@@ -1,4 +1,5 @@
 import { initTRPC, TRPCError } from "@trpc/server";
+import config from "../config/config.js";
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 
 export interface TrpcContext {
@@ -33,6 +34,11 @@ import { getSessionUser } from "../services/sessionAccess.js";
 
 export const authedProcedure = t.procedure.use(
   async ({ ctx, next, type, path }) => {
+    if (config.RECOVERY_MODE && type === "mutation")
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Recovery preview is read-only",
+      });
     const user = await getSessionUser(ctx.session);
     if (!user) {
       throw new TRPCError({

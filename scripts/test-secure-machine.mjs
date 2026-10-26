@@ -206,6 +206,22 @@ export async function testSecureMachine({
       (await commissioningService.inspect(machineId)).identity,
       "certificate",
     );
+    await page.reload();
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    await page.getByLabel("User certificate (PEM)").fill(certificatePem);
+    await page
+      .getByLabel("User private key (PEM)")
+      .setInputFiles({
+        name: "owned-user.key",
+        mimeType: "application/x-pem-file",
+        buffer: Buffer.from(privateKeyPem),
+      });
+    await page.getByRole("button", { name: "Update", exact: true }).click();
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    assert.equal(
+      (await commissioningService.inspect(machineId)).identity,
+      "certificate",
+    );
     assert.equal(
       (
         await call("PUT", `/api/v1/machines/${machineId}`, {

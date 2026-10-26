@@ -234,19 +234,37 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
                   })
                 }
               />
-              <TextField
-                label="User private key (PEM)"
-                type="password"
-                autoComplete="new-password"
-                value={formData.authentication.privateKeyPem ?? ''}
-                helperText="Replace certificate and key together. Leave both blank to retain the saved identity."
-                onChange={(event) =>
-                  handleChange('authentication', {
-                    ...formData.authentication!,
-                    privateKeyPem: event.target.value,
-                  })
-                }
-              />
+              <Button component="label" variant="outlined">
+                {formData.authentication.privateKeyPem
+                  ? 'Replacement private key loaded'
+                  : 'Load user private key (PEM)'}
+                <input
+                  type="file"
+                  accept=".pem,.key"
+                  aria-label="User private key (PEM)"
+                  hidden
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 32768) {
+                      setError('Private key file must be at most 32 KiB.');
+                      return;
+                    }
+                    try {
+                      handleChange('authentication', {
+                        ...formData.authentication!,
+                        privateKeyPem: await file.text(),
+                      });
+                    } catch {
+                      setError('The private key file could not be read.');
+                    }
+                  }}
+                />
+              </Button>
+              <Alert severity="info">
+                Replace certificate and key together. Leave both unchanged to retain the saved
+                identity. Private key contents are never displayed.
+              </Alert>
               {formData.authentication.certificateExpiresAt && (
                 <Alert
                   severity={

@@ -121,6 +121,19 @@ export default function ProductionPage() {
       <style>{`@page { margin: 12mm; } @media print { main { margin-left:0!important; width:100%!important; padding:0!important } .production-report * { color:#000!important; background:transparent!important } .MuiFab-root, [aria-label="Open AI suggestions"], .MuiSnackbar-root {display:none!important} body, #root, main, main > div { height:auto!important; overflow:visible!important; } .MuiDrawer-root, [data-print-hide] {display:none!important} .production-report {color:#000!important;background:white!important} .production-report .MuiPaper-root {box-shadow:none!important;color:#000!important;background:white!important} table {break-inside:auto} tr {break-inside:avoid} }`}</style>
       <Box data-print-hide>
         <Typography variant="h4">Production shift</Typography>
+        {admin && (
+          <Button
+            onClick={async () => {
+              try {
+                downloadJson(await productionRequest('/diagnostics'), 'support-diagnostics.json');
+              } catch (failure) {
+                setError(String(failure));
+              }
+            }}
+          >
+            Download support diagnostics
+          </Button>
+        )}
         <Tabs value={tab} onChange={(_, value) => setTab(value)}>
           <Tab label="Shift workspace" />
           {admin && <Tab label="Commission machine" />}

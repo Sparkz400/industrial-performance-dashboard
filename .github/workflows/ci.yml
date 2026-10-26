@@ -39,7 +39,7 @@ jobs:
       - run: npm run storybook:build -w client
         if: runner.os == 'Linux'
         env:
-          STORYBOOK_DISABLE_TELEMETRY: '1'
+          STORYBOOK_DISABLE_TELEMETRY: "1"
       - run: npx tsc --noEmit -p client/tsconfig.json
       - run: npm run lint
       - run: npm run format:check -w client
@@ -63,7 +63,7 @@ jobs:
           POSTGRES_USER: dashboard
           POSTGRES_PASSWORD: dashboard-local
           POSTGRES_DB: performance_dashboard
-        ports: ['55432:5432']
+        ports: ["55432:5432"]
         options: >-
           --health-cmd "pg_isready -U dashboard -d performance_dashboard"
           --health-interval 5s --health-timeout 5s --health-retries 10
@@ -109,3 +109,15 @@ jobs:
         with:
           node-version-file: .nvmrc
       - run: node scripts/test-container.mjs performance-dashboard:ci
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/test-operations.mjs performance-dashboard:ci
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: operations-evidence
+          path: |
+            .local/operations-*/validation.json
+            .local/operations-*/capacity.json
+            .local/operations-*/recovery-preview.png
+          retention-days: 7

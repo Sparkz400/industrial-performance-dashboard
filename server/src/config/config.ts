@@ -3,6 +3,7 @@ import "dotenv/config";
 
 // Define the schema for environment variables
 const envVarsSchema = Joi.object({
+  RECOVERY_MODE: Joi.boolean().default(false),
   NODE_ENV: Joi.string()
     .valid("development", "production", "test")
     .default("development"),
@@ -233,17 +234,23 @@ const envVarsSchema = Joi.object({
 
   // SMTP / Email
   SMTP_HOST: Joi.string()
+    .empty("")
     .optional()
     .description("SMTP server host for email delivery"),
   SMTP_PORT: Joi.alternatives()
     .try(Joi.number().port(), Joi.string())
     .optional()
     .description("SMTP server port"),
-  SMTP_USER: Joi.string().optional().description("SMTP authentication user"),
+  SMTP_USER: Joi.string()
+    .empty("")
+    .optional()
+    .description("SMTP authentication user"),
   SMTP_PASS: Joi.string()
+    .empty("")
     .optional()
     .description("SMTP authentication password"),
   SMTP_FROM: Joi.string()
+    .empty("")
     .optional()
     .description("Sender address for outgoing emails"),
 }).unknown(true);
@@ -294,6 +301,7 @@ export interface AppConfig {
   OPCUA_CERT_STATE: string;
   COOKIE_SECRET: string;
   AUTO_ACCEPT_CERTIFICATES: boolean;
+  RECOVERY_MODE: boolean;
   OPCUA_HEALTH_CHECK_INTERVAL: number;
   LOG_LEVEL: string;
   ADMIN_API_KEY?: string;

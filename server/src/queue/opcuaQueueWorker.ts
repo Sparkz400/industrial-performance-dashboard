@@ -38,7 +38,7 @@ export class OpcuaQueueWorker {
 
   getHealth() {
     return {
-      pendingMeasurements: this.getSpool().count(),
+      ...this.getSpool().health(),
       storageFailure: this.storageFailure,
       continuity: "unreceived intervals remain unknown",
     };

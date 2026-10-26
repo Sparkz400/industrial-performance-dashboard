@@ -523,18 +523,28 @@ below retain their unfulfilled acceptance criteria.
   Done: cover PostgreSQL, configuration, required spool state, certificates and secret
   recovery with protected storage; restore into an isolated fresh installation and
   reconcile data. Dashboard-only export remains clearly labeled as configuration export.
+  Progress: complete stopped-app backups and isolated fresh restores preserve database,
+  encrypted identities/key, pending spool, PKI and PDFs. Browser recovery/permissions,
+  tamper and overwrite checks pass in scripts/test-operations.mjs; integration pending.
 - [ ] **D03 — Make upgrades and rollback operationally safe** · P0 · M0 · Improve · L. Depends: D02.
   Done: migrations are tested on a copy of the previous schema/data, compatibility is
   declared, and backup/rollback behavior is documented. Failed startup cannot leave a
   silently half-migrated collector writing incompatible measurements.
+  Progress: upgrade takes a verified checkpoint; failed startup leaves the app stopped.
+  Owned-container acceptance restored the checkpoint into a fresh healthy instance.
 - [ ] **D04 — Measure the supported operating envelope** · P1 · M1 · New · L. Depends: F06, H02.
   Done: benchmark named hardware at declared tag rates, database size, dashboard users
   and export load; publish ingestion lag, p95 queries, memory, CPU and bytes/sample.
   Include replay competing with live acquisition, then choose limits from evidence.
+  Progress: docs/CAPACITY.md records a 6,200-row synthetic replay/live/query/export
+  workload on named hardware. A sustained customer/PLC operating envelope remains open.
 - [ ] **D05 — Make health and diagnostics actionable** · P1 · M1 · Improve · M. Depends: D01, H03.
   Done: readiness distinguishes accepting requests from collecting/persisting data;
   metrics cover reconnects, spool age, failed jobs and database lag. A redacted support
   bundle excludes secrets and has explicit size/time bounds.
+  Progress: database readiness, receive age/storage reserve and a bounded redacted
+  support download are implemented. Browser export checks pass; failed-job diagnostics
+  will be extended with the unattended-operation wave.
 - [ ] **D06 — Complete the first pilot acceptance pack** · P1 · M1 · New · L. Depends: D02, D04, D05, O09, R01, C04.
   Done: record exact machines/settings/software, supervised shift reconciliation,
   interruptions, restore evidence, observed defects and unresolved limits; the process

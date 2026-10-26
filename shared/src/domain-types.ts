@@ -14,6 +14,7 @@ import type {
 // ===== Auth / User Types =====
 
 export interface AuthUser {
+  recoveryMode?: boolean;
   id: number;
   username: string;
   email: string;

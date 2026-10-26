@@ -13,6 +13,8 @@ import {
   productionShifts,
   downtimeReasons,
   opcuaData,
+  reportHistory,
+  webhookDeliveries,
 } from "../database/schema.js";
 import { validateBody, validateParams } from "../middleware/validation.js";
 import { requireRole } from "../middleware/auth.js";
@@ -147,6 +149,75 @@ router.get(
   requireRole("admin"),
   asyncHandler(async (_req, res) => {
     res.json(opcuaQueueWorker.getHealth());
+  }),
+);
+router.get(
+  "/diagnostics",
+  requireRole("admin"),
+  asyncHandler(async (_req, res) => {
+    const snapshot = await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL statement_timeout = '3000'`);
+      const machineStates = await tx
+        .select({
+          id: machines.id,
+          status: machines.status,
+          securityMode: machines.securityMode,
+          securityPolicy: machines.securityPolicy,
+        })
+        .from(machines)
+        .orderBy(desc(machines.id))
+        .limit(200);
+      const reports = await tx
+        .select({
+          id: reportHistory.id,
+          status: reportHistory.status,
+          generatedAt: reportHistory.generatedAt,
+          completedAt: reportHistory.completedAt,
+        })
+        .from(reportHistory)
+        .orderBy(desc(reportHistory.id))
+        .limit(200);
+      const deliveries = await tx
+        .select({
+          id: webhookDeliveries.id,
+          attempts: webhookDeliveries.attempts,
+          nextAttemptAt: webhookDeliveries.nextAttemptAt,
+          deliveredAt: webhookDeliveries.deliveredAt,
+        })
+        .from(webhookDeliveries)
+        .orderBy(desc(webhookDeliveries.id))
+        .limit(200);
+      return { machineStates, reports, deliveries };
+    });
+    const health = opcuaQueueWorker.getHealth();
+    res.json({
+      format: "support-diagnostics-v1",
+      generatedAt: new Date().toISOString(),
+      node: process.version,
+      limits:
+        "Latest 200 rows per category; 3 seconds per database statement. This is a diagnostic snapshot, not an audit export.",
+      ...snapshot,
+      collector: {
+        ...health,
+        storageFailure: health.storageFailure
+          ? {
+              at: health.storageFailure.at,
+              reason: "Local storage unavailable",
+            }
+          : null,
+      },
+      redacted: [
+        "credentials",
+        "endpoints",
+        "names",
+        "values",
+        "SQL",
+        "logs",
+        "file paths",
+        "recipients",
+        "webhook payloads",
+      ],
+    });
   }),
 );
 router.post(

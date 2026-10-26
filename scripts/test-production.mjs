@@ -216,6 +216,7 @@ try {
     ["GET", "/api/v1/db/status"],
     ["GET", "/api/v1/DB/status"],
     ["GET", "/api/v1/alerts/channels"],
+    ["GET", "/api/v1/production/diagnostics"],
     ["GET", "/metrics"],
   ]) {
     const response = await call(method, path, data, viewer.request);
@@ -314,6 +315,17 @@ try {
   assert.equal(machineResponse.status(), 201, await machineResponse.text());
   const machine = await machineResponse.json();
   await page.goto(`${frontend}/production`);
+  const supportDownload = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download support diagnostics" })
+    .click();
+  const support = JSON.parse(
+    await readFile(await (await supportDownload).path(), "utf8"),
+  );
+  assert.equal(support.format, "support-diagnostics-v1");
+  assert.ok(JSON.stringify(support).length < 1000000);
+  assert.ok(!JSON.stringify(support).includes(machine.name));
+  assert.ok(!JSON.stringify(support).includes(password));
   await page.getByRole("tab", { name: "Commission machine" }).click();
   await page.getByLabel("Machine to commission").click();
   await page.getByRole("option", { name: machine.name }).click();

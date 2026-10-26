@@ -46,6 +46,8 @@ See the [production workflow](docs/PRODUCTION_WORKFLOW.md) and
 [P0 acceptance evidence](docs/P0_ACCEPTANCE.md) for tested paths and remaining gates.
 The first nominated pilot family is [Siemens SIMATIC S7-1500](docs/S7_1500_PILOT.md);
 software acceptance uses owned simulators, with physical CPU qualification still open.
+For isolated installation, complete backups, restore checks and upgrades, see the
+[operations guide](docs/OPERATIONS.md).
 
 ## Where it is going
 

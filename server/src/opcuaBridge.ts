@@ -8,6 +8,7 @@ import opcuaQueueWorker from "./queue/opcuaQueueWorker.js";
 import statusManager from "./utils/status.js";
 import StatusConstants from "./utils/statusConstants.js";
 import logger from "./utils/logger.js";
+import config from "./config/config.js";
 import dbClient from "./database/dbConnection.js";
 import { machineRepository } from "./repositories/machineRepository.js";
 import { shutdownTracing } from "./observability/tracing.js";
@@ -83,7 +84,7 @@ export function setupOpcuaBridge({
   });
 
   // Load alarm rules on startup
-  webhookService.start();
+  if (!config.RECOVERY_MODE) webhookService.start();
 
   let acquisitionStopped = false;
   opcuaEmitter.on("nodeChanged", (data: OpcuaNodeData) => {
@@ -170,6 +171,7 @@ export function setupOpcuaBridge({
 export async function startOpcuaServices({
   machineService,
 }: Services): Promise<void> {
+  if (config.RECOVERY_MODE) return;
   opcuaQueueWorker.start();
 
   logger.info("Initializing multi-machine OPC UA manager...");

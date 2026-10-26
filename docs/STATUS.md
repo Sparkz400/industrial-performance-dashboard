@@ -5,6 +5,13 @@ owned simulator or an isolated test installation using OPC UA scalar signals.
 
 ## Implemented and covered by focused tests
 
+- Protected OPC UA identities, explicit trust, expiry/hostname checks and browser
+  commissioning with redacted diagnostics; [S7-1500 pilot scope](S7_1500_PILOT.md).
+- Isolated installation/restore previews, complete image/database/file backups and
+  failed-upgrade rollback acceptance; [operations](OPERATIONS.md).
+- A measured synthetic replay/query/export workload and provisional rehearsal
+  limits; [capacity evidence](CAPACITY.md). Sustained PLC capacity remains unqualified.
+
 - Raw Boolean, string and numeric measurements with quality metadata and numeric projection.
 - Durable queue recovery through process termination, database connection outage,
   interrupted replay and SQLite capacity failure; accepted events retain stable identities.

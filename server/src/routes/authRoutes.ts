@@ -6,6 +6,7 @@ import { validateBody } from "../middleware/validation.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import db from "../database/db.js";
+import config from "../config/config.js";
 import { users } from "../database/schema.js";
 import logger from "../utils/logger.js";
 import { auditLogService, getAuditActor } from "../services/auditLogService.js";
@@ -124,6 +125,7 @@ router.post(
         username: user.username,
         email: user.email,
         role: user.role,
+        recoveryMode: config.RECOVERY_MODE,
       },
     });
   }),
@@ -185,6 +187,7 @@ router.get(
         email: user.email,
         role: user.role,
         createdAt: user.createdAt,
+        recoveryMode: config.RECOVERY_MODE,
       },
     });
   }),
