@@ -11,6 +11,7 @@ services:
     environment:
       NODE_ENV: production
       RECOVERY_MODE: ${RECOVERY_MODE:-false}
+      ENABLE_LEGACY_GATEWAY: ${ENABLE_LEGACY_GATEWAY:-false}
       HOST: 0.0.0.0
       PORT: 3000
       CLIENT_URL: ${CLIENT_URL:-http://localhost:3001}

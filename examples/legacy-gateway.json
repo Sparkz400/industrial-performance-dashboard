@@ -1,0 +1,14 @@
+{
+  "name": "OwnedLegacyFixture",
+  "namespaceUri": "urn:performance-dashboard:owned-legacy:v1",
+  "opcuaPort": 4842,
+  "pkiDirectory": "gateway-pki",
+  "trustedClientCertificate": "dashboard-client.pem",
+  "modbus": { "host": "127.0.0.1", "port": 1502, "unitId": 1, "functionCode": 3, "startAddress": 0, "count": 7, "timeoutMs": 1000, "pollMs": 1000 },
+  "tags": [
+    { "key": "ProductionState", "offset": 0, "type": "uint16", "wordOrder": "high-first" },
+    { "key": "ProductionCount", "offset": 1, "type": "uint32", "wordOrder": "high-first" },
+    { "key": "GoodCount", "offset": 3, "type": "uint32", "wordOrder": "high-first" },
+    { "key": "RejectCount", "offset": 5, "type": "uint32", "wordOrder": "high-first" }
+  ]
+}

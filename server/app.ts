@@ -201,7 +201,10 @@ export function createApp() {
 }
 
 // --- Bootstrap ---
-function bootstrap() {
+async function bootstrap() {
+  const { startConfiguredGateway } =
+    await import("./src/gateway/configuredGateway.js");
+  await startConfiguredGateway();
   const { app, sessionStore, sessionMiddleware } = createApp();
   const server = http.createServer(app);
   const services = createSocketServer(server, sessionStore, sessionMiddleware);
@@ -254,5 +257,8 @@ const isMainModule =
   process.env.NODE_ENV !== "test";
 
 if (isMainModule) {
-  bootstrap();
+  bootstrap().catch((error) => {
+    logger.error("Application startup failed", error);
+    process.exit(1);
+  });
 }

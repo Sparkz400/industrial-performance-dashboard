@@ -52,6 +52,8 @@ The [operator workflow](docs/OPERATOR_WORKFLOW.md) covers handover actions, revi
 manual counts and the supervisor wallboard with a dedicated read-only account.
 [Unattended operation](docs/UNATTENDED_OPERATION.md) covers durable scheduled reports,
 email retry status, alarm holds/hysteresis and collector/data-health incidents.
+The [legacy gateway recipe](docs/LEGACY_GATEWAY.md) includes a read-only Modbus TCP
+adapter, owned simulator and reusable production profile.
 
 ## Where it is going
 

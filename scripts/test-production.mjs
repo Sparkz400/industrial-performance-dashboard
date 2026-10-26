@@ -284,6 +284,7 @@ try {
     serverCertificateManager: new opcua.OPCUACertificateManager({
       rootFolder: join(directory, "server-pki"),
     }),
+    userCertificateManager: new opcua.OPCUACertificateManager({ rootFolder: join(directory, "user-pki") }),
   });
   await uaServer.initialize();
   const namespace = uaServer.engine.addressSpace.getOwnNamespace();
@@ -546,8 +547,8 @@ try {
   );
   assert.ok(repeated.length >= 2);
   assert.ok(repeated.every((r) => r.body === repeated[0].body));
-  await worker.stop();
   await multiMachine.disconnectAll();
+  await worker.stop();
   console.log(
     "PASS: UI-created rule -> live simulator -> history -> signed receiver, acknowledgment, measured recovery and durable retry identity",
   );
@@ -1025,6 +1026,8 @@ try {
   await testReportJobs({ call, pool, page, frontend, smtp, waitFor, reportScheduler, machine });
   const { testUnattendedAlarms } = await import("./test-unattended-alarms.mjs");
   await testUnattendedAlarms({ page, frontend, call, pool, machine, adminId, worker });
+  const { testGateway } = await import("./test-gateway.mjs");
+  await testGateway({ call, page, frontend, pool, directory, multiMachine, worker, waitFor });
   assert.deepEqual(pageErrors, []);
   await call("POST", "/api/v1/auth/logout", {}, viewer.request);
   await waitFor(() => !liveClient.connected, "Logout left socket connected");
@@ -1116,8 +1119,8 @@ try {
   await webhookService?.stop();
   await browser?.close();
   await vite?.close();
-  await worker?.stop();
   await multiMachine?.disconnectAll();
+  await worker?.stop();
   if (socketServer) await new Promise((r) => socketServer.io.close(r));
   else if (appServer) await new Promise((r) => appServer.close(r));
   if (receiver) await new Promise((r) => receiver.close(r));

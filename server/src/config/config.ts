@@ -4,6 +4,7 @@ import "dotenv/config";
 // Define the schema for environment variables
 const envVarsSchema = Joi.object({
   RECOVERY_MODE: Joi.boolean().default(false),
+  ENABLE_LEGACY_GATEWAY: Joi.boolean().default(false),
   NODE_ENV: Joi.string()
     .valid("development", "production", "test")
     .default("development"),
@@ -302,6 +303,7 @@ export interface AppConfig {
   COOKIE_SECRET: string;
   AUTO_ACCEPT_CERTIFICATES: boolean;
   RECOVERY_MODE: boolean;
+  ENABLE_LEGACY_GATEWAY: boolean;
   OPCUA_HEALTH_CHECK_INTERVAL: number;
   LOG_LEVEL: string;
   ADMIN_API_KEY?: string;

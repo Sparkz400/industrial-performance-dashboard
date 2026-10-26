@@ -5,6 +5,8 @@ owned simulator or an isolated test installation using OPC UA scalar signals.
 
 ## Implemented and covered by focused tests
 
+- An opt-in read-only Modbus TCP adapter with encrypted, co-located OPC UA and a
+  reusable profile; [legacy gateway scope and recipe](LEGACY_GATEWAY.md).
 - Durable report jobs, missed-slot catch-up, independent email retry status, alarm
   holds/hysteresis and data-health incidents; [unattended operation](UNATTENDED_OPERATION.md).
 - Attributable operator handover/actions, reviewed manual declarations and a

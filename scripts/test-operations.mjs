@@ -78,7 +78,7 @@ try {
   );
   const app = await compose(source, file, ["ps", "-q", "app"]);
   const fixture = `
-    import { readFileSync, mkdirSync } from 'node:fs';
+    import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
     import { createHash } from 'node:crypto';
     import db from './dist/src/database/db.js';
     import manager from './dist/src/database/dbConnection.js';
@@ -90,6 +90,9 @@ try {
     const spool = new MeasurementSpool(process.env.OPCUA_SPOOL_PATH);
     spool.enqueue({ key:'Count', value:7, timestamp:new Date('2026-01-01T00:00:00Z'), machineId:machine.id, dataType:'Int32', statusCode:'Good' });
     spool.close();
+    mkdirSync('/app/server/data/gateway/pki', {recursive:true});
+    writeFileSync('/app/server/data/gateway/config.json', JSON.stringify({name:'Owned backup fixture',enabled:false}));
+    writeFileSync('/app/server/data/gateway/pki/owned-backup-fixture.txt', 'gateway identity fixture');
     await writeReportPdf(process.env.REPORTS_DIR+'/fixture.pdf', { title:'Restore fixture', generatedAt:new Date('2026-01-01'), period:'Owned fixture', sections:[{title:'Evidence', paragraphs:['Unknown remains unknown.']}] });
     console.log(JSON.stringify({machineId:machine.id, pdf:createHash('sha256').update(readFileSync(process.env.REPORTS_DIR+'/fixture.pdf')).digest('hex'), key:createHash('sha256').update(readFileSync(process.env.MACHINE_SECRETS_KEY_FILE)).digest('hex')}));
     await manager.end();
@@ -137,6 +140,8 @@ try {
     const hash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
     assert.equal(hash(process.env.REPORTS_DIR+'/fixture.pdf'),${JSON.stringify(receipt.pdf)});
     assert.equal(hash(process.env.MACHINE_SECRETS_KEY_FILE),${JSON.stringify(receipt.key)});
+    assert.equal(JSON.parse(readFileSync('/app/server/data/gateway/config.json','utf8')).enabled,false);
+    assert.equal(readFileSync('/app/server/data/gateway/pki/owned-backup-fixture.txt','utf8'),'gateway identity fixture');
     console.log('PASS: database, encrypted identity, original key, pending spool and PDF restored');
     await manager.end();
   `;

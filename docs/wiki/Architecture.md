@@ -18,7 +18,11 @@ The [production workflow](https://github.com/Sparkz400/performance_dashboard/blo
 covers guided commissioning, immutable shift profiles, operator corrections,
 reconciled reports, durable alarm delivery and the single-company permission policy.
 Public sharing and legacy notification channels are disabled. Physical qualification
-and protected OPC UA identities remain open.
+remains open. Protected OPC UA identities are tested against owned servers.
+
+The optional [legacy gateway](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/LEGACY_GATEWAY.md)
+polls a bounded read-only Modbus register block and exposes encrypted local OPC UA.
+Its configuration and identity are included in managed backups; recovery stops polling.
 
 Scheduled PDFs use PDFKit and embedded fonts on Node 24/Wolfi, without a production
 browser. Existing database/volume paths remain intact. See the

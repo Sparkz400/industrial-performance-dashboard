@@ -80,7 +80,7 @@ export async function testSecureMachine({
     await page.getByRole("button", { name: /add machine/i }).click();
     await page
       .getByLabel("Machine Name")
-      .fill("Owned secure S7-1500 pilot simulator");
+      .fill("Owned secure OPC UA pilot simulator");
     await page.getByLabel("IP Address").fill("localhost");
     await page.getByRole("spinbutton", { name: /Port/ }).fill(String(port));
     await page.getByLabel("Resource Path").fill("/UA/SecurePilot");
@@ -95,7 +95,7 @@ export async function testSecureMachine({
     const body = await response.text();
     assert.ok(!body.includes(password) && !body.includes("encryptedSecret"));
     const machine = JSON.parse(body).find(
-      (m) => m.name === "Owned secure S7-1500 pilot simulator",
+      (m) => m.name === "Owned secure OPC UA pilot simulator",
     );
     assert.ok(machine);
     machineId = machine.id;

@@ -36,6 +36,11 @@ incident replay. Exact CPU/firmware/licence and physical-machine acceptance rema
 unqualified. Each feature keeps its own acceptance gate; simulator evidence does
 not close hardware or supervised-user gates.
 
+The read-only gateway software slice passes owned two-unit commissioning, profile
+reuse, write rejection, bad-quality persistence, reconnect and managed identity
+restart checks. See [gateway scope](docs/LEGACY_GATEWAY.md). This advances C04/C05/
+C07/C10; real-device inventories and vendor qualification remain open.
+
 The first P0 wave implements and tests F02/F04/F05/H01/H02 in
 [PR #40](https://github.com/Sparkz400/performance_dashboard/pull/40). Validation and
 scope are recorded in [P0 acceptance](docs/P0_ACCEPTANCE.md).
