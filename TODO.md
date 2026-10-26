@@ -29,12 +29,23 @@ functionality.
 
 ## Execution update — 2026-10-26
 
-Factory-pilot wave in progress: the nominated controller family is **Siemens
+Factory-pilot software implemented and locally validated: the nominated controller family is **Siemens
 SIMATIC S7-1500**. Implementation covers secure onboarding, installation/recovery,
 operator and supervisor flows, unattended operation, a read-only gateway and
 incident replay. Exact CPU/firmware/licence and physical-machine acceptance remain
 unqualified. Each feature keeps its own acceptance gate; simulator evidence does
 not close hardware or supervised-user gates.
+
+- [x] Secure onboarding software and certificate/credential recovery checks.
+- [x] Installation, complete backup/restore, actual earlier-image upgrade/rollback and capacity fixture.
+- [x] Operator handover/actions, manual declarations and restricted supervisor wallboard.
+- [x] Durable reports/email retries, alarm holds/hysteresis and collector/data incidents.
+- [x] Read-only legacy reference gateway, owned simulator and reusable profile.
+- [x] Bounded incident replay with clocks, quality/gaps, events, notes and export.
+
+Evidence: [factory-pilot acceptance](docs/FACTORY_PILOT_ACCEPTANCE.md) maps each
+software milestone to commits and tests. Integration and exact-head hosted CI
+remain pending; broader backlog items keep their original physical/customer gates.
 
 The read-only gateway software slice passes owned two-unit commissioning, profile
 reuse, write rejection, bad-quality persistence, reconnect and managed identity
@@ -566,7 +577,7 @@ below retain their unfulfilled acceptance criteria.
   bundle excludes secrets and has explicit size/time bounds.
   Progress: database readiness, receive age/storage reserve and a bounded redacted
   support download are implemented. Browser export checks pass; failed-job diagnostics
-  will be extended with the unattended-operation wave.
+  include durable report generation/delivery attempt and retry state.
 - [ ] **D06 — Complete the first pilot acceptance pack** · P1 · M1 · New · L. Depends: D02, D04, D05, O09, R01, C04.
   Done: record exact machines/settings/software, supervised shift reconciliation,
   interruptions, restore evidence, observed defects and unresolved limits; the process

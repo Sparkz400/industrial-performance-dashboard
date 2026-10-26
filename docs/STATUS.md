@@ -37,6 +37,8 @@ owned simulator or an isolated test installation using OPC UA scalar signals.
 
 See [P0 acceptance evidence](P0_ACCEPTANCE.md) for tests, fixtures and remaining work,
 and [dependency PR dispositions](DEPENDENCY_REVIEW.md) for the reviewed update set.
+The six later software milestones and current local validation are recorded in
+[factory-pilot acceptance](FACTORY_PILOT_ACCEPTANCE.md).
 
 Consult the CI run for the exact commit you intend to use. Hosted tests and local
 simulator evidence do not establish physical-machine acceptance or release readiness.
@@ -68,7 +70,7 @@ simulator evidence do not establish physical-machine acceptance or release readi
   Scoped UUID/esbuild overrides and their compatibility checks are documented in
   [the review](DEPENDENCY_REVIEW.md). CSRF and cross-origin socket regression checks pass.
 - The Node 24/Wolfi image renders scheduled PDFs without Chromium and has zero
-  findings in the full scan (28 OS and 557 Node packages). Actual-image collection,
+  findings in the pilot image's full scan (28 OS and 556 Node packages). Actual-image collection,
   recovery, reporting and persisted-volume checks pass. CI preserves complete scan
   evidence and blocks all high/critical findings, including unfixed ones. See the
   [reporting migration](REPORTING.md) and [image review](DEPENDENCY_REVIEW.md).

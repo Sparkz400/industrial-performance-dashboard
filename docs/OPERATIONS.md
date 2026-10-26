@@ -135,3 +135,8 @@ tampering/overwrite refusal and upgrades. Test containers/volumes are removed;
 private local backups and validation evidence remain under `.local/operations-*`
 until the task's final cleanup. This is software evidence, not a customer restore
 drill or physical-controller acceptance.
+
+Pass an optional second image argument to rehearse an actual earlier-image upgrade:
+`node scripts/test-operations.mjs NEW_IMAGE PREVIOUS_IMAGE`. The acceptance receipt
+records both. The [factory-pilot evidence](FACTORY_PILOT_ACCEPTANCE.md) includes this
+rehearsal with the earlier local candidate and current schema.

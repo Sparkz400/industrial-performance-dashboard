@@ -56,6 +56,8 @@ The [legacy gateway recipe](docs/LEGACY_GATEWAY.md) includes a read-only Modbus 
 adapter, owned simulator and reusable production profile.
 [Incident replay](docs/INCIDENT_REPLAY.md) joins bounded historical signals, alarm
 transitions, operator revisions and stop classifications with explicit clock and gap information.
+See [factory-pilot acceptance](docs/FACTORY_PILOT_ACCEPTANCE.md) for tested software
+milestones and the separate physical-machine gates.
 
 ## Where it is going
 

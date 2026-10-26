@@ -8,7 +8,8 @@ import { once } from "node:events";
 import { chromium } from "@playwright/test";
 
 const image = process.argv[2];
-assert.ok(image, "Usage: node scripts/test-operations.mjs IMAGE");
+const previousImage = process.argv[3] || image;
+assert.ok(image, "Usage: node scripts/test-operations.mjs IMAGE [PREVIOUS_IMAGE]");
 const id = randomUUID().replaceAll("-", "").slice(0, 12),
   source = `pd-ops-${id}`,
   restored = `${source}-restore`,
@@ -71,7 +72,7 @@ try {
     "--port",
     String(sourcePort),
     "--image",
-    image,
+    previousImage,
   ]);
   logs.push(
     "Fresh install and database migrations reached healthy recovery preview",
@@ -325,7 +326,7 @@ try {
   await writeFile(
     join(directory, "validation.json"),
     JSON.stringify(
-      { image, checks: logs, at: new Date().toISOString() },
+      { image, previousImage, checks: logs, at: new Date().toISOString() },
       null,
       2,
     ),

@@ -27,3 +27,7 @@ Confirm the exact CPU, firmware and runtime licence before physical qualificatio
 Use the [operations guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/OPERATIONS.md)
 for isolated installation previews, complete backups, fresh-instance restores and
 upgrade/rollback procedures. Configuration-only exports are not recovery backups.
+
+The [factory-pilot acceptance record](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/FACTORY_PILOT_ACCEPTANCE.md)
+maps secure onboarding, recovery, operator workflows, unattended operation, legacy
+gateway and incident replay to their tests and remaining qualification limits.

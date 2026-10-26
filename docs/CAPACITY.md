@@ -12,19 +12,26 @@ container. The fixture had 100 tags representing one minute at 1 Hz (6,000 repla
 samples), 200 concurrent incoming samples, 10 concurrent query clients making
 50 trend queries, and a 1,000-row PDF export.
 
-| Measurement | Initial observed result |
+| Measurement | Final pilot image observed result |
 | --- | ---: |
-| Durably buffered replay samples | 6,000 in 13.09 seconds |
+| Durably buffered replay samples | 6,000 in 31.72 seconds |
 | Replay with incoming samples, queries and export | 1.58 seconds |
 | Persisted rows | 6,200; no loss |
 | Uncertain samples retained with null numeric projection | 64 |
-| Trend query p95 | 491 ms |
-| Sampled peak process RSS | 340 MiB |
-| Process CPU during fixture | 1.47 s user + 0.63 s system |
-| PostgreSQL database size | 12.1 MiB |
+| Trend query p95 | 441 ms |
+| Receive-to-commit lag p95, including the initial buffered burst | 24.005 seconds |
+| Incoming-sample commit lag p95 during replay | 527 ms |
+| Allocated spool/WAL bytes | 6,004,240 |
+| Sampled peak process RSS | 338 MiB |
+| Process CPU during fixture | 1.54 s user + 0.62 s system |
+| PostgreSQL database size | 12.2 MiB |
 | Measurement table plus indexes | 2.4 MiB |
 
 The benchmark also records receive-to-commit lag and allocated spool/WAL bytes.
+This run used the [pilot image](FACTORY_PILOT_ACCEPTANCE.md); other owned host checks
+were running concurrently. The earlier run buffered the same burst in 13.09 seconds
+with query p95 491 ms. This variation is another reason to measure sustained load
+on the intended installation instead of treating the burst as a capacity promise.
 Use the receipt from the exact image being considered; later releases and hardware
 can change these numbers. CPU and memory are process measurements, not the total
 Docker/host footprint. Query clients are concurrent data requests, not a complete
