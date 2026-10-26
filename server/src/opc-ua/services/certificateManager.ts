@@ -122,6 +122,14 @@ class CertificateManagerService {
         await this.ensureDirectoryExists(this.rejectedDir);
         await this.ensureDirectoryExists(this.issuerDir);
 
+        const certExists = await exists(this.certificateFile);
+        const keyExists = await exists(this.privateKeyFile);
+        if (certExists !== keyExists) {
+          throw new Error(
+            "Client certificate/key backup is incomplete. Restore the matched identity before connecting.",
+          );
+        }
+
         this.certManager = new OPCUACertificateManager({
           rootFolder: this.pkiDir,
           automaticallyAcceptUnknownCertificate: false,
@@ -129,10 +137,7 @@ class CertificateManagerService {
         await this.certManager.initialize();
         logger.info(`OPCUACertificateManager initialized.`);
 
-        const certExists = await exists(this.certificateFile);
-        const keyExists = await exists(this.privateKeyFile);
-
-        if (!certExists || !keyExists) {
+        if (!certExists) {
           logger.info(
             "Client certificate or private key missing, creating new ones...",
           );
@@ -146,6 +151,7 @@ class CertificateManagerService {
         logger.info("Certificate Manager initialization complete.");
       } catch (error) {
         logger.error("Failed to initialize Certificate Manager:", error);
+        await this.certManager?.dispose();
         this.isInitialized = false;
         this.certManager = null;
         this._initializePromise = null;
@@ -300,10 +306,9 @@ class CertificateManagerService {
         !(await exists(this.certificateFile!)) ||
         !(await exists(this.privateKeyFile!))
       ) {
-        logger.warn(
-          "Certificate or key not found during load, attempting to recreate...",
+        throw new Error(
+          "Client certificate/key is missing. Restore the matched identity before connecting.",
         );
-        await this.createClientCertificate();
       }
       const certificate = await readFile(this.certificateFile!);
       const privateKey = await readFile(this.privateKeyFile!);
@@ -466,18 +471,9 @@ class CertificateManagerService {
         !(await exists(this.certificateFile!)) ||
         !(await exists(this.privateKeyFile!))
       ) {
-        logger.warn(
-          "Secure connection requested but client certificate/key missing. Attempting to create...",
+        throw new Error(
+          "Client certificate/key is missing. Restore the matched identity before connecting.",
         );
-        await this.createClientCertificate();
-        if (
-          !(await exists(this.certificateFile!)) ||
-          !(await exists(this.privateKeyFile!))
-        ) {
-          throw new Error(
-            "Client certificate or private key missing and could not be created. Cannot establish secure connection.",
-          );
-        }
       }
 
       const finalMode =
