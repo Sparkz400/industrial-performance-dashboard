@@ -44,8 +44,9 @@ not close hardware or supervised-user gates.
 - [x] Bounded incident replay with clocks, quality/gaps, events, notes and export.
 
 Evidence: [factory-pilot acceptance](docs/FACTORY_PILOT_ACCEPTANCE.md) maps each
-software milestone to commits and tests. Integration and exact-head hosted CI
-remain pending; broader backlog items keep their original physical/customer gates.
+software milestone to commits and tests. [PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57)
+tracks integration and hosted checks; broader backlog items keep their original
+physical/customer gates. Consult the checks for the exact revision being used.
 
 The read-only gateway software slice passes owned two-unit commissioning, profile
 reuse, write rejection, bad-quality persistence, reconnect and managed identity
@@ -558,7 +559,7 @@ below retain their unfulfilled acceptance criteria.
   reconcile data. Dashboard-only export remains clearly labeled as configuration export.
   Progress: complete stopped-app backups and isolated fresh restores preserve database,
   encrypted identities/key, pending spool, PKI and PDFs. Browser recovery/permissions,
-  tamper and overwrite checks pass in scripts/test-operations.mjs; integration pending.
+  tamper and overwrite checks pass in scripts/test-operations.mjs; evidence in PR #57.
 - [ ] **D03 — Make upgrades and rollback operationally safe** · P0 · M0 · Improve · L. Depends: D02.
   Done: migrations are tested on a copy of the previous schema/data, compatibility is
   declared, and backup/rollback behavior is documented. Failed startup cannot leave a
@@ -634,7 +635,7 @@ below retain their unfulfilled acceptance criteria.
   Correlated signals are presented as investigation leads, not proven causes.
   Progress: bounded signal/event replay, keyboard/playback cursor, raw quality and
   clock details, immutable operator revisions, later stop annotations and JSON
-  export are implemented; see docs/INCIDENT_REPLAY.md. Final integration pending.
+  export are implemented; see docs/INCIDENT_REPLAY.md and PR #57 for evidence.
 - [ ] **X04 — Prototype bounded capacity and completion forecasts** · P3 · M5 · Research · L. Depends: O05, R06.
   Done: estimate using comparable jobs and recent capacity with uncertainty ranges;
   backtest against actual completion and disclose unsupported process changes. Forecasts

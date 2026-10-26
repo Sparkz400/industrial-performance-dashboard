@@ -1,5 +1,8 @@
 # Factory-pilot software acceptance — 2026-10-26
 
+[PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57) records the
+integration and exact-revision hosted checks for this wave.
+
 The nominated pilot family is **Siemens SIMATIC S7-1500**. All evidence below uses
 owned simulators, isolated databases and disposable container installations. Exact
 CPU order number, firmware, OPC UA licence/settings, tag semantics, approved load
