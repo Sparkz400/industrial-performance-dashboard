@@ -161,7 +161,7 @@ below retain their unfulfilled acceptance criteria.
   credentials fail clearly. Qualify with read-only permissions on owned test servers.
   Progress: encrypted credentials, username and X.509 sessions, rotation, retention,
   redaction and secure browser/collector acceptance pass in scripts/test-secure-machine.mjs.
-  Integration reference pending this wave.
+  Integration and test evidence: PR #57.
 - [ ] **C02 — Complete certificate and endpoint trust lifecycle** · P0 · M0 · Improve · M. Depends: C01.
   Done: expiry, rejected peers, identity/hostname mismatch and renewal have actionable
   diagnostics; trust requires an explicit decision. Test an expired certificate and
@@ -172,7 +172,7 @@ below retain their unfulfilled acceptance criteria.
   Done: a guided check reports connection, identity, trust, browse/read permission,
   source time and sample quality; users can save a redacted diagnostic report without
   scanning arbitrary networks or issuing machine writes.
-  Progress: Guided exact-endpoint check and read/type/quality/source-time preview work with the owned simulator. Protected identities, explicit trust and redacted diagnostic downloads now pass owned-server/browser acceptance; integration reference pending.
+  Progress: Guided exact-endpoint check and read/type/quality/source-time preview work with the owned simulator. Protected identities, explicit trust and redacted diagnostic downloads now pass owned-server/browser acceptance; integration and test evidence: PR #57.
 
 - [ ] **C04 — Build reusable, versioned machine profiles** · P1 · M1 · New · L. Depends: C03.
   Done: profiles include namespace-aware signals, types, units, scales, state meanings,
@@ -338,7 +338,7 @@ below retain their unfulfilled acceptance criteria.
   size/type constrained and permission checked.
   Progress: Durable idempotent entries, immutable revision history, ownership, due
   dates, interval/shift validation and conflict protection implemented and tested;
-  attachments disabled. Integration evidence pending in this factory-pilot wave.
+  attachments disabled. Integration and test evidence: PR #57.
 - [ ] **U05 — Deliver a useful supervisor wallboard** · P1 · M1 · Improve · M. Depends: U02.
   Done: a selected line shows state, target progress, prioritized issues and freshness;
   kiosk rotation reconnects cleanly and uses a restricted identity. Screens remain
@@ -381,7 +381,7 @@ below retain their unfulfilled acceptance criteria.
   instead of producing a false recovery.
   Progress: Persistent trigger/recovery holds, threshold hysteresis, gap/quality/order
   resets and UI configuration are implemented with unit and owned replay tests.
-  See [unattended operation](docs/UNATTENDED_OPERATION.md); integration pending.
+  See [unattended operation](docs/UNATTENDED_OPERATION.md); integration and test evidence: PR #57.
 - [ ] **A03 — Alert on data and collector health** · P1 · M1 · New · M. Depends: A01, H03.
   Done: users can distinguish machine-condition alarms from disconnected endpoint,
   stale signal, bad quality and growing backlog; simulate each condition and verify
@@ -438,7 +438,7 @@ below retain their unfulfilled acceptance criteria.
   missed-slot catch-up, worker crash recovery and separate SMTP retry/partial-acceptance
   status are implemented. Owned process/mail/browser acceptance is in
   `scripts/test-report-jobs.mjs`. SMTP ambiguity and measurement-snapshot limits are
-  explicit in [unattended operation](docs/UNATTENDED_OPERATION.md); integration pending.
+  explicit in [unattended operation](docs/UNATTENDED_OPERATION.md); integration and test evidence: PR #57.
 - [ ] **R04 — Preserve report revisions and reproducibility** · P1 · M2 · New · M. Depends: H04, R01.
   Done: exports record inputs, window, mapping/calculation revisions and generation time;
   a correction creates a new revision with a reason. Published reports can be reproduced
