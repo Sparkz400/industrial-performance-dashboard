@@ -36,3 +36,4 @@ client/.env.local
 shared/dist/
 server/certificates/
 logs/
+data/

@@ -29,7 +29,9 @@ simulator evidence do not establish physical-machine acceptance or release readi
 ## Known limits
 
 - No physical machine or production-line qualification has been completed here.
-- OPC UA anonymous sessions and scalar values are the supported connection scope.
+- OPC UA scalar values, anonymous sessions and protected username/password or user-certificate
+  identities are supported in owned-server acceptance. Protected identities require an
+  encrypted channel and explicit certificate trust. See the [S7-1500 pilot guide](S7_1500_PILOT.md).
 - Process crashes and unobserved machine events can leave uncertain intervals;
   reconnection notifications cannot reconstruct measurements never received.
 - Shift profiles explicitly choose reset-to-zero or reject-decrease. Legacy OEE

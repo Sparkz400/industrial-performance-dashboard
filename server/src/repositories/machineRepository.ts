@@ -3,9 +3,12 @@ import db from "../database/db.js";
 import {
   machines,
   nodeMappings,
+  machineCredentials,
   type NewMachine,
   type NewNodeMapping,
 } from "../database/schema.js";
+import type { MachineAuthenticationInput } from "@performance-dashboard/shared";
+import { prepareMachineCredential } from "../services/machineIdentity.js";
 
 export interface MachineRecordInput {
   name: string;
@@ -41,13 +44,24 @@ export const machineRepository = {
     return countRow?.count ?? 0;
   },
 
-  async createMachine(input: MachineRecordInput) {
-    const [created] = await db
-      .insert(machines)
-      .values(input satisfies NewMachine)
-      .returning();
-
-    return created;
+  async createMachine(
+    input: MachineRecordInput,
+    authentication?: MachineAuthenticationInput,
+  ) {
+    return db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(machines)
+        .values(input satisfies NewMachine)
+        .returning();
+      const credential = await prepareMachineCredential(
+        created.id,
+        input.securityMode,
+        input.securityPolicy,
+        authentication,
+      );
+      if (credential) await tx.insert(machineCredentials).values(credential);
+      return created;
+    });
   },
 
   async findMachineById(machineId: number) {
@@ -59,17 +73,43 @@ export const machineRepository = {
     return result[0] ?? null;
   },
 
-  async updateMachine(machineId: number, input: MachineRecordInput) {
-    const result = await db
-      .update(machines)
-      .set({
-        ...input,
-        updatedAt: new Date(),
-      })
-      .where(eq(machines.id, machineId))
-      .returning();
-
-    return result[0] ?? null;
+  async updateMachine(
+    machineId: number,
+    input: MachineRecordInput,
+    authentication?: MachineAuthenticationInput,
+  ) {
+    return db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(machines)
+        .set({ ...input, updatedAt: new Date() })
+        .where(eq(machines.id, machineId))
+        .returning();
+      if (!updated) return null;
+      const [previous] = await tx
+        .select()
+        .from(machineCredentials)
+        .where(eq(machineCredentials.machineId, machineId));
+      const credential = await prepareMachineCredential(
+        machineId,
+        input.securityMode,
+        input.securityPolicy,
+        authentication,
+        previous,
+      );
+      if (credential)
+        await tx
+          .insert(machineCredentials)
+          .values(credential)
+          .onConflictDoUpdate({
+            target: machineCredentials.machineId,
+            set: credential,
+          });
+      else
+        await tx
+          .delete(machineCredentials)
+          .where(eq(machineCredentials.machineId, machineId));
+      return updated;
+    });
   },
 
   async deleteMachine(machineId: number) {

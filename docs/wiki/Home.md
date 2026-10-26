@@ -24,7 +24,8 @@ The [production workflow](https://github.com/Sparkz400/performance_dashboard/blo
 covers guided commissioning, immutable shift profiles, operator corrections,
 reconciled reports, durable alarm delivery and the single-company permission policy.
 Public sharing and legacy notification channels are disabled. Physical qualification
-and protected OPC UA identities remain open.
+remains open. Protected OPC UA identities and explicit certificate trust are covered by
+owned-server tests; see the [S7-1500 pilot guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/S7_1500_PILOT.md).
 
 The full npm audit and migrated Node 24/Wolfi image scan are clear in this wave.
 Scheduled reports use direct PDF generation; see the [reporting guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/REPORTING.md)

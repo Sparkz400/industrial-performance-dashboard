@@ -29,6 +29,13 @@ functionality.
 
 ## Execution update — 2026-10-26
 
+Factory-pilot wave in progress: the nominated controller family is **Siemens
+SIMATIC S7-1500**. Implementation covers secure onboarding, installation/recovery,
+operator and supervisor flows, unattended operation, a read-only gateway and
+incident replay. Exact CPU/firmware/licence and physical-machine acceptance remain
+unqualified. Each feature keeps its own acceptance gate; simulator evidence does
+not close hardware or supervised-user gates.
+
 The first P0 wave implements and tests F02/F04/F05/H01/H02 in
 [PR #40](https://github.com/Sparkz400/performance_dashboard/pull/40). Validation and
 scope are recorded in [P0 acceptance](docs/P0_ACCEPTANCE.md).
@@ -135,15 +142,20 @@ below retain their unfulfilled acceptance criteria.
   Done: username/password and user-certificate identity paths are explicitly supported
   or scoped per endpoint, secrets are protected/redacted, rotation works, and wrong
   credentials fail clearly. Qualify with read-only permissions on owned test servers.
+  Progress: encrypted credentials, username and X.509 sessions, rotation, retention,
+  redaction and secure browser/collector acceptance pass in scripts/test-secure-machine.mjs.
+  Integration reference pending this wave.
 - [ ] **C02 — Complete certificate and endpoint trust lifecycle** · P0 · M0 · Improve · M. Depends: C01.
   Done: expiry, rejected peers, identity/hostname mismatch and renewal have actionable
   diagnostics; trust requires an explicit decision. Test an expired certificate and
   a changed endpoint without silently downgrading channel security.
+  Progress: explicit trust, expiry/hostname checks, fingerprint/expiry UI and the
+  S7-1500 renewal guide are implemented; owned-server negative checks pass.
 - [ ] **C03 — Add a commissioning preflight** · P1 · M1 · New · M. Depends: C01, H01.
   Done: a guided check reports connection, identity, trust, browse/read permission,
   source time and sample quality; users can save a redacted diagnostic report without
   scanning arbitrary networks or issuing machine writes.
-  Progress: Guided exact-endpoint check and read/type/quality/source-time preview work with the owned simulator. Protected identity/trust diagnostics and a redacted diagnostic export remain open.
+  Progress: Guided exact-endpoint check and read/type/quality/source-time preview work with the owned simulator. Protected identities, explicit trust and redacted diagnostic downloads now pass owned-server/browser acceptance; integration reference pending.
 
 - [ ] **C04 — Build reusable, versioned machine profiles** · P1 · M1 · New · L. Depends: C03.
   Done: profiles include namespace-aware signals, types, units, scales, state meanings,

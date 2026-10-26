@@ -6,6 +6,8 @@ import {
 } from "../repositories/machineRepository.js";
 import type { Machine } from "../database/schema.js";
 import logger from "../utils/logger.js";
+import type { MachineAuthenticationInput } from "@performance-dashboard/shared";
+import { machineAuthentication } from "./machineIdentity.js";
 import {
   NotFoundError,
   ValidationError,
@@ -20,6 +22,7 @@ export interface MachineDraftInput {
   securityMode: string;
   securityPolicy: string;
   isActive: boolean;
+  authentication?: MachineAuthenticationInput;
 }
 
 export interface BrowseNodesInput {
@@ -46,7 +49,12 @@ function buildMachineRecord(input: MachineDraftInput): MachineRecordInput {
   const normalizedPath = normalizeResourcePath(input.resourcePath);
 
   return {
-    ...input,
+    name: input.name,
+    ip: input.ip,
+    port: input.port,
+    securityMode: input.securityMode,
+    securityPolicy: input.securityPolicy,
+    isActive: input.isActive,
     resourcePath: normalizedPath,
     endpointUrl: `opc.tcp://${input.ip}:${input.port}${normalizedPath}`,
   };
@@ -87,6 +95,7 @@ export const machineService = {
     return Promise.all(
       allMachines.map(async (machine: Machine) => ({
         ...machine,
+        authentication: await machineAuthentication(machine.id),
         mappingCount: await machineRepository.countMappingsByMachineId(
           machine.id,
         ),
@@ -96,7 +105,14 @@ export const machineService = {
 
   async createMachine(input: MachineDraftInput) {
     try {
-      return await machineRepository.createMachine(buildMachineRecord(input));
+      const machine = await machineRepository.createMachine(
+        buildMachineRecord(input),
+        input.authentication,
+      );
+      return {
+        ...machine,
+        authentication: await machineAuthentication(machine.id),
+      };
     } catch (error) {
       if (isDatabaseError(error) && error.code === "23505") {
         throw fromDatabaseError(error);
@@ -115,7 +131,11 @@ export const machineService = {
     }
 
     const mappings = await machineRepository.findMappingsByMachineId(machineId);
-    return { ...machine, mappings };
+    return {
+      ...machine,
+      mappings,
+      authentication: await machineAuthentication(machine.id),
+    };
   },
 
   async updateMachine(id: string, input: MachineDraftInput) {
@@ -125,6 +145,7 @@ export const machineService = {
       const updated = await machineRepository.updateMachine(
         machineId,
         buildMachineRecord(input),
+        input.authentication,
       );
 
       if (!updated) {
@@ -136,7 +157,10 @@ export const machineService = {
         `Machine ${machineId} config updated but reconnect failed`,
       );
 
-      return updated;
+      return {
+        ...updated,
+        authentication: await machineAuthentication(updated.id),
+      };
     } catch (error) {
       if (isDatabaseError(error) && error.code === "23505") {
         throw fromDatabaseError(error);

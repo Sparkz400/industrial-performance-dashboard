@@ -63,6 +63,7 @@ try {
     ALLOW_PRIVATE_OUTBOUND_URLS: "true",
     OPCUA_SPOOL_PATH: join(directory, "spool.sqlite"),
     OPCUA_PKI_DIR: join(directory, "client-pki"),
+    MACHINE_SECRETS_KEY_FILE: join(directory, "machine-secrets.key"),
     AUTO_ACCEPT_CERTIFICATES: "false",
     OPCUA_QUEUE_DELAY: "100",
     REPORTS_DIR: join(directory, "reports"),
@@ -76,7 +77,7 @@ try {
   });
   await migrate(drizzle(pool), { migrationsFolder: "server/drizzle" });
   const snapshot = JSON.parse(
-    await readFile("server/drizzle/meta/0006_snapshot.json", "utf8"),
+    await readFile("server/drizzle/meta/0007_snapshot.json", "utf8"),
   );
   const tables = new Set(
     (
@@ -160,6 +161,16 @@ try {
       headers: { "x-csrf-token": await csrf(request) },
     });
   const viewer = await browser.newContext();
+  const { testSecureMachine } = await import("./test-secure-machine.mjs");
+  await testSecureMachine({
+    call,
+    page,
+    frontend,
+    pool,
+    directory,
+    multiMachine,
+    waitFor,
+  });
   await call(
     "POST",
     "/api/v1/auth/login",
@@ -315,6 +326,22 @@ try {
     .click();
   await page.getByRole("button", { name: "Preview mapped signals" }).click();
   await expectVisible(page.getByText(/state: ns=1;s=ProductionState/));
+  const diagnosticDownload = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download redacted diagnostics" })
+    .click();
+  const diagnostic = JSON.parse(
+    await readFile(await (await diagnosticDownload).path(), "utf8"),
+  );
+  assert.equal(diagnostic.format, "commissioning-diagnostics-v1");
+  assert.equal(diagnostic.signals.length, 4);
+  assert.ok(!JSON.stringify(diagnostic).includes("ProductionState"));
+  assert.ok(
+    diagnostic.signals.every(
+      (signal) =>
+        !Object.hasOwn(signal, "value") && !Object.hasOwn(signal, "nodeId"),
+    ),
+  );
   await page.getByLabel(/I reviewed the mappings/).check();
   await page
     .getByRole("button", { name: "Save profile and create dashboard" })
@@ -1052,6 +1079,9 @@ try {
   await viewer.close();
   await context.close();
   await webhookService.stop();
+} catch (error) {
+  console.error("Production acceptance failed:", error);
+  throw error;
 } finally {
   reportScheduler?.stop();
   liveClient?.disconnect();
@@ -1066,6 +1096,9 @@ try {
   await uaServer?.shutdown(0);
   await sessionStore?.close();
   await manager?.end();
+  await (
+    await import("../server/dist/src/opc-ua/services/certificateManager.js")
+  ).default.dispose();
   await pool?.end();
   if (created) {
     // Pool shutdown can resolve before PostgreSQL observes the socket disconnect.

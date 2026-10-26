@@ -86,8 +86,9 @@ const envVarsSchema = Joi.object({
     .default("None")
     .description("OPC UA security policy"),
   OPCUA_SECURITY_FALLBACK_ENABLED: Joi.boolean()
+    .valid(false)
     .default(false)
-    .description("Enable fallback to SecurityMode=None on security errors"),
+    .description("Deprecated; security fallback is disabled"),
   OPCUA_PKI_DIR: Joi.string()
     .optional()
     .description("Optional custom path for OPC UA PKI certificates"),
@@ -114,8 +115,11 @@ const envVarsSchema = Joi.object({
     .required()
     .description("Secret used for signing sessions"),
   AUTO_ACCEPT_CERTIFICATES: Joi.boolean()
+    .valid(false)
     .default(false)
-    .description("Automatically trust unknown server certificates"),
+    .description(
+      "Deprecated; unknown server certificates require explicit trust",
+    ),
   OPCUA_HEALTH_CHECK_INTERVAL: Joi.number()
     .integer()
     .min(0)
@@ -235,9 +239,7 @@ const envVarsSchema = Joi.object({
     .try(Joi.number().port(), Joi.string())
     .optional()
     .description("SMTP server port"),
-  SMTP_USER: Joi.string()
-    .optional()
-    .description("SMTP authentication user"),
+  SMTP_USER: Joi.string().optional().description("SMTP authentication user"),
   SMTP_PASS: Joi.string()
     .optional()
     .description("SMTP authentication password"),

@@ -23,6 +23,8 @@ export type {
   UserInfo,
   Machine,
   MachineFormData,
+  MachineAuthentication,
+  MachineAuthenticationInput,
   NodeMapping,
   BrowsedNode,
   Widget,
@@ -355,4 +357,7 @@ export type {
   DowntimeReason,
   ShiftReport,
 } from "./production.js";
-export type { ScheduledReportConfig, ScheduledReportSection } from './reports.js';
+export type {
+  ScheduledReportConfig,
+  ScheduledReportSection,
+} from "./reports.js";

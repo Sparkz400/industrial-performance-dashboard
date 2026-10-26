@@ -101,6 +101,21 @@ export const nodeMappings = pgTable(
   ],
 );
 
+export const machineCredentials = pgTable("machine_credentials", {
+  machineId: integer("machine_id")
+    .primaryKey()
+    .references(() => machines.id, { onDelete: "cascade" }),
+  mode: varchar("mode", { length: 20 }).notNull(),
+  username: varchar("username", { length: 255 }),
+  certificateExpiresAt: timestamp("certificate_expires_at", {
+    withTimezone: true,
+  }),
+  encryptedSecret: text("encrypted_secret").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const opcuaData = pgTable(
   "opcua_data",
   {

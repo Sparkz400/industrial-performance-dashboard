@@ -33,6 +33,18 @@ export interface UserInfo {
 
 // ===== Machine Types =====
 
+export interface MachineAuthentication {
+  mode: "anonymous" | "username" | "certificate";
+  username?: string;
+  certificateExpiresAt?: string;
+}
+
+export interface MachineAuthenticationInput extends MachineAuthentication {
+  password?: string;
+  certificatePem?: string;
+  privateKeyPem?: string;
+}
+
 export interface Machine {
   id: number;
   name: string;
@@ -47,6 +59,7 @@ export interface Machine {
   createdAt: string;
   updatedAt: string;
   mappingCount?: number;
+  authentication?: MachineAuthentication;
 }
 
 export interface MachineFormData {
@@ -57,6 +70,7 @@ export interface MachineFormData {
   securityMode: string;
   securityPolicy: string;
   isActive: boolean;
+  authentication?: MachineAuthenticationInput;
 }
 
 export interface NodeMapping {

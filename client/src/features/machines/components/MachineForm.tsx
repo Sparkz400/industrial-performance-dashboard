@@ -32,6 +32,7 @@ const defaultFormData: MachineFormData = {
   securityMode: 'None',
   securityPolicy: 'None',
   isActive: true,
+  authentication: { mode: 'anonymous' },
 };
 
 const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, machine }) => {
@@ -49,6 +50,7 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
         securityMode: machine.securityMode,
         securityPolicy: machine.securityPolicy,
         isActive: machine.isActive,
+        authentication: machine.authentication ?? { mode: 'anonymous' },
       });
     } else {
       setFormData(defaultFormData);
@@ -125,8 +127,9 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
 
           <Box sx={{ display: 'flex', gap: 2 }}>
             <FormControl fullWidth>
-              <InputLabel>Security Mode</InputLabel>
+              <InputLabel id="machine-security-mode">Security Mode</InputLabel>
               <Select
+                labelId="machine-security-mode"
                 value={formData.securityMode}
                 label="Security Mode"
                 onChange={(e) => handleChange('securityMode', e.target.value)}
@@ -138,8 +141,9 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
             </FormControl>
 
             <FormControl fullWidth>
-              <InputLabel>Security Policy</InputLabel>
+              <InputLabel id="machine-security-policy">Security Policy</InputLabel>
               <Select
+                labelId="machine-security-policy"
                 value={formData.securityPolicy}
                 label="Security Policy"
                 onChange={(e) => handleChange('securityPolicy', e.target.value)}
@@ -150,6 +154,120 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
               </Select>
             </FormControl>
           </Box>
+
+          <FormControl fullWidth>
+            <InputLabel id="machine-authentication">Machine authentication</InputLabel>
+            <Select
+              labelId="machine-authentication"
+              label="Machine authentication"
+              value={formData.authentication?.mode ?? 'anonymous'}
+              onChange={(event) =>
+                setFormData((previous) => ({
+                  ...previous,
+                  authentication: {
+                    mode: event.target.value as 'anonymous' | 'username' | 'certificate',
+                  },
+                  ...(event.target.value !== 'anonymous'
+                    ? {
+                        securityMode: 'SignAndEncrypt',
+                        securityPolicy:
+                          previous.securityPolicy === 'None'
+                            ? 'Basic256Sha256'
+                            : previous.securityPolicy,
+                      }
+                    : {}),
+                }))
+              }
+            >
+              <MenuItem value="anonymous">Anonymous</MenuItem>
+              <MenuItem value="username">Username and password</MenuItem>
+              <MenuItem value="certificate">User certificate</MenuItem>
+            </Select>
+          </FormControl>
+          {formData.authentication?.mode === 'username' && (
+            <>
+              <TextField
+                label="Machine username"
+                autoComplete="off"
+                value={formData.authentication.username ?? ''}
+                onChange={(event) =>
+                  handleChange('authentication', {
+                    ...formData.authentication!,
+                    username: event.target.value,
+                  })
+                }
+              />
+              <TextField
+                label="Machine password"
+                type="password"
+                autoComplete="new-password"
+                value={formData.authentication.password ?? ''}
+                helperText={
+                  machine?.authentication?.mode === 'username'
+                    ? 'Leave blank to keep the saved password for the same username.'
+                    : 'Use a dedicated account with read access only.'
+                }
+                onChange={(event) =>
+                  handleChange('authentication', {
+                    ...formData.authentication!,
+                    password: event.target.value,
+                  })
+                }
+              />
+            </>
+          )}
+          {formData.authentication?.mode === 'certificate' && (
+            <>
+              <Alert severity="info">
+                User certificates require support from the server. S7-1500 availability depends on
+                CPU and firmware. This is separate from the application certificate under Settings.
+              </Alert>
+              <TextField
+                label="User certificate (PEM)"
+                multiline
+                minRows={3}
+                value={formData.authentication.certificatePem ?? ''}
+                onChange={(event) =>
+                  handleChange('authentication', {
+                    ...formData.authentication!,
+                    certificatePem: event.target.value,
+                  })
+                }
+              />
+              <TextField
+                label="User private key (PEM)"
+                type="password"
+                autoComplete="new-password"
+                value={formData.authentication.privateKeyPem ?? ''}
+                helperText="Replace certificate and key together. Leave both blank to retain the saved identity."
+                onChange={(event) =>
+                  handleChange('authentication', {
+                    ...formData.authentication!,
+                    privateKeyPem: event.target.value,
+                  })
+                }
+              />
+              {formData.authentication.certificateExpiresAt && (
+                <Alert
+                  severity={
+                    Date.parse(formData.authentication.certificateExpiresAt) - Date.now() <
+                    30 * 86400000
+                      ? 'warning'
+                      : 'info'
+                  }
+                >
+                  User certificate expires{' '}
+                  {new Date(formData.authentication.certificateExpiresAt).toLocaleDateString()}.
+                </Alert>
+              )}
+            </>
+          )}
+          {formData.securityMode === 'None' && (
+            <Alert severity="warning">
+              Unsecured connection: use only with an isolated simulator. Use Sign and Encrypt for a
+              machine pilot.
+            </Alert>
+          )}
 
           <FormControlLabel
             control={

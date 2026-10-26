@@ -1,3 +1,4 @@
+import { createMachineSession } from "../services/machineIdentity.js";
 import * as opcua from "node-opcua";
 import { EventEmitter } from "events";
 import crypto from "crypto";
@@ -36,7 +37,7 @@ class OPCUAEmitter extends EventEmitter {}
 export const opcuaEmitter = new OPCUAEmitter();
 
 /**
- * Auto-accept untrusted certificates event handler
+ * Publish untrusted certificates for explicit administrator review
  */
 opcuaEmitter.on(
   "serverCertificate",
@@ -51,32 +52,12 @@ opcuaEmitter.on(
         .update(certificate)
         .digest("hex");
 
-      if (config.AUTO_ACCEPT_CERTIFICATES) {
-        const serverName = serverUri || "unknown_server";
-        await certificateManager.trustCertificate(certificate, serverName);
-        logger.info(
-          `Auto-accepted certificate from ${serverName} (hash: ${certificateHash.substring(0, 16)}...)`,
-        );
-
-        opcuaEmitter.emit("certificateAccepted", {
-          success: true,
-          serverUri,
-          certificateHash,
-          timestamp: new Date().toISOString(),
-        });
-      } else {
-        logger.warn(
-          `Untrusted server certificate received from ${serverUri || "unknown server"}, waiting for manual acceptance`,
-        );
-
-        opcuaEmitter.emit("untrustedCertificate", {
-          certificate: certificate.toString("base64"),
-          serverUri: serverUri || "unknown_server",
-          certificateHash: certificateHash,
-          timestamp: new Date().toISOString(),
-          filename: `${serverUri?.replace(/[^a-z0-9]/gi, "_") || "unknown"}_${Date.now()}.pem`,
-        });
-      }
+      opcuaEmitter.emit("untrustedCertificate", {
+        certificate: certificate.toString("base64"),
+        serverUri: serverUri || "unknown_server",
+        certificateHash,
+        timestamp: new Date().toISOString(),
+      });
     } catch (error: any) {
       logger.error("Error handling server certificate:", error);
 
@@ -92,16 +73,7 @@ opcuaEmitter.on(
  * Initialize the certificate manager
  */
 export async function initializeCertificates(): Promise<void> {
-  try {
-    await certificateManager.ensureInitialized();
-  } catch (error: any) {
-    logger.error("Failed to initialize certificates:", error);
-    statusManager.setOpcuaStatus(StatusConstants.WARNING, {
-      message:
-        "Certificate initialization failed, falling back to insecure connection",
-      error: error.message,
-    });
-  }
+  await certificateManager.ensureInitialized();
 }
 
 /**
@@ -117,21 +89,7 @@ export async function connectAndSubscribe(
   let retryCount = 0;
   let lastError: Error | null = null;
 
-  logger.info("[ConnectAndSub] Ensuring certificates are initialized...");
-  try {
-    await initializeCertificates();
-    logger.info("[ConnectAndSub] Certificates initialization complete.");
-  } catch (initErr: any) {
-    logger.error(
-      "[ConnectAndSub] Certificate initialization failed during connection attempt:",
-      initErr,
-    );
-    statusManager.setOpcuaStatus(StatusConstants.WARNING, {
-      message:
-        "Certificate initialization failed, connection might be insecure or fail.",
-      error: initErr.message,
-    });
-  }
+  await initializeCertificates();
 
   const securityMode =
     securityOptions.securityMode || config.OPCUA_SECURITY_MODE;
@@ -194,7 +152,12 @@ export async function connectAndSubscribe(
 
       // Create session
       logger.info("[ConnectAndSub] Creating session...");
-      const session = await client.createSession();
+      const session = await createMachineSession(
+        client,
+        machineId,
+        endpointUrl,
+        securityMode,
+      );
       const namespaces = await session.readNamespaceArray();
       logger.info("[ConnectAndSub] Session created successfully.");
 

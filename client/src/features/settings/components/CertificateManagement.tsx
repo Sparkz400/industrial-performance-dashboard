@@ -46,6 +46,11 @@ interface CertificateInfo {
   name: string;
   path: string;
   content?: string;
+  fingerprint: string;
+  subject: string;
+  issuer: string;
+  validTo: string;
+  daysRemaining: number;
 }
 
 interface ClientCertificate {
@@ -484,7 +489,11 @@ const CertificateManagement: React.FC = () => {
             >
               {trustedCerts.map((cert: CertificateInfo) => (
                 <ListItem key={cert.name} divider>
-                  <ListItemText primary={cert.name} secondary={`Path: ${cert.path}`} />
+                  <ListItemText
+                    primary={cert.subject || cert.name}
+                    secondary={`Expires ${new Date(cert.validTo).toLocaleDateString()} (${cert.daysRemaining} days). SHA-256: ${cert.fingerprint}`}
+                    sx={{ overflowWrap: 'anywhere' }}
+                  />
                   <ListItemSecondaryAction>
                     <Tooltip title="View Details">
                       <IconButton
@@ -522,7 +531,11 @@ const CertificateManagement: React.FC = () => {
             >
               {rejectedCerts.map((cert: CertificateInfo) => (
                 <ListItem key={cert.name} divider>
-                  <ListItemText primary={cert.name} secondary={`Path: ${cert.path}`} />
+                  <ListItemText
+                    primary={cert.subject || cert.name}
+                    secondary={`Verify this SHA-256 fingerprint against the PLC before accepting: ${cert.fingerprint}. Expires ${new Date(cert.validTo).toLocaleDateString()}.`}
+                    sx={{ overflowWrap: 'anywhere' }}
+                  />
                   <ListItemSecondaryAction>
                     <Tooltip title="Accept Certificate">
                       <span>

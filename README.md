@@ -23,6 +23,7 @@ their signals, and build a shared view of a production line.
 ## What it does
 
 - Browse OPC UA nodes and configure per-machine tag mappings.
+- Connect with protected machine identities, explicit certificate trust and redacted commissioning diagnostics.
 - Display live readings and historical charts in configurable dashboards.
 - Calculate OEE from explicitly mapped machine states and production counters.
 - Preserve scalar values, source timestamps and quality information in history.
@@ -43,6 +44,8 @@ AI suggestions disclose external processing and do not execute measurement queri
 Public links/embeds and undelivered email/chat/SMS channels are disabled.
 See the [production workflow](docs/PRODUCTION_WORKFLOW.md) and
 [P0 acceptance evidence](docs/P0_ACCEPTANCE.md) for tested paths and remaining gates.
+The first nominated pilot family is [Siemens SIMATIC S7-1500](docs/S7_1500_PILOT.md);
+software acceptance uses owned simulators, with physical CPU qualification still open.
 
 ## Where it is going
 

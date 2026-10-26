@@ -9,6 +9,7 @@ import statusManager from "./utils/status.js";
 import StatusConstants from "./utils/statusConstants.js";
 import logger from "./utils/logger.js";
 import dbClient from "./database/dbConnection.js";
+import { machineRepository } from "./repositories/machineRepository.js";
 import { shutdownTracing } from "./observability/tracing.js";
 import { opcuaDataPointsReceived } from "./observability/metrics.js";
 
@@ -179,9 +180,9 @@ export async function startOpcuaServices({
       logger.info(
         `Multi-machine manager initialized with ${connectedIds.length} connection(s).`,
       );
-    } else {
+    } else if ((await machineRepository.listMachines()).length === 0) {
       logger.info(
-        "No machines in DB. Falling back to single OPC UA connection from .env...",
+        "No machines in DB. Starting single OPC UA connection from .env...",
       );
       await opcuaConnectionManager.startConnection().catch((err) => {
         logger.error("Initial OPC UA connection failed:", err);
@@ -189,12 +190,9 @@ export async function startOpcuaServices({
     }
   } catch (err) {
     logger.error(
-      "Multi-machine manager initialization failed, falling back to single connection:",
+      "Multi-machine manager initialization failed; configured machines remain disconnected:",
       err,
     );
-    await opcuaConnectionManager.startConnection().catch((connErr) => {
-      logger.error("Fallback OPC UA connection also failed:", connErr);
-    });
   }
 
   multiMachineManager.on(
