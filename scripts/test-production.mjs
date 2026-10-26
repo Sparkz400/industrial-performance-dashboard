@@ -41,6 +41,7 @@ let pool,
   webhookService,
   reportScheduler,
   liveClient;
+let smtp;
 let created = false;
 const waitFor = async (check, message, timeout = 30000) => {
   const deadline = Date.now() + timeout;
@@ -54,6 +55,8 @@ try {
   await admin.connect();
   await admin.query(`CREATE DATABASE "${database}"`);
   created = true;
+  const { createSmtpFixture } = await import("./test-report-jobs.mjs");
+  smtp = await createSmtpFixture();
   Object.assign(process.env, {
     DB_NAME: database,
     DB_READ_REPLICA_URLS: "",
@@ -67,6 +70,11 @@ try {
     AUTO_ACCEPT_CERTIFICATES: "false",
     OPCUA_QUEUE_DELAY: "100",
     REPORTS_DIR: join(directory, "reports"),
+    SMTP_HOST: "127.0.0.1",
+    SMTP_PORT: String(smtp.port),
+    SMTP_USER: "",
+    SMTP_PASS: "",
+    SMTP_FROM: "owned-fixture@example.com",
   });
   pool = new pg.Pool({
     host: process.env.DB_HOST,
@@ -76,9 +84,8 @@ try {
     database,
   });
   await migrate(drizzle(pool), { migrationsFolder: "server/drizzle" });
-  const snapshot = JSON.parse(
-    await readFile("server/drizzle/meta/0008_snapshot.json", "utf8"),
-  );
+  const journal = JSON.parse(await readFile("server/drizzle/meta/_journal.json", "utf8"));
+  const snapshot = JSON.parse(await readFile(`server/drizzle/meta/${String(journal.entries.at(-1).idx).padStart(4, "0")}_snapshot.json`, "utf8"));
   const tables = new Set(
     (
       await pool.query(
@@ -1014,6 +1021,11 @@ try {
     "PASS: report template create/edit/persistence, machine selection, timezone, invalid input, manual/automatic generation, browser history/download and viewer denial",
   );
   // Logout and account revocation deny both subsequent requests and live sockets.
+  const { testReportJobs } = await import("./test-report-jobs.mjs");
+  await testReportJobs({ call, pool, page, frontend, smtp, waitFor, reportScheduler, machine });
+  const { testUnattendedAlarms } = await import("./test-unattended-alarms.mjs");
+  await testUnattendedAlarms({ page, frontend, call, pool, machine, adminId, worker });
+  assert.deepEqual(pageErrors, []);
   await call("POST", "/api/v1/auth/logout", {}, viewer.request);
   await waitFor(() => !liveClient.connected, "Logout left socket connected");
   assert.equal(
@@ -1099,6 +1111,7 @@ try {
   throw error;
 } finally {
   reportScheduler?.stop();
+  await smtp?.close();
   liveClient?.disconnect();
   await webhookService?.stop();
   await browser?.close();

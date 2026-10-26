@@ -216,6 +216,8 @@ const ReportSchedulesPage: React.FC = () => {
     mutationFn: async (id: number) => {
       const res = await protectedFetch(API_ENDPOINTS.reports.runNow(id), {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId: crypto.randomUUID() }),
       });
       if (!res.ok) throw new Error('Failed to trigger report run');
       return res.json();

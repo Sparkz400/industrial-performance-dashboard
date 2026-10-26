@@ -183,6 +183,8 @@ export interface AlarmRule {
   threshold: number;
   hysteresis: number;
   cooldownSeconds: number;
+  debounceSeconds: number;
+  clearDebounceSeconds: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -681,9 +683,12 @@ export interface AlertRule {
   threshold: number | null;
   thresholdHigh: number | null;
   rateWindowSeconds: number | null;
+  hysteresis: number;
   severity: AlertSeverity;
   channels: number[];
   cooldownSeconds: number;
+  debounceSeconds: number;
+  clearDebounceSeconds: number;
   isActive: boolean;
   createdBy: number | null;
   createdAt: string;

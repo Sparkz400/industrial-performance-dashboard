@@ -6,23 +6,10 @@ import { tmpdir } from "node:os";
 const mocks = vi.hoisted(() => ({
   schedule: vi.fn(),
   template: vi.fn(),
-  history: vi.fn(),
-  historyUpdate: vi.fn(),
-  scheduleUpdate: vi.fn(),
   trending: vi.fn(),
   alerts: vi.fn(),
   oee: vi.fn(),
   pdf: vi.fn(),
-  email: vi.fn(),
-}));
-vi.mock("../../repositories/reportRepository.js", () => ({
-  reportRepository: {
-    findScheduleById: mocks.schedule,
-    findTemplateById: mocks.template,
-    createHistory: mocks.history,
-    updateHistoryStatus: mocks.historyUpdate,
-    updateSchedule: mocks.scheduleUpdate,
-  },
 }));
 vi.mock("../../repositories/alertRepository.js", () => ({
   alertRepository: { listAlertHistory: mocks.alerts },
@@ -33,11 +20,26 @@ vi.mock("../../services/trendingDataService.js", () => ({
 vi.mock("../../services/oeeCalculationService.js", () => ({
   oeeCalculationService: { calculateOee: mocks.oee },
 }));
-vi.mock("../../services/reportEmailService.js", () => ({
-  reportEmailService: { sendReport: mocks.email },
-}));
 vi.mock("../../services/reportPdf.js", () => ({ writeReportPdf: mocks.pdf }));
-import { reportGeneratorService } from "../../services/reportGeneratorService.js";
+import { renderScheduledReport } from "../../services/reportGeneratorService.js";
+import type { ReportSnapshot } from "../../database/schema.js";
+async function render() {
+  const schedule = await mocks.schedule(),
+    template = await mocks.template();
+  return renderScheduledReport({
+    id: 11,
+    scheduledFor: new Date("2026-10-26T12:00:00Z"),
+    snapshot: {
+      name: schedule.name,
+      title: template.name,
+      config: template.templateConfig,
+      timezone: schedule.timezone,
+      machineIds: schedule.machineIds,
+      recipients: schedule.recipients,
+      email: true,
+    } as ReportSnapshot,
+  });
+}
 
 let directory: string;
 beforeEach(async () => {
@@ -64,7 +66,6 @@ beforeEach(async () => {
       ],
     },
   });
-  mocks.history.mockResolvedValue({ id: 11 });
   mocks.trending.mockResolvedValue({
     series: [
       {
@@ -110,7 +111,7 @@ afterEach(async () => {
 
 describe("scheduled report migration", () => {
   it("preserves all sections, zero values, uncertainty, machine scope, history and PDF attachment", async () => {
-    await reportGeneratorService.generate(7);
+    await render();
     const [filename, document] = mocks.pdf.mock.calls[0];
     expect(document.title).toBe("Prüfstand");
     expect(document.sections).toHaveLength(3);
@@ -132,20 +133,6 @@ describe("scheduled report migration", () => {
     expect(mocks.trending.mock.calls[0][0].machineId).toBe(4);
     expect(mocks.alerts.mock.calls[0][0].machineId).toBe(4);
     expect(mocks.oee.mock.calls[0][0]).toBe(4);
-    expect(mocks.historyUpdate).toHaveBeenCalledWith(
-      11,
-      expect.objectContaining({
-        status: "completed",
-        filePath: filename,
-        fileSize: 17,
-      }),
-    );
-    expect(mocks.email).toHaveBeenCalledWith(
-      ["fixture@example.invalid"],
-      "Scheduled Report: Daily",
-      expect.any(String),
-      filename,
-    );
     expect(await readFile(filename, "utf8")).toBe("%PDF-test fixture");
   });
 
@@ -164,7 +151,7 @@ describe("scheduled report migration", () => {
     });
     mocks.trending.mockResolvedValue({ series: [] });
     mocks.oee.mockRejectedValue(new Error("No mapping"));
-    await reportGeneratorService.generate(7);
+    await render();
     const document = mocks.pdf.mock.calls[0][1];
     expect(document.sections[0].paragraphs).toEqual(["No data available."]);
     expect(document.sections[1].paragraphs).toEqual([
@@ -178,46 +165,14 @@ describe("scheduled report migration", () => {
     );
   });
 
-  it("marks rendering failures as failed and never sends a partial PDF", async () => {
+  it("propagates rendering failure for durable retry without sending a partial PDF", async () => {
     mocks.pdf.mockRejectedValue(new Error("Disk full"));
-    await reportGeneratorService.generate(7);
-    expect(mocks.historyUpdate).toHaveBeenCalledWith(
-      11,
-      expect.objectContaining({ status: "failed", error: "Disk full" }),
+    await expect(render()).rejects.toThrow("Disk full");
+  });
+  it("fixes a recovered job's query window to its scheduled instant", async () => {
+    await render();
+    expect(mocks.trending.mock.calls[0][0].endDate.toISOString()).toBe(
+      "2026-10-26T12:00:00.000Z",
     );
-    expect(mocks.email).not.toHaveBeenCalled();
-  });
-
-  it("keeps a completed download when email fails and honors disabled email", async () => {
-    mocks.email.mockRejectedValue(new Error("Owned SMTP failure"));
-    await reportGeneratorService.generate(7);
-    expect(mocks.historyUpdate).toHaveBeenCalledTimes(1);
-    expect(mocks.historyUpdate.mock.calls[0][1].status).toBe("completed");
-    mocks.schedule.mockResolvedValue({
-      id: 8,
-      templateId: 3,
-      name: "Saved only",
-      recipients: ["fixture@example.invalid"],
-      deliveryChannels: [],
-    });
-    await reportGeneratorService.generate(8);
-    expect(mocks.email).toHaveBeenCalledTimes(1);
-  });
-
-  it("prevents overlapping runs for the same schedule in this process", async () => {
-    let release!: () => void;
-    const pending = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    mocks.pdf.mockImplementation(async (file: string) => {
-      await pending;
-      await writeFile(file, "%PDF-test fixture");
-    });
-    const first = reportGeneratorService.generate(7);
-    await vi.waitFor(() => expect(mocks.pdf).toHaveBeenCalledTimes(1));
-    await reportGeneratorService.generate(7);
-    release();
-    await first;
-    expect(mocks.history).toHaveBeenCalledTimes(1);
   });
 });

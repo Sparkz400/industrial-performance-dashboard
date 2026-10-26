@@ -37,6 +37,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter, createContext } from "./src/trpc/index.js";
 import { edgeSyncService } from "./src/services/edgeSyncService.js";
 import { reportSchedulerService } from "./src/services/reportSchedulerService.js";
+import { healthIncidentService } from "./src/services/healthIncidentService.js";
 
 // --- Route modules ---
 import productionRoutes from "./src/routes/productionRoutes.js";
@@ -213,6 +214,7 @@ function bootstrap() {
 
   // Activate persisted report schedules
   if (!config.RECOVERY_MODE) reportSchedulerService.init();
+  if (!config.RECOVERY_MODE) healthIncidentService.start();
 
   const shutdown = createShutdown(server, services.io);
   process.on("SIGINT", () => {

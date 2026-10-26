@@ -31,9 +31,16 @@ interface ReportHistoryItem {
   scheduleId: number;
   scheduleName: string;
   generatedAt: string;
-  status: 'generating' | 'completed' | 'failed';
+  status: 'queued' | 'generating' | 'completed' | 'failed';
   fileSize: number | null;
   error: string | null;
+  attempts: number;
+  retryAt: string | null;
+  scheduledFor: string | null;
+  emailStatus: string;
+  emailAttempts: number;
+  emailRetryAt: string | null;
+  emailError: string | null;
 }
 
 interface ReportHistoryResponse {
@@ -80,6 +87,7 @@ const ReportHistoryPage: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [scheduleFilter, setScheduleFilter] = useState<number | 'all'>('all');
+  const [retryError, setRetryError] = useState('');
 
   const { data: scheduleOptions = [] } = useQuery({
     queryKey: ['reportScheduleOptions'],
@@ -124,9 +132,9 @@ const ReportHistoryPage: React.FC = () => {
         </Button>
       </Box>
 
-      {error && (
+      {(error || retryError) && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {(error as Error).message}
+          {retryError || (error as Error).message}
         </Alert>
       )}
 
@@ -161,8 +169,9 @@ const ReportHistoryPage: React.FC = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>Schedule</TableCell>
-                  <TableCell>Generated At</TableCell>
+                  <TableCell>Created At</TableCell>
                   <TableCell>Status</TableCell>
+                  <TableCell>Email delivery</TableCell>
                   <TableCell>File Size</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
@@ -170,7 +179,7 @@ const ReportHistoryPage: React.FC = () => {
               <TableBody>
                 {items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                       <Typography variant="body2" color="text.secondary">
                         No report history found
                       </Typography>
@@ -188,9 +197,64 @@ const ReportHistoryPage: React.FC = () => {
                           size="small"
                           sx={{ textTransform: 'capitalize' }}
                         />
+                        <Typography variant="caption" display="block">
+                          Attempts: {item.attempts}
+                          {item.scheduledFor
+                            ? ` · Period ends ${formatDate(item.scheduledFor)}`
+                            : ''}
+                        </Typography>
+                        {item.error && (
+                          <Typography variant="body2" color="error">
+                            {item.error}
+                          </Typography>
+                        )}
+                        {item.retryAt && (
+                          <Typography variant="caption">
+                            Retry: {formatDate(item.retryAt)}
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Typography>{item.emailStatus}</Typography>
+                        <Typography variant="caption" display="block">
+                          Attempts: {item.emailAttempts}
+                        </Typography>
+                        {item.emailError && (
+                          <Typography variant="body2" color="error">
+                            {item.emailError}
+                          </Typography>
+                        )}
+                        {item.emailRetryAt && (
+                          <Typography variant="caption">
+                            Retry: {formatDate(item.emailRetryAt)}
+                          </Typography>
+                        )}
                       </TableCell>
                       <TableCell>{formatFileSize(item.fileSize)}</TableCell>
                       <TableCell>
+                        {(item.status === 'failed' ||
+                          ['failed', 'blocked', 'retrying'].includes(item.emailStatus)) && (
+                          <Button
+                            onClick={async () => {
+                              setRetryError('');
+                              try {
+                                const response = await protectedFetch(
+                                  `${API_ENDPOINTS.reports.history}/${item.id}/retry`,
+                                  { method: 'POST' },
+                                );
+                                if (!response.ok) {
+                                  const data = await response.json();
+                                  throw new Error(data.message ?? 'Retry failed');
+                                }
+                                await refetch();
+                              } catch (failure) {
+                                setRetryError(String(failure));
+                              }
+                            }}
+                          >
+                            Retry #{item.id}
+                          </Button>
+                        )}
                         {item.status === 'completed' && (
                           <IconButton
                             size="small"

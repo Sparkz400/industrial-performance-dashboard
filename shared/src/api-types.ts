@@ -488,6 +488,8 @@ export interface CreateAlarmRuleRequest {
   threshold: number;
   hysteresis?: number;
   cooldownSeconds?: number;
+  debounceSeconds?: number;
+  clearDebounceSeconds?: number;
   isActive?: boolean;
 }
 
@@ -498,6 +500,8 @@ export interface UpdateAlarmRuleRequest {
   threshold?: number;
   hysteresis?: number;
   cooldownSeconds?: number;
+  debounceSeconds?: number;
+  clearDebounceSeconds?: number;
   isActive?: boolean;
 }
 
@@ -827,9 +831,12 @@ export interface CreateAlertEngineRuleRequest {
   threshold?: number;
   thresholdHigh?: number;
   rateWindowSeconds?: number;
+  hysteresis?: number;
   severity?: string;
   channels?: number[];
   cooldownSeconds?: number;
+  debounceSeconds?: number;
+  clearDebounceSeconds?: number;
 }
 
 export type UpdateAlertEngineRuleRequest = Partial<CreateAlertEngineRuleRequest> & { isActive?: boolean };

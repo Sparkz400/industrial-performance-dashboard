@@ -61,6 +61,10 @@ export const alarmRouter = router({
         condition: z.enum(alarmConditions),
         threshold: z.number(),
         thresholdHigh: z.number().optional(),
+        rateWindowSeconds: z.number().int().min(1).max(86400).optional(),
+        debounceSeconds: z.number().int().min(0).max(86400).optional(),
+        clearDebounceSeconds: z.number().int().min(0).max(86400).optional(),
+        hysteresis: z.number().min(0).optional(),
         severity: z
           .enum(["critical", "high", "medium", "low", "info"])
           .default("medium"),
@@ -88,6 +92,10 @@ export const alarmRouter = router({
           condition: z.string().optional(),
           threshold: z.number().optional(),
           thresholdHigh: z.number().optional(),
+          rateWindowSeconds: z.number().int().min(1).max(86400).optional(),
+          debounceSeconds: z.number().int().min(0).max(86400).optional(),
+          clearDebounceSeconds: z.number().int().min(0).max(86400).optional(),
+          hysteresis: z.number().min(0).optional(),
           severity: z
             .enum(["critical", "high", "medium", "low", "info"])
             .optional(),

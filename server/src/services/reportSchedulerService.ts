@@ -1,130 +1,54 @@
-import cron, { type ScheduledTask } from "node-cron";
-import { CronExpressionParser } from "cron-parser";
-import { reportRepository } from "../repositories/reportRepository.js";
-import { reportGeneratorService } from "./reportGeneratorService.js";
+import { reportJobService, nextReportRun } from "./reportJobService.js";
 import logger from "../utils/logger.js";
 
-// ---------------------------------------------------------------------------
-// Scheduled Report Job Manager
-// ---------------------------------------------------------------------------
-
 class ReportSchedulerService {
-  private scheduledJobs = new Map<number, ScheduledTask>();
-
-  /**
-   * Initialise the scheduler — load all active schedules from the database
-   * and create cron jobs for each.
-   */
+  private timer?: ReturnType<typeof setInterval>;
+  private ticking = false;
+  private active = 0;
+  private legacyChecked = false;
   async init(): Promise<void> {
-    try {
-      const schedules = await reportRepository.getAllActiveSchedules();
-      for (const schedule of schedules) {
-        this.scheduleJob(
-          schedule.id,
-          schedule.cronExpression,
-          schedule.timezone ?? "UTC",
-        );
-      }
-      logger.info(
-        `[ReportScheduler] Initialised ${schedules.length} scheduled report jobs`,
-      );
-    } catch (err) {
-      logger.error("[ReportScheduler] Failed to initialise:", err);
-    }
-  }
-
-  /**
-   * Create (or replace) a cron job for the given schedule.
-   */
-  scheduleJob(
-    scheduleId: number,
-    cronExpression: string,
-    timezone = "UTC",
-  ): void {
-    // Stop any existing job for this schedule
-    this.unscheduleJob(scheduleId);
-
-    if (!this.calculateNextRun(cronExpression, timezone)) {
-      logger.warn(
-        `[ReportScheduler] Invalid cron expression for schedule ${scheduleId}: "${cronExpression}"`,
-      );
-      return;
-    }
-
-    const task = cron.schedule(
-      cronExpression,
-      async () => {
-        logger.info(
-          `[ReportScheduler] Cron tick — generating report for schedule ${scheduleId}`,
-        );
-        try {
-          await reportGeneratorService.generate(scheduleId);
-        } catch (err) {
-          logger.error(
-            `[ReportScheduler] Report generation failed for schedule ${scheduleId}:`,
-            err,
-          );
-        }
-      },
-      { timezone, noOverlap: true },
-    );
-
-    this.scheduledJobs.set(scheduleId, task);
-    logger.debug(
-      `[ReportScheduler] Scheduled job ${scheduleId} with cron "${cronExpression}"`,
-    );
-  }
-
-  /**
-   * Stop and remove the cron job for a given schedule.
-   */
-  unscheduleJob(scheduleId: number): void {
-    const existing = this.scheduledJobs.get(scheduleId);
-    if (existing) {
-      void existing.destroy();
-      this.scheduledJobs.delete(scheduleId);
-      logger.debug(`[ReportScheduler] Unscheduled job ${scheduleId}`);
-    }
-  }
-
-  /**
-   * Tear down all existing jobs and re-read from the database.
-   */
-  async refreshAll(): Promise<void> {
-    // Stop all existing jobs
     this.stop();
-
-    // Reload from DB
-    await this.init();
+    this.start();
+    await this.tick();
   }
-
-  stop(): void {
-    for (const id of this.scheduledJobs.keys()) this.unscheduleJob(id);
+  private start(): void {
+    if (this.timer) return;
+    this.timer = setInterval(() => {
+      void this.tick();
+    }, 1000);
+    this.timer.unref();
   }
-
-  /**
-   * Compute the next run time for a cron expression relative to now.
-   * Returns an ISO string or null if the expression is invalid.
-   */
-  calculateNextRun(cronExpression: string, timezone?: string): string | null {
-    if (!cron.validate(cronExpression)) return null;
-
+  async tick(): Promise<void> {
+    if (this.ticking) return;
+    this.ticking = true;
     try {
-      const options: { tz?: string } = {};
-      if (timezone) options.tz = timezone;
-      const interval = CronExpressionParser.parse(cronExpression, options);
-      return interval.next().toISOString();
-    } catch {
-      return null;
+      if (!this.legacyChecked) {
+        await reportJobService.markLegacyInterrupted();
+        this.legacyChecked = true;
+      }
+      this.active = await reportJobService.enqueueDue();
+      await reportJobService.processPending();
+    } catch (error) {
+      logger.error("[ReportScheduler] Durable report processing failed", error);
+    } finally {
+      this.ticking = false;
     }
   }
-
-  /**
-   * Return the number of currently active jobs (useful for health checks).
-   */
+  async refreshAll(): Promise<void> {
+    this.start();
+    this.active = await reportJobService.enqueueDue();
+    void this.tick();
+  }
+  stop(): void {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = undefined;
+    this.active = 0;
+  }
+  calculateNextRun(cronExpression: string, timezone = "UTC"): string | null {
+    return nextReportRun(cronExpression, timezone)?.toISOString() ?? null;
+  }
   get activeJobCount(): number {
-    return this.scheduledJobs.size;
+    return this.active;
   }
 }
-
 export const reportSchedulerService = new ReportSchedulerService();

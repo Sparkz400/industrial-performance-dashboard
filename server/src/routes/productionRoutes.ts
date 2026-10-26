@@ -173,6 +173,11 @@ router.get(
           status: reportHistory.status,
           generatedAt: reportHistory.generatedAt,
           completedAt: reportHistory.completedAt,
+          attempts: reportHistory.attempts,
+          retryAt: reportHistory.retryAt,
+          emailStatus: reportHistory.emailStatus,
+          emailAttempts: reportHistory.emailAttempts,
+          emailRetryAt: reportHistory.emailRetryAt,
         })
         .from(reportHistory)
         .orderBy(desc(reportHistory.id))

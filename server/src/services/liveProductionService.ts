@@ -53,6 +53,7 @@ export function liveState(
 
 export async function liveProduction(
   ids?: number[],
+  includeProgress = true,
 ): Promise<{ checkedAt: string; machines: MachineLiveSummary[] }> {
   const now = new Date();
   const assets = await db
@@ -135,7 +136,7 @@ export async function liveProduction(
         truncated: false,
       };
       const total = profile?.signals.total;
-      if (shift && total) {
+      if (shift && total && includeProgress) {
         const rows = await db
           .select({
             timestamp: opcuaData.timestamp,

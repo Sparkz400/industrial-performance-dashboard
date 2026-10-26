@@ -1,16 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import { reportRepository } from "../repositories/reportRepository.js";
 import { alertRepository } from "../repositories/alertRepository.js";
 import { trendingDataService } from "./trendingDataService.js";
 import { oeeCalculationService } from "./oeeCalculationService.js";
-import { reportEmailService } from "./reportEmailService.js";
+import type { ReportSnapshot } from "../database/schema.js";
 import { writeReportPdf, type ReportSection } from "./reportPdf.js";
 import logger from "../utils/logger.js";
-import type {
-  ScheduledReportConfig,
-  ScheduledReportSection,
-} from "@performance-dashboard/shared";
+import type { ScheduledReportSection } from "@performance-dashboard/shared";
 
 async function collectSection(
   section: ScheduledReportSection,
@@ -163,128 +159,49 @@ async function collectSection(
   };
 }
 
-class ReportGeneratorService {
-  private running = new Set<number>();
-
-  async generate(scheduleId: number): Promise<void> {
-    if (this.running.has(scheduleId)) return;
-    this.running.add(scheduleId);
-    try {
-      await this.generateOnce(scheduleId);
-    } finally {
-      this.running.delete(scheduleId);
+export async function renderScheduledReport(job: {
+  id: number;
+  scheduledFor: Date;
+  snapshot: ReportSnapshot;
+}): Promise<{ filePath: string; fileSize: number }> {
+  const { snapshot } = job;
+  const config = snapshot.config;
+  const now = job.scheduledFor;
+  const hours = config.lookbackHours ?? 24;
+  if (!Number.isFinite(hours) || hours <= 0 || hours > 744)
+    throw new Error("Report window must be between 0 and 744 hours");
+  const start = new Date(now.getTime() - hours * 3600000);
+  const timezone = snapshot.timezone;
+  new Intl.DateTimeFormat("en", { timeZone: timezone }).format(now);
+  const sections: ReportSection[] = [];
+  for (const section of config.sections ?? []) {
+    const machines = section.machineId
+      ? [section.machineId]
+      : snapshot.machineIds;
+    for (const machineId of machines.length ? machines : [undefined]) {
+      const result = await collectSection(
+        { ...section, machineId },
+        start,
+        now,
+        timezone,
+      );
+      if (machineId) result.title += ` - Machine ${machineId}`;
+      sections.push(result);
     }
   }
-
-  private async generateOnce(scheduleId: number): Promise<void> {
-    const schedule = await reportRepository.findScheduleById(scheduleId);
-    if (!schedule) {
-      logger.warn(`[ReportGenerator] Schedule ${scheduleId} not found`);
-      return;
-    }
-    const template = await reportRepository.findTemplateById(
-      schedule.templateId,
-    );
-    if (!template) {
-      logger.warn(
-        `[ReportGenerator] Template ${schedule.templateId} not found`,
-      );
-      return;
-    }
-    const history = await reportRepository.createHistory({
-      scheduleId,
-      templateId: template.id,
-      scheduleName: schedule.name,
-      status: "generating",
+  if (!sections.length)
+    sections.push({
+      title: "Report",
+      paragraphs: ["No report sections configured in the template."],
     });
-    try {
-      const config = (template.templateConfig ?? {}) as ScheduledReportConfig;
-      const title = config.title ?? template.name ?? "Report";
-      const now = new Date();
-      const hours = config.lookbackHours ?? 24;
-      if (!Number.isFinite(hours) || hours <= 0 || hours > 744)
-        throw new Error("Report window must be between 0 and 744 hours");
-      const start = new Date(now.getTime() - hours * 60 * 60 * 1000);
-      const timezone = schedule.timezone ?? "UTC";
-      new Intl.DateTimeFormat("en", { timeZone: timezone }).format(now);
-      const sections: ReportSection[] = [];
-      for (const section of config.sections ?? []) {
-        const machines = section.machineId
-          ? [section.machineId]
-          : ((schedule.machineIds ?? []) as number[]);
-        for (const machineId of machines.length ? machines : [undefined]) {
-          const result = await collectSection(
-            { ...section, machineId },
-            start,
-            now,
-            timezone,
-          );
-          if (machineId) result.title += ` - Machine ${machineId}`;
-          sections.push(result);
-        }
-      }
-      if (!sections.length)
-        sections.push({
-          title: "Report",
-          paragraphs: ["No report sections configured in the template."],
-        });
-      const directory = path.resolve(process.env.REPORTS_DIR || "reports");
-      fs.mkdirSync(directory, { recursive: true });
-      const pdfPath = path.join(
-        directory,
-        `report-${scheduleId}-${history.id}.pdf`,
-      );
-      await writeReportPdf(pdfPath, {
-        title,
-        generatedAt: now,
-        period: `Period: ${start.toISOString()} to ${now.toISOString()}\nAlert display timezone: ${timezone}`,
-        sections,
-      });
-      await reportRepository.updateHistoryStatus(history.id, {
-        status: "completed",
-        filePath: pdfPath,
-        fileSize: fs.statSync(pdfPath).size,
-        completedAt: new Date(),
-      });
-      await reportRepository.updateSchedule(scheduleId, {
-        lastRunAt: now,
-        lastRunStatus: "completed",
-      });
-      const recipients = (schedule.recipients ?? []) as string[];
-      if (
-        recipients.length &&
-        ((schedule.deliveryChannels ?? ["email"]) as string[]).includes("email")
-      ) {
-        try {
-          await reportEmailService.sendReport(
-            recipients,
-            `Scheduled Report: ${schedule.name}`,
-            `Please find attached the report "${title}" generated on ${now.toISOString()}.`,
-            pdfPath,
-          );
-        } catch (error) {
-          logger.error(
-            `[ReportGenerator] Email delivery failed for schedule ${scheduleId}`,
-            error,
-          );
-        }
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      await reportRepository.updateHistoryStatus(history.id, {
-        status: "failed",
-        error: message,
-        completedAt: new Date(),
-      });
-      await reportRepository.updateSchedule(scheduleId, {
-        lastRunAt: new Date(),
-        lastRunStatus: "failed",
-      });
-      logger.error(
-        `[ReportGenerator] Generation failed for schedule ${scheduleId}: ${message}`,
-      );
-    }
-  }
+  const directory = path.resolve(process.env.REPORTS_DIR || "reports");
+  fs.mkdirSync(directory, { recursive: true });
+  const filePath = path.join(directory, `report-${job.id}.pdf`);
+  await writeReportPdf(filePath, {
+    title: snapshot.title,
+    generatedAt: new Date(),
+    period: `Period: ${start.toISOString()} to ${now.toISOString()}\nAlert display timezone: ${timezone}`,
+    sections,
+  });
+  return { filePath, fileSize: fs.statSync(filePath).size };
 }
-
-export const reportGeneratorService = new ReportGeneratorService();

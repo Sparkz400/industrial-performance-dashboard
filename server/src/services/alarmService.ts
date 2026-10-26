@@ -20,6 +20,58 @@ interface RuleState {
   sourceTime: number;
   value: number | null;
   lastTriggeredAt: number;
+  ruleRevision?: number;
+  candidate?: boolean;
+  candidateSource?: number;
+  candidateReceived?: number;
+}
+
+/** A duration requires good, ordered observations on both clocks; a gap is not evidence. */
+export function stabilizedCondition(
+  rule: Pick<
+    AlertRuleRow,
+    | "debounceSeconds"
+    | "clearDebounceSeconds"
+    | "rateWindowSeconds"
+    | "updatedAt"
+  >,
+  condition: boolean | null,
+  active: boolean,
+  state: RuleState,
+  previous?: RuleState,
+): boolean | null {
+  state.ruleRevision = rule.updatedAt?.getTime() ?? 0;
+  if (previous && state.sourceTime < previous.sourceTime) {
+    state.value = null;
+    state.sourceTime = previous.sourceTime;
+    return null;
+  }
+  if (condition === null) return null;
+  if (condition === active) return condition;
+  const duration =
+    (condition ? rule.debounceSeconds : rule.clearDebounceSeconds) * 1000;
+  if (!duration) return condition;
+  const continuous =
+    previous?.value != null &&
+    previous.ruleRevision === state.ruleRevision &&
+    state.sourceTime - previous.sourceTime <=
+      (rule.rateWindowSeconds ?? 60) * 1000 &&
+    state.receivedAt - previous.receivedAt <=
+      (rule.rateWindowSeconds ?? 60) * 1000;
+  state.candidate = condition;
+  state.candidateSource =
+    continuous && previous?.candidate === condition
+      ? previous.candidateSource
+      : state.sourceTime;
+  state.candidateReceived =
+    continuous && previous?.candidate === condition
+      ? previous.candidateReceived
+      : state.receivedAt;
+  return state.sourceTime - (state.candidateSource ?? state.sourceTime) >=
+    duration &&
+    state.receivedAt - (state.candidateReceived ?? state.receivedAt) >= duration
+    ? condition
+    : active;
 }
 
 export const alarmConditions = [
@@ -40,12 +92,22 @@ export function evaluateCondition(
   rule: Pick<
     AlertRuleRow,
     "condition" | "threshold" | "thresholdHigh" | "rateWindowSeconds"
-  >,
+  > & { hysteresis?: number },
   value: number,
   sourceTime: number,
   previous?: Pick<RuleState, "value" | "sourceTime">,
+  active = false,
 ): boolean | null {
-  const low = rule.threshold;
+  const adjustment = active ? (rule.hysteresis ?? 0) : 0;
+  const low =
+    rule.threshold == null
+      ? null
+      : rule.threshold +
+        (["gt", "gte"].includes(rule.condition)
+          ? -adjustment
+          : ["lt", "lte"].includes(rule.condition)
+            ? adjustment
+            : 0);
   const high = rule.thresholdHigh;
   if (
     rule.condition === "state_change" ||
@@ -108,6 +170,31 @@ export function toAlarmEvent(row: AlertHistoryRow): AlarmEvent {
   };
 }
 
+type AlarmTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+async function queueTransition(
+  tx: AlarmTransaction,
+  row: AlertHistoryRow,
+  triggered: boolean,
+  at: Date,
+) {
+  const event = {
+    type: triggered ? "alarm.triggered" : "alarm.cleared",
+    payload: toAlarmEvent(row),
+    timestamp: at.toISOString(),
+  };
+  const destinations = await tx
+    .select()
+    .from(webhooks)
+    .where(eq(webhooks.isActive, true));
+  for (const destination of destinations) {
+    const events = destination.events as string[];
+    if (events.includes(event.type) || events.includes("*"))
+      await tx
+        .insert(webhookDeliveries)
+        .values({ webhookId: destination.id, event });
+  }
+}
+
 export class AlarmEvaluator extends EventEmitter {
   private rules?: AlertRuleRow[];
 
@@ -117,6 +204,66 @@ export class AlarmEvaluator extends EventEmitter {
   }
   async reloadRules(): Promise<void> {
     await this.loadRules();
+  }
+
+  async observeHealth(
+    key: string,
+    machineId: number | null,
+    breached: boolean | null,
+    name: string,
+    message: string,
+  ): Promise<void> {
+    let changed: AlertHistoryRow | undefined;
+    const now = new Date();
+    await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(hashtext(${`health:${key}`}))`,
+      );
+      const [active] = await tx
+        .select()
+        .from(alertHistory)
+        .where(
+          and(
+            sql`${alertHistory.metadata}->>'healthKey' = ${key}`,
+            isNull(alertHistory.resolvedAt),
+          ),
+        )
+        .limit(1);
+      const metadata = {
+        healthKey: key,
+        conditionState:
+          breached === null ? "unknown" : breached ? "active" : "clear",
+      };
+      if (!active && breached) {
+        [changed] = await tx
+          .insert(alertHistory)
+          .values({
+            machineId,
+            nodeKey: `health:${key}`,
+            ruleName: name,
+            severity: "high",
+            status: "active",
+            message,
+            createdAt: now,
+            metadata,
+          })
+          .returning();
+      } else if (active && breached === false) {
+        [changed] = await tx
+          .update(alertHistory)
+          .set({ status: "resolved", resolvedAt: now, metadata })
+          .where(eq(alertHistory.id, active.id))
+          .returning();
+      } else if (active) {
+        await tx
+          .update(alertHistory)
+          .set({ metadata, message })
+          .where(eq(alertHistory.id, active.id));
+      }
+      if (changed) await queueTransition(tx, changed, breached === true, now);
+    });
+    if (changed)
+      this.emit(breached ? "alarmTriggered" : "alarmCleared", changed);
   }
 
   // Called serially by the durable collector, before acknowledging the spool batch.
@@ -182,10 +329,17 @@ export class AlarmEvaluator extends EventEmitter {
           .limit(1);
         if (!previous && active?.createdAt)
           state.lastTriggeredAt = active.createdAt.getTime();
-        const condition =
+        const measuredCondition =
           value == null
             ? null
-            : evaluateCondition(rule, value, sourceTime, previous);
+            : evaluateCondition(rule, value, sourceTime, previous, !!active);
+        const condition = stabilizedCondition(
+          rule,
+          measuredCondition,
+          !!active,
+          state,
+          previous,
+        );
         const conditionState =
           condition == null ? "unknown" : condition ? "active" : "clear";
         if (active) {
@@ -243,27 +397,13 @@ export class AlarmEvaluator extends EventEmitter {
           state.lastTriggeredAt = receivedAt;
           eventName = "alarmTriggered";
         }
-        if (changed && eventName !== "alarmUpdated") {
-          const event = {
-            type:
-              eventName === "alarmTriggered"
-                ? "alarm.triggered"
-                : "alarm.cleared",
-            payload: toAlarmEvent(changed),
-            timestamp: new Date(receivedAt).toISOString(),
-          };
-          const destinations = await tx
-            .select()
-            .from(webhooks)
-            .where(eq(webhooks.isActive, true));
-          for (const destination of destinations) {
-            const events = destination.events as string[];
-            if (events.includes(event.type) || events.includes("*"))
-              await tx
-                .insert(webhookDeliveries)
-                .values({ webhookId: destination.id, event });
-          }
-        }
+        if (changed && eventName !== "alarmUpdated")
+          await queueTransition(
+            tx,
+            changed,
+            eventName === "alarmTriggered",
+            new Date(receivedAt),
+          );
         await tx
           .insert(alarmEvaluationState)
           .values({ key, ruleId: rule.id, state })

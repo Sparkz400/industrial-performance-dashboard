@@ -39,3 +39,7 @@ declares the synthetic workload and its limits; it is not physical PLC qualifica
 [Operator handover and wallboard](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/OPERATOR_WORKFLOW.md)
 cover attributable actions, reviewed manual declarations, current job/target context
 and a restricted display account. Physical viewing-distance acceptance remains open.
+
+[Unattended operation](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/UNATTENDED_OPERATION.md)
+covers durable report recovery, separate email retry status, measured alarm holds
+and collector/data-health incidents, including SMTP and self-monitoring limits.

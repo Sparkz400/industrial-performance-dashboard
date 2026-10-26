@@ -24,6 +24,7 @@ import type { AlertHistoryRow } from "./database/schema.js";
 import { webhookService } from "./services/webhookService.js";
 import { spcService, spcEvents } from "./services/spcService.js";
 import { edgeSyncService } from "./services/edgeSyncService.js";
+import { healthIncidentService } from "./services/healthIncidentService.js";
 
 interface Services {
   io: SocketServer;
@@ -250,6 +251,7 @@ export function createShutdown(
       logger.info("[Shutdown] Disconnecting OPC UA connections...");
       await multiMachineManager.disconnectAll();
       await opcuaConnectionManager.disconnectConnection();
+      await healthIncidentService.stop();
       await opcuaQueueWorker.stop();
       await webhookService.stop();
       edgeSyncService.stopSyncLoop();

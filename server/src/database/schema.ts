@@ -15,7 +15,11 @@ import {
   primaryKey,
   unique,
 } from "drizzle-orm/pg-core";
-import type { SignalMetadata } from "@performance-dashboard/shared";
+import { sql } from "drizzle-orm";
+import type {
+  SignalMetadata,
+  ScheduledReportConfig,
+} from "@performance-dashboard/shared";
 
 // --- Enums ---
 
@@ -671,6 +675,11 @@ export const alertRules = pgTable(
     severity: alertSeverityEnum("severity").notNull().default("medium"),
     channels: jsonb("channels").notNull().default([]),
     cooldownSeconds: integer("cooldown_seconds").default(300),
+    debounceSeconds: integer("debounce_seconds").notNull().default(0),
+    clearDebounceSeconds: integer("clear_debounce_seconds")
+      .notNull()
+      .default(0),
+    hysteresis: real("hysteresis").notNull().default(0),
     isActive: boolean("is_active").default(true),
     createdBy: integer("created_by").references(() => users.id),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
@@ -710,6 +719,10 @@ export const alertHistory = pgTable(
     index("idx_alert_history_created_at").on(table.createdAt),
     index("idx_alert_history_rule").on(table.ruleId),
     index("idx_alert_history_status").on(table.status),
+    index("idx_alert_history_health").on(
+      sql`(${table.metadata}->>'healthKey')`,
+      table.resolvedAt,
+    ),
   ],
 );
 
@@ -935,12 +948,35 @@ export const reportHistory = pgTable(
     generatedAt: timestamp("generated_at", { withTimezone: true }).defaultNow(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     metadata: jsonb("metadata").default({}),
+    runKey: text("run_key").unique(),
+    scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
+    snapshot: jsonb("snapshot").$type<ReportSnapshot>(),
+    attempts: integer("attempts").notNull().default(0),
+    retryAt: timestamp("retry_at", { withTimezone: true }),
+    emailStatus: varchar("email_status", { length: 30 })
+      .notNull()
+      .default("not-requested"),
+    emailAttempts: integer("email_attempts").notNull().default(0),
+    emailRetryAt: timestamp("email_retry_at", { withTimezone: true }),
+    emailError: text("email_error"),
+    emailRemaining: jsonb("email_remaining").$type<string[]>(),
   },
   (table) => [
     index("idx_report_history_schedule").on(table.scheduleId),
     index("idx_report_history_generated").on(table.generatedAt),
+    index("idx_report_history_retry").on(table.retryAt, table.emailRetryAt),
   ],
 );
+
+export interface ReportSnapshot {
+  name: string;
+  title: string;
+  config: ScheduledReportConfig;
+  timezone: string;
+  machineIds: number[];
+  recipients: string[];
+  email: boolean;
+}
 
 // --- Type exports ---
 

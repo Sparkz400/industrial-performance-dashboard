@@ -362,10 +362,16 @@ below retain their unfulfilled acceptance criteria.
   Done: noisy thresholds do not flood history; boundaries and clear conditions are
   documented and replay-tested. Bad/stale input suspends or changes evaluation explicitly
   instead of producing a false recovery.
+  Progress: Persistent trigger/recovery holds, threshold hysteresis, gap/quality/order
+  resets and UI configuration are implemented with unit and owned replay tests.
+  See [unattended operation](docs/UNATTENDED_OPERATION.md); integration pending.
 - [ ] **A03 — Alert on data and collector health** · P1 · M1 · New · M. Depends: A01, H03.
   Done: users can distinguish machine-condition alarms from disconnected endpoint,
   stale signal, bad quality and growing backlog; simulate each condition and verify
   recovery behavior without inventing machine state.
+  Progress: Commissioned-state freshness, collector storage/backlog/space incidents
+  reuse durable history and webhooks. Startup grace and bounded polling are documented
+  in [unattended operation](docs/UNATTENDED_OPERATION.md); external outage monitoring remains necessary.
 - [ ] **A04 — Add ownership, acknowledgment and maintenance suppression** · P1 · M1 · Improve · M. Depends: A01.
   Done: acknowledgment records actor/time/comment, suppression is scoped and time-bounded,
   and expiration is visible. A dashboard acknowledgment never silently acknowledges
@@ -411,9 +417,11 @@ below retain their unfulfilled acceptance criteria.
   Done: schedule timezone/DST, missed-run policy and stable run identity are explicit;
   retries do not create uncontrolled duplicate mail, and overlapping executions are
   bounded. Failed generation and failed delivery are separate statuses.
-  Progress: timezone/DST, actual timer execution, machine selection and in-process
-  overlap protection are tested. Missed-run replay, cross-process locking, durable
-  delivery retry/deduplication and separate delivery status remain open.
+  Progress: Durable jobs/cursors, saved configuration and periods, database locks,
+  missed-slot catch-up, worker crash recovery and separate SMTP retry/partial-acceptance
+  status are implemented. Owned process/mail/browser acceptance is in
+  `scripts/test-report-jobs.mjs`. SMTP ambiguity and measurement-snapshot limits are
+  explicit in [unattended operation](docs/UNATTENDED_OPERATION.md); integration pending.
 - [ ] **R04 — Preserve report revisions and reproducibility** · P1 · M2 · New · M. Depends: H04, R01.
   Done: exports record inputs, window, mapping/calculation revisions and generation time;
   a correction creates a new revision with a reason. Published reports can be reproduced

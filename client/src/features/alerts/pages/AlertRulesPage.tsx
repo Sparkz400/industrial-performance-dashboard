@@ -48,6 +48,9 @@ interface AlertRule {
   isActive: boolean;
   channels: number[];
   cooldownSeconds: number;
+  debounceSeconds: number;
+  clearDebounceSeconds: number;
+  hysteresis: number;
 }
 
 const fetchRules = async (): Promise<AlertRule[]> => {
@@ -147,6 +150,9 @@ const AlertRulesPage: React.FC = () => {
         rateWindowSeconds:
           values.rateWindowSeconds === '' ? null : Number(values.rateWindowSeconds),
         cooldownSeconds: values.cooldownSeconds === '' ? 60 : Number(values.cooldownSeconds),
+        debounceSeconds: Number(values.debounceSeconds || 0),
+        clearDebounceSeconds: Number(values.clearDebounceSeconds || 0),
+        hysteresis: Number(values.hysteresis || 0),
       };
       if (editingRule) {
         updateMutation.mutate({ id: editingRule.id, values: payload });
@@ -338,6 +344,9 @@ const AlertRulesPage: React.FC = () => {
                     severity: editingRule.severity,
                     channels: editingRule.channels ?? [],
                     cooldownSeconds: editingRule.cooldownSeconds,
+                    debounceSeconds: editingRule.debounceSeconds,
+                    clearDebounceSeconds: editingRule.clearDebounceSeconds,
+                    hysteresis: editingRule.hysteresis,
                   }
                 : undefined
             }

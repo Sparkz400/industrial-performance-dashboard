@@ -5,6 +5,8 @@ owned simulator or an isolated test installation using OPC UA scalar signals.
 
 ## Implemented and covered by focused tests
 
+- Durable report jobs, missed-slot catch-up, independent email retry status, alarm
+  holds/hysteresis and data-health incidents; [unattended operation](UNATTENDED_OPERATION.md).
 - Attributable operator handover/actions, reviewed manual declarations and a
   restricted supervisor display; [operator workflow](OPERATOR_WORKFLOW.md).
 - Protected OPC UA identities, explicit trust, expiry/hostname checks and browser

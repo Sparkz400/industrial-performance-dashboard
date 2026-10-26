@@ -137,9 +137,7 @@ await assert.rejects(
 );
 await assert.rejects(writeReportPdf(directory, report));
 assert.ok(
-  !(await readdir(resolve(directory, ".."))).includes(
-    "report-evidence.partial",
-  ),
+  !(await readdir(resolve(directory, ".."))).some((name) => name.startsWith("report-evidence.") && name.endsWith(".partial")),
   "Failed publication left a partial PDF",
 );
 console.log(

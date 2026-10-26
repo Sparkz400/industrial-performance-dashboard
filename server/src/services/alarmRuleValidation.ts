@@ -2,6 +2,22 @@ import type { NewAlertRule } from "../database/schema.js";
 import { ValidationError } from "../utils/errors.js";
 
 export function validateAlarmRule(rule: NewAlertRule): void {
+  for (const duration of [
+    rule.debounceSeconds ?? 0,
+    rule.clearDebounceSeconds ?? 0,
+  ]) {
+    if (!Number.isInteger(duration) || duration < 0 || duration > 86400)
+      throw new ValidationError("Alarm debounce must be 0 to 86400 seconds");
+  }
+  if (!Number.isFinite(rule.hysteresis ?? 0) || (rule.hysteresis ?? 0) < 0)
+    throw new ValidationError("Hysteresis must be a finite nonnegative number");
+  if (
+    (rule.hysteresis ?? 0) > 0 &&
+    !["gt", "gte", "lt", "lte"].includes(rule.condition)
+  )
+    throw new ValidationError(
+      "Hysteresis is supported for greater/less-than thresholds only",
+    );
   if (rule.isActive !== false && rule.plantId != null)
     throw new ValidationError(
       "Plant-scoped rules are unavailable; select a machine or all machines",

@@ -96,6 +96,7 @@ try {
     "Report attachment",
     "Offline verification",
     filename,
+    "<owned-runtime-report@performance-dashboard.local>",
   );
   const mime = attachment.message.toString();
   assert.match(mime, /Content-Type: application\/pdf/);

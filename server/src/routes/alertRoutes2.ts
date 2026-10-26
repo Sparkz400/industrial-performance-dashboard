@@ -53,6 +53,9 @@ const ruleBodySchema = Joi.object({
     .default("medium"),
   channels: Joi.array().items(Joi.number().integer()).default([]),
   cooldownSeconds: Joi.number().integer().min(0).default(300),
+  debounceSeconds: Joi.number().integer().min(0).max(86400).default(0),
+  clearDebounceSeconds: Joi.number().integer().min(0).max(86400).default(0),
+  hysteresis: Joi.number().min(0).default(0),
   isActive: Joi.boolean().default(true),
 });
 
@@ -85,6 +88,9 @@ const ruleUpdateSchema = Joi.object({
     .optional(),
   channels: Joi.array().items(Joi.number().integer()).optional(),
   cooldownSeconds: Joi.number().integer().min(0).optional(),
+  debounceSeconds: Joi.number().integer().min(0).max(86400).optional(),
+  clearDebounceSeconds: Joi.number().integer().min(0).max(86400).optional(),
+  hysteresis: Joi.number().min(0).optional(),
   isActive: Joi.boolean().optional(),
 }).min(1);
 

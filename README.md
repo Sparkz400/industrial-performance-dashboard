@@ -41,7 +41,7 @@ certification claim; see [current status](docs/STATUS.md).
 
 Edge synchronization is disabled until canonical central ingestion is implemented.
 AI suggestions disclose external processing and do not execute measurement queries.
-Public links/embeds and undelivered email/chat/SMS channels are disabled.
+Public links/embeds and legacy alarm email/chat/SMS channels are disabled.
 See the [production workflow](docs/PRODUCTION_WORKFLOW.md) and
 [P0 acceptance evidence](docs/P0_ACCEPTANCE.md) for tested paths and remaining gates.
 The first nominated pilot family is [Siemens SIMATIC S7-1500](docs/S7_1500_PILOT.md);
@@ -50,6 +50,8 @@ For isolated installation, complete backups, restore checks and upgrades, see th
 [operations guide](docs/OPERATIONS.md).
 The [operator workflow](docs/OPERATOR_WORKFLOW.md) covers handover actions, reviewed
 manual counts and the supervisor wallboard with a dedicated read-only account.
+[Unattended operation](docs/UNATTENDED_OPERATION.md) covers durable scheduled reports,
+email retry status, alarm holds/hysteresis and collector/data-health incidents.
 
 ## Where it is going
 
