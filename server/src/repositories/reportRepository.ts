@@ -23,14 +23,6 @@ export const reportRepository = {
       .orderBy(desc(reportTemplates.createdAt));
   },
 
-  async findTemplateById(id: number) {
-    const [template] = await getReadDb()
-      .select()
-      .from(reportTemplates)
-      .where(eq(reportTemplates.id, id));
-    return template ?? null;
-  },
-
   async createTemplate(input: typeof reportTemplates.$inferInsert) {
     const [created] = await db
       .insert(reportTemplates)
@@ -78,14 +70,6 @@ export const reportRepository = {
       .orderBy(desc(reportSchedules.createdAt));
   },
 
-  async findScheduleById(id: number) {
-    const [schedule] = await getReadDb()
-      .select()
-      .from(reportSchedules)
-      .where(eq(reportSchedules.id, id));
-    return schedule ?? null;
-  },
-
   async createSchedule(input: typeof reportSchedules.$inferInsert) {
     const [created] = await db
       .insert(reportSchedules)
@@ -114,37 +98,7 @@ export const reportRepository = {
     return deleted ?? null;
   },
 
-  async getAllActiveSchedules() {
-    return getReadDb()
-      .select()
-      .from(reportSchedules)
-      .where(eq(reportSchedules.isActive, true));
-  },
-
   // ===== Report History =====
-
-  async createHistory(input: typeof reportHistory.$inferInsert) {
-    const [created] = await db.insert(reportHistory).values(input).returning();
-    return created;
-  },
-
-  async updateHistoryStatus(
-    id: number,
-    update: {
-      status: string;
-      filePath?: string;
-      fileSize?: number;
-      error?: string;
-      completedAt?: Date;
-    },
-  ) {
-    const [updated] = await db
-      .update(reportHistory)
-      .set(update)
-      .where(eq(reportHistory.id, id))
-      .returning();
-    return updated ?? null;
-  },
 
   async listHistory(filters?: {
     scheduleId?: number;

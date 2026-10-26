@@ -22,6 +22,28 @@ const sample = {
   machineId: 1,
 };
 describe("durable measurement spool", () => {
+  it("reports receive age and empty queue as unknown rather than zero-age data", () => {
+    const spool = new MeasurementSpool(":memory:");
+    try {
+      expect(spool.health()).toMatchObject({
+        pendingMeasurements: 0,
+        oldestReceivedAt: null,
+        oldestReceivedAgeSeconds: null,
+      });
+      spool.enqueue({
+        ...sample,
+        receivedAt: new Date(Date.now() - 10000).toISOString(),
+      });
+      expect(spool.health().pendingMeasurements).toBe(1);
+      expect(spool.health().oldestReceivedAgeSeconds).toBeGreaterThanOrEqual(
+        10,
+      );
+      spool.acknowledge(spool.peek(1));
+      expect(spool.health().oldestReceivedAt).toBeNull();
+    } finally {
+      spool.close();
+    }
+  });
   it("retains source identity and receive time across spool replay", () => {
     const spool = new MeasurementSpool(":memory:");
     try {

@@ -2,13 +2,16 @@ name: performance-dashboard
 services:
   app:
     build: .
+    image: ${APP_IMAGE:-performance-dashboard:local}
     ports:
-      - '127.0.0.1:3001:3000'
+      - "127.0.0.1:${DASHBOARD_PORT:-3001}:3000"
     depends_on:
       db:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      RECOVERY_MODE: ${RECOVERY_MODE:-false}
+      ENABLE_LEGACY_GATEWAY: ${ENABLE_LEGACY_GATEWAY:-false}
       HOST: 0.0.0.0
       PORT: 3000
       CLIENT_URL: ${CLIENT_URL:-http://localhost:3001}
@@ -23,11 +26,32 @@ services:
       OPCUA_IP: ${OPCUA_IP:-host.docker.internal}
       OPCUA_PORT: ${OPCUA_PORT:-4841}
       OPCUA_RESOURCE_PATH: ${OPCUA_RESOURCE_PATH:-/UA/MyLittleServer}
+      OPCUA_PKI_DIR: /app/server/certificates
+      OPCUA_SPOOL_PATH: /app/server/data/measurements.sqlite
+      MACHINE_SECRETS_KEY_FILE: /app/server/data/machine-secrets.key
+      REPORTS_DIR: /app/server/reports
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
     volumes:
       - measurements:/app/server/data
       - certificates:/app/server/certificates
       - reports:/app/server/reports
     restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          'fetch("http://127.0.0.1:3000/healthz").then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
   db:
     image: postgres:16-alpine
     environment:
@@ -37,7 +61,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U dashboard -d performance_dashboard']
+      test: ["CMD-SHELL", "pg_isready -U dashboard -d performance_dashboard"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -47,3 +71,6 @@ volumes:
   measurements:
   certificates:
   reports:
+networks:
+  default:
+    internal: ${ISOLATED_NETWORK:-false}

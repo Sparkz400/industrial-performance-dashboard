@@ -133,6 +133,12 @@ scanning, with image identity retained as an artifact. Rebuild and rescan each
 release candidate; passing automated checks does not establish physical-machine,
 SMTP-provider, backup/restore or deployment acceptance.
 
+The subsequent [factory-pilot candidate](FACTORY_PILOT_ACCEPTANCE.md), source
+`5178ebd9`, also has zero npm/Trivy findings. Its inventory contains 28 Wolfi and
+556 Node packages; unused node-cron was removed when durable scheduling replaced
+the in-memory scheduler. The linked acceptance record identifies its own image
+digest, runtime/upgrade tests and remaining physical/provider acceptance gates.
+
 ### Superseded image evidence
 
 The previous PR #51 Node 24/Debian trixie/Chromium image

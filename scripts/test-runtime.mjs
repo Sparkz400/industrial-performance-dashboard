@@ -48,7 +48,14 @@ tracing.initTracing();
 await tracing.shutdownTracing();
 
 const directory = await mkdtemp(join(tmpdir(), "dashboard-runtime-"));
-let server, client, session;
+let server,
+  client,
+  session,
+  gateway,
+  modbus,
+  certificates,
+  databaseManager,
+  runtimeClientPki;
 try {
   const { writeReportPdf } =
     await import("../server/dist/src/services/reportPdf.js");
@@ -96,6 +103,7 @@ try {
     "Report attachment",
     "Offline verification",
     filename,
+    "<owned-runtime-report@performance-dashboard.local>",
   );
   const mime = attachment.message.toString();
   assert.match(mime, /Content-Type: application\/pdf/);
@@ -115,25 +123,27 @@ try {
     serverCertificateManager: new opcua.OPCUACertificateManager({
       rootFolder: join(directory, "server-pki"),
     }),
+    userCertificateManager: new opcua.OPCUACertificateManager({
+      rootFolder: join(directory, "user-pki"),
+    }),
   });
   await server.initialize();
-  const variable = server.engine.addressSpace
-    .getOwnNamespace()
-    .addVariable({
-      organizedBy: server.engine.addressSpace.rootFolder.objects,
-      browseName: "RuntimeValue",
-      nodeId: "ns=1;s=RuntimeValue",
-      dataType: "Double",
-      minimumSamplingInterval: 20,
-      value: new opcua.Variant({ dataType: opcua.DataType.Double, value: 42 }),
-    });
+  const variable = server.engine.addressSpace.getOwnNamespace().addVariable({
+    organizedBy: server.engine.addressSpace.rootFolder.objects,
+    browseName: "RuntimeValue",
+    nodeId: "ns=1;s=RuntimeValue",
+    dataType: "Double",
+    minimumSamplingInterval: 20,
+    value: new opcua.Variant({ dataType: opcua.DataType.Double, value: 42 }),
+  });
   await server.start();
+  runtimeClientPki = new opcua.OPCUACertificateManager({
+    rootFolder: join(directory, "client-pki"),
+  });
   client = opcua.OPCUAClient.create({
     endpointMustExist: false,
     connectionStrategy: { maxRetry: 0 },
-    clientCertificateManager: new opcua.OPCUACertificateManager({
-      rootFolder: join(directory, "client-pki"),
-    }),
+    clientCertificateManager: runtimeClientPki,
   });
   await client.connect(`opc.tcp://127.0.0.1:${port}/UA/Runtime`);
   session = await client.createSession();
@@ -171,12 +181,106 @@ try {
     variable.setValueFromSource({ dataType: opcua.DataType.Double, value: 43 });
   });
   await subscription.terminate();
+  await session.close();
+  session = undefined;
+  await client.disconnect();
+  client = undefined;
+  await server.shutdown(0);
+  server = undefined;
+  const { createModbusSimulator } =
+    await import("../server/dist/simulation/modbusSimulationServer.js");
+  const { startLegacyGateway } =
+    await import("../server/dist/src/gateway/legacyGateway.js");
+  certificates = (
+    await import("../server/dist/src/opc-ua/services/certificateManager.js")
+  ).default;
+  databaseManager = (
+    await import("../server/dist/src/database/dbConnection.js")
+  ).default;
+  const settings = (await import("../server/dist/src/config/config.js"))
+    .default;
+  settings.OPCUA_PKI_DIR = join(directory, "secure-client");
+  await certificates.ensureInitialized();
+  modbus = await createModbusSimulator(0);
+  gateway = await startLegacyGateway({
+    name: "OwnedRuntimeGateway",
+    namespaceUri: "urn:performance-dashboard:runtime:legacy",
+    opcuaPort: port,
+    pkiDirectory: join(directory, "gateway-pki"),
+    trustedClientCertificate: certificates.certificateFile,
+    modbus: {
+      host: "127.0.0.1",
+      port: modbus.port,
+      unitId: 1,
+      functionCode: 3,
+      startAddress: 0,
+      count: 7,
+      pollMs: 100,
+      timeoutMs: 500,
+    },
+    tags: [
+      { key: "Count", offset: 1, type: "uint32", wordOrder: "high-first" },
+    ],
+  });
+  await certificates.trustCertificate(
+    gateway.server.getCertificate(),
+    "owned-runtime-gateway",
+  );
+  client = opcua.OPCUAClient.create({
+    ...(await certificates.getClientOptions(
+      "SignAndEncrypt",
+      "Basic256Sha256",
+    )),
+    connectionStrategy: { maxRetry: 0 },
+  });
+  await client.connect(`opc.tcp://localhost:${port}/UA/LegacyGateway`);
+  session = await client.createSession();
+  const namespaceIndex = (await session.readNamespaceArray()).indexOf(
+    gateway.config.namespaceUri,
+  );
+  const nodeId = `ns=${namespaceIndex};s=Count`;
+  const measurement = await session.read({
+    nodeId,
+    attributeId: opcua.AttributeIds.Value,
+  });
+  assert.ok(measurement.statusCode.isGood());
+  assert.ok(measurement.value.value >= 100);
+  assert.equal(
+    (
+      await session.write({
+        nodeId,
+        attributeId: opcua.AttributeIds.Value,
+        value: { value: { dataType: opcua.DataType.Double, value: 0 } },
+      })
+    ).name,
+    "BadNotWritable",
+  );
+  modbus.state.available = false;
+  for (let attempt = 0; attempt < 50; attempt++) {
+    if (
+      !(
+        await session.read({ nodeId, attributeId: opcua.AttributeIds.Value })
+      ).statusCode.isGood()
+    )
+      break;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.equal(
+    (await session.read({ nodeId, attributeId: opcua.AttributeIds.Value }))
+      .statusCode.name,
+    "BadNoCommunication",
+  );
 } finally {
   await session?.close();
   await client?.disconnect();
   await server?.shutdown(0);
+  await gateway?.stop();
+  await modbus?.stop();
+  await certificates?.dispose();
+  await runtimeClientPki?.dispose();
+  await databaseManager?.end();
   await rm(directory, { recursive: true, force: true });
 }
 console.log(
-  "PASS: SQLite, bcrypt, OPC UA certificate generation/read/subscription, scheduler, offline email, tracing and browser-free PDF",
+  "PASS: SQLite, bcrypt, OPC UA certificate generation/read/subscription, encrypted read-only Modbus gateway, scheduler, offline email, tracing and browser-free PDF",
 );

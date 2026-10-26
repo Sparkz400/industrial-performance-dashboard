@@ -1,3 +1,4 @@
+import { createMachineSession } from "../../services/machineIdentity.js";
 import { EventEmitter } from "events";
 import { eq, and } from "drizzle-orm";
 import * as opcua from "node-opcua";
@@ -264,31 +265,36 @@ class MultiMachineManager extends EventEmitter {
     let tempClient: opcua.OPCUAClient | null = null;
     let useTempConnection = false;
 
-    if (entry?.connection?.session) {
-      session = entry.connection.session;
-    } else {
-      // Create temp connection just for browsing
-      const result = await db
-        .select()
-        .from(machines)
-        .where(eq(machines.id, machineId));
-
-      if (result.length === 0) throw new Error("Machine not found");
-
-      const machine = result[0];
-      const clientOptions =
-        await opcuaClient.certificateManager.getClientOptions(
-          machine.securityMode ?? "None",
-          machine.securityPolicy ?? "None",
-        );
-
-      tempClient = opcua.OPCUAClient.create(clientOptions);
-      await tempClient.connect(machine.endpointUrl);
-      session = await tempClient.createSession();
-      useTempConnection = true;
-    }
-
     try {
+      if (entry?.connection?.session) {
+        session = entry.connection.session;
+      } else {
+        // Create temp connection just for browsing
+        const result = await db
+          .select()
+          .from(machines)
+          .where(eq(machines.id, machineId));
+
+        if (result.length === 0) throw new Error("Machine not found");
+
+        const machine = result[0];
+        const clientOptions =
+          await opcuaClient.certificateManager.getClientOptions(
+            machine.securityMode ?? "None",
+            machine.securityPolicy ?? "None",
+          );
+
+        tempClient = opcua.OPCUAClient.create(clientOptions);
+        useTempConnection = true;
+        await tempClient.connect(machine.endpointUrl);
+        session = await createMachineSession(
+          tempClient,
+          machineId,
+          machine.endpointUrl,
+          machine.securityMode ?? "None",
+        );
+      }
+
       const browseResult = await session.browse({
         nodeId: parentNodeId || "RootFolder",
         browseDirection: opcua.BrowseDirection.Forward,
@@ -311,8 +317,11 @@ class MultiMachineManager extends EventEmitter {
     } finally {
       if (useTempConnection) {
         try {
-          if (session) await session.close();
-          if (tempClient) await tempClient.disconnect();
+          try {
+            if (session) await session.close();
+          } finally {
+            if (tempClient) await tempClient.disconnect();
+          }
         } catch (e) {
           logger.error(
             "[MultiMachine] Error closing temp browse connection:",

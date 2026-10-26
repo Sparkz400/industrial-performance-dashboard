@@ -13,8 +13,15 @@ import {
   productionShifts,
   downtimeReasons,
   opcuaData,
+  reportHistory,
+  webhookDeliveries,
 } from "../database/schema.js";
-import { validateBody, validateParams } from "../middleware/validation.js";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../middleware/validation.js";
+import { incidentReplay } from "../services/incidentReplay.js";
 import { requireRole } from "../middleware/auth.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import {
@@ -34,9 +41,46 @@ const idSchema = Joi.object({
 });
 const instant = Joi.string()
   .isoDate()
+  .strict()
   .pattern(/(?:Z|[+-]\d{2}:\d{2})$/)
   .required();
 const windowSchema = Joi.object({ start: instant, end: instant });
+
+router.get(
+  "/replay/:id",
+  validateParams(idSchema),
+  validateQuery(
+    Joi.object({
+      start: instant,
+      end: instant,
+      keys: Joi.array()
+        .items(Joi.string().max(200).required())
+        .single()
+        .min(1)
+        .max(8)
+        .unique()
+        .required(),
+      maxGapSeconds: Joi.number().integer().min(1).max(3600).default(60),
+    }),
+  ),
+  asyncHandler(async (req, res) => {
+    const query = req.query as unknown as {
+      start: string;
+      end: string;
+      keys: string[];
+      maxGapSeconds: number;
+    };
+    res.json(
+      await incidentReplay(
+        Number(req.params.id),
+        query.start,
+        query.end,
+        query.keys,
+        query.maxGapSeconds,
+      ),
+    );
+  }),
+);
 
 function window(start: string, end: string) {
   const from = new Date(start),
@@ -147,6 +191,80 @@ router.get(
   requireRole("admin"),
   asyncHandler(async (_req, res) => {
     res.json(opcuaQueueWorker.getHealth());
+  }),
+);
+router.get(
+  "/diagnostics",
+  requireRole("admin"),
+  asyncHandler(async (_req, res) => {
+    const snapshot = await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL statement_timeout = '3000'`);
+      const machineStates = await tx
+        .select({
+          id: machines.id,
+          status: machines.status,
+          securityMode: machines.securityMode,
+          securityPolicy: machines.securityPolicy,
+        })
+        .from(machines)
+        .orderBy(desc(machines.id))
+        .limit(200);
+      const reports = await tx
+        .select({
+          id: reportHistory.id,
+          status: reportHistory.status,
+          generatedAt: reportHistory.generatedAt,
+          completedAt: reportHistory.completedAt,
+          attempts: reportHistory.attempts,
+          retryAt: reportHistory.retryAt,
+          emailStatus: reportHistory.emailStatus,
+          emailAttempts: reportHistory.emailAttempts,
+          emailRetryAt: reportHistory.emailRetryAt,
+        })
+        .from(reportHistory)
+        .orderBy(desc(reportHistory.id))
+        .limit(200);
+      const deliveries = await tx
+        .select({
+          id: webhookDeliveries.id,
+          attempts: webhookDeliveries.attempts,
+          nextAttemptAt: webhookDeliveries.nextAttemptAt,
+          deliveredAt: webhookDeliveries.deliveredAt,
+        })
+        .from(webhookDeliveries)
+        .orderBy(desc(webhookDeliveries.id))
+        .limit(200);
+      return { machineStates, reports, deliveries };
+    });
+    const health = opcuaQueueWorker.getHealth();
+    res.json({
+      format: "support-diagnostics-v1",
+      generatedAt: new Date().toISOString(),
+      node: process.version,
+      limits:
+        "Latest 200 rows per category; 3 seconds per database statement. This is a diagnostic snapshot, not an audit export.",
+      ...snapshot,
+      collector: {
+        ...health,
+        storageFailure: health.storageFailure
+          ? {
+              at: health.storageFailure.at,
+              reason: "Local storage unavailable",
+            }
+          : null,
+      },
+      redacted: [
+        "credentials",
+        "endpoints",
+        "names",
+        "values",
+        "SQL",
+        "logs",
+        "file paths",
+        "recipients",
+        "webhook payloads",
+      ],
+    });
   }),
 );
 router.post(

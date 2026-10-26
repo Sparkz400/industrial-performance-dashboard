@@ -23,6 +23,8 @@ export type {
   UserInfo,
   Machine,
   MachineFormData,
+  MachineAuthentication,
+  MachineAuthenticationInput,
   NodeMapping,
   BrowsedNode,
   Widget,
@@ -349,10 +351,17 @@ export type {
 } from "./api-types.js";
 export type {
   ProductionState,
+  OperatorEntry,
+  MachineLiveSummary,
   ProductionSignal,
   ProductionProfile,
   ProductionInterval,
   DowntimeReason,
   ShiftReport,
 } from "./production.js";
-export type { ScheduledReportConfig, ScheduledReportSection } from './reports.js';
+export type {
+  ScheduledReportConfig,
+  ScheduledReportSection,
+} from "./reports.js";
+export type { ReplaySample, ReplayEvent, IncidentReplay } from "./replay.js";
+export { replayObservation, replayPoints } from "./replay.js";

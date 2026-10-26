@@ -14,6 +14,7 @@ import type {
 // ===== Auth / User Types =====
 
 export interface AuthUser {
+  recoveryMode?: boolean;
   id: number;
   username: string;
   email: string;
@@ -33,6 +34,18 @@ export interface UserInfo {
 
 // ===== Machine Types =====
 
+export interface MachineAuthentication {
+  mode: "anonymous" | "username" | "certificate";
+  username?: string;
+  certificateExpiresAt?: string;
+}
+
+export interface MachineAuthenticationInput extends MachineAuthentication {
+  password?: string;
+  certificatePem?: string;
+  privateKeyPem?: string;
+}
+
 export interface Machine {
   id: number;
   name: string;
@@ -47,6 +60,7 @@ export interface Machine {
   createdAt: string;
   updatedAt: string;
   mappingCount?: number;
+  authentication?: MachineAuthentication;
 }
 
 export interface MachineFormData {
@@ -57,6 +71,7 @@ export interface MachineFormData {
   securityMode: string;
   securityPolicy: string;
   isActive: boolean;
+  authentication?: MachineAuthenticationInput;
 }
 
 export interface NodeMapping {
@@ -168,6 +183,8 @@ export interface AlarmRule {
   threshold: number;
   hysteresis: number;
   cooldownSeconds: number;
+  debounceSeconds: number;
+  clearDebounceSeconds: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -666,9 +683,12 @@ export interface AlertRule {
   threshold: number | null;
   thresholdHigh: number | null;
   rateWindowSeconds: number | null;
+  hysteresis: number;
   severity: AlertSeverity;
   channels: number[];
   cooldownSeconds: number;
+  debounceSeconds: number;
+  clearDebounceSeconds: number;
   isActive: boolean;
   createdBy: number | null;
   createdAt: string;

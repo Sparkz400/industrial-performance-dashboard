@@ -5,10 +5,13 @@
   background: transparent;
   cursor: pointer;
   display: block;
+  border: 0;
+  padding: 0;
 }
 
-.burger input {
-  display: none;
+.burger:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 6px;
 }
 
 .burger span {
@@ -41,18 +44,18 @@
   transform: translateY(-100%);
 }
 
-.burger input:checked ~ span:nth-of-type(1) {
+.burger[aria-expanded='true'] span:nth-of-type(1) {
   transform: rotate(45deg);
   top: 0;
   left: 5px;
 }
 
-.burger input:checked ~ span:nth-of-type(2) {
+.burger[aria-expanded='true'] span:nth-of-type(2) {
   width: 0;
   opacity: 0;
 }
 
-.burger input:checked ~ span:nth-of-type(3) {
+.burger[aria-expanded='true'] span:nth-of-type(3) {
   transform: rotate(-45deg);
   top: 22px;
   left: 5px;

@@ -5,6 +5,21 @@ owned simulator or an isolated test installation using OPC UA scalar signals.
 
 ## Implemented and covered by focused tests
 
+- Bounded incident replay with quality/gaps, separate clocks, immutable operator
+  revisions and retrospective stop classifications; [replay contract](INCIDENT_REPLAY.md).
+- An opt-in read-only Modbus TCP adapter with encrypted, co-located OPC UA and a
+  reusable profile; [legacy gateway scope and recipe](LEGACY_GATEWAY.md).
+- Durable report jobs, missed-slot catch-up, independent email retry status, alarm
+  holds/hysteresis and data-health incidents; [unattended operation](UNATTENDED_OPERATION.md).
+- Attributable operator handover/actions, reviewed manual declarations and a
+  restricted supervisor display; [operator workflow](OPERATOR_WORKFLOW.md).
+- Protected OPC UA identities, explicit trust, expiry/hostname checks and browser
+  commissioning with redacted diagnostics; [S7-1500 pilot scope](S7_1500_PILOT.md).
+- Isolated installation/restore previews, complete image/database/file backups and
+  failed-upgrade rollback acceptance; [operations](OPERATIONS.md).
+- A measured synthetic replay/query/export workload and provisional rehearsal
+  limits; [capacity evidence](CAPACITY.md). Sustained PLC capacity remains unqualified.
+
 - Raw Boolean, string and numeric measurements with quality metadata and numeric projection.
 - Durable queue recovery through process termination, database connection outage,
   interrupted replay and SQLite capacity failure; accepted events retain stable identities.
@@ -22,6 +37,8 @@ owned simulator or an isolated test installation using OPC UA scalar signals.
 
 See [P0 acceptance evidence](P0_ACCEPTANCE.md) for tests, fixtures and remaining work,
 and [dependency PR dispositions](DEPENDENCY_REVIEW.md) for the reviewed update set.
+The six later software milestones and current local validation are recorded in
+[factory-pilot acceptance](FACTORY_PILOT_ACCEPTANCE.md).
 
 Consult the CI run for the exact commit you intend to use. Hosted tests and local
 simulator evidence do not establish physical-machine acceptance or release readiness.
@@ -29,7 +46,9 @@ simulator evidence do not establish physical-machine acceptance or release readi
 ## Known limits
 
 - No physical machine or production-line qualification has been completed here.
-- OPC UA anonymous sessions and scalar values are the supported connection scope.
+- OPC UA scalar values, anonymous sessions and protected username/password or user-certificate
+  identities are supported in owned-server acceptance. Protected identities require an
+  encrypted channel and explicit certificate trust. See the [S7-1500 pilot guide](S7_1500_PILOT.md).
 - Process crashes and unobserved machine events can leave uncertain intervals;
   reconnection notifications cannot reconstruct measurements never received.
 - Shift profiles explicitly choose reset-to-zero or reject-decrease. Legacy OEE
@@ -51,7 +70,7 @@ simulator evidence do not establish physical-machine acceptance or release readi
   Scoped UUID/esbuild overrides and their compatibility checks are documented in
   [the review](DEPENDENCY_REVIEW.md). CSRF and cross-origin socket regression checks pass.
 - The Node 24/Wolfi image renders scheduled PDFs without Chromium and has zero
-  findings in the full scan (28 OS and 557 Node packages). Actual-image collection,
+  findings in the pilot image's full scan (28 OS and 556 Node packages). Actual-image collection,
   recovery, reporting and persisted-volume checks pass. CI preserves complete scan
   evidence and blocks all high/critical findings, including unfixed ones. See the
   [reporting migration](REPORTING.md) and [image review](DEPENDENCY_REVIEW.md).

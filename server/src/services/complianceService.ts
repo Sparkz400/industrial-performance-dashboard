@@ -15,7 +15,7 @@ import { ValidationError, NotFoundError } from "../utils/errors.js";
 export interface ComplianceActor {
   userId?: number;
   username?: string;
-  userRole?: "admin" | "viewer";
+  userRole?: "admin" | "viewer" | "wallboard";
   ipAddress?: string;
 }
 
@@ -259,9 +259,7 @@ export const complianceService = {
       recentResult,
     ] = await Promise.all([
       // Total compliance events
-      db
-        .select({ count: count() })
-        .from(complianceAuditLogs),
+      db.select({ count: count() }).from(complianceAuditLogs),
       // Events in last 30 days
       db
         .select({ count: count() })

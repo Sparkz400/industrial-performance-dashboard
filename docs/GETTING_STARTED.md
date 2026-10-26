@@ -41,6 +41,10 @@ the calculations; they do not qualify a physical machine.
 
 ## Container deployment
 
+For a fresh installation with generated credentials, isolated preview and complete
+backup/restore tooling, use the [operations guide](OPERATIONS.md). The manual
+Compose setup below remains available for development and existing installations.
+
 Create a private `.env` in the repository root containing `DB_PASSWORD`,
 `SESSION_SECRET`, `COOKIE_SECRET`, `SEED_ADMIN_PASSWORD` and
 `CLIENT_URL=http://localhost:3001`. Generate unique secrets; the seed password

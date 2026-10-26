@@ -1,58 +1,58 @@
 import { afterEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
-  schedule: vi.fn(),
-  destroy: vi.fn(),
-  generate: vi.fn(),
-  list: vi.fn(),
+  due: vi.fn().mockResolvedValue(1),
+  process: vi.fn().mockResolvedValue(undefined),
+  legacy: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("node-cron", async (original) => {
-  const actual = await original<typeof import("node-cron")>();
+vi.mock("../../services/reportJobService.js", async (original) => {
+  const actual =
+    await original<typeof import("../../services/reportJobService.js")>();
   return {
-    default: { validate: actual.default.validate, schedule: mocks.schedule },
+    ...actual,
+    reportJobService: {
+      enqueueDue: mocks.due,
+      processPending: mocks.process,
+      markLegacyInterrupted: mocks.legacy,
+    },
   };
 });
-vi.mock("../../repositories/reportRepository.js", () => ({
-  reportRepository: { getAllActiveSchedules: mocks.list },
-}));
-vi.mock("../../services/reportGeneratorService.js", () => ({
-  reportGeneratorService: { generate: mocks.generate },
-}));
 import { reportSchedulerService } from "../../services/reportSchedulerService.js";
+import { nextReportRun, reportRetry } from "../../services/reportJobService.js";
 afterEach(() => {
   reportSchedulerService.stop();
   vi.useRealTimers();
   vi.clearAllMocks();
 });
-
-it("loads schedule timezones, executes the generator, and destroys replaced tasks", async () => {
-  mocks.schedule.mockReturnValue({ destroy: mocks.destroy });
-  mocks.list.mockResolvedValue([
-    { id: 4, cronExpression: "0 6 * * *", timezone: "Europe/Berlin" },
-  ]);
+it("recovers pending jobs on startup and continues polling without overlapping ticks", async () => {
   await reportSchedulerService.init();
-  expect(mocks.schedule).toHaveBeenCalledWith(
-    "0 6 * * *",
-    expect.any(Function),
-    { timezone: "Europe/Berlin", noOverlap: true },
-  );
-  await mocks.schedule.mock.calls[0][1]();
-  expect(mocks.generate).toHaveBeenCalledWith(4);
-  await reportSchedulerService.refreshAll();
-  expect(mocks.destroy).toHaveBeenCalledTimes(1);
+  await vi.waitFor(() => expect(mocks.process).toHaveBeenCalled());
+  expect(mocks.legacy).toHaveBeenCalledOnce();
   expect(reportSchedulerService.activeJobCount).toBe(1);
+  let finish!: () => void;
+  mocks.process.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const tick = reportSchedulerService.tick();
+  await vi.waitFor(() => expect(finish).toBeDefined());
+  await reportSchedulerService.tick();
+  finish();
+  await tick;
+  expect(mocks.process).toHaveBeenCalledTimes(2);
 });
-
-it("calculates the next run in the chosen timezone across DST and rejects invalid zones", () => {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date("2026-10-24T05:00:00Z"));
+it("calculates timezone-aware persisted slots across DST and bounds retry attempts", () => {
+  const before = new Date("2026-10-24T05:00:00Z");
   expect(
-    reportSchedulerService.calculateNextRun("0 6 * * *", "Europe/Berlin"),
+    nextReportRun("0 6 * * *", "Europe/Berlin", before)?.toISOString(),
   ).toBe("2026-10-25T05:00:00.000Z");
-  expect(reportSchedulerService.calculateNextRun("0 6 * * *", "UTC")).toBe(
+  expect(nextReportRun("0 6 * * *", "UTC", before)?.toISOString()).toBe(
     "2026-10-24T06:00:00.000Z",
   );
-  expect(reportSchedulerService.calculateNextRun("invalid", "UTC")).toBeNull();
-  expect(
-    reportSchedulerService.calculateNextRun("0 6 * * *", "Invalid/Zone"),
-  ).toBeNull();
+  expect(nextReportRun("invalid", "UTC", before)).toBeNull();
+  expect(nextReportRun("0 6 * * *", "Invalid/Zone", before)).toBeNull();
+  expect(reportRetry(1, before)?.getTime()).toBe(before.getTime() + 30000);
+  expect(reportRetry(4, before)?.getTime()).toBe(before.getTime() + 240000);
+  expect(reportRetry(5, before)).toBeNull();
 });

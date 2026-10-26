@@ -22,6 +22,9 @@ import { useQuery } from '@tanstack/react-query';
 import type { ShiftReport, DowntimeReason } from '@performance-dashboard/shared';
 import { useAuthStore } from '@/stores/useAuthStore';
 import CommissioningPanel, { productionRequest, downloadJson } from './CommissioningPanel';
+import OperatorWorkspace from './OperatorWorkspace';
+import IncidentReplayPanel from './IncidentReplayPanel';
+import { Link } from 'react-router-dom';
 
 interface Shift {
   id: number;
@@ -121,12 +124,42 @@ export default function ProductionPage() {
       <style>{`@page { margin: 12mm; } @media print { main { margin-left:0!important; width:100%!important; padding:0!important } .production-report * { color:#000!important; background:transparent!important } .MuiFab-root, [aria-label="Open AI suggestions"], .MuiSnackbar-root {display:none!important} body, #root, main, main > div { height:auto!important; overflow:visible!important; } .MuiDrawer-root, [data-print-hide] {display:none!important} .production-report {color:#000!important;background:white!important} .production-report .MuiPaper-root {box-shadow:none!important;color:#000!important;background:white!important} table {break-inside:auto} tr {break-inside:avoid} }`}</style>
       <Box data-print-hide>
         <Typography variant="h4">Production shift</Typography>
-        <Tabs value={tab} onChange={(_, value) => setTab(value)}>
-          <Tab label="Shift workspace" />
-          {admin && <Tab label="Commission machine" />}
+        <Button component={Link} to="/wallboard">
+          Open supervisor wallboard
+        </Button>
+        {admin && (
+          <Button
+            onClick={async () => {
+              try {
+                downloadJson(await productionRequest('/diagnostics'), 'support-diagnostics.json');
+              } catch (failure) {
+                setError(String(failure));
+              }
+            }}
+          >
+            Download support diagnostics
+          </Button>
+        )}
+        <Tabs
+          value={tab}
+          onChange={(_, value) => setTab(value)}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+        >
+          <Tab value={0} label="Shift workspace" />
+          <Tab value={2} label="Operator handover" />
+          <Tab value={3} label="Incident replay" />
+          {admin && <Tab value={1} label="Commission machine" />}
         </Tabs>
       </Box>
-      {tab === 1 && admin ? (
+      {tab === 3 ? (
+        <IncidentReplayPanel />
+      ) : tab === 2 ? (
+        <Box sx={{ pt: 3 }}>
+          <OperatorWorkspace />
+        </Box>
+      ) : tab === 1 && admin ? (
         <Box sx={{ pt: 3 }}>
           <CommissioningPanel />
         </Box>

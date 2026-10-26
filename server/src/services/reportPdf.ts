@@ -1,5 +1,6 @@
 import PDFDocument from "pdfkit";
 import { createWriteStream } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { rename, rm } from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
@@ -22,7 +23,7 @@ export async function writeReportPdf(
   destination: string,
   report: ReportContent,
 ): Promise<void> {
-  const temporary = `${destination}.partial`;
+  const temporary = `${destination}.${randomUUID()}.partial`;
   const doc = new PDFDocument({
     size: "A4",
     margins: { top: 48, bottom: 56, left: 42, right: 42 },

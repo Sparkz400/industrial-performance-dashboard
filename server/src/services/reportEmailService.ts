@@ -9,6 +9,9 @@ import config from "../config/config.js";
 
 class ReportEmailService {
   private transporter: Transporter | null = null;
+  get configured(): boolean {
+    return Boolean(config.SMTP_HOST);
+  }
 
   /**
    * Lazily create the nodemailer transport from environment configuration.
@@ -34,6 +37,9 @@ class ReportEmailService {
       port: port ? Number(port) : 587,
       secure: port === "465" || port === 465,
       auth: user && pass ? { user, pass } : undefined,
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 30000,
     });
 
     return this.transporter;
@@ -47,18 +53,16 @@ class ReportEmailService {
     subject: string,
     body: string,
     pdfPath: string,
-  ): Promise<void> {
+    messageId: string,
+  ): Promise<string[]> {
     const transport = this.getTransporter();
     if (!transport) {
-      logger.info(
-        "[ReportEmail] Skipping email — SMTP transport not available",
-      );
-      return;
+      throw new Error("SMTP is not configured");
     }
 
     if (recipients.length === 0) {
       logger.debug("[ReportEmail] No recipients — skipping email");
-      return;
+      return [];
     }
 
     const from =
@@ -74,6 +78,7 @@ class ReportEmailService {
         to: recipients.join(", "),
         subject,
         text: body,
+        messageId,
         attachments: [
           {
             filename,
@@ -83,8 +88,16 @@ class ReportEmailService {
         ],
       });
 
-      logger.info(
-        `[ReportEmail] Email sent to ${recipients.join(", ")} — messageId: ${info.messageId}`,
+      logger.info(`[ReportEmail] SMTP result recorded for ${messageId}`);
+      const accepted = new Set(
+        (info.accepted ?? []).map((entry: string | { address: string }) =>
+          typeof entry === "string"
+            ? entry.toLowerCase()
+            : entry.address.toLowerCase(),
+        ),
+      );
+      return recipients.filter(
+        (recipient) => !accepted.has(recipient.toLowerCase()),
       );
     } catch (err) {
       logger.error("[ReportEmail] Failed to send email:", err);

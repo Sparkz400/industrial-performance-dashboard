@@ -1,3 +1,7 @@
+import {
+  createMachineSession,
+  machineAuthentication,
+} from "./machineIdentity.js";
 import { eq, and, desc } from "drizzle-orm";
 import Joi from "joi";
 import * as opcua from "node-opcua";
@@ -102,7 +106,12 @@ export const commissioningService = {
           transportTimeout: 10000,
         });
         await client.connect(machine.endpointUrl);
-        session = await client.createSession();
+        session = await createMachineSession(
+          client,
+          machineId,
+          machine.endpointUrl,
+          machine.securityMode ?? "None",
+        );
       }
       const namespaces = await session.readNamespaceArray();
       const mappings = profile
@@ -151,20 +160,20 @@ export const commissioningService = {
         checkedAt,
         machineId,
         connection: "connected",
-        identity: "anonymous",
+        identity: (await machineAuthentication(machineId)).mode,
         securityMode: machine.securityMode,
         securityPolicy: machine.securityPolicy,
         trust:
           machine.securityMode === "None"
             ? "No encrypted channel; owned local simulator only"
-            : "Configured certificate policy used; review endpoint identity before production",
+            : "Trusted certificate, validity and endpoint hostname checked",
         namespaces,
         signals,
         currentMappings,
         ready: signals.length > 0 && signals.every((signal) => signal.good),
         limitations: [
           "Read-only value check; no machine writes",
-          "Protected user identities and physical-machine qualification remain open",
+          "Physical-machine qualification remains separate from this connection check",
           "Profile units and scale are operator declarations; verify against the source",
         ],
       };

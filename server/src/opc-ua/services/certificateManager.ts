@@ -1,3 +1,8 @@
+import { X509Certificate } from "node:crypto";
+import {
+  validateMachineSecurity,
+  validateCertificate,
+} from "../../services/machineIdentity.js";
 import fs from "fs";
 import path from "path";
 import { promisify } from "util";
@@ -21,6 +26,12 @@ export interface CertificateInfo {
   name: string;
   path: string;
   content: string;
+  fingerprint: string;
+  subject: string;
+  issuer: string;
+  validFrom: string;
+  validTo: string;
+  daysRemaining: number;
 }
 
 export interface ClientCertificateResult {
@@ -111,18 +122,22 @@ class CertificateManagerService {
         await this.ensureDirectoryExists(this.rejectedDir);
         await this.ensureDirectoryExists(this.issuerDir);
 
+        const certExists = await exists(this.certificateFile);
+        const keyExists = await exists(this.privateKeyFile);
+        if (certExists !== keyExists) {
+          throw new Error(
+            "Client certificate/key backup is incomplete. Restore the matched identity before connecting.",
+          );
+        }
+
         this.certManager = new OPCUACertificateManager({
           rootFolder: this.pkiDir,
-          automaticallyAcceptUnknownCertificate:
-            config.AUTO_ACCEPT_CERTIFICATES,
+          automaticallyAcceptUnknownCertificate: false,
         });
         await this.certManager.initialize();
         logger.info(`OPCUACertificateManager initialized.`);
 
-        const certExists = await exists(this.certificateFile);
-        const keyExists = await exists(this.privateKeyFile);
-
-        if (!certExists || !keyExists) {
+        if (!certExists) {
           logger.info(
             "Client certificate or private key missing, creating new ones...",
           );
@@ -136,6 +151,7 @@ class CertificateManagerService {
         logger.info("Certificate Manager initialization complete.");
       } catch (error) {
         logger.error("Failed to initialize Certificate Manager:", error);
+        await this.certManager?.dispose();
         this.isInitialized = false;
         this.certManager = null;
         this._initializePromise = null;
@@ -290,10 +306,9 @@ class CertificateManagerService {
         !(await exists(this.certificateFile!)) ||
         !(await exists(this.privateKeyFile!))
       ) {
-        logger.warn(
-          "Certificate or key not found during load, attempting to recreate...",
+        throw new Error(
+          "Client certificate/key is missing. Restore the matched identity before connecting.",
         );
-        await this.createClientCertificate();
       }
       const certificate = await readFile(this.certificateFile!);
       const privateKey = await readFile(this.privateKeyFile!);
@@ -313,13 +328,14 @@ class CertificateManagerService {
     try {
       if (!this.certManager) await this.ensureInitialized();
 
-      const sanitizedName = name.replace(/[^a-z0-9._-]/gi, "_");
-      const timestamp = Date.now();
-      const filename = `${sanitizedName}_${timestamp}.pem`;
-      const filepath = path.join(this.trustedDir!, path.basename(filename));
-
-      await writeFile(filepath, certificate);
-      logger.info(`Added certificate to trusted list: ${filepath}`);
+      const parsed = new X509Certificate(certificate);
+      validateCertificate(parsed);
+      await this.certManager!.trustCertificate(parsed.raw);
+      const certificates = await this.getTrustedCertificates();
+      const filepath = certificates.find(
+        (item) => item.fingerprint === parsed.fingerprint256,
+      )?.path;
+      if (!filepath) throw new Error("Trusted certificate was not persisted");
       return filepath;
     } catch (error: any) {
       logger.error("Failed to trust certificate:", {
@@ -358,7 +374,16 @@ class CertificateManagerService {
           const filepath = path.join(dirPath, file);
           try {
             const content = await readFile(filepath);
+            const parsed = new X509Certificate(content);
             certificates.push({
+              fingerprint: parsed.fingerprint256,
+              subject: parsed.subject,
+              issuer: parsed.issuer,
+              validFrom: new Date(parsed.validFrom).toISOString(),
+              validTo: new Date(parsed.validTo).toISOString(),
+              daysRemaining: Math.floor(
+                (Date.parse(parsed.validTo) - Date.now()) / 86400000,
+              ),
               name: file,
               path: filepath,
               content: content.toString("base64"),
@@ -393,33 +418,11 @@ class CertificateManagerService {
       if (!this.certManager) await this.ensureInitialized();
 
       const rejectedPath = path.join(this.rejectedDir!, safeFilename);
-      const trustedPath = path.join(this.trustedDir!, safeFilename);
-
-      if (!(await exists(rejectedPath))) {
-        throw new Error(`Rejected certificate not found: ${filename}`);
-      }
-
-      try {
-        await promisify(fs.rename)(rejectedPath, trustedPath);
-        logger.info(
-          `Atomically moved certificate from rejected to trusted: ${filename}`,
-        );
-      } catch (renameError: any) {
-        if (renameError.code === "EXDEV") {
-          logger.warn(
-            `Atomic rename failed (cross-device?), falling back to copy/delete for ${filename}`,
-          );
-          const certificate = await readFile(rejectedPath);
-          await writeFile(trustedPath, certificate);
-          await unlink(rejectedPath);
-          logger.info(
-            `Copied/deleted certificate from rejected to trusted: ${filename}`,
-          );
-        } else {
-          throw renameError;
-        }
-      }
-
+      const certificate = await readFile(rejectedPath);
+      const trustedPath = await this.trustCertificate(
+        certificate,
+        safeFilename,
+      );
       return trustedPath;
     } catch (error: any) {
       logger.error("Failed to accept rejected certificate:", {
@@ -451,29 +454,9 @@ class CertificateManagerService {
         requestedSessionTimeout: 60000,
       };
 
-      const modeKey = securityMode as keyof typeof MessageSecurityMode;
-      const resolvedMode = MessageSecurityMode[modeKey] as
-        | (typeof MessageSecurityMode)[keyof typeof MessageSecurityMode]
-        | undefined;
-      if (resolvedMode === undefined) {
-        logger.warn(
-          `Invalid security mode specified: ${securityMode}. Defaulting to None.`,
-        );
-        securityMode = "None";
-      }
+      validateMachineSecurity(securityMode, securityPolicy);
 
-      const policyKey = securityPolicy as keyof typeof SecurityPolicy;
-      const resolvedPolicy = SecurityPolicy[policyKey] as
-        | (typeof SecurityPolicy)[keyof typeof SecurityPolicy]
-        | undefined;
-      if (resolvedPolicy === undefined) {
-        logger.warn(
-          `Invalid security policy specified: ${securityPolicy}. Defaulting to None.`,
-        );
-        securityPolicy = "None";
-      }
-
-      if (securityMode === "None" || securityPolicy === "None") {
+      if (securityMode === "None") {
         logger.info(
           "Using SecurityMode=None and SecurityPolicy=None for client options.",
         );
@@ -488,18 +471,9 @@ class CertificateManagerService {
         !(await exists(this.certificateFile!)) ||
         !(await exists(this.privateKeyFile!))
       ) {
-        logger.warn(
-          "Secure connection requested but client certificate/key missing. Attempting to create...",
+        throw new Error(
+          "Client certificate/key is missing. Restore the matched identity before connecting.",
         );
-        await this.createClientCertificate();
-        if (
-          !(await exists(this.certificateFile!)) ||
-          !(await exists(this.privateKeyFile!))
-        ) {
-          throw new Error(
-            "Client certificate or private key missing and could not be created. Cannot establish secure connection.",
-          );
-        }
       }
 
       const finalMode =
@@ -526,9 +500,19 @@ class CertificateManagerService {
   }
 
   getAvailableSecurityPolicies(): string[] {
-    return Object.keys(SecurityPolicy).filter(
-      (policy) => policy !== "Invalid" && policy !== "PubSub_Aes128_CTR",
-    );
+    return [
+      "None",
+      "Basic256Sha256",
+      "Aes128_Sha256_RsaOaep",
+      "Aes256_Sha256_RsaPss",
+    ];
+  }
+
+  async dispose(): Promise<void> {
+    await this.certManager?.dispose();
+    this.certManager = null;
+    this.isInitialized = false;
+    this._initializePromise = null;
   }
 
   getAvailableSecurityModes(): string[] {

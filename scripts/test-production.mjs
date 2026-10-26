@@ -41,6 +41,7 @@ let pool,
   webhookService,
   reportScheduler,
   liveClient;
+let smtp;
 let created = false;
 const waitFor = async (check, message, timeout = 30000) => {
   const deadline = Date.now() + timeout;
@@ -54,6 +55,8 @@ try {
   await admin.connect();
   await admin.query(`CREATE DATABASE "${database}"`);
   created = true;
+  const { createSmtpFixture } = await import("./test-report-jobs.mjs");
+  smtp = await createSmtpFixture();
   Object.assign(process.env, {
     DB_NAME: database,
     DB_READ_REPLICA_URLS: "",
@@ -63,9 +66,15 @@ try {
     ALLOW_PRIVATE_OUTBOUND_URLS: "true",
     OPCUA_SPOOL_PATH: join(directory, "spool.sqlite"),
     OPCUA_PKI_DIR: join(directory, "client-pki"),
+    MACHINE_SECRETS_KEY_FILE: join(directory, "machine-secrets.key"),
     AUTO_ACCEPT_CERTIFICATES: "false",
     OPCUA_QUEUE_DELAY: "100",
     REPORTS_DIR: join(directory, "reports"),
+    SMTP_HOST: "127.0.0.1",
+    SMTP_PORT: String(smtp.port),
+    SMTP_USER: "",
+    SMTP_PASS: "",
+    SMTP_FROM: "owned-fixture@example.com",
   });
   pool = new pg.Pool({
     host: process.env.DB_HOST,
@@ -75,9 +84,8 @@ try {
     database,
   });
   await migrate(drizzle(pool), { migrationsFolder: "server/drizzle" });
-  const snapshot = JSON.parse(
-    await readFile("server/drizzle/meta/0006_snapshot.json", "utf8"),
-  );
+  const journal = JSON.parse(await readFile("server/drizzle/meta/_journal.json", "utf8"));
+  const snapshot = JSON.parse(await readFile(`server/drizzle/meta/${String(journal.entries.at(-1).idx).padStart(4, "0")}_snapshot.json`, "utf8"));
   const tables = new Set(
     (
       await pool.query(
@@ -160,6 +168,16 @@ try {
       headers: { "x-csrf-token": await csrf(request) },
     });
   const viewer = await browser.newContext();
+  const { testSecureMachine } = await import("./test-secure-machine.mjs");
+  await testSecureMachine({
+    call,
+    page,
+    frontend,
+    pool,
+    directory,
+    multiMachine,
+    waitFor,
+  });
   await call(
     "POST",
     "/api/v1/auth/login",
@@ -205,6 +223,7 @@ try {
     ["GET", "/api/v1/db/status"],
     ["GET", "/api/v1/DB/status"],
     ["GET", "/api/v1/alerts/channels"],
+    ["GET", "/api/v1/production/diagnostics"],
     ["GET", "/metrics"],
   ]) {
     const response = await call(method, path, data, viewer.request);
@@ -265,6 +284,7 @@ try {
     serverCertificateManager: new opcua.OPCUACertificateManager({
       rootFolder: join(directory, "server-pki"),
     }),
+    userCertificateManager: new opcua.OPCUACertificateManager({ rootFolder: join(directory, "user-pki") }),
   });
   await uaServer.initialize();
   const namespace = uaServer.engine.addressSpace.getOwnNamespace();
@@ -303,6 +323,17 @@ try {
   assert.equal(machineResponse.status(), 201, await machineResponse.text());
   const machine = await machineResponse.json();
   await page.goto(`${frontend}/production`);
+  const supportDownload = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download support diagnostics" })
+    .click();
+  const support = JSON.parse(
+    await readFile(await (await supportDownload).path(), "utf8"),
+  );
+  assert.equal(support.format, "support-diagnostics-v1");
+  assert.ok(JSON.stringify(support).length < 1000000);
+  assert.ok(!JSON.stringify(support).includes(machine.name));
+  assert.ok(!JSON.stringify(support).includes(password));
   await page.getByRole("tab", { name: "Commission machine" }).click();
   await page.getByLabel("Machine to commission").click();
   await page.getByRole("option", { name: machine.name }).click();
@@ -315,6 +346,22 @@ try {
     .click();
   await page.getByRole("button", { name: "Preview mapped signals" }).click();
   await expectVisible(page.getByText(/state: ns=1;s=ProductionState/));
+  const diagnosticDownload = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download redacted diagnostics" })
+    .click();
+  const diagnostic = JSON.parse(
+    await readFile(await (await diagnosticDownload).path(), "utf8"),
+  );
+  assert.equal(diagnostic.format, "commissioning-diagnostics-v1");
+  assert.equal(diagnostic.signals.length, 4);
+  assert.ok(!JSON.stringify(diagnostic).includes("ProductionState"));
+  assert.ok(
+    diagnostic.signals.every(
+      (signal) =>
+        !Object.hasOwn(signal, "value") && !Object.hasOwn(signal, "nodeId"),
+    ),
+  );
   await page.getByLabel(/I reviewed the mappings/).check();
   await page
     .getByRole("button", { name: "Save profile and create dashboard" })
@@ -500,8 +547,8 @@ try {
   );
   assert.ok(repeated.length >= 2);
   assert.ok(repeated.every((r) => r.body === repeated[0].body));
-  await worker.stop();
   await multiMachine.disconnectAll();
+  await worker.stop();
   console.log(
     "PASS: UI-created rule -> live simulator -> history -> signed receiver, acknowledgment, measured recovery and durable retry identity",
   );
@@ -814,6 +861,9 @@ try {
     400,
   );
   assert.deepEqual(pageErrors, []);
+
+  const { testOperator } = await import("./test-operator.mjs");
+  await testOperator({ call, page, frontend, pool, browser, viewer, machine, shift, adminId, viewerId });
   console.log(
     "PASS: browser shift creation, operator classification, immutable reconciliation, corrections and printed report; exact independent OEE = 43.333333%",
   );
@@ -972,6 +1022,15 @@ try {
     "PASS: report template create/edit/persistence, machine selection, timezone, invalid input, manual/automatic generation, browser history/download and viewer denial",
   );
   // Logout and account revocation deny both subsequent requests and live sockets.
+  const { testReportJobs } = await import("./test-report-jobs.mjs");
+  await testReportJobs({ call, pool, page, frontend, smtp, waitFor, reportScheduler, machine });
+  const { testUnattendedAlarms } = await import("./test-unattended-alarms.mjs");
+  await testUnattendedAlarms({ page, frontend, call, pool, machine, adminId, worker });
+  const { testGateway } = await import("./test-gateway.mjs");
+  await testGateway({ call, page, frontend, pool, directory, multiMachine, worker, waitFor });
+  const { testIncidentReplay } = await import("./test-incident-replay.mjs");
+  await testIncidentReplay({ call, pool, page, frontend, machine, shift, adminId, viewer });
+  assert.deepEqual(pageErrors, []);
   await call("POST", "/api/v1/auth/logout", {}, viewer.request);
   await waitFor(() => !liveClient.connected, "Logout left socket connected");
   assert.equal(
@@ -1052,20 +1111,29 @@ try {
   await viewer.close();
   await context.close();
   await webhookService.stop();
+} catch (error) {
+  console.error("Production acceptance failed:", error);
+  throw error;
 } finally {
   reportScheduler?.stop();
+  await smtp?.close();
   liveClient?.disconnect();
   await webhookService?.stop();
   await browser?.close();
   await vite?.close();
-  await worker?.stop();
   await multiMachine?.disconnectAll();
+  await worker?.stop();
   if (socketServer) await new Promise((r) => socketServer.io.close(r));
   else if (appServer) await new Promise((r) => appServer.close(r));
   if (receiver) await new Promise((r) => receiver.close(r));
   await uaServer?.shutdown(0);
   await sessionStore?.close();
   await manager?.end();
+  await (
+    await import("../server/dist/src/opc-ua/services/certificateManager.js")
+  ).default.dispose();
+  // NodeOPCUA caches default stores across clients; release them before deleting owned PKI folders.
+  await (await import("node-opcua")).OPCUACertificateManager.disposeAll();
   await pool?.end();
   if (created) {
     // Pool shutdown can resolve before PostgreSQL observes the socket disconnect.

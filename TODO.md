@@ -29,6 +29,30 @@ functionality.
 
 ## Execution update — 2026-10-26
 
+Factory-pilot software implemented and locally validated: the nominated controller family is **Siemens
+SIMATIC S7-1500**. Implementation covers secure onboarding, installation/recovery,
+operator and supervisor flows, unattended operation, a read-only gateway and
+incident replay. Exact CPU/firmware/licence and physical-machine acceptance remain
+unqualified. Each feature keeps its own acceptance gate; simulator evidence does
+not close hardware or supervised-user gates.
+
+- [x] Secure onboarding software and certificate/credential recovery checks.
+- [x] Installation, complete backup/restore, actual earlier-image upgrade/rollback and capacity fixture.
+- [x] Operator handover/actions, manual declarations and restricted supervisor wallboard.
+- [x] Durable reports/email retries, alarm holds/hysteresis and collector/data incidents.
+- [x] Read-only legacy reference gateway, owned simulator and reusable profile.
+- [x] Bounded incident replay with clocks, quality/gaps, events, notes and export.
+
+Evidence: [factory-pilot acceptance](docs/FACTORY_PILOT_ACCEPTANCE.md) maps each
+software milestone to commits and tests. [PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57)
+tracks integration and hosted checks; broader backlog items keep their original
+physical/customer gates. Consult the checks for the exact revision being used.
+
+The read-only gateway software slice passes owned two-unit commissioning, profile
+reuse, write rejection, bad-quality persistence, reconnect and managed identity
+restart checks. See [gateway scope](docs/LEGACY_GATEWAY.md). This advances C04/C05/
+C07/C10; real-device inventories and vendor qualification remain open.
+
 The first P0 wave implements and tests F02/F04/F05/H01/H02 in
 [PR #40](https://github.com/Sparkz400/performance_dashboard/pull/40). Validation and
 scope are recorded in [P0 acceptance](docs/P0_ACCEPTANCE.md).
@@ -135,15 +159,20 @@ below retain their unfulfilled acceptance criteria.
   Done: username/password and user-certificate identity paths are explicitly supported
   or scoped per endpoint, secrets are protected/redacted, rotation works, and wrong
   credentials fail clearly. Qualify with read-only permissions on owned test servers.
+  Progress: encrypted credentials, username and X.509 sessions, rotation, retention,
+  redaction and secure browser/collector acceptance pass in scripts/test-secure-machine.mjs.
+  Integration and test evidence: PR #57.
 - [ ] **C02 — Complete certificate and endpoint trust lifecycle** · P0 · M0 · Improve · M. Depends: C01.
   Done: expiry, rejected peers, identity/hostname mismatch and renewal have actionable
   diagnostics; trust requires an explicit decision. Test an expired certificate and
   a changed endpoint without silently downgrading channel security.
+  Progress: explicit trust, expiry/hostname checks, fingerprint/expiry UI and the
+  S7-1500 renewal guide are implemented; owned-server negative checks pass.
 - [ ] **C03 — Add a commissioning preflight** · P1 · M1 · New · M. Depends: C01, H01.
   Done: a guided check reports connection, identity, trust, browse/read permission,
   source time and sample quality; users can save a redacted diagnostic report without
   scanning arbitrary networks or issuing machine writes.
-  Progress: Guided exact-endpoint check and read/type/quality/source-time preview work with the owned simulator. Protected identity/trust diagnostics and a redacted diagnostic export remain open.
+  Progress: Guided exact-endpoint check and read/type/quality/source-time preview work with the owned simulator. Protected identities, explicit trust and redacted diagnostic downloads now pass owned-server/browser acceptance; integration and test evidence: PR #57.
 
 - [ ] **C04 — Build reusable, versioned machine profiles** · P1 · M1 · New · L. Depends: C03.
   Done: profiles include namespace-aware signals, types, units, scales, state meanings,
@@ -298,16 +327,25 @@ below retain their unfulfilled acceptance criteria.
   Done: an operator sees the current job, stops needing reasons, authorized quality input
   and handover actions in a short touch-friendly flow. Acknowledgment and classification
   are application actions; machine control is not introduced.
-  Progress: Production workspace supports shift context, stop classification/corrections and administrator reconciliation. Handover, touch/accessibility qualification and operator quantity entry remain open.
+  Progress: Production workspace supports shift context, stop classification/corrections,
+  attributable handover/actions and reviewed operator quantity declarations. Mobile
+  browser acceptance is covered in `scripts/test-operator.mjs`; supervised operator
+  and accessibility qualification remain open. See [operator workflow](docs/OPERATOR_WORKFLOW.md).
 
 - [ ] **U04 — Add shift handover notes and action ownership** · P1 · M1 · New · M. Depends: U03.
   Done: notes link to machine/job/interval, have an owner and resolved/open state, and
   appear in the next handover. Edits are attributable; attachments, if enabled, are
   size/type constrained and permission checked.
+  Progress: Durable idempotent entries, immutable revision history, ownership, due
+  dates, interval/shift validation and conflict protection implemented and tested;
+  attachments disabled. Integration and test evidence: PR #57.
 - [ ] **U05 — Deliver a useful supervisor wallboard** · P1 · M1 · Improve · M. Depends: U02.
   Done: a selected line shows state, target progress, prioritized issues and freshness;
   kiosk rotation reconnects cleanly and uses a restricted identity. Screens remain
   legible at the agreed viewing distance and do not depend on color alone.
+  Progress: Six-machine pages, selection/rotation/fullscreen, observed target progress,
+  freshness/unknown states and a read-only account are browser tested. Viewing-distance
+  and sustained display acceptance remain open; see [workflow](docs/OPERATOR_WORKFLOW.md).
 - [ ] **U06 — Establish accessible interaction patterns** · P1 · M1 · Improve · L. Depends: none.
   Done: commissioning, login, dashboards and operator actions support keyboard focus,
   non-drag alternatives, semantic labels and screen-reader status; test contrast, zoom,
@@ -341,10 +379,16 @@ below retain their unfulfilled acceptance criteria.
   Done: noisy thresholds do not flood history; boundaries and clear conditions are
   documented and replay-tested. Bad/stale input suspends or changes evaluation explicitly
   instead of producing a false recovery.
+  Progress: Persistent trigger/recovery holds, threshold hysteresis, gap/quality/order
+  resets and UI configuration are implemented with unit and owned replay tests.
+  See [unattended operation](docs/UNATTENDED_OPERATION.md); integration and test evidence: PR #57.
 - [ ] **A03 — Alert on data and collector health** · P1 · M1 · New · M. Depends: A01, H03.
   Done: users can distinguish machine-condition alarms from disconnected endpoint,
   stale signal, bad quality and growing backlog; simulate each condition and verify
   recovery behavior without inventing machine state.
+  Progress: Commissioned-state freshness, collector storage/backlog/space incidents
+  reuse durable history and webhooks. Startup grace and bounded polling are documented
+  in [unattended operation](docs/UNATTENDED_OPERATION.md); external outage monitoring remains necessary.
 - [ ] **A04 — Add ownership, acknowledgment and maintenance suppression** · P1 · M1 · Improve · M. Depends: A01.
   Done: acknowledgment records actor/time/comment, suppression is scoped and time-bounded,
   and expiration is visible. A dashboard acknowledgment never silently acknowledges
@@ -390,9 +434,11 @@ below retain their unfulfilled acceptance criteria.
   Done: schedule timezone/DST, missed-run policy and stable run identity are explicit;
   retries do not create uncontrolled duplicate mail, and overlapping executions are
   bounded. Failed generation and failed delivery are separate statuses.
-  Progress: timezone/DST, actual timer execution, machine selection and in-process
-  overlap protection are tested. Missed-run replay, cross-process locking, durable
-  delivery retry/deduplication and separate delivery status remain open.
+  Progress: Durable jobs/cursors, saved configuration and periods, database locks,
+  missed-slot catch-up, worker crash recovery and separate SMTP retry/partial-acceptance
+  status are implemented. Owned process/mail/browser acceptance is in
+  `scripts/test-report-jobs.mjs`. SMTP ambiguity and measurement-snapshot limits are
+  explicit in [unattended operation](docs/UNATTENDED_OPERATION.md); integration and test evidence: PR #57.
 - [ ] **R04 — Preserve report revisions and reproducibility** · P1 · M2 · New · M. Depends: H04, R01.
   Done: exports record inputs, window, mapping/calculation revisions and generation time;
   a correction creates a new revision with a reason. Published reports can be reproduced
@@ -511,18 +557,28 @@ below retain their unfulfilled acceptance criteria.
   Done: cover PostgreSQL, configuration, required spool state, certificates and secret
   recovery with protected storage; restore into an isolated fresh installation and
   reconcile data. Dashboard-only export remains clearly labeled as configuration export.
+  Progress: complete stopped-app backups and isolated fresh restores preserve database,
+  encrypted identities/key, pending spool, PKI and PDFs. Browser recovery/permissions,
+  tamper and overwrite checks pass in scripts/test-operations.mjs; evidence in PR #57.
 - [ ] **D03 — Make upgrades and rollback operationally safe** · P0 · M0 · Improve · L. Depends: D02.
   Done: migrations are tested on a copy of the previous schema/data, compatibility is
   declared, and backup/rollback behavior is documented. Failed startup cannot leave a
   silently half-migrated collector writing incompatible measurements.
+  Progress: upgrade takes a verified checkpoint; failed startup leaves the app stopped.
+  Owned-container acceptance restored the checkpoint into a fresh healthy instance.
 - [ ] **D04 — Measure the supported operating envelope** · P1 · M1 · New · L. Depends: F06, H02.
   Done: benchmark named hardware at declared tag rates, database size, dashboard users
   and export load; publish ingestion lag, p95 queries, memory, CPU and bytes/sample.
   Include replay competing with live acquisition, then choose limits from evidence.
+  Progress: docs/CAPACITY.md records a 6,200-row synthetic replay/live/query/export
+  workload on named hardware. A sustained customer/PLC operating envelope remains open.
 - [ ] **D05 — Make health and diagnostics actionable** · P1 · M1 · Improve · M. Depends: D01, H03.
   Done: readiness distinguishes accepting requests from collecting/persisting data;
   metrics cover reconnects, spool age, failed jobs and database lag. A redacted support
   bundle excludes secrets and has explicit size/time bounds.
+  Progress: database readiness, receive age/storage reserve and a bounded redacted
+  support download are implemented. Browser export checks pass; failed-job diagnostics
+  include durable report generation/delivery attempt and retry state.
 - [ ] **D06 — Complete the first pilot acceptance pack** · P1 · M1 · New · L. Depends: D02, D04, D05, O09, R01, C04.
   Done: record exact machines/settings/software, supervised shift reconciliation,
   interruptions, restore evidence, observed defects and unresolved limits; the process
@@ -577,6 +633,9 @@ below retain their unfulfilled acceptance criteria.
   Done: replay a bounded historical window with signal quality, events, changes and
   annotations in time order; separate source/receive clocks and missing intervals.
   Correlated signals are presented as investigation leads, not proven causes.
+  Progress: bounded signal/event replay, keyboard/playback cursor, raw quality and
+  clock details, immutable operator revisions, later stop annotations and JSON
+  export are implemented; see docs/INCIDENT_REPLAY.md and PR #57 for evidence.
 - [ ] **X04 — Prototype bounded capacity and completion forecasts** · P3 · M5 · Research · L. Depends: O05, R06.
   Done: estimate using comparable jobs and recent capacity with uncertainty ranges;
   backtest against actual completion and disclose unsupported process changes. Forecasts

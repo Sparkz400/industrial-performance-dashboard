@@ -26,6 +26,9 @@ export interface AlertRuleInput {
   severity?: AlertSeverityValue;
   channels?: unknown[];
   cooldownSeconds?: number;
+  debounceSeconds?: number;
+  clearDebounceSeconds?: number;
+  hysteresis?: number;
   isActive?: boolean;
   createdBy?: number | null;
 }

@@ -182,7 +182,7 @@ export default function CommissioningPanel() {
     <Stack spacing={2}>
       <Typography variant="h5">Commission a machine</Typography>
       <Alert severity="info">
-        This flow only reads the selected endpoint. Anonymous access is currently supported. Verify
+        This flow only reads the selected endpoint using its saved machine identity. Verify
         permissions, certificate trust and machine-specific meanings before using production
         equipment.
       </Alert>
@@ -221,10 +221,46 @@ export default function CommissioningPanel() {
         }}
       />
       {preview && (
-        <Alert severity="info">
-          Connected using {preview.identity}, {preview.securityMode}. {preview.trust}. Checked{' '}
-          {new Date(preview.checkedAt).toLocaleString()}.
-        </Alert>
+        <>
+          <Alert severity="info">
+            Connected using {preview.identity}, {preview.securityMode}. {preview.trust}. Checked{' '}
+            {new Date(preview.checkedAt).toLocaleString()}.
+          </Alert>
+          <Button
+            onClick={() =>
+              downloadJson(
+                {
+                  format: 'commissioning-diagnostics-v1',
+                  checkedAt: preview.checkedAt,
+                  identity: preview.identity,
+                  securityMode: preview.securityMode,
+                  trust: preview.trust,
+                  ready: preview.ready,
+                  signals: preview.signals.map(
+                    ({ role, quality, actualType, sourceTime, good }) => ({
+                      role,
+                      quality,
+                      actualType,
+                      sourceTime,
+                      good,
+                    }),
+                  ),
+                  redacted: [
+                    'endpoint',
+                    'machine name',
+                    'node identifiers',
+                    'namespace URIs',
+                    'values',
+                    'credentials',
+                  ],
+                },
+                'commissioning-diagnostics.json',
+              )
+            }
+          >
+            Download redacted diagnostics
+          </Button>
+        </>
       )}
       <Typography variant="h6">2. Map the signals and their meaning</Typography>
       <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>

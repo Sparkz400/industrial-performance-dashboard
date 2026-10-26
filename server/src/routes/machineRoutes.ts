@@ -1,5 +1,6 @@
 import express, { type Request, type Response } from "express";
 import Joi from "joi";
+import type { MachineAuthenticationInput } from "@performance-dashboard/shared";
 import { validateBody, validateParams } from "../middleware/validation.js";
 import { optionalComplianceFields } from "../middleware/complianceMiddleware.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
@@ -21,6 +22,7 @@ type MachineBody = {
   securityMode: string;
   securityPolicy: string;
   isActive: boolean;
+  authentication?: MachineAuthenticationInput;
   reasonForChange?: string | null;
   electronicSignature?: Record<string, unknown> | null;
 };
@@ -55,7 +57,22 @@ const machineSchema = Joi.object({
   securityMode: Joi.string()
     .valid("None", "Sign", "SignAndEncrypt")
     .default("None"),
-  securityPolicy: Joi.string().default("None"),
+  securityPolicy: Joi.string()
+    .valid(
+      "None",
+      "Basic256Sha256",
+      "Aes128_Sha256_RsaOaep",
+      "Aes256_Sha256_RsaPss",
+    )
+    .default("None"),
+  authentication: Joi.object({
+    mode: Joi.string().valid("anonymous", "username", "certificate").required(),
+    username: Joi.string().max(255),
+    password: Joi.string().max(4096).allow(""),
+    certificatePem: Joi.string().max(32768).allow(""),
+    privateKeyPem: Joi.string().max(32768).allow(""),
+    certificateExpiresAt: Joi.string().isoDate(),
+  }),
   isActive: Joi.boolean().default(true),
 });
 

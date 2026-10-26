@@ -23,6 +23,7 @@ their signals, and build a shared view of a production line.
 ## What it does
 
 - Browse OPC UA nodes and configure per-machine tag mappings.
+- Connect with protected machine identities, explicit certificate trust and redacted commissioning diagnostics.
 - Display live readings and historical charts in configurable dashboards.
 - Calculate OEE from explicitly mapped machine states and production counters.
 - Preserve scalar values, source timestamps and quality information in history.
@@ -40,9 +41,23 @@ certification claim; see [current status](docs/STATUS.md).
 
 Edge synchronization is disabled until canonical central ingestion is implemented.
 AI suggestions disclose external processing and do not execute measurement queries.
-Public links/embeds and undelivered email/chat/SMS channels are disabled.
+Public links/embeds and legacy alarm email/chat/SMS channels are disabled.
 See the [production workflow](docs/PRODUCTION_WORKFLOW.md) and
 [P0 acceptance evidence](docs/P0_ACCEPTANCE.md) for tested paths and remaining gates.
+The first nominated pilot family is [Siemens SIMATIC S7-1500](docs/S7_1500_PILOT.md);
+software acceptance uses owned simulators, with physical CPU qualification still open.
+For isolated installation, complete backups, restore checks and upgrades, see the
+[operations guide](docs/OPERATIONS.md).
+The [operator workflow](docs/OPERATOR_WORKFLOW.md) covers handover actions, reviewed
+manual counts and the supervisor wallboard with a dedicated read-only account.
+[Unattended operation](docs/UNATTENDED_OPERATION.md) covers durable scheduled reports,
+email retry status, alarm holds/hysteresis and collector/data-health incidents.
+The [legacy gateway recipe](docs/LEGACY_GATEWAY.md) includes a read-only Modbus TCP
+adapter, owned simulator and reusable production profile.
+[Incident replay](docs/INCIDENT_REPLAY.md) joins bounded historical signals, alarm
+transitions, operator revisions and stop classifications with explicit clock and gap information.
+See [factory-pilot acceptance](docs/FACTORY_PILOT_ACCEPTANCE.md) for tested software
+milestones and the separate physical-machine gates.
 
 ## Where it is going
 

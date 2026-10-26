@@ -1,5 +1,38 @@
 export type ProductionState =
   "running" | "idle" | "fault" | "planned" | "unknown";
+
+export interface OperatorEntry {
+  id: number;
+  requestId: string;
+  machineId: number;
+  shiftId: number | null;
+  kind: "note" | "action" | "quantity";
+  text: string;
+  priority: "normal" | "high";
+  status: "open" | "resolved";
+  ownerId: number | null;
+  dueAt: string | null;
+  intervalStart: string | null;
+  intervalEnd: string | null;
+  quantity: { total: number; good: number; reject: number } | null;
+  version: number;
+  createdBy: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MachineLiveSummary {
+  id: number;
+  name: string;
+  connection: string;
+  state: ProductionState;
+  freshness: "fresh" | "stale" | "missing" | "bad-quality" | "disconnected" | "clock-skew";
+  lastMeasurement: string | null;
+  receivedAt: string | null;
+  shift: { id: number; name: string; start: string; end: string; job: { reference: string; product: string; target: number | null } } | null;
+  production: { observed: number | null; complete: boolean; asOf: string | null; truncated: boolean };
+  issues: { id: number; text: string; priority: string; dueAt: string | null; kind: string }[];
+}
 export interface ProductionSignal {
   nodeKey: string;
   namespaceUri: string;

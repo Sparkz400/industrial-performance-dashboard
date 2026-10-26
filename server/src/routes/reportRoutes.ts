@@ -9,7 +9,7 @@ import { asyncHandler } from "../middleware/errorHandler.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { reportRepository } from "../repositories/reportRepository.js";
 import { reportSchedulerService } from "../services/reportSchedulerService.js";
-import { reportGeneratorService } from "../services/reportGeneratorService.js";
+import { reportJobService } from "../services/reportJobService.js";
 import { NotFoundError } from "../utils/errors.js";
 
 const router = Router();
@@ -111,7 +111,9 @@ const scheduleUpdateSchema = Joi.object({
 
 const historyQuerySchema = Joi.object({
   scheduleId: Joi.number().integer().optional(),
-  status: Joi.string().valid("generating", "completed", "failed").optional(),
+  status: Joi.string()
+    .valid("queued", "generating", "completed", "failed")
+    .optional(),
   startDate: Joi.date().iso().optional(),
   endDate: Joi.date().iso().optional(),
   limit: Joi.number().integer().min(1).max(500).default(50),
@@ -183,12 +185,7 @@ router.get(
     res.json(
       schedules.map((schedule) => ({
         ...schedule,
-        nextRunAt: schedule.isActive
-          ? reportSchedulerService.calculateNextRun(
-              schedule.cronExpression,
-              schedule.timezone ?? "UTC",
-            )
-          : null,
+        nextRunAt: schedule.isActive ? schedule.nextRunAt : null,
       })),
     );
   }),
@@ -215,7 +212,14 @@ router.put(
   validateBody(scheduleUpdateSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id);
-    const schedule = await reportRepository.updateSchedule(id, req.body);
+    const resetCursor =
+      req.body.cronExpression !== undefined ||
+      req.body.timezone !== undefined ||
+      req.body.isActive !== undefined;
+    const schedule = await reportRepository.updateSchedule(id, {
+      ...req.body,
+      ...(resetCursor ? { nextRunAt: null } : {}),
+    });
     if (!schedule) {
       throw new NotFoundError("Report schedule");
     }
@@ -243,25 +247,33 @@ router.post(
   "/schedules/:id/run-now",
   requireRole("admin"),
   validateParams(idParamSchema),
+  validateBody(Joi.object({ requestId: Joi.string().guid().optional() })),
   asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id);
-    const schedule = await reportRepository.findScheduleById(id);
-    if (!schedule) {
-      throw new NotFoundError("Report schedule");
-    }
-
-    // Trigger generation asynchronously — return immediately
-    reportGeneratorService.generate(id).catch((err) => {
-      // Error is already logged inside the generator
+    const job = await reportJobService.enqueueManual(id, req.body.requestId);
+    void reportSchedulerService.tick();
+    res.json({
+      message: "Report queued durably",
+      scheduleId: id,
+      historyId: job.id,
     });
-
-    res.json({ message: "Report generation started", scheduleId: id });
   }),
 );
 
 // =========================================================================
 // History
 // =========================================================================
+
+router.post(
+  "/history/:id/retry",
+  requireRole("admin"),
+  validateParams(idParamSchema),
+  asyncHandler(async (req, res) => {
+    await reportJobService.retry(Number(req.params.id));
+    void reportSchedulerService.tick();
+    res.json({ message: "Report retry queued" });
+  }),
+);
 
 router.get(
   "/history",

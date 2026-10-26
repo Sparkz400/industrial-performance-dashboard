@@ -24,8 +24,22 @@ The [production workflow](https://github.com/Sparkz400/performance_dashboard/blo
 covers guided commissioning, immutable shift profiles, operator corrections,
 reconciled reports, durable alarm delivery and the single-company permission policy.
 Public sharing and legacy notification channels are disabled. Physical qualification
-and protected OPC UA identities remain open.
+remains open. Protected OPC UA identities and explicit certificate trust are covered by
+owned-server tests; see the [S7-1500 pilot guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/S7_1500_PILOT.md).
 
 The full npm audit and migrated Node 24/Wolfi image scan are clear in this wave.
 Scheduled reports use direct PDF generation; see the [reporting guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/REPORTING.md)
 and [security review](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DEPENDENCY_REVIEW.md).
+
+The [operations guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/OPERATIONS.md)
+covers isolated installation previews, complete backups and restore/upgrade checks.
+[Capacity evidence](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/CAPACITY.md)
+declares the synthetic workload and its limits; it is not physical PLC qualification.
+
+[Operator handover and wallboard](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/OPERATOR_WORKFLOW.md)
+cover attributable actions, reviewed manual declarations, current job/target context
+and a restricted display account. Physical viewing-distance acceptance remains open.
+
+[Unattended operation](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/UNATTENDED_OPERATION.md)
+covers durable report recovery, separate email retry status, measured alarm holds
+and collector/data-health incidents, including SMTP and self-monitoring limits.

@@ -8,7 +8,9 @@ import opcuaQueueWorker from "./queue/opcuaQueueWorker.js";
 import statusManager from "./utils/status.js";
 import StatusConstants from "./utils/statusConstants.js";
 import logger from "./utils/logger.js";
+import config from "./config/config.js";
 import dbClient from "./database/dbConnection.js";
+import { machineRepository } from "./repositories/machineRepository.js";
 import { shutdownTracing } from "./observability/tracing.js";
 import { opcuaDataPointsReceived } from "./observability/metrics.js";
 
@@ -22,6 +24,8 @@ import type { AlertHistoryRow } from "./database/schema.js";
 import { webhookService } from "./services/webhookService.js";
 import { spcService, spcEvents } from "./services/spcService.js";
 import { edgeSyncService } from "./services/edgeSyncService.js";
+import { healthIncidentService } from "./services/healthIncidentService.js";
+import { stopConfiguredGateway } from "./gateway/configuredGateway.js";
 
 interface Services {
   io: SocketServer;
@@ -82,7 +86,7 @@ export function setupOpcuaBridge({
   });
 
   // Load alarm rules on startup
-  webhookService.start();
+  if (!config.RECOVERY_MODE) webhookService.start();
 
   let acquisitionStopped = false;
   opcuaEmitter.on("nodeChanged", (data: OpcuaNodeData) => {
@@ -169,6 +173,7 @@ export function setupOpcuaBridge({
 export async function startOpcuaServices({
   machineService,
 }: Services): Promise<void> {
+  if (config.RECOVERY_MODE) return;
   opcuaQueueWorker.start();
 
   logger.info("Initializing multi-machine OPC UA manager...");
@@ -179,9 +184,9 @@ export async function startOpcuaServices({
       logger.info(
         `Multi-machine manager initialized with ${connectedIds.length} connection(s).`,
       );
-    } else {
+    } else if ((await machineRepository.listMachines()).length === 0) {
       logger.info(
-        "No machines in DB. Falling back to single OPC UA connection from .env...",
+        "No machines in DB. Starting single OPC UA connection from .env...",
       );
       await opcuaConnectionManager.startConnection().catch((err) => {
         logger.error("Initial OPC UA connection failed:", err);
@@ -189,12 +194,9 @@ export async function startOpcuaServices({
     }
   } catch (err) {
     logger.error(
-      "Multi-machine manager initialization failed, falling back to single connection:",
+      "Multi-machine manager initialization failed; configured machines remain disconnected:",
       err,
     );
-    await opcuaConnectionManager.startConnection().catch((connErr) => {
-      logger.error("Fallback OPC UA connection also failed:", connErr);
-    });
   }
 
   multiMachineManager.on(
@@ -250,6 +252,8 @@ export function createShutdown(
       logger.info("[Shutdown] Disconnecting OPC UA connections...");
       await multiMachineManager.disconnectAll();
       await opcuaConnectionManager.disconnectConnection();
+      await stopConfiguredGateway();
+      await healthIncidentService.stop();
       await opcuaQueueWorker.stop();
       await webhookService.stop();
       edgeSyncService.stopSyncLoop();

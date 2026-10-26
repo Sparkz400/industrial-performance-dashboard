@@ -3,6 +3,8 @@ import "dotenv/config";
 
 // Define the schema for environment variables
 const envVarsSchema = Joi.object({
+  RECOVERY_MODE: Joi.boolean().default(false),
+  ENABLE_LEGACY_GATEWAY: Joi.boolean().default(false),
   NODE_ENV: Joi.string()
     .valid("development", "production", "test")
     .default("development"),
@@ -86,8 +88,9 @@ const envVarsSchema = Joi.object({
     .default("None")
     .description("OPC UA security policy"),
   OPCUA_SECURITY_FALLBACK_ENABLED: Joi.boolean()
+    .valid(false)
     .default(false)
-    .description("Enable fallback to SecurityMode=None on security errors"),
+    .description("Deprecated; security fallback is disabled"),
   OPCUA_PKI_DIR: Joi.string()
     .optional()
     .description("Optional custom path for OPC UA PKI certificates"),
@@ -114,8 +117,11 @@ const envVarsSchema = Joi.object({
     .required()
     .description("Secret used for signing sessions"),
   AUTO_ACCEPT_CERTIFICATES: Joi.boolean()
+    .valid(false)
     .default(false)
-    .description("Automatically trust unknown server certificates"),
+    .description(
+      "Deprecated; unknown server certificates require explicit trust",
+    ),
   OPCUA_HEALTH_CHECK_INTERVAL: Joi.number()
     .integer()
     .min(0)
@@ -229,6 +235,7 @@ const envVarsSchema = Joi.object({
 
   // SMTP / Email
   SMTP_HOST: Joi.string()
+    .empty("")
     .optional()
     .description("SMTP server host for email delivery"),
   SMTP_PORT: Joi.alternatives()
@@ -236,12 +243,15 @@ const envVarsSchema = Joi.object({
     .optional()
     .description("SMTP server port"),
   SMTP_USER: Joi.string()
+    .empty("")
     .optional()
     .description("SMTP authentication user"),
   SMTP_PASS: Joi.string()
+    .empty("")
     .optional()
     .description("SMTP authentication password"),
   SMTP_FROM: Joi.string()
+    .empty("")
     .optional()
     .description("Sender address for outgoing emails"),
 }).unknown(true);
@@ -292,6 +302,8 @@ export interface AppConfig {
   OPCUA_CERT_STATE: string;
   COOKIE_SECRET: string;
   AUTO_ACCEPT_CERTIFICATES: boolean;
+  RECOVERY_MODE: boolean;
+  ENABLE_LEGACY_GATEWAY: boolean;
   OPCUA_HEALTH_CHECK_INTERVAL: number;
   LOG_LEVEL: string;
   ADMIN_API_KEY?: string;

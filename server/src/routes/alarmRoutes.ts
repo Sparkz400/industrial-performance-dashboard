@@ -88,10 +88,14 @@ const ruleBodySchema = Joi.object({
     .required(),
   threshold: Joi.number().required(),
   thresholdHigh: Joi.number().optional(),
+  rateWindowSeconds: Joi.number().integer().min(1).max(86400).optional(),
   severity: Joi.string()
     .valid("critical", "high", "medium", "low", "info")
     .default("medium"),
   cooldownSeconds: Joi.number().integer().min(0).default(300),
+  debounceSeconds: Joi.number().integer().min(0).max(86400).default(0),
+  clearDebounceSeconds: Joi.number().integer().min(0).max(86400).default(0),
+  hysteresis: Joi.number().min(0).default(0),
   channels: Joi.array().items(Joi.object()).default([]),
   isActive: Joi.boolean().default(true),
   description: Joi.string().optional().allow(""),
@@ -104,10 +108,14 @@ const ruleUpdateSchema = Joi.object({
     .optional(),
   threshold: Joi.number().optional(),
   thresholdHigh: Joi.number().optional(),
+  rateWindowSeconds: Joi.number().integer().min(1).max(86400).optional(),
   severity: Joi.string()
     .valid("critical", "high", "medium", "low", "info")
     .optional(),
   cooldownSeconds: Joi.number().integer().min(0).optional(),
+  debounceSeconds: Joi.number().integer().min(0).max(86400).optional(),
+  clearDebounceSeconds: Joi.number().integer().min(0).max(86400).optional(),
+  hysteresis: Joi.number().min(0).optional(),
   channels: Joi.array().items(Joi.object()).optional(),
   isActive: Joi.boolean().optional(),
   description: Joi.string().optional().allow(""),

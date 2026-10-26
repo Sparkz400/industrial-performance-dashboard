@@ -1,6 +1,6 @@
 import React, { useEffect, useState, Suspense, useMemo, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Box, CircularProgress, Typography, Button } from '@mui/material';
+import { Alert, Box, CircularProgress, Typography, Button } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import ResponsiveSidebar from './features/layout/components/sidebar';
 import ErrorBoundary from './features/system/components/ErrorBoundary';
@@ -12,6 +12,7 @@ import { useStatusStore } from './stores/useStatusStore';
 import { useAuthStore } from './stores/useAuthStore';
 
 const ProductionPage = React.lazy(() => import('./features/production/ProductionPage'));
+const Wallboard = React.lazy(() => import('./features/production/Wallboard'));
 
 // Lazy load pages
 const LoginPage = React.lazy(() => import('./features/auth/pages/LoginPage'));
@@ -138,7 +139,9 @@ const PageTransition = ({ children }: PageTransitionProps) => (
  *
  */
 function App() {
-  const [sidebarOpen, setSidebarOpen] = useState(localStorage.getItem('sidebarOpen') !== 'false');
+  const [sidebarOpen, setSidebarOpen] = useState(
+    window.innerWidth >= 600 && localStorage.getItem('sidebarOpen') !== 'false',
+  );
   const [drawerWidth, setDrawerWidth] = useState(0);
 
   const isError = useStatusStore((s) => s.isError);
@@ -167,6 +170,15 @@ function App() {
   useEffect(() => {
     localStorage.setItem('sidebarOpen', sidebarOpen.toString());
   }, [sidebarOpen]);
+
+  useEffect(() => {
+    const screen = window.matchMedia('(max-width: 599px)');
+    const collapse = () => {
+      if (screen.matches) setSidebarOpen(false);
+    };
+    screen.addEventListener('change', collapse);
+    return () => screen.removeEventListener('change', collapse);
+  }, []);
 
   useEffect(() => {
     const snackbarKey = 'system-connection-error';
@@ -234,10 +246,17 @@ function App() {
           </ErrorBoundary>
 
           <Box component="main" sx={contentBoxStyles}>
+            {user.recoveryMode && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                Recovery preview: machine connections and deliveries are paused. Data is read-only
+                until this installation is activated.
+              </Alert>
+            )}
             <ErrorBoundary FallbackComponent={ErrorFallback}>
               <Suspense fallback={<PageLoader />}>
                 <AnimatePresence mode="wait">
                   <Routes>
+                    <Route path="/wallboard" element={<Wallboard />} />
                     <Route
                       path="/production"
                       element={
@@ -250,7 +269,11 @@ function App() {
                       path="/"
                       element={
                         <PageTransition>
-                          <DashboardPage />
+                          {user.role === 'wallboard' ? (
+                            <Navigate to="/wallboard" replace />
+                          ) : (
+                            <DashboardPage />
+                          )}
                         </PageTransition>
                       }
                     />

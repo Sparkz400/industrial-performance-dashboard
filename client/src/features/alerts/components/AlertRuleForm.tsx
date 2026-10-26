@@ -22,6 +22,9 @@ export interface AlertRuleFormValues {
   severity: string;
   channels: number[];
   cooldownSeconds: number | '';
+  debounceSeconds: number | '';
+  clearDebounceSeconds: number | '';
+  hysteresis: number | '';
 }
 
 interface Machine {
@@ -60,6 +63,9 @@ const defaultValues: AlertRuleFormValues = {
   severity: 'medium',
   channels: [],
   cooldownSeconds: 60,
+  debounceSeconds: 0,
+  clearDebounceSeconds: 0,
+  hysteresis: 0,
 };
 
 const AlertRuleForm: React.FC<AlertRuleFormProps> = ({
@@ -79,7 +85,13 @@ const AlertRuleForm: React.FC<AlertRuleFormProps> = ({
   }, [initialValues]);
 
   const handleChange = (field: keyof AlertRuleFormValues, value: unknown) => {
-    setValues((prev) => ({ ...prev, [field]: value }));
+    setValues((prev) => ({
+      ...prev,
+      [field]: value,
+      ...(field === 'condition' && !['gt', 'gte', 'lt', 'lte'].includes(String(value))
+        ? { hysteresis: 0 }
+        : {}),
+    }));
     if (Object.hasOwn(errors, field) && errors[field as keyof typeof errors]) {
       setErrors((prev) => {
         const next = { ...prev };
@@ -211,7 +223,9 @@ const AlertRuleForm: React.FC<AlertRuleFormProps> = ({
           required
         />
       )}
-      {values.condition === 'rate_of_change' && (
+      {(values.condition === 'rate_of_change' ||
+        Number(values.debounceSeconds) > 0 ||
+        Number(values.clearDebounceSeconds) > 0) && (
         <TextField
           label="Maximum sample gap (seconds)"
           type="number"
@@ -220,9 +234,12 @@ const AlertRuleForm: React.FC<AlertRuleFormProps> = ({
             handleChange('rateWindowSeconds', e.target.value === '' ? '' : Number(e.target.value))
           }
           error={!!errors.rateWindowSeconds}
-          helperText={errors.rateWindowSeconds}
+          helperText={
+            errors.rateWindowSeconds ||
+            'Default: 60 seconds. Missing or bad samples restart the hold period.'
+          }
           fullWidth
-          required
+          required={values.condition === 'rate_of_change'}
         />
       )}
       <FormControl fullWidth error={!!errors.severity}>
@@ -251,6 +268,37 @@ const AlertRuleForm: React.FC<AlertRuleFormProps> = ({
           handleChange('cooldownSeconds', e.target.value === '' ? '' : Number(e.target.value))
         }
         fullWidth
+      />
+      <TextField
+        label="Trigger hold (seconds)"
+        type="number"
+        value={values.debounceSeconds}
+        onChange={(e) =>
+          handleChange('debounceSeconds', e.target.value === '' ? '' : Number(e.target.value))
+        }
+        fullWidth
+        helperText="0 triggers immediately; otherwise require sustained good observations."
+      />
+      <TextField
+        label="Recovery hold (seconds)"
+        type="number"
+        value={values.clearDebounceSeconds}
+        onChange={(e) =>
+          handleChange('clearDebounceSeconds', e.target.value === '' ? '' : Number(e.target.value))
+        }
+        fullWidth
+        helperText="Requires measured recovery before clearing an incident."
+      />
+      <TextField
+        label="Recovery hysteresis (signal units)"
+        type="number"
+        value={values.hysteresis}
+        disabled={!['gt', 'gte', 'lt', 'lte'].includes(values.condition)}
+        onChange={(e) =>
+          handleChange('hysteresis', e.target.value === '' ? '' : Number(e.target.value))
+        }
+        fullWidth
+        helperText="Greater-than clears below the threshold minus this margin; less-than uses threshold plus margin."
       />
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
         <Button onClick={onCancel}>Cancel</Button>

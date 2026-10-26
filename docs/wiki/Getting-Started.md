@@ -19,3 +19,15 @@ covers preserved features, existing volumes, upgrades, rollback and email settin
 After starting the owned simulator, open **Production shift → Commission machine**.
 Follow the [production workflow guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/PRODUCTION_WORKFLOW.md)
 for reusable mappings, shift reports and isolated recovery/browser checks.
+
+For the nominated Siemens SIMATIC S7-1500 pilot, follow the
+[secure connection and renewal guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/S7_1500_PILOT.md).
+Confirm the exact CPU, firmware and runtime licence before physical qualification.
+
+Use the [operations guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/OPERATIONS.md)
+for isolated installation previews, complete backups, fresh-instance restores and
+upgrade/rollback procedures. Configuration-only exports are not recovery backups.
+
+The [factory-pilot acceptance record](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/FACTORY_PILOT_ACCEPTANCE.md)
+maps secure onboarding, recovery, operator workflows, unattended operation, legacy
+gateway and incident replay to their tests and remaining qualification limits.

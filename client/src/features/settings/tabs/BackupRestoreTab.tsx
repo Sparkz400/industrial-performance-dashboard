@@ -14,13 +14,13 @@ const BackupRestoreTab: React.FC = () => {
   return (
     <Card>
       <CardHeader
-        title="Dashboard Backup & Restore"
+        title="Dashboard Configuration Export & Import"
         avatar={
           <Avatar>
             <SettingsBackupRestoreIcon />
           </Avatar>
         }
-        subheader="Export and import your dashboard configurations"
+        subheader="Layouts only. Full recovery also requires the database, measurements, certificates, reports and secret key; use the operations backup tool."
       />
       <Divider />
       <CardContent>
@@ -33,7 +33,7 @@ const BackupRestoreTab: React.FC = () => {
                   Export Dashboards{' '}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  Download a backup file containing all your dashboards, widgets, and layouts
+                  Download a configuration file containing your dashboards, widgets, and layouts
                 </Typography>
                 <ButtonLoader
                   variant="contained"

@@ -42,7 +42,6 @@ class OpcuaConnectionManager extends EventEmitter {
   retryDelay: number;
   healthCheckInterval: ReturnType<typeof setInterval> | null;
   currentConfig: OpcuaConfig;
-  securityFallbackEnabled: boolean;
   currentConnection: OpcuaConnectionResult | null;
 
   constructor() {
@@ -62,15 +61,7 @@ class OpcuaConnectionManager extends EventEmitter {
       securityPolicy: config.OPCUA_SECURITY_POLICY,
     };
 
-    this.securityFallbackEnabled = config.OPCUA_SECURITY_FALLBACK_ENABLED;
-    if (this.securityFallbackEnabled) {
-      logger.info('OPC UA security fallback to "None" is ENABLED.');
-    } else {
-      logger.info('OPC UA security fallback to "None" is DISABLED.');
-    }
-
     this.currentConnection = null;
-
     this.initializeCertificates();
 
     opcuaClient.opcuaEmitter.on("untrustedCertificate", (certInfo: any) => {
@@ -128,8 +119,6 @@ class OpcuaConnectionManager extends EventEmitter {
       securityPolicy: securityOptions.securityPolicy,
       attempt: this.connectionAttempts,
     });
-
-    let isSecurityError = false;
 
     try {
       const connectionPromise = opcuaClient.connectAndSubscribe(
@@ -190,53 +179,6 @@ class OpcuaConnectionManager extends EventEmitter {
         attempt: this.connectionAttempts,
       });
 
-      isSecurityError =
-        error.message &&
-        (error.message.includes("certificate") ||
-          error.message.includes("security") ||
-          error.message.includes("untrusted") ||
-          error.message.includes("trust") ||
-          error.message.includes("rejected") ||
-          (error.statusCode &&
-            error.statusCode.name.startsWith("BadSecurity")));
-
-      if (
-        this.securityFallbackEnabled &&
-        isSecurityError &&
-        this.currentConfig.securityMode !== "None"
-      ) {
-        logger.warn(
-          "Security-related error detected and fallback is enabled. Attempting connection with SecurityMode=None.",
-        );
-
-        statusManager.setOpcuaStatus(StatusConstants.WARNING, {
-          message: "Security error, falling back to No security",
-          error: error.message,
-          endpoint: endpointUrl,
-        });
-
-        const originalSecurity = {
-          securityMode: this.currentConfig.securityMode,
-          securityPolicy: this.currentConfig.securityPolicy,
-        };
-
-        this.currentConfig.securityMode = "None";
-        this.currentConfig.securityPolicy = "None";
-
-        this.connectionAttempts = 0;
-
-        setTimeout(() => {
-          logger.info(
-            `Retrying connection with No security (original was ${originalSecurity.securityMode}/${originalSecurity.securityPolicy})`,
-          );
-          this.isConnecting = false;
-          void this.startConnection();
-        }, 2000);
-
-        this.isConnecting = false;
-        return;
-      }
-
       statusManager.setOpcuaStatus(StatusConstants.ERROR, {
         message: `Connection failed: ${error.message}`,
         error: error.message,
@@ -246,16 +188,7 @@ class OpcuaConnectionManager extends EventEmitter {
 
       this.scheduleReconnect();
     } finally {
-      if (
-        !this.reconnectTimer &&
-        !(
-          this.securityFallbackEnabled &&
-          isSecurityError &&
-          this.currentConfig.securityMode !== "None"
-        )
-      ) {
-        this.isConnecting = false;
-      }
+      this.isConnecting = false;
     }
   }
 
