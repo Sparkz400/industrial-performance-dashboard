@@ -250,32 +250,6 @@ export interface AuditLogEntry {
   createdAt: string;
 }
 
-// ===== Natural Language Query Types =====
-
-export interface NLQueryRequest {
-  query: string;
-  dashboardId?: string;
-  machineId?: number;
-}
-
-export interface NLQueryResponse {
-  answer: string;
-  evidence?: "suggestion-only";
-  provider?: "Anthropic";
-  queryExecuted?: false;
-  chartConfig?: NLChartConfig | null;
-  sqlGenerated?: string;
-  data?: unknown[];
-}
-
-export interface NLChartConfig {
-  type: "line" | "bar" | "pie";
-  title: string;
-  xAxis: string;
-  yAxis: string;
-  data: unknown[];
-}
-
 // ===== Webhook / Integration Types =====
 
 export interface Webhook {

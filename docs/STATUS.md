@@ -58,8 +58,7 @@ simulator evidence do not establish physical-machine acceptance or release readi
 - The disk spool needs free space, a persistent volume and a single collector.
 - Edge/cloud transfer and ingest are disabled: previously transferred queue records
   do not establish queryable central history. Retained records remain visible in settings.
-- AI provides suggestions only, discloses Anthropic processing and never executes SQL
-  or renders provider-invented measurement charts. Missing configuration returns 503.
+- The AI assistant, query endpoint and external-provider configuration have been removed.
 - Compliance, recipes and digital twins remain experimental. Public shares/embeds
   and legacy notification channels are disabled. The tested single-company permission
   policy does not establish site/asset or tenant isolation. See the

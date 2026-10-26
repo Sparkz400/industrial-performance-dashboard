@@ -16,8 +16,6 @@ import type {
   ShareToken,
   CustomWidgetManifest,
   CustomWidgetRegistration,
-  NLQueryResponse,
-  NLChartConfig,
   // Compliance
   ComplianceAuditEntry,
   DashboardVersion,
@@ -395,16 +393,6 @@ export interface GetAuditLogsRequest {
 }
 
 export type GetAuditLogsResponse = AuditLogEntry[];
-
-// ===== Natural Language Query API =====
-
-export interface NLQueryApiRequest {
-  query: string;
-  dashboardId?: string;
-  machineId?: number;
-}
-
-export type NLQueryApiResponse = NLQueryResponse;
 
 // ===== Webhook API =====
 

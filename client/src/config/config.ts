@@ -54,7 +54,6 @@ export const API_ENDPOINTS = {
       `${API_BASE_URL}/certificates/accept-rejected/${filename}`, // Function for dynamic paths
   },
   // Tier 3 features
-  nlQuery: `${API_BASE_URL}/nl-query`,
   webhooks: {
     base: `${API_BASE_URL}/webhooks`,
     byId: (id: number) => `${API_BASE_URL}/webhooks/${id}`,

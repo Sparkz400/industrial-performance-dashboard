@@ -40,10 +40,6 @@ export type {
   AggregateDataPoint,
   Annotation,
   AuditLogEntry,
-  // Natural Language Query
-  NLQueryRequest,
-  NLQueryResponse,
-  NLChartConfig,
   // Webhooks
   Webhook,
   WebhookEvent,
@@ -185,9 +181,6 @@ export type {
   DbMetricsResponse,
   GetAuditLogsRequest,
   GetAuditLogsResponse,
-  // NL Query API
-  NLQueryApiRequest,
-  NLQueryApiResponse,
   // Webhook API
   CreateWebhookRequest,
   UpdateWebhookRequest,

@@ -68,7 +68,7 @@ deferred tasks must be recorded explicitly rather than silently counted as done.
 | **M2 — Brownfield connectivity and dependable history** | Needed gateway protocol, stable ingestion contract, retention/rollups, durable events, deterministic reports and tested operational recovery | Required adapters pass C10 fixtures and real endpoint qualification; H04–H07/H09–H10, I01–I05, D07 and relevant alert/report items demonstrate replay, load and operational limits. |
 | **M3 — Production improvement workflows** | Better line-loss analysis, validated quality/batches, maintenance, energy and useful asset views | Select a concrete improvement question for O06–O08, Q01–Q07, M01–M06, U08 and X03. Show before/after evidence with comparable conditions and no invented causal claim. |
 | **M4 — Multi-site operations** | Authenticated edge ingestion, site permissions, identity federation and fleet administration | H08, D08 and E01–E05 prove authorization boundaries, independent offline operation, deduplication and recovery across a named site pair. Separate companies still use separate installations. |
-| **M5 — Evidence-backed intelligence and ecosystem** | Governed data questions, evaluated anomaly detection, selected extensions and demand-led enterprise options | X01/X02/X04–X06, I06–I08 and E06 require separate go/no-go decisions, useful evaluation results and a maintenance owner. No autonomous machine control. |
+| **M5 — Evidence-backed intelligence and ecosystem** | Evaluated anomaly detection, selected extensions and demand-led enterprise options | X02/X04/X06, I06–I08 and E06 require separate go/no-go decisions, useful evaluation results and a maintenance owner. No autonomous machine control. |
 
 M1 pilot acceptance is not a general release or machine-family qualification.
 M2 and later scopes are selectable: the pilot inventory determines whether MQTT,
@@ -84,7 +84,7 @@ not a second checklist.
 | --- | --- | --- |
 | 1 | P01, F01 | Define the nominated pilot and reproduce the important existing gaps. |
 | 2 | H01, H02, H03 | Make signal identity and the displayed time window trustworthy. |
-| 3 | F02, F03, F04, F05 | Isolate SPC; prove the alarm path; stop edge/AI screens implying unsupported behavior. |
+| 3 | F02, F03, F04, F05 | Isolate SPC; prove the alarm path; keep edge limits explicit and remove the AI assistant. |
 | 4 | F06, F07, F08, F09, F10 | Qualify spool failure, authorization boundaries, exposure and regression evidence. |
 | 5 | C01, C02, D01, D02, D03, A01 | Connect a protected test endpoint, recover the installation and expose a coherent alarm workflow. |
 | 6 | C03, C04, U01, U02 | Make correct setup repeatable and understandable. |
@@ -184,7 +184,7 @@ software SHA, sampling settings, endpoint limits, retention and workload with re
 | Historian engine | Existing PostgreSQL and spool | Reproducible query/storage limits that indexing, retention and rollups cannot reasonably address. |
 | Deployment scale | One company per installation | Site requirements plus proven authorization/replication, then a separate tenancy decision. |
 | Cloud | Optional and explicit | Customer requirements for central access, data residency, costs and offline operation. |
-| AI | Off unless configured; grounded read-only assistance only | Approved data policy, permission-enforced retrieval and an evaluation corpus demonstrating value. |
+| AI | Removed from product scope | No assistant, provider integration or planned AI data-question interface. |
 | Advanced prediction | Descriptive analytics first | Adequate labeled incidents, stable features and useful performance on held-out periods/assets. |
 | Recipe use | Record and compare intended/observed parameters | Machine actuation is outside this plan and requires separate authorization and design. |
 | Digital twin | Useful 2D asset context | A simulation use case with a validated model and calibration evidence. |

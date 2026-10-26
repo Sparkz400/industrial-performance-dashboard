@@ -241,10 +241,6 @@ export const api = {
     deleteMapping: (machineId: number, mappingId: number) =>
       api.delete(API_ENDPOINTS.machines.deleteMapping(machineId, mappingId)),
 
-    // Natural Language Query
-    nlQuery: (query: string, machineId?: number) =>
-      api.post(API_ENDPOINTS.nlQuery, { query, machineId }),
-
     // Webhooks
     getWebhooks: () => api.get(API_ENDPOINTS.webhooks.base),
     createWebhook: (data: { name: string; url: string; events: string[] }) =>

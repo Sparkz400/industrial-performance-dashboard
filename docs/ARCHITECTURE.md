@@ -45,8 +45,8 @@ Observations do not establish continuity. SPC windows are keyed by profile,
 machine and tag; baseline/chart queries use the same machine boundary.
 
 The old edge receiver did not populate canonical history. Edge mutations now
-fail with 501 and the queue is preserved for a future explicit migration. AI
-calls only generate labeled suggestions; no generated SQL is executed.
+fail with 501 and the queue is preserved for a future explicit migration.
+The AI assistant and its external-provider integration have been removed.
 
 The spool is for one collector process on a durable local filesystem. Preserve
 `server/data/` or the container volume. Disk exhaustion and abrupt hardware loss

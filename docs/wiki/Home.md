@@ -5,7 +5,7 @@ historical trends and OEE. Development software for owned simulators and isolate
 test equipment; physical-machine and production acceptance remain open.
 
 The first P0 wave fixes trend completeness, SPC isolation and measurement identity.
-Edge transfer is disabled; AI generates suggestions without querying measurements.
+Edge transfer is disabled. The AI assistant and provider integration have been removed.
 See [acceptance evidence](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/P0_ACCEPTANCE.md).
 
 - [[Getting Started]]

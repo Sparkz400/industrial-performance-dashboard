@@ -37,38 +37,12 @@ test("trend API rejects ambiguous machine scope and accepts an empty scoped wind
   });
 });
 
-test("AI discloses suggestions and external processing before sending", async ({
-  page,
-}) => {
-  let requests = 0;
-  await page.route("**/api/v1/nl-query", async (route) => {
-    requests++;
-    await route.fulfill({
-      status: 503,
-      json: {
-        message: "AI suggestions are not configured",
-        code: "NL_NOT_CONFIGURED",
-      },
-    });
-  });
+test("dashboard has no AI assistant", async ({ page }) => {
   await login(page);
-  await page.getByRole("button", { name: "Open AI suggestions" }).click();
-  await expect(page.getByText(/No machine data is queried/)).toBeVisible();
   await expect(
-    page.getByText(/sends your question to Anthropic/),
-  ).toBeVisible();
-  expect(requests).toBe(0);
-  await page
-    .getByPlaceholder("Ask for a suggestion...")
-    .fill("Explain a trend query");
-  await page
-    .getByRole("button", { name: "Send AI suggestion request" })
-    .click();
-  await expect(
-    page.getByText("AI suggestions are not configured", { exact: true }),
-  ).toBeVisible();
-  expect(requests).toBe(1);
-  await page.getByRole("button", { name: "Close AI suggestions" }).click();
+    page.getByRole("button", { name: "Open AI suggestions" }),
+  ).toHaveCount(0);
+  await expect(page.getByPlaceholder("Ask for a suggestion...")).toHaveCount(0);
 });
 
 test("trend UI consumes the API envelope and exposes quality and resolution", async ({

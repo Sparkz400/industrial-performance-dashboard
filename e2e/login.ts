@@ -5,7 +5,9 @@ export async function login(page: Page) {
     throw new Error("Set E2E_PASSWORD or SEED_ADMIN_PASSWORD");
   await page.goto("/");
   await page.getByLabel(/username/i).fill(process.env.E2E_USERNAME || "admin");
-  await page.getByLabel(/password/i).fill(process.env.E2E_PASSWORD);
+  await page
+    .locator('input[autocomplete="current-password"]')
+    .fill(process.env.E2E_PASSWORD);
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(

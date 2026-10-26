@@ -76,9 +76,6 @@ export type {
   GetAuditLogsRequest,
   GetAuditLogsResponse,
   // Tier 3 types
-  NLQueryRequest,
-  NLQueryResponse,
-  NLChartConfig,
   Webhook,
   WebhookEvent,
   ShareToken,
@@ -87,8 +84,6 @@ export type {
   CustomWidgetManifest,
   WidgetSettingsField,
   CustomWidgetRegistration,
-  NLQueryApiRequest,
-  NLQueryApiResponse,
   CreateWebhookRequest,
   UpdateWebhookRequest,
   GetWebhooksResponse,

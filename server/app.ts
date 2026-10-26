@@ -52,7 +52,6 @@ import statusRoutes from "./src/routes/statusRoutes.js";
 import machineRoutes from "./src/routes/machineRoutes.js";
 import operationModeRoutes from "./src/routes/operationModeRoutes.js";
 import auditLogRoutes from "./src/routes/auditLogRoutes.js";
-import nlQueryRoutes from "./src/routes/nlQueryRoutes.js";
 import webhookRoutes from "./src/routes/webhookRoutes.js";
 import shareRoutes from "./src/routes/shareRoutes.js";
 import customWidgetRoutes from "./src/routes/customWidgetRoutes.js";
@@ -144,7 +143,6 @@ export function createApp() {
     requireRole("admin"),
     auditLogRoutes,
   );
-  app.use("/api/v1/nl-query", requireAuth, nlQueryRoutes);
   app.use("/api/v1/webhooks", requireAuth, requireRole("admin"), webhookRoutes);
   app.use(
     "/api/v1/custom-widgets",

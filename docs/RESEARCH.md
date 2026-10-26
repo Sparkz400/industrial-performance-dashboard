@@ -3,8 +3,8 @@
 Research date: **2026-10-26**. Code baseline: `6b5556493e7c48687a43cc9d90df3aba0be1374e`.
 
 This is the preserved pre-fix assessment. The [P0 acceptance record](P0_ACCEPTANCE.md)
-tracks subsequent trend/SPC/identity fixes and the disabled-edge/suggestion-only AI
-boundaries; use [STATUS](STATUS.md) and [TODO](../TODO.md) for current behavior.
+tracks subsequent trend/SPC/identity fixes and the disabled-edge boundary.
+The AI assistant has since been removed; use [STATUS](STATUS.md) and [TODO](../TODO.md) for current behavior.
 
 This assessment separates code that exists, documented test coverage, gaps found
 by inspection, and proposed product opportunities. It does not certify a machine,
@@ -44,7 +44,6 @@ None of these labels means production-ready.
 | Compliance records — Experimental | Audit records, signature verification, integrity verification and exports | [Compliance service](../server/src/services/complianceService.ts). These components do not establish regulatory compliance, tamper resistance against a database administrator or a validated electronic-record system. |
 | Edge/cloud — Experimental | Database-backed sync queue, retries, status/configuration and receiving endpoint | [Edge service](../server/src/services/edgeSyncService.ts). Receiver inserts into `edge_sync_queue`; it does not materialize canonical historian records. This queue is separate from the acquisition SQLite spool. |
 | Webhooks — Experimental | Registration, test delivery, HMAC signing and outbound-request protection | [Webhook service](../server/src/services/webhookService.ts). `triggerEvent` has no production call site in the inspected source; delivery is fire-and-forget, without a durable delivery outbox. |
-| Natural-language questions — Experimental | Calls an external Anthropic API; returns explanatory text, generated SQL and suggested chart metadata | [NL service](../server/src/services/nlQueryService.ts). Always returns an empty data array; generated SQL is not executed. Requires an API key and sends the user's question to the provider. Answers are not grounded in measured query results. |
 | Custom widgets — Experimental | Manifest registration/management and UI describing an iframe messaging model | [Service](../server/src/services/customWidgetService.ts), [manager](../client/src/features/widgets/sdk/CustomWidgetManager.tsx). Registration and UI copy are not proof of a complete, isolated runtime or stable SDK. |
 | Backup and restore — Present, narrow | Dashboard configuration export/import | [Backup UI](../client/src/features/settings/tabs/BackupRestoreTab.tsx). This is not a complete PostgreSQL, spool, certificate and configuration recovery procedure. |
 | Installable UI — Present, narrow | Browser install-prompt and standalone-display detection hook | [PWA hook](../client/src/hooks/usePWA.ts). This does not establish safe offline work queues or fresh machine data while disconnected. |
@@ -62,7 +61,6 @@ needs a focused regression test when implemented.
 | Two alarm/alert implementations exist; only one is called from the acquisition bridge | A configured rule in one UI may never receive measurements through its intended engine. | F03, A01 |
 | Webhook trigger method has no production caller; deliveries are not durably scheduled | A successful test button is insufficient evidence that an actual production event reaches an integration. | F03, I01 |
 | Edge receive acknowledges by inserting queue rows, without canonical historian writes | A healthy-looking sync status can be mistaken for a working central history database. | F04, H08 |
-| AI response returns `data: []` and uses a prompt describing only a subset of the current measurement schema | Fluent answers can imply access to evidence the model never queried. | F05, X01 |
 | Backup UI exports dashboard configuration | A user could still lack the material needed to recover measurements and credentials after host loss. | D02 |
 | The local production build reports large chunks, including an approximately 3.87 MB minified dashboard-page chunk | Startup and interaction on operator devices need measurement; bundle size alone is not a measured user-perceived delay. | U10, D04 |
 

@@ -19,7 +19,7 @@ still reports large bundles; performance work is tracked separately.
 | Trend completeness / H02 | Dense windows aggregate across the entire interval into at most 2,000 points. Responses disclose resolution, counts, legacy provenance and possible concurrent-query truncation. UI consumes the API envelope and uses real time spacing. | 5,001-sample, same-key machine, long-window and explicit-bucket database assertions; client zero/null conversion test; Chromium trend fixture. | Samples do not prove continuity. A concurrent arrival between summary and raw reads may produce an explicitly flagged truncated result. |
 | Quality propagation / H03, partial | Bad/mixed and empty buckets are gaps; raw zero remains zero. Reports use whole-query statistics and disclose counts/resolution. Isolated samples remain visible; legend choices survive data refresh. | Database and browser fixtures above. | KPI/tooltip/source-time consistency across every widget is still open. Exports still need H04's bounded, quality-aware contract. |
 | Edge / F04 | Transfer and ingest mutations return 501. Background transfers are disabled. Read-only settings distinguish retained pending records from previously marked transfers; canonical central history is unavailable. Existing queue data is retained. | experimentalBoundaries unit test; real API/browser Edge Status flow. | H08 must implement authenticated durable central ingestion before re-enabling transfers. This does not disable the separate local acquisition spool. |
-| AI / F05 | Suggestions only; no database query execution. API marks provider/evidence/queryExecuted, discards generated chart data, fails clearly without configuration and bounds provider calls. UI discloses Anthropic before sending. | Mocked-provider and missing-key unit tests; Chromium disclosure flow (no external request). | No live paid/provider request was made. Grounded, authorized data questions remain X01. |
+| AI / F05 | Removed: assistant UI, query endpoint, provider calls, configuration and shared contracts. | Browser regression checks the assistant is absent. | Historical suggestion-only acceptance is superseded by removal. |
 | Harness / F10, partial | Database mocks are at module scope. App bootstrap has its own beforeAll budget; HTTP assertions keep their normal timeout. | Parallel client/server coverage run: 65 client tests, 120 server tests; no nested-mock warning or first-route timeout. | The production wave below adds durability and alarm acceptance; the exhaustive authorization matrix remains F07. |
 | Dependencies / F09, partial | Root workspace lock; matched Vitest/coverage v4; aligned OpenTelemetry API/SDK/exporters; updated scheduler type import. | Clean npm ci, npm ls without invalid peers, builds/type checks, unit/integration suites, real loopback span export, database/certificate tests, browser flows. | Exact-image security review and the broader access-boundary audit remain open. See dependency disposition record. |
 
@@ -50,12 +50,11 @@ one synthetic span only to its own ephemeral loopback collector.
 
 The browser suite includes real login, CSRF, machine settings, dashboard
 persistence, public-certificate and disabled-edge flows. Trend rendering uses a
-clearly synthetic API fixture, with actual SQL behavior tested separately. AI
-tests never contact Anthropic. No browser fixture is evidence from a real machine.
+clearly synthetic API fixture, with actual SQL behavior tested separately.
+No browser fixture is evidence from a real machine.
 
-The hosted browser run additionally exposed overlapping Add Widget/AI buttons
-and per-handshake session middleware creation. The buttons now occupy separate
-positions; one middleware instance serves each socket server. A real loopback
+The hosted browser run additionally exposed per-handshake session middleware
+creation. One middleware instance now serves each socket server. A real loopback
 socket test rejects 20 unsigned handshakes without growing session-store listeners,
 then accepts a correctly signed session. The subsequent wave below adds idle expiry and real logout/account revocation tests.
 

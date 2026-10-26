@@ -44,7 +44,7 @@ with tabular numerals for stable measurements and monospace technical identifier
 Fonts require no internet access; see [font source and license](client/public/fonts/figtree/README.md).
 
 Edge synchronization is disabled until canonical central ingestion is implemented.
-AI suggestions disclose external processing and do not execute measurement queries.
+The AI assistant and external AI-provider integration have been removed.
 Public links/embeds and legacy alarm email/chat/SMS channels are disabled.
 See the [production workflow](docs/PRODUCTION_WORKFLOW.md) and
 [P0 acceptance evidence](docs/P0_ACCEPTANCE.md) for tested paths and remaining gates.

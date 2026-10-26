@@ -17,7 +17,7 @@ long-term-support policy is currently offered. Report against current `main`.
   network isolation and HTTPS for a deployment beyond your workstation.
 - Keep one collector process per measurement spool. Preserve its volume and monitor
   free disk space. A lost or full disk cannot provide durable buffering.
-- Treat compliance, custom-widget, natural-language and edge-sync features as
+- Treat compliance, custom-widget and edge-sync features as
   experimental. Separate installations are required for independent companies;
   plant membership tables do not establish tenant isolation.
 - Review `npm audit`, CodeQL and container scan findings. Known dependency
