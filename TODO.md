@@ -100,9 +100,9 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
 
 - [ ] **F01 — Capture the current product contract** · P0 · M0 · Improve · S. Depends: none.
   Done: preserve fixtures for trend truncation, same-key machines, unwired alerts/webhooks,
-  edge receive and empty AI results; map enabled screens to supported, experimental or
+  edge receive; map enabled screens to supported, experimental or
   disabled states and link each reproduced issue to its owning task.
-  Progress: trend/machine-isolation, edge and AI regressions plus the acceptance
+  Progress: trend/machine-isolation and edge regressions plus the acceptance
   matrix and actual UI-rule-to-receiver alarm fixtures are present. Complete the
   screen-by-screen experimental/disabled acceptance inventory before closure.
 - [x] **F02 — Isolate SPC state and baselines** · P0 · M0 · Improve · M. Depends: F01, H01.
@@ -123,12 +123,9 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   cannot be presented as proof that a central historian contains the measurements.
   Completed: [PR #40](https://github.com/Sparkz400/performance_dashboard/pull/40);
   [validation and limits](docs/P0_ACCEPTANCE.md).
-- [x] **F05 — Make AI data access and limitations explicit** · P0 · M0 · Improve · S. Depends: F01.
-  Done: users see whether an answer used measured data or only generated a suggestion;
-  external-provider use is disclosed, unavailable configuration is clear, and unexecuted
-  SQL cannot appear as a verified result. No arbitrary SQL execution is added.
-  Completed: [PR #40](https://github.com/Sparkz400/performance_dashboard/pull/40);
-  [validation and limits](docs/P0_ACCEPTANCE.md).
+- [x] **F05 — Remove the AI assistant** · P0 · M0 · Remove · S.
+  Removed the assistant UI, backend endpoint, external-provider calls and configuration,
+  shared contracts and associated provider tests. AI assistance is outside product scope.
 - [x] **F06 — Qualify durable acquisition failures** · P0 · M0 · Improve · L. Depends: H01.
   Done: test process termination, database outage, spool reopen, disk-full and replay
   interruption; account for every durably accepted event and expose unreceived/unknown
@@ -607,7 +604,7 @@ below retain their unfulfilled acceptance criteria.
   owner accepts the bounded pilot. Automation alone cannot close this item.
 - [ ] **D07 — Support a documented disconnected installation** · P2 · M2 · New · M. Depends: D03.
   Done: installation/update artifacts, dependencies, image digests and instructions work
-  without runtime internet access; disabled external email/AI/report destinations fail
+  without runtime internet access; disabled external email/report destinations fail
   clearly. License notices and dependency inventory accompany the package.
 - [ ] **D08 — Design high availability from measured needs** · P2 · M4 · Research · XL. Depends: D04, H08, E03.
   Done: distinguish database recovery, web redundancy and collector ownership; demonstrate
@@ -643,10 +640,6 @@ below retain their unfulfilled acceptance criteria.
 
 ## Analytics and experiments
 
-- [ ] **X01 — Build grounded, permission-aware data questions** · P3 · M5 · Improve · XL. Depends: F05, I02, E01, R04.
-  Done: use an allowlisted analytical query layer with timeouts, row limits and normal
-  permissions; answers cite executed results, filters, time/coverage and uncertainty.
-  Evaluate hallucination/prompt-injection cases and require explicit external-data policy.
 - [ ] **X02 — Evaluate anomaly and predictive-maintenance models** · P3 · M5 · Research · XL. Depends: Q01, M03, H07.
   Done: compare against a simple threshold baseline on held-out periods/assets with
   labeled incidents; publish false-positive, missed-event and lead-time behavior plus
@@ -662,14 +655,10 @@ below retain their unfulfilled acceptance criteria.
   Done: estimate using comparable jobs and recent capacity with uncertainty ranges;
   backtest against actual completion and disclose unsupported process changes. Forecasts
   are advisory and do not automatically reschedule or control machines.
-- [ ] **X05 — Evaluate a read-only AI/MCP access surface** · P3 · M5 · Research · L. Depends: I02, E02, X01.
-  Done: scope tools to approved queries with user identity, provenance and query budgets;
-  demonstrate cross-user/site denial and malicious-input handling. No arbitrary SQL,
-  secrets retrieval or PLC writes are exposed through the assistant interface.
 - [ ] **X06 — Test improvement recommendations with evidence** · P3 · M5 · Research · M. Depends: X03, R06, M06.
   Done: recommendations cite loss/energy/maintenance evidence and assumptions, allow
   human dismissal and link accepted actions to outcomes. Compare usefulness with a
-  simple ranked loss list before adopting model-generated advice.
+  simple ranked loss list; recommendations use explicit rules and measured evidence.
 
 ## Public project and pilot learning
 

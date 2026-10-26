@@ -21,8 +21,7 @@ feature does not expand present compatibility or production-readiness claims.
 
 The [first P0 acceptance record](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/P0_ACCEPTANCE.md)
 documents identity, SPC isolation and trend fixes. Edge transfer is disabled until
-central ingestion exists; AI suggestions explicitly disclose external processing
-and never execute measurement queries.
+central ingestion exists. The AI assistant and external-provider integration have been removed.
 
 **Why is OEE unavailable?**
 

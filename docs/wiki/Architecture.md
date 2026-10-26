@@ -12,7 +12,7 @@ service. See
 
 New measurements preserve namespace-aware identity and receive time. Dense trend
 queries span the selected interval with quality gaps and explicit resolution.
-Edge transfer remains disabled; AI suggestions do not execute database queries.
+Edge transfer remains disabled. The AI assistant and provider integration have been removed.
 
 See the [architecture guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/ARCHITECTURE.md)
 for measurement quality, durable replay, OEE boundaries and deployment limits.

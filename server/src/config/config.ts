@@ -167,15 +167,6 @@ const envVarsSchema = Joi.object({
     .default(1000)
     .description("Max requests per window for rate limit"),
 
-  // Claude API (for Natural Language Queries)
-  ANTHROPIC_API_KEY: Joi.string()
-    .allow("")
-    .default("")
-    .description("Anthropic API key for natural language query feature"),
-  ANTHROPIC_MODEL: Joi.string()
-    .default("claude-sonnet-4-20250514")
-    .description("Claude model ID for NL queries"),
-
   // Webhooks
   WEBHOOK_SIGNING_SECRET: Joi.string()
     .default("whsec_default_change_me")
@@ -325,8 +316,6 @@ export interface AppConfig {
   OTEL_ENABLED: boolean;
   OTEL_EXPORTER_OTLP_ENDPOINT: string;
   OTEL_SERVICE_NAME: string;
-  ANTHROPIC_API_KEY: string;
-  ANTHROPIC_MODEL: string;
   WEBHOOK_SIGNING_SECRET: string;
   ALLOW_PRIVATE_OUTBOUND_URLS: boolean;
   SMTP_HOST?: string;

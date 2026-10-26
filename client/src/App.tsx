@@ -23,7 +23,6 @@ const SettingsPage = React.lazy(() => import('./features/settings/pages/settings
 const HelpPage = React.lazy(() => import('./features/help/pages/helpPage'));
 const MachinesPage = React.lazy(() => import('./features/machines/pages/MachinesPage'));
 const EmbedPage = React.lazy(() => import('./features/embed/pages/EmbedPage'));
-const NLQueryPanel = React.lazy(() => import('./features/nl-query/components/NLQueryPanel'));
 
 // Tier 1 feature pages
 const PlantsPage = React.lazy(() => import('./features/plants/pages/PlantsPage'));
@@ -501,7 +500,6 @@ function App() {
 
       {user.role === 'admin' && <CertificateNotification />}
       <CsrfErrorHandler />
-      <Suspense fallback={null}>{user.role === 'admin' && <NLQueryPanel />}</Suspense>
     </Router>
   );
 }
