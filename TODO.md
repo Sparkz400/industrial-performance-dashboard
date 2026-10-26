@@ -39,6 +39,9 @@ All 29 dependency PRs were reviewed. Fifteen obsolete or incompatible proposals
 were closed with reasons; fourteen compatible proposals are consolidated into this
 wave in [PR #40](https://github.com/Sparkz400/performance_dashboard/pull/40), whose
 status records integration. See [PR dispositions](docs/DEPENDENCY_REVIEW.md).
+Replacement Node 26 proposal #41 was also reviewed and closed. Docker major
+updates now require an explicit F09 support decision; minor/patch updates continue.
+New Gitleaks action PR #42 passed all required checks and was merged separately.
 
 ## Foundation
 
@@ -94,6 +97,8 @@ status records integration. See [PR dispositions](docs/DEPENDENCY_REVIEW.md).
   Follow-up: qualify coordinated MUI, Storybook/Vite, lint, Vitest 5, virtualization,
   grid-layout and Node major migrations; resolve development advisories with supported
   upstream versions. Exact-image/code-scanning review and the full boundary audit remain open.
+  Image review: application commit `53cce7a7` has one critical and 66 high Trivy
+  findings, including libxml2 with no fixed package listed; see the dependency review.
 - [ ] **F10 — Create a feature-level acceptance matrix** · P0 · M0 · Improve · M. Depends: F02, F03, F06, F07.
   Done: enabled pilot features have happy-path and failure-path evidence; distinguish
   unit, database, browser, simulator and physical-machine checks. CI success alone never

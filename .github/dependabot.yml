@@ -34,3 +34,7 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
+    # Node major changes require the support/qualification decision in TODO F09.
+    ignore:
+      - dependency-name: node
+        update-types: ['version-update:semver-major']

@@ -2,8 +2,18 @@
 
 All 29 open proposals were reviewed against the current root-workspace project.
 Compatible changes are consolidated in [PR #40](https://github.com/Sparkz400/performance_dashboard/pull/40) so one dependency
-set can be installed and tested together. Original bot branches are retained as
-review provenance when their commits were not merged verbatim.
+set can be installed and tested together. Closed pull-request history preserves
+proposal provenance even when GitHub removes the original bot branches.
+
+Dependabot generated replacement Node 26 proposal #41 during cleanup. Its two
+Docker stage changes were reviewed and declined for the same reason as #29.
+Docker major updates are now excluded from automatic proposals while Node 24 is
+the declared runtime; minor/patch updates remain enabled. A major runtime change
+requires the explicit support decision and validation tracked under F09.
+
+New PR #42 updated the pinned Gitleaks action to v3 (Node 24 action runtime,
+unchanged inputs/outputs). Its single-line change and release notes were reviewed;
+all required checks passed on `4c500941c151198466489bba8794fbc319f147c3` before merge.
 
 | PR | Disposition |
 | --- | --- |
@@ -59,4 +69,10 @@ review supported upstream migrations and rerun audits for each release.
 
 Container/Chromium advisories and code scanning are separate gates, reported by
 the current-image workflow. This record does not accept an image for production.
+The image scan for application commit `53cce7a7` reports one critical and 66 high
+open findings. [Critical libxml2 finding #468](https://github.com/Sparkz400/performance_dashboard/security/code-scanning/468)
+lists CVE-2026-6653 and provides no fixed Debian package version. These findings
+are not suppressed; maintainers must resolve or explicitly assess them under F09
+before accepting a production image. Later workflow/documentation-only changes
+do not constitute a patched application image.
 See [P0 acceptance](P0_ACCEPTANCE.md) and [TODO](../TODO.md).
