@@ -68,14 +68,17 @@ export async function testIncidentReplay({ call, pool, page, frontend, machine, 
   await page.getByRole("heading", { name: "Incident replay", exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: ".local/production-evidence/incident-replay.png", fullPage: true });
   await observation.scrollIntoViewIfNeeded();
-  await page.screenshot({ path: ".local/production-evidence/incident-replay-events.png", fullPage: true });
+  await expect(observation).toBeInViewport();
+  await page.screenshot({ path: ".local/production-evidence/incident-replay-events.png", fullPage: true, animations: "disabled" });
   await page.getByRole("button", { name: "Play at 60×", exact: true }).click();
   await expect(page.getByLabel("Replay cursor")).toHaveText(at(60));
   await page.setViewportSize({ width: 390, height: 844 });
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: ".local/production-evidence/incident-replay-mobile.png", fullPage: true });
   await observation.scrollIntoViewIfNeeded();
-  await page.screenshot({ path: ".local/production-evidence/incident-replay-mobile-observation.png", fullPage: true });
+  await expect(observation).toBeInViewport();
+  await expect(observation.getByRole("heading", { name: "Unknown", exact: true })).toBeVisible();
+  await page.screenshot({ path: ".local/production-evidence/incident-replay-mobile-observation.png", fullPage: true, animations: "disabled" });
   await page.setViewportSize({ width: 1440, height: 1000 });
 
   await pool.query("INSERT INTO opcua_data(machine_id,node_key,timestamp,value,status_code) SELECT $1,'ReplayDense',$2::timestamptz+n*interval '1 millisecond',n,'Good' FROM generate_series(1,2001)n", [machine.id, at(0)]);

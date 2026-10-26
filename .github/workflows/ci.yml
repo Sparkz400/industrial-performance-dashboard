@@ -48,6 +48,7 @@ jobs:
         if: always()
         with:
           name: coverage-${{ matrix.os }}
+          include-hidden-files: true
           path: |
             client/coverage/
             server/coverage/
@@ -93,6 +94,7 @@ jobs:
         if: always()
         with:
           name: browser-evidence
+          include-hidden-files: true
           path: |
             playwright-report/
             test-results/
@@ -116,6 +118,7 @@ jobs:
         if: always()
         with:
           name: operations-evidence
+          include-hidden-files: true
           path: |
             .local/operations-*/validation.json
             .local/operations-*/capacity.json

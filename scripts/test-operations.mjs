@@ -15,6 +15,7 @@ const id = randomUUID().replaceAll("-", "").slice(0, 12),
   restored = `${source}-restore`,
   rollback = `${source}-rollback`;
 const directory = resolve(".local", `operations-${id}`);
+await mkdir(dirname(directory), { recursive: true });
 await mkdir(directory, { recursive: false });
 const docker = process.env.DOCKER_BIN || "docker";
 const stacks = [],
