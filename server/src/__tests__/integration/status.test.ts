@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createMockDbChain, setupServerMocks } from "../helpers/mockDb.js";
+import { createMockDbChain } from "../helpers/mockDb.js";
 
 // Set up all module-level mocks
-setupServerMocks();
 
 const mockDb = createMockDbChain();
 vi.mock("../../database/db.js", () => ({

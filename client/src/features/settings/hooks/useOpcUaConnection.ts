@@ -225,8 +225,7 @@ export const useOpcUaConnection = (): OpcUaConnectionReturn => {
   useEffect(() => {
     // Ensure status and details exist before accessing nested properties
     const currentOpcuaStatus = (status?.opcua?.details as Record<string, unknown>)?.config as
-      | OpcUaConfig
-      | undefined;
+      OpcUaConfig | undefined;
     const isChanged =
       ip !== (currentOpcuaStatus?.ip || 'localhost') ||
       port !== (currentOpcuaStatus?.port?.toString() || '4840') ||

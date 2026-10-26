@@ -1,5 +1,8 @@
 # Architecture
 
+This page describes the current system. See the [roadmap](ROADMAP.md#technical-direction)
+for proposed contracts and the [research assessment](RESEARCH.md) for implementation gaps.
+
 ```mermaid
 flowchart LR
   Machine[OPC UA machine or simulator] --> Collector[Node.js collector]
@@ -21,6 +24,22 @@ source timestamps, raw scalar value, quality and numeric projection. Good Boolea
 values project to 0/1; text and bad-quality values remain available as raw values
 but do not become chart numbers. The event/timestamp constraint prevents duplicate
 replay after an ambiguous commit. Failed writes stay in the local spool.
+
+New samples also retain receive time and signal metadata: endpoint, machine,
+namespace URI, identifier, mapping revision and optional engineering unit.
+Identity uses namespace URI rather than the transient namespace index. Migration
+0003 adds nullable columns; legacy rows remain unknown. Units are read when the
+server exposes EngineeringUnits, otherwise null. Historical queries still select
+machine/tag aliases; review remapping before combining different physical signals.
+
+Trend queries require a machine and aggregate dense windows across the requested
+interval, with a 2,000-point bound, sample counts, resolution and unknown/bad gaps.
+Observations do not establish continuity. SPC windows are keyed by profile,
+machine and tag; baseline/chart queries use the same machine boundary.
+
+The old edge receiver did not populate canonical history. Edge mutations now
+fail with 501 and the queue is preserved for a future explicit migration. AI
+calls only generate labeled suggestions; no generated SQL is executed.
 
 The spool is for one collector process on a durable local filesystem. Preserve
 `server/data/` or the container volume. Disk exhaustion and abrupt hardware loss

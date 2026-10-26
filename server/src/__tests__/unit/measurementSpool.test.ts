@@ -6,6 +6,7 @@ import {
   MeasurementSpool,
   toMeasurementRow,
 } from "../../queue/measurementSpool.js";
+import { measurementIdentity } from "../../opc-ua/measurementIdentity.js";
 const directories: string[] = [];
 afterEach(() => {
   for (const dir of directories.splice(0))
@@ -21,6 +22,32 @@ const sample = {
   machineId: 1,
 };
 describe("durable measurement spool", () => {
+  it("retains source identity and receive time across spool replay", () => {
+    const spool = new MeasurementSpool(":memory:");
+    try {
+      const signalMetadata = measurementIdentity(
+        "opc.tcp://owned:4841",
+        1,
+        "Running",
+        { nodeId: "ns=1;s=Running", dataType: "Boolean", label: "Running" },
+        ["core", "urn:owned"],
+        null,
+      );
+      const receivedAt = "2026-01-01T00:00:01.000Z";
+      spool.enqueue({ ...sample, receivedAt, signalMetadata });
+      const row = toMeasurementRow(spool.peek(1)[0]);
+      expect(row.signalMetadata).toEqual(signalMetadata);
+      expect(row.receivedAt?.toISOString()).toBe(receivedAt);
+      expect(
+        toMeasurementRow({ id: "old", data: sample }).signalMetadata,
+      ).toBeNull();
+      expect(
+        toMeasurementRow({ id: "old", data: sample }).receivedAt,
+      ).toBeNull();
+    } finally {
+      spool.close();
+    }
+  });
   it("reopens unacknowledged measurements with the same replay identity", () => {
     const dir = mkdtempSync(join(tmpdir(), "dashboard-spool-"));
     directories.push(dir);

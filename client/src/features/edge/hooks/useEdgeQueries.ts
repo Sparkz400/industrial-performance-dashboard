@@ -5,6 +5,8 @@ import { API_ENDPOINTS } from '@/config/config';
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export interface EdgeStatus {
+  centralHistory?: 'unavailable';
+  legacyTransferredRecords?: number;
   enabled: boolean;
   cloudConnected: boolean;
   lastSyncAt: string | null;

@@ -36,6 +36,7 @@ import SystemInfoTab from '../tabs/SystemInfoTab';
 import AuditTrailTab from '../tabs/AuditTrailTab';
 import WebhookManager from '../../webhooks/components/WebhookManager';
 import CustomWidgetManager from '../../widgets/sdk/CustomWidgetManager';
+import EdgeSettingsPanel from '../../edge/components/EdgeSettingsPanel';
 
 // Import hooks
 import { useStatusStore } from '@/stores/useStatusStore';
@@ -92,6 +93,11 @@ const SettingsPage: React.FC = () => {
               label: 'Webhooks',
               icon: <WebhookIcon />,
               content: <WebhookManager />,
+            },
+            {
+              label: 'Edge Status',
+              icon: <StorageIcon />,
+              content: <EdgeSettingsPanel />,
             },
             {
               label: 'Custom Widgets',

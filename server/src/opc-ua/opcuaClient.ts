@@ -8,6 +8,8 @@ import StatusConstants from "../utils/statusConstants.js";
 import statusManager from "../utils/status.js";
 import certificateManager from "./services/certificateManager.js";
 import config from "../config/config.js";
+import { measurementIdentity } from "./measurementIdentity.js";
+import type { SignalMetadata } from "@performance-dashboard/shared";
 
 export interface OpcuaNodeData {
   key: string;
@@ -15,6 +17,8 @@ export interface OpcuaNodeData {
   value: number | string | boolean | null;
   timestamp: Date;
   sourceTimestamp?: Date | null;
+  receivedAt?: Date;
+  signalMetadata?: SignalMetadata;
   dataType: string;
   statusCode: string;
   machineId?: number;
@@ -150,6 +154,7 @@ export async function connectAndSubscribe(
       );
 
       client = opcua.OPCUAClient.create(clientOptions);
+      const metadataByKey = new Map<string, SignalMetadata>();
       client.on("connection_lost", () => {
         for (const [key, node] of Object.entries(
           dynamicMapping || opcuaMapping,
@@ -162,6 +167,8 @@ export async function connectAndSubscribe(
             dataType: node.dataType,
             statusCode: "BadCommunicationError",
             machineId,
+            receivedAt: new Date(),
+            signalMetadata: metadataByKey.get(key),
           });
         }
       });
@@ -188,6 +195,7 @@ export async function connectAndSubscribe(
       // Create session
       logger.info("[ConnectAndSub] Creating session...");
       const session = await client.createSession();
+      const namespaces = await session.readNamespaceArray();
       logger.info("[ConnectAndSub] Session created successfully.");
 
       // Create subscription
@@ -215,6 +223,37 @@ export async function connectAndSubscribe(
       const activeMapping = dynamicMapping || opcuaMapping;
       for (const [key, nodeConfig] of Object.entries(activeMapping)) {
         try {
+          let unit: string | null = null;
+          // EngineeringUnits is optional; absence is unknown, never an inferred unit.
+          try {
+            const property = await session.translateBrowsePath(
+              opcua.makeBrowsePath(nodeConfig.nodeId, "/0:EngineeringUnits"),
+            );
+            const unitNode = property.statusCode.isGood()
+              ? property.targets?.[0]?.targetId
+              : undefined;
+            if (unitNode) {
+              const result = await session.read({
+                nodeId: unitNode,
+                attributeId: opcua.AttributeIds.Value,
+              });
+              if (result.statusCode.isGood())
+                unit = result.value.value?.displayName?.text ?? null;
+            }
+          } catch {
+            logger.warn(
+              `[ConnectAndSub] Engineering units unavailable for ${key}`,
+            );
+          }
+          const metadata = measurementIdentity(
+            endpointUrl,
+            machineId,
+            key,
+            nodeConfig,
+            namespaces,
+            unit,
+          );
+          metadataByKey.set(key, metadata);
           const monitoredItem = opcua.ClientMonitoredItem.create(
             subscription,
             {
@@ -236,6 +275,8 @@ export async function connectAndSubscribe(
               value: dataValue.value.value,
               timestamp: dataValue.serverTimestamp || new Date(),
               sourceTimestamp: dataValue.sourceTimestamp,
+              receivedAt: new Date(),
+              signalMetadata: metadata,
               dataType: nodeConfig.dataType,
               statusCode: dataValue.statusCode.toString(),
               machineId,

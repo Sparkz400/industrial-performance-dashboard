@@ -9,7 +9,7 @@ import type {
   AlarmStatus,
   AlarmCondition,
   AggregateResolution,
-} from './enums.js';
+} from "./enums.js";
 
 // ===== Auth / User Types =====
 
@@ -129,7 +129,7 @@ export interface KpiData {
   activeAlarms: number;
   uptimePercent: number;
   airConsumption: number;
-  systemStatus: 'healthy' | 'degraded' | 'error';
+  systemStatus: "healthy" | "degraded" | "error";
   dbStatus: string;
   opcuaStatus: string;
 }
@@ -243,13 +243,16 @@ export interface NLQueryRequest {
 
 export interface NLQueryResponse {
   answer: string;
+  evidence?: "suggestion-only";
+  provider?: "Anthropic";
+  queryExecuted?: false;
   chartConfig?: NLChartConfig | null;
   sqlGenerated?: string;
   data?: unknown[];
 }
 
 export interface NLChartConfig {
-  type: 'line' | 'bar' | 'pie';
+  type: "line" | "bar" | "pie";
   title: string;
   xAxis: string;
   yAxis: string;
@@ -324,7 +327,7 @@ export interface CustomWidgetManifest {
 export interface WidgetSettingsField {
   key: string;
   label: string;
-  type: 'text' | 'number' | 'boolean' | 'select';
+  type: "text" | "number" | "boolean" | "select";
   options?: string[];
   defaultValue?: unknown;
 }
@@ -392,7 +395,7 @@ export interface SpcProfile {
   name: string;
   machineId: number | null;
   nodeKey: string;
-  method: 'zscore' | 'moving_avg' | 'std_bands' | 'cusum';
+  method: "zscore" | "moving_avg" | "std_bands" | "cusum";
   windowSize: number;
   ucl: number | null;
   lcl: number | null;
@@ -412,7 +415,7 @@ export interface SpcAlert {
   profileName?: string;
   machineId: number | null;
   nodeKey: string;
-  alertType: 'ucl_breach' | 'lcl_breach' | 'trend' | 'shift';
+  alertType: "ucl_breach" | "lcl_breach" | "trend" | "shift";
   value: number;
   threshold: number;
   message: string;
@@ -452,7 +455,7 @@ export interface Recipe {
   version: number;
   description: string | null;
   machineId: number | null;
-  status: 'draft' | 'active' | 'archived';
+  status: "draft" | "active" | "archived";
   parameters: RecipeParameter[];
   setpoints: Record<string, { value: number; min: number; max: number }>;
   parentId: number | null;
@@ -466,7 +469,7 @@ export interface Batch {
   batchNumber: string;
   recipeId: number | null;
   machineId: number | null;
-  status: 'planned' | 'running' | 'completed' | 'aborted';
+  status: "planned" | "running" | "completed" | "aborted";
   startedAt: string | null;
   completedAt: string | null;
   notes: string | null;
@@ -504,7 +507,7 @@ export interface BatchDataSeries {
 export interface TwinElementMapping {
   svgElementId: string;
   label: string;
-  dataType: 'sensor' | 'status' | 'indicator';
+  dataType: "sensor" | "status" | "indicator";
 }
 
 export interface DigitalTwinTemplate {
@@ -647,9 +650,10 @@ export interface OeeResult {
 
 // ===== Alert Types =====
 
-export type AlertSeverity = 'critical' | 'high' | 'medium' | 'low' | 'info';
-export type AlertStatus = 'active' | 'acknowledged' | 'resolved' | 'silenced';
-export type AlertCondition = 'gt' | 'lt' | 'eq' | 'neq' | 'range' | 'rate_of_change' | 'state_change';
+export type AlertSeverity = "critical" | "high" | "medium" | "low" | "info";
+export type AlertStatus = "active" | "acknowledged" | "resolved" | "silenced";
+export type AlertCondition =
+  "gt" | "lt" | "eq" | "neq" | "range" | "rate_of_change" | "state_change";
 
 export interface AlertRule {
   id: number;
@@ -692,7 +696,7 @@ export interface AlertHistoryEntry {
 export interface NotificationChannel {
   id: number;
   name: string;
-  type: 'email' | 'slack' | 'teams' | 'sms' | 'in_app';
+  type: "email" | "slack" | "teams" | "sms" | "in_app";
   config: Record<string, unknown>;
   isActive: boolean;
   createdBy: number | null;
@@ -702,7 +706,7 @@ export interface NotificationChannel {
 
 // ===== Report Types =====
 
-export type ReportType = 'shift' | 'daily' | 'weekly';
+export type ReportType = "shift" | "daily" | "weekly";
 
 export interface ReportTemplate {
   id: number;
@@ -740,7 +744,7 @@ export interface ReportHistoryEntry {
   scheduleId: number | null;
   templateId: number | null;
   scheduleName: string | null;
-  status: 'generating' | 'completed' | 'failed';
+  status: "generating" | "completed" | "failed";
   filePath: string | null;
   fileSize: number | null;
   error: string | null;
@@ -753,11 +757,33 @@ export interface ReportHistoryEntry {
 
 export interface TrendingDataPoint {
   timestamp: string;
-  value: number;
+  value: number | null;
+  statusCode?: string | null;
+  sourceTimestamp?: string | null;
+  receivedAt?: string | null;
+  sampleCount?: number;
+  goodSampleCount?: number;
 }
 
 export interface TrendingSeries {
   nodeKey: string;
   displayName: string;
   data: TrendingDataPoint[];
+  machineId?: number;
+  resolutionMs?: number | null;
+  aggregation?: "avg" | "min" | "max" | "last";
+  truncated?: boolean;
+  sampleCount?: number;
+  goodSampleCount?: number;
+  legacySampleCount?: number;
+  requestedStart?: string;
+  requestedEnd?: string;
+  observedStart?: string | null;
+  observedEnd?: string | null;
+  continuity?: "unverified";
+  statistics?: {
+    min: number | null;
+    max: number | null;
+    average: number | null;
+  };
 }

@@ -15,6 +15,7 @@ import {
   primaryKey,
   unique,
 } from "drizzle-orm/pg-core";
+import type { SignalMetadata } from "@performance-dashboard/shared";
 
 // --- Enums ---
 
@@ -112,6 +113,8 @@ export const opcuaData = pgTable(
     statusCode: text("status_code"),
     dataType: text("data_type"),
     sourceTimestamp: timestamp("source_timestamp", { withTimezone: true }),
+    receivedAt: timestamp("received_at", { withTimezone: true }),
+    signalMetadata: jsonb("signal_metadata").$type<SignalMetadata>(),
     eventId: text("event_id"),
     machineId: integer("machine_id").references(() => machines.id, {
       onDelete: "set null",
@@ -122,7 +125,10 @@ export const opcuaData = pgTable(
       name: "opcua_data_pkey",
       columns: [table.timestamp, table.id],
     }),
-    unique("opcua_data_event_timestamp_unique").on(table.timestamp, table.eventId),
+    unique("opcua_data_event_timestamp_unique").on(
+      table.timestamp,
+      table.eventId,
+    ),
     index("idx_opcua_data_node_key_timestamp").on(
       table.nodeKey,
       table.timestamp,

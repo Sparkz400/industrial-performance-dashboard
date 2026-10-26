@@ -12,6 +12,7 @@ import {
   Chip,
   alpha,
   Divider,
+  Alert,
 } from '@mui/material';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import SendIcon from '@mui/icons-material/Send';
@@ -33,10 +34,10 @@ interface ChatMessage {
 }
 
 const EXAMPLE_QUERIES = [
-  'Show me machine temperatures from last hour',
-  "What's the average uptime rate this week?",
-  'List all active alarms',
-  'Compare air consumption across machines',
+  'Suggest how to investigate a temperature increase',
+  'Explain what inputs an OEE calculation needs',
+  'Suggest a query for historical alarms',
+  'How could I compare air consumption?',
 ];
 
 /**
@@ -160,7 +161,7 @@ export default function NLQueryPanel() {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: response.answer,
-        chartConfig: response.chartConfig,
+        chartConfig: null,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
@@ -194,13 +195,14 @@ export default function NLQueryPanel() {
 
   return (
     <>
-      <Tooltip title="Ask AI about your data" placement="left">
+      <Tooltip title="AI suggestions (no data access)" placement="left">
         <Fab
+          aria-label="Open AI suggestions"
           color="primary"
           onClick={() => setOpen(true)}
           sx={{
             position: 'fixed',
-            bottom: 24,
+            bottom: 96,
             right: 24,
             zIndex: 1200,
             background: 'linear-gradient(135deg, #6C63FF, #FF6B9D)',
@@ -238,15 +240,20 @@ export default function NLQueryPanel() {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <SmartToyIcon color="primary" />
             <Typography variant="h6" fontWeight={600}>
-              AI Data Assistant
+              AI Suggestions
             </Typography>
           </Box>
-          <IconButton onClick={() => setOpen(false)} size="small">
+          <IconButton aria-label="Close AI suggestions" onClick={() => setOpen(false)} size="small">
             <CloseIcon />
           </IconButton>
         </Box>
 
         {/* Messages */}
+        <Alert severity="warning" sx={{ m: 2 }}>
+          Experimental suggestions only. No machine data is queried and generated SQL is not
+          executed. Sending a message sends your question to Anthropic; do not include confidential
+          information.
+        </Alert>
         <Box
           sx={{
             flexGrow: 1,
@@ -261,7 +268,8 @@ export default function NLQueryPanel() {
             <Box sx={{ textAlign: 'center', mt: 4 }}>
               <SmartToyIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
               <Typography variant="body1" color="text.secondary" gutterBottom>
-                Ask questions about your machine data in natural language
+                Ask for explanations or query suggestions. Answers are not verified against
+                measurements.
               </Typography>
               <Divider sx={{ my: 2 }} />
               <Typography variant="caption" color="text.disabled" sx={{ mb: 1, display: 'block' }}>
@@ -357,7 +365,7 @@ export default function NLQueryPanel() {
           <TextField
             fullWidth
             size="small"
-            placeholder="Ask about your data..."
+            placeholder="Ask for a suggestion..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -367,6 +375,7 @@ export default function NLQueryPanel() {
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
           />
           <IconButton
+            aria-label="Send AI suggestion request"
             color="primary"
             onClick={handleSend}
             disabled={!input.trim() || loading}

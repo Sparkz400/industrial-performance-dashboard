@@ -1,296 +1,72 @@
-import { eq, sql, and, lt, asc } from "drizzle-orm";
-
+import { sql } from "drizzle-orm";
 import db from "../database/db.js";
-import { edgeSyncQueue, edgeConfig } from "../database/schema.js";
-import config from "../config/config.js";
-import logger from "../utils/logger.js";
+import { AppError } from "../utils/errors.js";
 
-const MAX_RETRIES = 5;
-const BACKOFF_BASE_MS = 2000;
-
-let syncLoopTimer: ReturnType<typeof setInterval> | null = null;
+function unavailable(): never {
+  throw new AppError(
+    "Edge synchronization is disabled until authenticated central historian ingestion is implemented (H08). Existing queue records are retained.",
+    501,
+    "EDGE_NOT_IMPLEMENTED",
+  );
+}
 
 export const edgeSyncService = {
+  // The former receiver acknowledged queue rows without storing canonical measurements.
   isEdgeMode(): boolean {
-    return config.EDGE_MODE_ENABLED === true;
+    return false;
   },
-
-  async isCloudReachable(): Promise<boolean> {
-    const cloudUrl = config.EDGE_CLOUD_URL;
-    if (!cloudUrl) return false;
-
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-      const response = await fetch(`${cloudUrl}/api/v1/status`, {
-        method: "HEAD",
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      return response.ok || response.status === 401;
-    } catch {
-      return false;
-    }
-  },
-
   async queueForSync(
-    tableName: string,
-    operation: string,
-    recordId: string,
-    payload: unknown,
-  ) {
-    await db.insert(edgeSyncQueue).values({
-      tableName,
-      operation,
-      recordId: String(recordId),
-      payload,
-      syncStatus: "pending",
-    });
+    _tableName: string,
+    _operation: string,
+    _recordId: string,
+    _payload: unknown,
+  ): Promise<void> {
+    unavailable();
   },
-
-  async getStatus() {
-    const pendingResult = await db.execute(
-      sql`SELECT count(*) as count FROM edge_sync_queue WHERE sync_status = 'pending'`,
-    );
-    const retryingResult = await db.execute(
-      sql`SELECT count(*) as count FROM edge_sync_queue WHERE sync_status = 'failed' AND retry_count < ${MAX_RETRIES}`,
-    );
-    const lastSyncResult = await db.execute(
-      sql`SELECT synced_at FROM edge_sync_queue WHERE sync_status = 'synced' ORDER BY synced_at DESC LIMIT 1`,
-    );
-    const lastErrorResult = await db.execute(
-      sql`SELECT last_error FROM edge_sync_queue WHERE sync_status = 'failed' ORDER BY created_at DESC LIMIT 1`,
-    );
-
-    const cloudReachable = await this.isCloudReachable();
-
-    const pending = pendingResult.rows[0] as { count: string } | undefined;
-    const lastSync = lastSyncResult.rows[0] as { synced_at: string } | undefined;
-    const lastError = lastErrorResult.rows[0] as { last_error: string } | undefined;
-    const retrying = retryingResult.rows[0] as { count: string } | undefined;
-
-    return {
-      isEdgeMode: this.isEdgeMode(),
-      cloudReachable,
-      syncQueueDepth: Number(pending?.count ?? 0),
-      lastSuccessfulSync: lastSync?.synced_at
-        ? new Date(lastSync.synced_at).toISOString()
-        : null,
-      lastSyncError: lastError?.last_error ?? null,
-      retryingCount: Number(retrying?.count ?? 0),
-    };
-  },
-
   async processSync(): Promise<number> {
-    const cloudUrl = config.EDGE_CLOUD_URL;
-    if (!cloudUrl) {
-      logger.debug("[Edge] No cloud URL configured, skipping sync");
-      return 0;
-    }
-
-    const reachable = await this.isCloudReachable();
-    if (!reachable) {
-      logger.debug("[Edge] Cloud not reachable, skipping sync");
-      return 0;
-    }
-
-    const batchSize = config.EDGE_SYNC_BATCH_SIZE ?? 500;
-
-    // Get pending items
-    const items = await db
-      .select()
-      .from(edgeSyncQueue)
-      .where(and(eq(edgeSyncQueue.syncStatus, "pending")))
-      .orderBy(asc(edgeSyncQueue.createdAt))
-      .limit(batchSize);
-
-    // Also retry failed items with retry_count < MAX_RETRIES
-    const retryItems = await db
-      .select()
-      .from(edgeSyncQueue)
-      .where(
-        and(
-          eq(edgeSyncQueue.syncStatus, "failed"),
-          lt(edgeSyncQueue.retryCount, MAX_RETRIES),
-        ),
-      )
-      .orderBy(asc(edgeSyncQueue.createdAt))
-      .limit(Math.max(0, batchSize - items.length));
-
-    const allItems = [...items, ...retryItems];
-    if (allItems.length === 0) return 0;
-
-    // Get edge ID
-    const edgeId = await this.getEdgeId();
-
-    const payload = {
-      edgeId,
-      items: allItems.map((item) => ({
-        tableName: item.tableName,
-        operation: item.operation,
-        recordId: item.recordId,
-        payload: item.payload,
-        originalTimestamp:
-          item.createdAt?.toISOString() ?? new Date().toISOString(),
-      })),
-    };
-
-    try {
-      // Mark as syncing
-      const ids = allItems.map((i) => i.id);
-      await db
-        .update(edgeSyncQueue)
-        .set({ syncStatus: "syncing" })
-        .where(sql`id = ANY(${ids})`);
-
-      const response = await fetch(`${cloudUrl}/api/v1/edge/ingest`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
-        await db
-          .update(edgeSyncQueue)
-          .set({ syncStatus: "synced", syncedAt: new Date() })
-          .where(sql`id = ANY(${ids})`);
-        logger.info(`[Edge] Synced ${allItems.length} items to cloud`);
-        return allItems.length;
-      } else {
-        const errorText = await response.text();
-        throw new Error(
-          `Cloud responded with ${response.status}: ${errorText}`,
-        );
-      }
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      logger.warn(`[Edge] Sync failed: ${errorMsg}`);
-
-      // Mark as failed with incremented retry count
-      for (const item of allItems) {
-        const backoff = BACKOFF_BASE_MS * Math.pow(2, item.retryCount ?? 0);
-        await db
-          .update(edgeSyncQueue)
-          .set({
-            syncStatus: "failed",
-            retryCount: (item.retryCount ?? 0) + 1,
-            lastError: errorMsg,
-          })
-          .where(eq(edgeSyncQueue.id, item.id));
-      }
-      return 0;
-    }
+    unavailable();
   },
-
-  async getEdgeId(): Promise<string> {
-    const result = await db
-      .select()
-      .from(edgeConfig)
-      .where(eq(edgeConfig.key, "edge_id"))
-      .limit(1);
-
-    if (result[0]) {
-      return result[0].value as string;
-    }
-
-    // Generate and store a new edge ID
-    const newId = crypto.randomUUID();
-    await db.insert(edgeConfig).values({
-      key: "edge_id",
-      value: JSON.stringify(newId),
-    });
-    return newId;
+  async ingestFromEdge(_edgeId: string, _items: unknown[]): Promise<number> {
+    unavailable();
   },
-
+  async updateConfig(_updates: Record<string, unknown>): Promise<never> {
+    unavailable();
+  },
   async getConfig() {
-    const rows = await db.select().from(edgeConfig);
-    const configMap: Record<string, unknown> = {};
-    for (const row of rows) {
-      configMap[row.key] = row.value;
-    }
     return {
-      cloudUrl: config.EDGE_CLOUD_URL ?? null,
-      syncIntervalMs: config.EDGE_SYNC_INTERVAL_MS ?? 30000,
-      syncBatchSize: config.EDGE_SYNC_BATCH_SIZE ?? 500,
-      dataRetentionDays: config.EDGE_DATA_RETENTION_DAYS ?? 7,
-      lightweightMode: config.EDGE_LIGHTWEIGHT_MODE === true,
+      enabled: false,
+      cloudUrl: "",
+      syncIntervalSeconds: 30,
+      batchSize: 500,
+      retentionDays: 7,
+      centralHistory: "unavailable",
     };
   },
-
-  async updateConfig(updates: Record<string, unknown>) {
-    for (const [key, value] of Object.entries(updates)) {
-      const existing = await db
-        .select()
-        .from(edgeConfig)
-        .where(eq(edgeConfig.key, key))
-        .limit(1);
-
-      if (existing[0]) {
-        await db
-          .update(edgeConfig)
-          .set({ value: JSON.stringify(value), updatedAt: new Date() })
-          .where(eq(edgeConfig.key, key));
-      } else {
-        await db.insert(edgeConfig).values({
-          key,
-          value: JSON.stringify(value),
-        });
-      }
-    }
-    return this.getConfig();
+  async getStatus() {
+    const result = await db.execute(
+      sql`SELECT sync_status, count(*)::int AS count FROM edge_sync_queue GROUP BY sync_status`,
+    );
+    const rows = result.rows as { sync_status: string; count: number }[];
+    const pending = rows
+      .filter((row) => row.sync_status !== "synced")
+      .reduce((sum, row) => sum + row.count, 0);
+    const transferred =
+      rows.find((row) => row.sync_status === "synced")?.count ?? 0;
+    return {
+      enabled: false,
+      isEdgeMode: false,
+      cloudConnected: false,
+      cloudReachable: false,
+      lastSyncAt: null,
+      lastSuccessfulSync: null,
+      lastSyncError: null,
+      syncQueueDepth: pending,
+      pendingRecords: pending,
+      legacyTransferredRecords: transferred,
+      centralHistory: "unavailable",
+      retryingCount: 0,
+    };
   },
-
-  startSyncLoop() {
-    if (!this.isEdgeMode()) {
-      logger.info("[Edge] Edge mode not enabled, sync loop not started");
-      return;
-    }
-
-    const intervalMs = config.EDGE_SYNC_INTERVAL_MS ?? 30000;
-    logger.info(`[Edge] Starting sync loop (interval: ${intervalMs}ms)`);
-
-    syncLoopTimer = setInterval(async () => {
-      try {
-        await this.processSync();
-      } catch (error) {
-        logger.error("[Edge] Sync loop error:", error);
-      }
-    }, intervalMs);
-  },
-
-  stopSyncLoop() {
-    if (syncLoopTimer) {
-      clearInterval(syncLoopTimer);
-      syncLoopTimer = null;
-      logger.info("[Edge] Sync loop stopped");
-    }
-  },
-
-  /** Cloud-side: ingest data from edge instances. */
-  async ingestFromEdge(
-    edgeId: string,
-    items: Array<{
-      tableName: string;
-      operation: string;
-      recordId: string;
-      payload: unknown;
-      originalTimestamp: string;
-    }>,
-  ) {
-    // For now, store ingested items in the edge_sync_queue with 'synced' status
-    // so they can be processed by the cloud application
-    for (const item of items) {
-      await db.insert(edgeSyncQueue).values({
-        tableName: item.tableName,
-        operation: item.operation,
-        recordId: item.recordId,
-        payload: item.payload,
-        syncStatus: "synced",
-        syncedAt: new Date(),
-      });
-    }
-    return items.length;
-  },
+  startSyncLoop() {},
+  stopSyncLoop() {},
 };

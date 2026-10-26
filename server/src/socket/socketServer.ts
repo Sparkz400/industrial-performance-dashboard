@@ -70,6 +70,19 @@ export function createSocketServer(
   statusService.register();
 
   // --- Socket.IO Authentication Middleware ---
+  // One middleware instance per server; constructing it per handshake leaks store listeners.
+  const sessionMiddleware = session({
+    store: sessionStore,
+    secret: config.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: new URL(config.CLIENT_URL).protocol === "https:",
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+    },
+  });
   io.use((socket, next) => {
     // Socket.IO passes an IncomingMessage; Express middleware expects Request/Response
     const req = socket.request as unknown as Request;
@@ -80,19 +93,6 @@ export function createSocketServer(
         logger.error("Socket.IO Cookie parsing error:", cookieErr);
         return next(new Error("Authentication error: Invalid cookies"));
       }
-
-      const sessionMiddleware = session({
-        store: sessionStore,
-        secret: process.env.SESSION_SECRET || "fallback-insecure-secret",
-        resave: false,
-        saveUninitialized: false,
-        cookie: {
-          secure: new URL(config.CLIENT_URL).protocol === "https:",
-          httpOnly: true,
-          sameSite: "lax",
-          path: "/",
-        },
-      });
 
       sessionMiddleware(req, res, (sessionErr?: unknown) => {
         if (sessionErr) {

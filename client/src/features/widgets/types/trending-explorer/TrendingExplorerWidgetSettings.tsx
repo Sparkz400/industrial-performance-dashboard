@@ -24,8 +24,7 @@ const TrendingExplorerWidgetSettings: React.FC<TrendingExplorerWidgetSettingsPro
 
   const handleMachineChange = (
     event:
-      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-      | { target: { value: string } },
+      React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { value: string } },
   ) => {
     const value = event.target.value;
     onConfigChange({

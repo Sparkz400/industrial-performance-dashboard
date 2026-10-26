@@ -14,7 +14,7 @@ router.use(requireAuth);
 
 const trendingQuerySchema = Joi.object({
   nodeKeys: Joi.string().required().description("Comma-separated node keys"),
-  machineId: Joi.number().integer().optional(),
+  machineId: Joi.number().integer().positive().required(),
   startDate: Joi.date().iso().required(),
   endDate: Joi.date().iso().required(),
   downsampleBucketSeconds: Joi.number().integer().min(1).optional(),

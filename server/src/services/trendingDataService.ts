@@ -3,6 +3,10 @@ import { getReadDb } from "../database/db.js";
 import { opcuaData, nodeMappings } from "../database/schema.js";
 import logger from "../utils/logger.js";
 import { ValidationError } from "../utils/errors.js";
+import type {
+  GetTrendingDataResponse,
+  TrendingSeries,
+} from "@performance-dashboard/shared";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -17,20 +21,7 @@ export interface TrendingQueryParams {
   aggregation?: "avg" | "min" | "max" | "last";
 }
 
-interface DataPoint {
-  timestamp: string;
-  value: number | null;
-}
-
-interface Series {
-  nodeKey: string;
-  displayName: string;
-  data: DataPoint[];
-}
-
-export interface TrendingResult {
-  series: Series[];
-}
+export type TrendingResult = GetTrendingDataResponse;
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -38,6 +29,36 @@ export interface TrendingResult {
 
 const MAX_POINTS_PER_SERIES = 2000;
 const MIN_AUTO_BUCKET_SECONDS = 60;
+
+function validateWindow(
+  params: TrendingQueryParams,
+): asserts params is TrendingQueryParams & { machineId: number } {
+  if (!Number.isInteger(params.machineId) || params.machineId! <= 0) {
+    throw new ValidationError(
+      "Select one machine; node keys are not unique across machines",
+    );
+  }
+  const span = params.endDate.getTime() - params.startDate.getTime();
+  if (!Number.isFinite(span) || span <= 0 || span > 366 * 86400000) {
+    throw new ValidationError(
+      "Select a positive time window of at most 366 days",
+    );
+  }
+  if (
+    !params.nodeKeys.length ||
+    params.nodeKeys.length > 32 ||
+    params.nodeKeys.some((key) => !key.trim())
+  ) {
+    throw new ValidationError("Select between 1 and 32 non-empty node keys");
+  }
+  if (
+    params.downsampleBucketSeconds != null &&
+    (!Number.isFinite(params.downsampleBucketSeconds) ||
+      params.downsampleBucketSeconds <= 0)
+  ) {
+    throw new ValidationError("Bucket duration must be positive");
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -87,82 +108,133 @@ export const trendingDataService = {
   async queryTrendingData(
     params: TrendingQueryParams,
   ): Promise<TrendingResult> {
-    const { nodeKeys, machineId, startDate, endDate, aggregation } = params;
-
-    if (nodeKeys.length === 0) {
-      throw new ValidationError("At least one nodeKey is required");
-    }
-
+    validateWindow(params);
+    const { machineId, startDate, endDate } = params;
+    const nodeKeys = [...new Set(params.nodeKeys)];
     const readDb = getReadDb();
-
-    // Resolve display names
     const displayMap = await this.resolveDisplayNames(nodeKeys, machineId);
-
-    const bucketSeconds = computeBucketSeconds(
-      startDate,
-      endDate,
-      params.downsampleBucketSeconds,
-    );
-
-    const seriesList: Series[] = [];
-
+    const seriesList: TrendingSeries[] = [];
     for (const nodeKey of nodeKeys) {
-      let rows: { timestamp: unknown; value: number | null }[];
-
-      const conditions = [
+      const condition = and(
         eq(opcuaData.nodeKey, nodeKey),
+        eq(opcuaData.machineId, machineId),
         gte(opcuaData.timestamp, startDate),
         lte(opcuaData.timestamp, endDate),
-      ];
-      if (machineId != null) {
-        conditions.push(eq(opcuaData.machineId, machineId));
-      }
-
-      if (bucketSeconds != null) {
-        // Downsampled query
-        const bucketExpr = sql`to_timestamp(floor(extract(epoch from ${opcuaData.timestamp}) / ${bucketSeconds}) * ${bucketSeconds})`;
-        const aggExpr = aggregationExpression(aggregation);
-
-        rows = await readDb
+      );
+      const valid = sql`${opcuaData.statusCode} LIKE 'Good%' AND ${opcuaData.value} IS NOT NULL`;
+      const [summary] = await readDb
+        .select({
+          count: sql<number>`count(*)::int`,
+          good: sql<number>`count(*) FILTER (WHERE ${valid})::int`,
+          legacy: sql<number>`count(*) FILTER (WHERE ${opcuaData.signalMetadata} IS NULL)::int`,
+          first: sql<Date | null>`min(${opcuaData.timestamp})`,
+          last: sql<Date | null>`max(${opcuaData.timestamp})`,
+          min: sql<
+            number | null
+          >`min(${opcuaData.value}) FILTER (WHERE ${valid})`,
+          max: sql<
+            number | null
+          >`max(${opcuaData.value}) FILTER (WHERE ${valid})`,
+          average: sql<
+            number | null
+          >`avg(${opcuaData.value}) FILTER (WHERE ${valid})`,
+        })
+        .from(opcuaData)
+        .where(condition);
+      const span = endDate.getTime() - startDate.getTime();
+      const bucketMs =
+        params.downsampleBucketSeconds != null ||
+        summary.count > MAX_POINTS_PER_SERIES
+          ? Math.max(
+              Math.ceil(span / (MAX_POINTS_PER_SERIES - 1)),
+              (params.downsampleBucketSeconds ?? 0) * 1000,
+            )
+          : null;
+      const iso = (value: Date | string | null) =>
+        value == null ? null : new Date(value).toISOString();
+      const series: TrendingSeries = {
+        nodeKey,
+        displayName: displayMap.get(nodeKey) ?? nodeKey,
+        machineId,
+        resolutionMs: bucketMs,
+        aggregation: params.aggregation ?? "avg",
+        truncated: false,
+        sampleCount: summary.count,
+        goodSampleCount: summary.good,
+        legacySampleCount: summary.legacy,
+        requestedStart: startDate.toISOString(),
+        requestedEnd: endDate.toISOString(),
+        observedStart: iso(summary.first),
+        observedEnd: iso(summary.last),
+        continuity: "unverified",
+        statistics: {
+          min: summary.min,
+          max: summary.max,
+          average: summary.average,
+        },
+        data: [],
+      };
+      if (bucketMs != null) {
+        // Anchor buckets to the requested start so the inclusive end still fits the cap.
+        const bucket = sql`floor((extract(epoch from ${opcuaData.timestamp}) * 1000 - ${startDate.getTime()}) / ${bucketMs})`;
+        const rows = await readDb
           .select({
-            timestamp: bucketExpr.as("bucket"),
-            value: aggExpr.as("value"),
+            bucket: sql<number>`${bucket}::int`,
+            value: sql<
+              number | null
+            >`CASE WHEN count(*) FILTER (WHERE ${valid}) = count(*) THEN ${aggregationExpression(params.aggregation)} ELSE NULL END`,
+            count: sql<number>`count(*)::int`,
+            good: sql<number>`count(*) FILTER (WHERE ${valid})::int`,
           })
           .from(opcuaData)
-          .where(and(...conditions))
-          .groupBy(bucketExpr, opcuaData.nodeKey)
-          .orderBy(asc(bucketExpr))
-          .limit(MAX_POINTS_PER_SERIES);
+          .where(condition)
+          .groupBy(sql`1`)
+          .orderBy(sql`1`);
+        const byBucket = new Map(rows.map((row) => [row.bucket, row]));
+        for (let i = 0; i <= Math.floor(span / bucketMs); i++) {
+          const row = byBucket.get(i);
+          series.data.push({
+            timestamp: new Date(
+              startDate.getTime() + i * bucketMs,
+            ).toISOString(),
+            value: row?.value ?? null,
+            sampleCount: row?.count ?? 0,
+            goodSampleCount: row?.good ?? 0,
+            statusCode: !row
+              ? "Missing"
+              : row.good === row.count
+                ? "Good"
+                : "MixedOrBad",
+          });
+        }
       } else {
-        // Raw query
-        rows = await readDb
+        const rows = await readDb
           .select({
             timestamp: opcuaData.timestamp,
             value: opcuaData.value,
+            statusCode: opcuaData.statusCode,
+            sourceTimestamp: opcuaData.sourceTimestamp,
+            receivedAt: opcuaData.receivedAt,
           })
           .from(opcuaData)
-          .where(and(...conditions))
+          .where(condition)
           .orderBy(asc(opcuaData.timestamp))
-          .limit(MAX_POINTS_PER_SERIES);
+          .limit(MAX_POINTS_PER_SERIES + 1);
+        // A concurrent arrival may invalidate the earlier count; disclose rather than hide it.
+        series.truncated = rows.length > MAX_POINTS_PER_SERIES;
+        series.data = rows.slice(0, MAX_POINTS_PER_SERIES).map((row) => ({
+          timestamp: row.timestamp.toISOString(),
+          value: row.statusCode?.startsWith("Good") ? row.value : null,
+          statusCode: row.statusCode,
+          sourceTimestamp: iso(row.sourceTimestamp),
+          receivedAt: iso(row.receivedAt),
+          sampleCount: 1,
+          goodSampleCount:
+            row.statusCode?.startsWith("Good") && row.value != null ? 1 : 0,
+        }));
       }
-
-      seriesList.push({
-        nodeKey,
-        displayName: displayMap.get(nodeKey) ?? nodeKey,
-        data: rows.map((r) => ({
-          timestamp:
-            r.timestamp instanceof Date
-              ? r.timestamp.toISOString()
-              : String(r.timestamp),
-          value: r.value,
-        })),
-      });
+      seriesList.push(series);
     }
-
-    logger.debug(
-      `[TrendingData] Queried ${nodeKeys.length} series, bucket=${bucketSeconds ?? "raw"}s`,
-    );
-
     return { series: seriesList };
   },
 
@@ -171,6 +243,7 @@ export const trendingDataService = {
    * that exports include the full dataset.
    */
   async exportCsv(params: TrendingQueryParams): Promise<string> {
+    validateWindow(params);
     const { nodeKeys, machineId, startDate, endDate, aggregation } = params;
 
     if (nodeKeys.length === 0) {
@@ -210,8 +283,8 @@ export const trendingDataService = {
           })
           .from(opcuaData)
           .where(and(...conditions))
-          .groupBy(bucketExpr, opcuaData.nodeKey)
-          .orderBy(asc(bucketExpr));
+          .groupBy(sql`1`)
+          .orderBy(sql`1`);
       } else {
         rows = await readDb
           .select({

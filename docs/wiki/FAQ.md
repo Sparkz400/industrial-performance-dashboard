@@ -11,6 +11,19 @@ for the actual scope and gateway requirements.
 No such qualification is claimed. Automated tests and simulator checks cover a
 bounded software scope. See [status](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/STATUS.md).
 
+**Which features are complete, and what is planned next?**
+
+The [capability assessment](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/RESEARCH.md)
+separates implemented behavior from incomplete integrations and experimental screens.
+The current inspection also identifies correctness gaps requiring follow-up.
+See [[Roadmap]] for the staged plan and links to acceptance criteria. A planned
+feature does not expand present compatibility or production-readiness claims.
+
+The [first P0 acceptance record](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/P0_ACCEPTANCE.md)
+documents identity, SPC isolation and trend fixes. Edge transfer is disabled until
+central ingestion exists; AI suggestions explicitly disclose external processing
+and never execute measurement queries.
+
 **Why is OEE unavailable?**
 
 Map operating states, production counters and quality counters, then choose a

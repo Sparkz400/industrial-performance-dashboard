@@ -92,13 +92,13 @@ export const spcRepository = {
   },
 
   async listActiveProfilesByNodeKey(nodeKey: string, machineId?: number) {
-    const conditions = machineId
-      ? and(
-          eq(spcProfiles.nodeKey, nodeKey),
-          eq(spcProfiles.isActive, true),
-          eq(spcProfiles.machineId, machineId),
-        )
-      : and(eq(spcProfiles.nodeKey, nodeKey), eq(spcProfiles.isActive, true));
+    const conditions = and(
+      eq(spcProfiles.nodeKey, nodeKey),
+      eq(spcProfiles.isActive, true),
+      machineId == null
+        ? isNull(spcProfiles.machineId)
+        : eq(spcProfiles.machineId, machineId),
+    );
 
     return getReadDb().select().from(spcProfiles).where(conditions);
   },

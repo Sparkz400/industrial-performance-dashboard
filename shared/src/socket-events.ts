@@ -16,12 +16,25 @@ export interface SystemStatus {
 
 // ===== OPC UA Types =====
 
+export interface SignalMetadata {
+  signalId: string;
+  endpointUrl: string;
+  machineId: number | null;
+  nodeId: string;
+  namespaceUri: string;
+  identifier: string;
+  mappingRevision: string;
+  unit: string | null;
+}
+
 export interface OpcuaNodeData {
   key: string;
   label: string;
   value: number | string | boolean | null;
   timestamp: Date | string;
   sourceTimestamp?: Date | string | null;
+  receivedAt?: Date | string;
+  signalMetadata?: SignalMetadata;
   dataType: string;
   statusCode: string;
   machineId?: number;
@@ -112,7 +125,7 @@ export interface EdgeSyncStatusEvent {
 
 // ===== Alert Socket Payloads =====
 
-import type { AlertHistoryEntry } from './domain-types.js';
+import type { AlertHistoryEntry } from "./domain-types.js";
 
 export type { AlertHistoryEntry };
 

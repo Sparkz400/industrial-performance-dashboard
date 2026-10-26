@@ -9,6 +9,21 @@ updates:
       npm-minor-patch:
         patterns: ['*']
         update-types: [minor, patch]
+      mui-major:
+        patterns: ['@mui/*']
+        update-types: [major]
+      storybook-vite-major:
+        patterns: ['storybook', '@storybook/*', 'vite', '@vitejs/*']
+        update-types: [major]
+      lint-major:
+        patterns: ['eslint*', '@eslint/*', 'typescript-eslint', '@typescript-eslint/*']
+        update-types: [major]
+      test-runner-major:
+        patterns: ['vitest', '@vitest/*']
+        update-types: [major]
+      virtualization-major:
+        patterns: ['react-window', '@types/react-window', 'react-virtualized-auto-sizer']
+        update-types: [major]
   - package-ecosystem: github-actions
     directory: /
     schedule:

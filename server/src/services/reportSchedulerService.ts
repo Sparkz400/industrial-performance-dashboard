@@ -1,4 +1,4 @@
-import cron from "node-cron";
+import cron, { type ScheduledTask } from "node-cron";
 import cronParser from "cron-parser";
 import { reportRepository } from "../repositories/reportRepository.js";
 import { reportGeneratorService } from "./reportGeneratorService.js";
@@ -9,7 +9,7 @@ import logger from "../utils/logger.js";
 // ---------------------------------------------------------------------------
 
 class ReportSchedulerService {
-  private scheduledJobs = new Map<number, cron.ScheduledTask>();
+  private scheduledJobs = new Map<number, ScheduledTask>();
 
   /**
    * Initialise the scheduler — load all active schedules from the database
@@ -99,7 +99,10 @@ class ReportSchedulerService {
     try {
       const options: { tz?: string } = {};
       if (timezone) options.tz = timezone;
-      const interval = cronParser.CronExpressionParser.parse(cronExpression, options);
+      const interval = cronParser.CronExpressionParser.parse(
+        cronExpression,
+        options,
+      );
       return interval.next().toISOString();
     } catch {
       return null;

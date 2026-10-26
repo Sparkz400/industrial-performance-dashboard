@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { API_ENDPOINTS } from '@/config/config';
 import { protectedFetch } from '@/utils/protectedFetch';
+import type {
+  GetTrendingDataResponse,
+  TrendingSeries as ApiTrendingSeries,
+} from '@performance-dashboard/shared';
 
 export interface TrendingDataParams {
   nodeKeys: string[];
@@ -9,9 +13,27 @@ export interface TrendingDataParams {
   endDate: string;
 }
 
-export interface TrendingSeries {
+export interface TrendingSeries extends Omit<ApiTrendingSeries, 'data'> {
   id: string;
-  data: Array<{ x: string; y: number }>;
+  data: Array<{
+    x: string;
+    y: number | null;
+    statusCode?: string | null;
+    sourceTimestamp?: string | null;
+    receivedAt?: string | null;
+  }>;
+}
+
+/**
+ *
+ * @param response
+ */
+export function toChartSeries(response: GetTrendingDataResponse): TrendingSeries[] {
+  return response.series.map((series) => ({
+    ...series,
+    id: `${series.displayName} [${series.nodeKey}]`,
+    data: series.data.map((point) => ({ ...point, x: point.timestamp, y: point.value })),
+  }));
 }
 
 export interface AvailableTag {
@@ -36,9 +58,11 @@ export function useTrendingData(params: TrendingDataParams) {
       if (params.machineId) searchParams.set('machineId', String(params.machineId));
       const res = await protectedFetch(`${API_ENDPOINTS.trending.data}?${searchParams}`);
       if (!res.ok) throw new Error('Failed to fetch trending data');
-      return res.json();
+      const payload: GetTrendingDataResponse = await res.json();
+      return toChartSeries(payload);
     },
-    enabled: params.nodeKeys.length > 0,
+    enabled:
+      params.nodeKeys.length > 0 && !!params.machineId && !!params.startDate && !!params.endDate,
     staleTime: 15_000,
   });
 }

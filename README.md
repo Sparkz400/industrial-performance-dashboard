@@ -16,7 +16,8 @@ their signals, and build a shared view of a production line.
 > See [status and limitations](docs/STATUS.md). This is an independent project.
 
 [Getting started](docs/GETTING_STARTED.md) · [Architecture](docs/ARCHITECTURE.md) ·
-[Compatibility](docs/COMPATIBILITY.md) · [Contributing](CONTRIBUTING.md) ·
+[Compatibility](docs/COMPATIBILITY.md) · [Roadmap](docs/ROADMAP.md) ·
+[TODO](TODO.md) · [Research](docs/RESEARCH.md) · [Contributing](CONTRIBUTING.md) ·
 [Discussions](https://github.com/Sparkz400/performance_dashboard/discussions)
 
 ## What it does
@@ -25,12 +26,27 @@ their signals, and build a shared view of a production line.
 - Display live readings and historical charts in configurable dashboards.
 - Calculate OEE from explicitly mapped machine states and production counters.
 - Preserve scalar values, source timestamps and quality information in history.
+- Retain namespace-aware signal identity and receive time for new measurements.
+- Show bounded trends over the full selected interval with quality gaps and resolution.
 - Buffer measurements on local disk and replay them after database interruptions.
 - Provide alerts, report scheduling and administration with authenticated sessions.
 
 Additional experimental screens include statistical process control, digital
 twins, recipes and compliance records. Their presence is not a support or
 certification claim; see [current status](docs/STATUS.md).
+
+Edge synchronization is disabled until canonical central ingestion is implemented.
+AI suggestions disclose external processing and do not execute measurement queries.
+See [P0 acceptance evidence](docs/P0_ACCEPTANCE.md) for the first fixes and remaining gates.
+
+## Where it is going
+
+The [roadmap](docs/ROADMAP.md) starts with trustworthy measurements and a useful
+one-line pilot, then develops connectivity, production workflows, quality,
+maintenance, energy and multi-site operation. The [research assessment](docs/RESEARCH.md)
+separates current code from proposed capabilities; the [TODO backlog](TODO.md)
+tracks priorities, dependencies and completion criteria. These are plans, not
+released features or compatibility promises.
 
 ## Quick start
 

@@ -21,7 +21,7 @@ import { NotFoundError, ValidationError } from "../utils/errors.js";
 export const spcEvents = new EventEmitter();
 
 // ---------------------------------------------------------------------------
-// Ring-buffer: in-memory recent values per nodeKey, capped at windowSize
+// Each profile owns its samples; aliases shared by different machines are not identity.
 // ---------------------------------------------------------------------------
 const ringBuffers = new Map<string, number[]>();
 
@@ -70,6 +70,7 @@ export const spcService = {
     if (!updated) {
       throw new NotFoundError("SPC Profile");
     }
+    clearProfileBuffers(id);
     return updated;
   },
 
@@ -78,6 +79,7 @@ export const spcService = {
     if (!deleted) {
       throw new NotFoundError("SPC Profile");
     }
+    clearProfileBuffers(id);
     return deleted;
   },
 
@@ -90,13 +92,16 @@ export const spcService = {
     }
 
     const result = await db.execute(
-      sql`SELECT avg(value)::real AS mean, stddev(value)::real AS stddev
+      sql`SELECT avg(value) AS mean, stddev(value) AS stddev
           FROM opcua_data
           WHERE node_key = ${profile.nodeKey}
+            AND machine_id IS NOT DISTINCT FROM ${profile.machineId}
+            AND status_code LIKE 'Good%'
             AND timestamp > now() - interval '7 days'`,
     );
 
-    const row = result.rows[0] as { mean: string | null; stddev: string | null } | undefined;
+    const row = result.rows[0] as
+      { mean: string | null; stddev: string | null } | undefined;
     const mean = row?.mean != null ? Number(row.mean) : null;
     const stddev = row?.stddev != null ? Number(row.stddev) : null;
 
@@ -121,6 +126,7 @@ export const spcService = {
     await db.execute(
       sql`UPDATE spc_profiles SET last_computed_at = now() WHERE id = ${profileId}`,
     );
+    clearProfileBuffers(profileId);
 
     logger.info(
       `[SPC] Computed baseline for profile ${profileId} (${profile.name}): mean=${mean}, stddev=${stddev}, ucl=${ucl}, lcl=${lcl}`,
@@ -132,6 +138,7 @@ export const spcService = {
   // ---- Real-time evaluation (called from opcuaBridge) ----
 
   async evaluateDataPoint(nodeKey: string, value: number, machineId?: number) {
+    if (!Number.isFinite(value)) return;
     const profiles = await spcRepository.listActiveProfilesByNodeKey(
       nodeKey,
       machineId,
@@ -140,6 +147,7 @@ export const spcService = {
     if (profiles.length === 0) return;
 
     for (const profile of profiles) {
+      if (profile.machineId !== (machineId ?? null)) continue;
       try {
         await evaluateAgainstProfile(profile, nodeKey, value, machineId);
       } catch (error) {
@@ -163,11 +171,14 @@ export const spcService = {
     const rows = await getReadDb()
       .select({
         timestamp: opcuaData.timestamp,
-        value: opcuaData.value,
+        value: sql<
+          number | null
+        >`CASE WHEN ${opcuaData.statusCode} LIKE 'Good%' THEN ${opcuaData.value} ELSE NULL END`,
       })
       .from(opcuaData)
       .where(
         sql`${opcuaData.nodeKey} = ${profile.nodeKey}
+            AND ${opcuaData.machineId} IS NOT DISTINCT FROM ${profile.machineId}
             AND ${opcuaData.timestamp} >= ${startDate}
             AND ${opcuaData.timestamp} <= ${endDate}`,
       )
@@ -223,7 +234,11 @@ async function evaluateAgainstProfile(
   machineId?: number,
 ) {
   const windowSize = profile.windowSize ?? 100;
-  const buffer = pushValue(nodeKey, value, windowSize);
+  const buffer = pushValue(
+    `${profile.id}:${machineId ?? "legacy"}:${nodeKey}`,
+    value,
+    windowSize,
+  );
 
   let isAnomaly = false;
   let alertType: string | undefined;
@@ -341,4 +356,10 @@ async function evaluateAgainstProfile(
         ? alert.createdAt.toISOString()
         : new Date().toISOString(),
   });
+}
+
+function clearProfileBuffers(profileId: number) {
+  for (const key of ringBuffers.keys()) {
+    if (key.startsWith(`${profileId}:`)) ringBuffers.delete(key);
+  }
 }

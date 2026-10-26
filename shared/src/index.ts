@@ -15,7 +15,7 @@ export {
   AggregateResolution,
   getStatusLabel,
   getStatusColor,
-} from './enums.js';
+} from "./enums.js";
 
 // Domain Types
 export type {
@@ -97,20 +97,21 @@ export type {
   // Trending
   TrendingDataPoint,
   TrendingSeries,
-} from './domain-types.js';
+} from "./domain-types.js";
 
 export type {
   AlertSeverity,
   AlertStatus,
   AlertCondition,
   ReportType,
-} from './domain-types.js';
+} from "./domain-types.js";
 
 // Socket.io Event Types
 export type {
   ServiceStatus,
   SystemStatus,
   OpcuaNodeData,
+  SignalMetadata,
   MachineStatusUpdate,
   CertificateNotification,
   CertificateAcceptedResult,
@@ -125,7 +126,7 @@ export type {
   InterServerEvents,
   SocketData,
   AcknowledgeAlertPayload,
-} from './socket-events.js';
+} from "./socket-events.js";
 
 // API Request/Response Types
 export type {
@@ -345,4 +346,4 @@ export type {
   UpdateReportScheduleResponse,
   DeleteReportScheduleResponse,
   GetReportHistoryResponse,
-} from './api-types.js';
+} from "./api-types.js";

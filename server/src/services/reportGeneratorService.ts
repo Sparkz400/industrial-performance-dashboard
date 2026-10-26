@@ -10,6 +10,7 @@ import { trendingDataService } from "./trendingDataService.js";
 import { oeeCalculationService } from "./oeeCalculationService.js";
 import { reportEmailService } from "./reportEmailService.js";
 import logger from "../utils/logger.js";
+import type { TrendingSeries } from "@performance-dashboard/shared";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -88,11 +89,7 @@ function escapeHtml(str: string): string {
 
 function renderTrendingSection(
   title: string,
-  series: {
-    nodeKey: string;
-    displayName: string;
-    data: { timestamp: string; value: number | null }[];
-  }[],
+  series: TrendingSeries[],
 ): string {
   if (series.length === 0) {
     return `<h2>${escapeHtml(title)}</h2><p>No data available.</p>`;
@@ -102,15 +99,9 @@ function renderTrendingSection(
   for (const s of series) {
     if (s.data.length === 0) continue;
     const latest = s.data[s.data.length - 1];
-    const values = s.data
-      .map((d) => d.value)
-      .filter((v) => v != null) as number[];
-    const avg =
-      values.length > 0
-        ? (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2)
-        : "N/A";
-    const min = values.length > 0 ? Math.min(...values).toFixed(2) : "N/A";
-    const max = values.length > 0 ? Math.max(...values).toFixed(2) : "N/A";
+    const avg = s.statistics?.average?.toFixed(2) ?? "N/A";
+    const min = s.statistics?.min?.toFixed(2) ?? "N/A";
+    const max = s.statistics?.max?.toFixed(2) ?? "N/A";
 
     rows.push(
       `<tr>
@@ -119,14 +110,14 @@ function renderTrendingSection(
         <td>${avg}</td>
         <td>${min}</td>
         <td>${max}</td>
-        <td>${s.data.length}</td>
+        <td>${s.goodSampleCount ?? 0}/${s.sampleCount ?? 0} usable samples; ${s.resolutionMs ?? 0} ms buckets; ${s.truncated ? "TRUNCATED" : "full query window"}; continuity unverified</td>
       </tr>`,
     );
   }
 
   return `<h2>${escapeHtml(title)}</h2>
 <table>
-  <thead><tr><th>Tag</th><th>Latest</th><th>Avg</th><th>Min</th><th>Max</th><th>Points</th></tr></thead>
+  <thead><tr><th>Tag</th><th>Latest displayed</th><th>Avg</th><th>Min</th><th>Max</th><th>Points</th></tr></thead>
   <tbody>${rows.join("")}</tbody>
 </table>`;
 }
@@ -291,6 +282,12 @@ class ReportGeneratorService {
           case "trending": {
             const nodeKeys = section.nodeKeys ?? [];
             if (nodeKeys.length > 0) {
+              if (!section.machineId) {
+                sections.push(
+                  "<p>Trending unavailable: select one machine in this report section.</p>",
+                );
+                break;
+              }
               const result = await trendingDataService.queryTrendingData({
                 nodeKeys,
                 machineId: section.machineId,

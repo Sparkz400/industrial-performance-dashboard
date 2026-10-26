@@ -1,10 +1,7 @@
 import config from "../config/config.js";
 import logger from "../utils/logger.js";
 import { AppError } from "../utils/errors.js";
-import type {
-  NLQueryResponse,
-  NLChartConfig,
-} from "@performance-dashboard/shared";
+import type { NLQueryResponse } from "@performance-dashboard/shared";
 
 interface ClaudeMessage {
   role: "user" | "assistant";
@@ -41,11 +38,11 @@ async function callClaude(
       system,
       messages,
     }),
+    signal: AbortSignal.timeout(30000),
   });
 
   if (!response.ok) {
-    const errorBody = await response.text();
-    logger.error(`Claude API error: ${response.status} ${errorBody}`);
+    logger.error(`Claude API error: ${response.status}`);
     throw new AppError("AI query service unavailable", 502, "NL_API_ERROR");
   }
 
@@ -55,6 +52,8 @@ async function callClaude(
 }
 
 const SYSTEM_PROMPT = `You are an AI assistant for an industrial performance monitoring dashboard.
+You have no access to measured data and cannot execute queries. Provide suggestions only.
+Never report observed values, production totals or verified conclusions.
 The database has these tables:
 - opcua_data: columns (id, node_key, node_label, timestamp, value, machine_id) — time-series sensor data
 - machines: columns (id, name, endpoint_url, ip, port, status, is_active)
@@ -87,29 +86,35 @@ export const nlQueryService = {
       SYSTEM_PROMPT,
     );
 
+    const suggestion = {
+      evidence: "suggestion-only" as const,
+      provider: "Anthropic" as const,
+      queryExecuted: false as const,
+      chartConfig: null,
+      data: [],
+    };
+
     // Parse the JSON from the response
     const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
     if (!jsonMatch) {
-      return { answer: responseText, chartConfig: null, data: [] };
+      return { ...suggestion, answer: responseText };
     }
 
     try {
       const parsed = JSON.parse(jsonMatch[1]);
-      const data: unknown[] = [];
-      const chartConfig: NLChartConfig | null = parsed.chartConfig || null;
       const sqlGenerated =
         typeof parsed.sql === "string" && parsed.sql.trim() !== ""
           ? parsed.sql.trim()
           : undefined;
 
       return {
-        answer: parsed.answer,
+        ...suggestion,
+        answer:
+          typeof parsed.answer === "string" ? parsed.answer : responseText,
         sqlGenerated,
-        chartConfig,
-        data,
       };
     } catch {
-      return { answer: responseText, chartConfig: null, data: [] };
+      return { ...suggestion, answer: responseText };
     }
   },
 };

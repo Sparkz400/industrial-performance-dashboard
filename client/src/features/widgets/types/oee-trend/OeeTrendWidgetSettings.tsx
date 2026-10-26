@@ -30,8 +30,7 @@ const OeeTrendWidgetSettings: React.FC<OeeTrendWidgetSettingsProps> = ({
 
   const handleMachineChange = (
     event:
-      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-      | { target: { value: string } },
+      React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { value: string } },
   ) => {
     const value = event.target.value;
     onConfigChange({ ...config, machineId: value === '' ? undefined : Number(value) });
@@ -39,8 +38,7 @@ const OeeTrendWidgetSettings: React.FC<OeeTrendWidgetSettingsProps> = ({
 
   const handleGranularityChange = (
     event:
-      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-      | { target: { value: string } },
+      React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { value: string } },
   ) => {
     onConfigChange({ ...config, granularity: event.target.value });
   };

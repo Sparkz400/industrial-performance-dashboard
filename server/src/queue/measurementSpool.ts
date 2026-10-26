@@ -2,12 +2,15 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
+import type { SignalMetadata } from "@performance-dashboard/shared";
 
 export interface OpcuaDataItem {
   key: string;
   label: string;
   timestamp: Date | string | number;
   sourceTimestamp?: Date | string | null;
+  receivedAt?: Date | string;
+  signalMetadata?: SignalMetadata;
   value: number | string | boolean | null;
   statusCode?: string;
   dataType?: string;
@@ -48,9 +51,20 @@ export class MeasurementSpool {
     if (typeof data.value === "number" && !Number.isFinite(data.value)) {
       throw new Error("Measurement must be finite");
     }
+    for (const time of [data.sourceTimestamp, data.receivedAt]) {
+      if (time != null && !Number.isFinite(new Date(time).getTime())) {
+        throw new Error("Invalid measurement source or receive timestamp");
+      }
+    }
     this.database
       .prepare("INSERT INTO measurements(id, payload) VALUES (?, ?)")
-      .run(randomUUID(), JSON.stringify(data));
+      .run(
+        randomUUID(),
+        JSON.stringify({
+          ...data,
+          receivedAt: data.receivedAt ?? new Date().toISOString(),
+        }),
+      );
   }
 
   peek(limit: number): SpoolEntry[] {
@@ -94,6 +108,8 @@ export function toMeasurementRow({ id, data }: SpoolEntry) {
     sourceTimestamp: data.sourceTimestamp
       ? new Date(data.sourceTimestamp)
       : null,
+    receivedAt: data.receivedAt ? new Date(data.receivedAt) : null,
+    signalMetadata: data.signalMetadata ?? null,
     value:
       statusCode.startsWith("Good") && typeof numericValue === "number"
         ? numericValue

@@ -22,8 +22,7 @@ const OeeGaugeWidgetSettings: React.FC<OeeGaugeWidgetSettingsProps> = ({
 
   const handleMachineChange = (
     event:
-      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-      | { target: { value: string } },
+      React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { value: string } },
   ) => {
     const value = event.target.value;
     onConfigChange({ ...config, machineId: value === '' ? undefined : Number(value) });

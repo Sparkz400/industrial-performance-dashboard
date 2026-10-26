@@ -1,5 +1,6 @@
 import { type Express } from "express";
 import supertest from "supertest";
+import { beforeAll } from "vitest";
 
 let appInstance: Express | null = null;
 
@@ -11,6 +12,11 @@ async function ensureApp() {
   }
   return appInstance;
 }
+
+// Bootstrap has its own budget; individual HTTP assertions retain the normal timeout.
+beforeAll(async () => {
+  await ensureApp();
+}, 60_000);
 
 /**
  * Returns a supertest instance for simple GET requests (no CSRF needed).
