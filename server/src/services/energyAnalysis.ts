@@ -21,6 +21,7 @@ export interface EnergySample {
   value: number | null;
   status_code: string | null;
   signal_metadata: { namespaceUri?: string; identifier?: string } | null;
+  correctionRevision?: number;
 }
 export function calculateEnergy(
   samples: EnergySample[],
@@ -67,6 +68,7 @@ export function calculateEnergy(
     }
     const energy =
       delta * meter.signal.scale * (meter.signal.unit === "Wh" ? 0.001 : 1);
+    if (!Number.isFinite(energy) || !Number.isFinite(kWh + energy)) continue;
     kWh += energy;
     coveredSeconds += seconds;
     usable++;
@@ -106,7 +108,7 @@ export function calculateEnergy(
       usable > 0 && coveredSeconds === (end.getTime() - start.getTime()) / 1000,
   };
 }
-export async function energyAnalysis(
+export async function loadEnergySamples(
   report: ShiftReport,
   database: Pick<typeof db, "select" | "selectDistinctOn"> = db,
 ) {
@@ -114,8 +116,7 @@ export async function energyAnalysis(
     .select()
     .from(energyMeters)
     .where(eq(energyMeters.machineId, report.machineId));
-  if (!meter)
-    return { configured: false, observedKWh: null, kWhPerGoodPart: null };
+  if (!meter) return null;
   const config = meter.config as EnergyMeter;
   const rows = await database
     .selectDistinctOn([opcuaData.timestamp], {
@@ -123,6 +124,7 @@ export async function energyAnalysis(
       value: opcuaData.value,
       status_code: opcuaData.statusCode,
       signal_metadata: opcuaData.signalMetadata,
+      correctionRevision: opcuaData.correctionRevision,
     })
     .from(opcuaData)
     .where(
@@ -139,6 +141,16 @@ export async function energyAnalysis(
     throw new ValidationError(
       "Energy analysis exceeds 200000 samples; use shorter shifts",
     );
+  return { meter, config, rows };
+}
+export async function energyAnalysis(
+  report: ShiftReport,
+  database: Pick<typeof db, "select" | "selectDistinctOn"> = db,
+) {
+  const source = await loadEnergySamples(report, database);
+  if (!source)
+    return { configured: false, observedKWh: null, kWhPerGoodPart: null };
+  const { meter, config, rows } = source;
   const energy = calculateEnergy(
     rows,
     config,
@@ -171,6 +183,8 @@ export async function energyAnalysis(
   return {
     configured: true,
     meterVersion: meter.version,
+    correctedSampleCount: rows.filter((row) => row.correctionRevision > 0)
+      .length,
     meter: config,
     ...energy,
     independent: independent ?? null,

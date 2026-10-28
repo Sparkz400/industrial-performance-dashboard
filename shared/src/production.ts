@@ -110,6 +110,13 @@ export interface DowntimeReason {
   supersedesId: number | null;
 }
 export interface ShiftReport {
+  measurementEvidence?: {
+    digest: string;
+    samples: number;
+    correctedSamples: number;
+    lateSamples: number;
+    latestReceivedAt: string | null;
+  };
   runs?: { plan: ProductRun; report: ShiftReport }[];
   planVersion?: number;
   revision: "shift-v1";

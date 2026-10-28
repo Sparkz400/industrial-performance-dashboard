@@ -15,6 +15,7 @@ const ConnectionDiagnosticsPanel = React.lazy(() => import('./ConnectionDiagnost
 const AlarmReviewPanel = React.lazy(() => import('./AlarmReviewPanel'));
 const WorkOrderPanel = React.lazy(() => import('./WorkOrderPanel'));
 const AssetOverviewPanel = React.lazy(() => import('./AssetOverviewPanel'));
+const DerivedSignalsPanel = React.lazy(() => import('./DerivedSignalsPanel'));
 /**
  *
  */
@@ -66,6 +67,11 @@ export default function OperationsPage() {
       name: 'Asset overview',
       de: 'Anlagenübersicht',
       content: <AssetOverviewPanel machineId={Number(machine)} />,
+    },
+    {
+      name: 'Calculated signals',
+      de: 'Berechnete Signale',
+      content: <DerivedSignalsPanel key={machine} machineId={Number(machine)} />,
     },
   ];
   return (

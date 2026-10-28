@@ -93,3 +93,27 @@ it('cancels a pending retry when the account is cleaned up', () => {
   expect(socket.connect).not.toHaveBeenCalled();
   expect(socket.off).toHaveBeenCalledWith('sessionStatus');
 });
+it('expires silent healthy observations for every store consumer and rejects missing timestamps', () => {
+  const health = {
+    database: { status: 'CONNECTED' },
+    opcua: { status: 'CONNECTED' },
+    overall: { status: 'CONNECTED' },
+    lastUpdated: new Date().toISOString(),
+  };
+  socket.handlers.get('statusUpdate')!(health);
+  expect(useStatusStore.getState().isConnected).toBe(true);
+  vi.advanceTimersByTime(90001);
+  expect(useStatusStore.getState().isConnected).toBe(false);
+  expect(useStatusStore.getState().status.overall.status).toBe('UNKNOWN');
+  socket.handlers.get('statusUpdate')!({ ...health, lastUpdated: undefined });
+  expect(useStatusStore.getState().isConnected).toBe(false);
+});
+it('does not call unknown OPC UA health fully connected', () => {
+  socket.handlers.get('statusUpdate')!({
+    database: { status: 'CONNECTED' },
+    opcua: { status: 'UNKNOWN' },
+    overall: { status: 'CONNECTED' },
+    lastUpdated: new Date().toISOString(),
+  });
+  expect(useStatusStore.getState().isConnected).toBe(false);
+});

@@ -9,5 +9,12 @@ it('converts nested API ratios into percentages while preserving missing-data st
       quality: { quality: 1 },
       dataComplete: false,
     }),
-  ).toEqual({ oee: 72, availability: 90, performance: 80, quality: 100, dataComplete: false });
+  ).toMatchObject({
+    oee: 72,
+    availability: 90,
+    performance: 80,
+    quality: 100,
+    dataComplete: false,
+    evidence: { dataComplete: false },
+  });
 });

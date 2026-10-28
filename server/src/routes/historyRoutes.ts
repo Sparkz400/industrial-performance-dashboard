@@ -1,4 +1,5 @@
 import { eligible, applyRetention } from "../services/historyRetention.js";
+import measurementCorrectionRoutes from "./measurementCorrectionRoutes.js";
 import { Router } from "express";
 import Joi from "joi";
 import { randomUUID } from "node:crypto";
@@ -14,6 +15,7 @@ import { ValidationError } from "../utils/errors.js";
 import { storageRunway } from "../services/storageRunway.js";
 
 const router = Router();
+router.use(measurementCorrectionRoutes);
 const id = Joi.object({ id: Joi.number().integer().positive().required() });
 router.get(
   "/:id/summaries",
@@ -33,9 +35,24 @@ router.get(
     res.json(
       (
         await manager.pool.query(
-          `SELECT *, CASE WHEN good=samples AND good>0 AND identity NOT IN ('unknown','mixed') THEN sum/good ELSE NULL END AS average,
-    'retained-summary' AS source, 'unverified' AS continuity FROM history_summaries
-    WHERE machine_id=$1 AND node_key=$2 AND bucket >= $3 AND bucket < $4 ORDER BY bucket LIMIT 8785`,
+          `WITH parts AS (
+            SELECT bucket,samples,good,sum,min,max,identity,0::integer AS corrected_samples,samples AS retained_samples
+            FROM history_summaries WHERE machine_id=$1 AND node_key=$2 AND bucket >= $3 AND bucket < $4
+            UNION ALL
+            SELECT date_trunc('hour',timestamp,'UTC'),count(*)::integer,
+              count(*) FILTER(WHERE status_code LIKE 'Good%' AND value NOT IN ('NaN'::real,'Infinity'::real,'-Infinity'::real))::integer,
+              sum(value::double precision) FILTER(WHERE status_code LIKE 'Good%' AND value NOT IN ('NaN'::real,'Infinity'::real,'-Infinity'::real)),min(value) FILTER(WHERE status_code LIKE 'Good%' AND value NOT IN ('NaN'::real,'Infinity'::real,'-Infinity'::real)),max(value) FILTER(WHERE status_code LIKE 'Good%' AND value NOT IN ('NaN'::real,'Infinity'::real,'-Infinity'::real)),
+              CASE WHEN count(signal_metadata)=0 THEN 'unknown' WHEN count(signal_metadata)<count(*) OR min(md5(signal_metadata::text))<>max(md5(signal_metadata::text)) THEN 'mixed' ELSE min(md5(signal_metadata::text)) END,
+              count(*) FILTER(WHERE correction_revision>0)::integer,0::integer
+            FROM opcua_data WHERE machine_id=$1 AND node_key=$2 AND timestamp >= $3 AND timestamp < $4 + interval '1 hour' AND date_trunc('hour',timestamp,'UTC') >= $3 AND date_trunc('hour',timestamp,'UTC') < $4 GROUP BY 1
+          ), combined AS (
+            SELECT bucket,sum(samples)::integer AS samples,sum(good)::integer AS good,sum(sum) AS sum,min(min) AS min,max(max) AS max,
+              CASE WHEN min(identity)=max(identity) THEN min(identity) ELSE 'mixed' END AS identity,
+              sum(corrected_samples)::integer AS corrected_samples,sum(retained_samples)::integer AS retained_samples
+            FROM parts GROUP BY bucket
+          ) SELECT *,CASE WHEN good=samples AND good>0 AND identity NOT IN ('unknown','mixed') THEN sum/good ELSE NULL END AS average,
+            'retained-and-current' AS source,'unverified' AS continuity
+          FROM combined ORDER BY bucket LIMIT 8785`,
           [Number(req.params.id), req.query.nodeKey, start, end],
         )
       ).rows,

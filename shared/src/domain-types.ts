@@ -418,7 +418,14 @@ export interface SpcAlert {
 
 export interface SpcChartDataPoint {
   timestamp: string;
-  value: number;
+  value: number | null;
+  rawValue?: unknown;
+  statusCode?: string | null;
+  receivedAt?: string | null;
+  sourceTimestamp?: string | null;
+  correctionRevision?: number;
+  reportedStatusCode?: string | null;
+  sourceClockState?: string;
   isAnomaly: boolean;
 }
 
@@ -428,6 +435,9 @@ export interface SpcChartData {
   ucl: number;
   lcl: number;
   mean: number;
+  truncated?: boolean;
+  start?: string;
+  end?: string;
 }
 
 // ===== Recipe / Batch Management =====
@@ -759,6 +769,10 @@ export interface ReportHistoryEntry {
 // ===== Trending Types =====
 
 export interface TrendingDataPoint {
+  correctionRevision?: number;
+  reportedStatusCode?: string | null;
+  sourceClockState?: string;
+  rawValue?: unknown;
   timestamp: string;
   value: number | null;
   statusCode?: string | null;
@@ -769,6 +783,7 @@ export interface TrendingDataPoint {
 }
 
 export interface TrendingSeries {
+  correctedSampleCount?: number;
   nodeKey: string;
   displayName: string;
   data: TrendingDataPoint[];

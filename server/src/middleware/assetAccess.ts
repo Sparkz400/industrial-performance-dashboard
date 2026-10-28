@@ -51,6 +51,44 @@ export async function authorizeAssetRequest(
   };
   let found: RegExpExecArray | null;
   if (read && path === "/access/me") return;
+  if (read && (found = match(/^\/widget-evidence\/machines\/(\d+)$/))) {
+    assertMachine(found[1]);
+    return;
+  }
+  if (
+    (found = match(/^\/derived-signals\/machines\/(\d+)(?:\/\d+\/evaluate)?$/))
+  ) {
+    if (!read && (method !== "POST" || !canSupervise(scope.role))) denied();
+    assertMachine(found[1]);
+    return;
+  }
+  if (
+    (found = match(
+      /^\/cmms\/machines\/(\d+)\/(destinations|preview|handoffs)$/,
+    ))
+  ) {
+    if (!canSupervise(scope.role) || (!read && method !== "POST")) denied();
+    assertMachine(found[1]);
+    return;
+  }
+  if ((found = match(/^\/energy-costs\/machines\/(\d+)\/tariffs$/))) {
+    if (!read && (method !== "POST" || !canSupervise(scope.role))) denied();
+    assertMachine(found[1]);
+    return;
+  }
+  if (read && (found = match(/^\/energy-costs\/shifts\/(\d+)$/))) {
+    await assertResource("shift", found[1]);
+    return;
+  }
+  if (
+    (found = match(
+      /^\/history\/(\d+)\/(measurements|corrections)(?:\/preview)?$/,
+    ))
+  ) {
+    if (!read && (method !== "POST" || !canSupervise(scope.role))) denied();
+    assertMachine(found[1]);
+    return;
+  }
   if (read && path === "/digital-twins/instances") {
     assertMachine(query.machineId);
     return;

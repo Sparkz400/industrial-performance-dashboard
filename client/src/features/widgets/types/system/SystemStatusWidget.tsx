@@ -30,11 +30,20 @@ interface SystemStatusWidgetProps {
 const SystemStatusWidget = memo<SystemStatusWidgetProps>(({ config = {} }) => {
   const { showDetails = true } = config;
 
-  const status = useStatusStore((s) => s.status);
+  const recordedStatus = useStatusStore((s) => s.status);
   const isError = useStatusStore((s) => s.isError);
-  const isConnected = useStatusStore((s) => s.isConnected);
+  const recordedConnected = useStatusStore((s) => s.isConnected);
   const lastChecked = useStatusStore((s) => s.lastChecked);
   const refreshStatus = useStatusStore((s) => s.refreshStatus);
+  const [now, setNow] = React.useState(Date.now);
+  React.useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(timer);
+  }, []);
+  const age = lastChecked ? now - lastChecked.getTime() : NaN;
+  const fresh = Number.isFinite(age) && age >= -5000 && age <= 90000 && !isError;
+  const status = fresh ? recordedStatus : undefined;
+  const isConnected = fresh && recordedConnected;
 
   const overallStatus = status?.overall?.status?.toLowerCase() || 'unknown';
   const loading = false; // Store handles async internally
@@ -111,6 +120,7 @@ const SystemStatusWidget = memo<SystemStatusWidgetProps>(({ config = {} }) => {
           <Tooltip title="Refresh Status">
             <span>
               <IconButton
+                aria-label="Refresh Status"
                 size="small"
                 onClick={handleRefresh}
                 disabled={loading || isRefreshing}
@@ -154,7 +164,11 @@ const SystemStatusWidget = memo<SystemStatusWidgetProps>(({ config = {} }) => {
             flexGrow: 1,
           }}
         >
-          {isConnected ? (
+          {!fresh ? (
+            <Typography role="status">
+              Current system status unknown: stale or unavailable observation.
+            </Typography>
+          ) : isConnected ? (
             <Typography variant="h6" color="success.main" sx={{ mb: 2 }}>
               All systems operational
             </Typography>
@@ -176,6 +190,11 @@ const SystemStatusWidget = memo<SystemStatusWidgetProps>(({ config = {} }) => {
       )}
 
       <Divider sx={{ mt: 'auto', mb: 1 }} />
+      {!fresh && Boolean(showDetails) && (
+        <Typography role="status" color="warning.main">
+          Current system status unknown: stale or unavailable observation.
+        </Typography>
+      )}
 
       {/* Footer with last updated info */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

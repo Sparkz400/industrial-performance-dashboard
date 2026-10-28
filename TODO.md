@@ -29,6 +29,14 @@ functionality.
 
 ## Execution update — 2026-10-26
 
+### Data integrity and reviewed operations — 2026-10-28
+
+The authorized implementation wave covers H03/H07/H10/U09/I04/M05: honest widgets,
+reviewed measurement corrections, bounded calculated signals, explicit offline
+drafts, reviewed CMMS handoffs and versioned energy estimates. See
+[contracts, verification and remaining boundaries](docs/DATA_INTEGRITY.md).
+This work is isolated from PR #63's endurance checkout. Physical-machine and CMMS
+vendor acceptance remain separate; new software does not close the 72-hour gate.
 ### Factory operations expansion — 2026-10-28
 
 The user authorized all six next steps: portable setup bundles (I05), connection
@@ -279,7 +287,10 @@ below retain their unfulfilled acceptance criteria.
   stale values and valid zero; source/receive times and known gaps remain inspectable.
   Continuous interpolation across an unknown interval is never implied without disclosure.
   Progress: trends preserve zero/null, report whole-window statistics and disclose
-  sampled/unknown continuity; KPI and tooltip consistency across all views remains open.
+  sampled/unknown continuity. The integrity wave replaces generated legacy widgets,
+  propagates quality/staleness/unknown states and exposes source evidence; see
+  [integrity verification](docs/DATA_INTEGRITY.md#verification). Experimental screens
+  retain their separate qualification requirements.
 - [ ] **H04 — Stream and bound historical exports** · P1 · M2 · Improve · M. Depends: H01.
   Done: large exports use bounded memory, cancellation and query limits, retain identity,
   units, timestamps and quality, and clearly label raw versus aggregated output. Protect

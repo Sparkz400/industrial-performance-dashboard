@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { operationRequest, localInput, toIso } from './api';
+import CmmsHandoffPanel from './CmmsHandoffPanel';
 interface Action {
   id: number;
   version: number;
@@ -410,6 +411,7 @@ export default function MaintenanceActionsPanel({ machineId }: { machineId: numb
       >
         {t('Record completed intervention', 'Abgeschlossenen Eingriff erfassen')}
       </Button>
+      <CmmsHandoffPanel key={machineId} machineId={machineId} />
     </Stack>
   );
 }

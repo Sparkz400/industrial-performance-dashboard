@@ -97,8 +97,8 @@ describe('widgetRegistry', () => {
   });
 
   it('widgets without settings should have null settingsComponent', () => {
-    expect(widgetRegistry.currentAirConsumptionWidget.settingsComponent).toBeNull();
-    expect(widgetRegistry.operationModePie.settingsComponent).toBeNull();
+    expect(widgetRegistry.currentAirConsumptionWidget.settingsComponent).not.toBeNull();
+    expect(widgetRegistry.operationModePie.settingsComponent).not.toBeNull();
   });
 });
 

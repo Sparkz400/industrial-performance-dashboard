@@ -14,6 +14,8 @@ import {
 } from '@mui/material';
 import { useActiveBatch, useBatchData } from '@/features/recipes/hooks/useBatchQueries';
 import type { WidgetConfig } from '@/types';
+import WidgetReadingEvidence from '../WidgetReadingEvidence';
+import { widgetReadings } from '../../hooks/widgetReadings';
 
 interface BatchMonitorWidgetProps {
   config?: WidgetConfig;
@@ -22,12 +24,21 @@ interface BatchMonitorWidgetProps {
 
 const BatchMonitorWidget: React.FC<BatchMonitorWidgetProps> = ({ config = {}, onError }) => {
   const machineId = (config.machineId as number) ?? 0;
+  const [now, setNow] = React.useState(Date.now);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(timer);
+  }, []);
   const {
     data: activeBatch,
     isLoading: batchLoading,
     error: batchError,
   } = useActiveBatch(machineId || undefined);
-  const { data: seriesData, isLoading: dataLoading } = useBatchData(activeBatch?.id ?? 0);
+  const {
+    data: seriesData,
+    isLoading: dataLoading,
+    error: dataError,
+  } = useBatchData(activeBatch?.id ?? 0);
 
   useEffect(() => {
     if (batchError && onError) {
@@ -79,6 +90,13 @@ const BatchMonitorWidget: React.FC<BatchMonitorWidgetProps> = ({ config = {}, on
       </Box>
     );
   }
+
+  if (batchError || dataError)
+    return (
+      <Box sx={{ p: 2 }}>
+        <Typography role="status">Batch measurements are unavailable.</Typography>
+      </Box>
+    );
 
   if (!activeBatch) {
     return (
@@ -138,7 +156,28 @@ const BatchMonitorWidget: React.FC<BatchMonitorWidgetProps> = ({ config = {}, on
             </TableHead>
             <TableBody>
               {seriesData.map((series) => {
-                const current = series.dataPoints.at(-1)?.value ?? null;
+                const readings = widgetReadings(
+                  series.dataPoints.map((point) => ({ ...point, time: point.timestamp })),
+                );
+                const latest = readings.at(-1);
+                const age = latest ? now - Date.parse(latest.timestamp) : NaN;
+                const quality = !latest
+                  ? 'Missing'
+                  : !Number.isFinite(age) || age < -5000
+                    ? 'Invalid clock'
+                    : age > 60000
+                      ? 'Stale'
+                      : latest.value == null
+                        ? 'Bad or unknown quality'
+                        : 'Good';
+                const current =
+                  latest?.statusCode?.startsWith('Good') &&
+                  Number.isFinite(age) &&
+                  age >= -5000 &&
+                  age <= 60000 &&
+                  Number.isFinite(latest.value)
+                    ? latest.value
+                    : null;
                 const inRange =
                   current != null
                     ? Math.abs(current - series.targetValue) <= series.tolerance
@@ -147,6 +186,10 @@ const BatchMonitorWidget: React.FC<BatchMonitorWidgetProps> = ({ config = {}, on
                   <TableRow key={series.nodeKey}>
                     <TableCell sx={{ py: 0.3, fontSize: '0.75rem' }}>
                       {series.displayName}
+                      <Typography variant="caption" display="block">
+                        {quality}
+                      </Typography>
+                      <WidgetReadingEvidence rows={readings} />
                     </TableCell>
                     <TableCell sx={{ py: 0.3, fontSize: '0.75rem' }} align="right">
                       {series.setpoint != null ? series.setpoint : '-'}

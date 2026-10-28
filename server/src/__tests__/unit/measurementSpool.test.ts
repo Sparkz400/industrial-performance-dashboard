@@ -22,6 +22,36 @@ const sample = {
   machineId: 1,
 };
 describe("durable measurement spool", () => {
+  it("keeps late source evidence and rejects future clocks beyond five minutes", () => {
+    const receivedAt = "2026-01-01T00:00:00Z";
+    const row = (timestamp: string, sourceTimestamp = timestamp) =>
+      toMeasurementRow({
+        id: "clock-fixture",
+        data: { ...sample, timestamp, sourceTimestamp, receivedAt },
+      });
+    expect(row("2025-12-01T00:00:00Z")).toMatchObject({
+      value: 1,
+      rawValue: true,
+      sourceClockState: "not-future",
+      reportedStatusCode: "Good",
+    });
+    expect(row("2026-01-01T00:05:00Z").value).toBe(1);
+    expect(row("2026-01-01T00:05:00.001Z")).toMatchObject({
+      value: null,
+      rawValue: true,
+      statusCode: "BadSourceClock",
+      reportedStatusCode: "Good",
+      sourceClockState: "future",
+    });
+    const futureSource = row(receivedAt, "2026-01-02T00:00:00Z");
+    expect(futureSource.value).toBeNull();
+    expect(futureSource.sourceTimestamp?.toISOString()).toBe(
+      "2026-01-02T00:00:00.000Z",
+    );
+    expect(futureSource.timestamp.toISOString()).toBe(
+      "2026-01-01T00:00:00.000Z",
+    );
+  });
   it("reports receive age and empty queue as unknown rather than zero-age data", () => {
     const spool = new MeasurementSpool(":memory:");
     try {
@@ -118,6 +148,12 @@ describe("durable measurement spool", () => {
     try {
       expect(() => spool.enqueue({ ...sample, value: NaN })).toThrow("finite");
       expect(() => spool.enqueue({ ...sample, timestamp: "bad" })).toThrow(
+        "timestamp",
+      );
+      expect(() =>
+        spool.enqueue({ ...sample, sourceTimestamp: "bad" }),
+      ).toThrow("timestamp");
+      expect(() => spool.enqueue({ ...sample, receivedAt: "bad" })).toThrow(
         "timestamp",
       );
       expect(spool.peek(10)).toEqual([]);

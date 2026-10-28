@@ -1,6 +1,6 @@
 import { Router } from "express";
 import Joi from "joi";
-import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import db from "../database/db.js";
 import {
   machines,
@@ -22,11 +22,16 @@ import {
   ValidationError,
 } from "../utils/errors.js";
 import { liveProduction } from "../services/liveProductionService.js";
+import { canonicalJson } from "../utils/canonicalJson.js";
 import {
   canSupervise,
   loadAccessScope,
   accessScope,
 } from "../services/accessScope.js";
+import {
+  validateOfflineDraft,
+  offlineIntentDigest,
+} from "../services/offlineOperatorIntent.js";
 
 const router = Router();
 const id = Joi.number().integer().positive().required();
@@ -146,6 +151,10 @@ router.post(
     Joi.object({
       ...mutable,
       requestId: Joi.string().guid().required(),
+      offlineDraftedAt: Joi.string()
+        .isoDate()
+        .strict()
+        .pattern(/(?:Z|[+-]\d{2}:\d{2})$/),
       machineId: id,
       shiftId: Joi.number().integer().positive().allow(null).required(),
       kind: Joi.string().valid("note", "action", "quantity").required(),
@@ -161,7 +170,8 @@ router.post(
     }),
   ),
   asyncHandler(async (req, res) => {
-    const body = req.body;
+    const { offlineDraftedAt, ...body } = req.body;
+    validateOfflineDraft(offlineDraftedAt);
     await validateOwner(body.ownerId, body.machineId);
     if (body.kind === "action" && !body.ownerId)
       throw new ValidationError("Assign an owner to an action");
@@ -216,6 +226,28 @@ router.post(
       createdBy: req.session.userId!,
     };
     const entry = await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(hashtext(${`operator-create:${body.requestId}`}))`,
+      );
+      const [reviewer] = await tx
+        .select({ updatedAt: users.updatedAt })
+        .from(users)
+        .where(
+          and(
+            eq(users.id, req.session.userId!),
+            eq(users.isActive, true),
+            inArray(users.role, ["admin", "supervisor", "operator"]),
+          ),
+        )
+        .for("share");
+      if (
+        !reviewer ||
+        reviewer.updatedAt?.toISOString() !== req.session.userVersion
+      )
+        throw new ForbiddenError(
+          "Operator permissions changed; sign in and review again",
+        );
+      validateOfflineDraft(offlineDraftedAt);
       const [saved] = await tx
         .insert(operatorEntries)
         .values(draft)
@@ -240,7 +272,7 @@ router.post(
           existing.createdBy !== req.session.userId ||
           Object.entries(draft).some(
             ([key, value]) =>
-              JSON.stringify(original[key]) !== JSON.stringify(value),
+              canonicalJson(original[key]) !== canonicalJson(value),
           )
         )
           throw new ConflictError(
@@ -268,10 +300,18 @@ router.post(
       ...mutable,
       version: Joi.number().integer().positive().required(),
       status: Joi.string().valid("open", "resolved").required(),
-    }),
+      offlineIntentId: Joi.string().guid(),
+      offlineDraftedAt: Joi.string()
+        .isoDate()
+        .strict()
+        .pattern(/(?:Z|[+-]\d{2}:\d{2})$/),
+    }).and("offlineIntentId", "offlineDraftedAt"),
   ),
   asyncHandler(async (req, res) => {
     const entryId = Number(req.params.id);
+    const { offlineIntentId, offlineDraftedAt, ...body } = req.body;
+    validateOfflineDraft(offlineDraftedAt);
+    const intentDigest = offlineIntentId ? offlineIntentDigest(body) : null;
     const result = await db.transaction(async (tx) => {
       const [entry] = await tx
         .select()
@@ -279,8 +319,52 @@ router.post(
         .where(eq(operatorEntries.id, entryId))
         .for("update");
       if (!entry) throw new NotFoundError("Entry");
-      await validateOwner(req.body.ownerId, entry.machineId);
-      if (entry.version !== req.body.version)
+      const [reviewer] = await tx
+        .select({ updatedAt: users.updatedAt })
+        .from(users)
+        .where(
+          and(
+            eq(users.id, req.session.userId!),
+            eq(users.isActive, true),
+            inArray(users.role, ["admin", "supervisor", "operator"]),
+          ),
+        )
+        .for("share");
+      if (
+        !reviewer ||
+        reviewer.updatedAt?.toISOString() !== req.session.userVersion
+      )
+        throw new ForbiddenError(
+          "Operator permissions changed; sign in and review again",
+        );
+      validateOfflineDraft(offlineDraftedAt);
+      if (offlineIntentId) {
+        const [applied] = await tx
+          .select()
+          .from(operatorEntryEvents)
+          .where(
+            and(
+              eq(operatorEntryEvents.entryId, entryId),
+              sql`${operatorEntryEvents.snapshot}->'offlineIntent'->>'id' = ${offlineIntentId}`,
+            ),
+          )
+          .limit(1);
+        if (applied) {
+          const snapshot = applied.snapshot as {
+            offlineIntent?: { digest: string };
+          };
+          if (
+            applied.actorId !== req.session.userId ||
+            snapshot.offlineIntent?.digest !== intentDigest
+          )
+            throw new ConflictError(
+              "This offline intent was used for a different edit",
+            );
+          return entry;
+        }
+      }
+      await validateOwner(body.ownerId, entry.machineId);
+      if (entry.version !== body.version)
         throw new ConflictError(
           "This entry changed. Refresh and review the latest version before saving",
         );
@@ -291,14 +375,14 @@ router.post(
         throw new ForbiddenError(
           "An administrator must review quantity declarations",
         );
-      if (entry.kind === "action" && !req.body.ownerId)
+      if (entry.kind === "action" && !body.ownerId)
         throw new ValidationError("An action needs an owner");
       const [updated] = await tx
         .update(operatorEntries)
         .set({
-          ...req.body,
+          ...body,
           version: entry.version + 1,
-          dueAt: req.body.dueAt ? new Date(req.body.dueAt) : null,
+          dueAt: body.dueAt ? new Date(body.dueAt) : null,
           updatedAt: new Date(),
         })
         .where(eq(operatorEntries.id, entryId))
@@ -307,7 +391,12 @@ router.post(
         entryId,
         actorId: req.session.userId!,
         version: updated.version,
-        snapshot: updated,
+        snapshot: offlineIntentId
+          ? {
+              ...updated,
+              offlineIntent: { id: offlineIntentId, digest: intentDigest },
+            }
+          : updated,
       });
       return updated;
     });

@@ -1,11 +1,32 @@
 import { translate as t, useLanguage } from '@/i18n';
 import LiveState from './LiveState';
-import React, { useState } from 'react';
-import { Alert, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Alert,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  MenuItem,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import type { OperatorEntry, MachineLiveSummary } from '@performance-dashboard/shared';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { productionRequest } from './CommissioningPanel';
+import {
+  OFFLINE_DRAFT_EVENT,
+  OFFLINE_DRAFT_KEY,
+  OFFLINE_DRAFT_TTL,
+  readOfflineDrafts,
+  retainOfflineDraft,
+  discardOfflineDraft,
+  type OfflineEntryBase,
+  type OfflineOperatorDraft,
+  type OperatorDraftForm,
+} from './offlineDrafts';
 
 const empty = () => ({
   requestId: crypto.randomUUID(),
@@ -32,12 +53,83 @@ export default function OperatorWorkspace() {
   const editable =
     ['admin', 'operator', 'supervisor'].includes(user?.role ?? '') && !user?.recoveryMode;
   const [machine, setMachine] = useState('');
-  const [draft, setDraft] = useState(empty);
-  const [editing, setEditing] = useState<OperatorEntry | null>(null);
+  const [draft, setDraft] = useState<OperatorDraftForm>(empty);
+  const [editing, setEditing] = useState<OfflineEntryBase | null>(null);
   const [history, setHistory] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [all, setAll] = useState(false);
+  const [online, setOnline] = useState(navigator.onLine);
+  const [retained, setRetained] = useState<OfflineOperatorDraft[]>([]);
+  const [offlineReview, setOfflineReview] = useState<OfflineOperatorDraft | null>(null);
+  const [reviewReady, setReviewReady] = useState(false);
+  const [reviewed, setReviewed] = useState(false);
+  const [currentEntry, setCurrentEntry] = useState<OperatorEntry | null>(null);
+  const reviewing = useRef<string | null>(null);
+  const identityGeneration = useRef(0);
+  useEffect(() => {
+    identityGeneration.current++;
+    setDraft(empty());
+    setMachine('');
+    setEditing(null);
+    setHistory(null);
+    setError('');
+    setOfflineReview(null);
+    setCurrentEntry(null);
+    setReviewed(false);
+    setReviewReady(false);
+    reviewing.current = null;
+  }, [user?.id, user?.role]);
+  useEffect(() => {
+    const reload = () => setRetained(user ? readOfflineDrafts(user.id) : []);
+    const connection = () => {
+      setOnline(navigator.onLine);
+      setReviewed(false);
+      setReviewReady(false);
+    };
+    const storage = (event: StorageEvent) => {
+      if (event.key === OFFLINE_DRAFT_KEY || event.key === null) {
+        let sameOwner = false;
+        try {
+          sameOwner = JSON.parse(event.newValue ?? 'null')?.userId === user?.id;
+        } catch {
+          /* Invalid storage must not expose an open protected copy. */
+        }
+        const remaining = user && sameOwner ? readOfflineDrafts(user.id) : [];
+        setRetained(remaining);
+        if (
+          sameOwner &&
+          (!reviewing.current || remaining.some((item) => item.id === reviewing.current))
+        )
+          return;
+        // Another tab can log out while this tab is offline: erase its open copy too.
+        identityGeneration.current++;
+        reviewing.current = null;
+        setDraft(empty());
+        setEditing(null);
+        setHistory(null);
+        setError('');
+        setOfflineReview(null);
+        setCurrentEntry(null);
+        setReviewed(false);
+        setReviewReady(false);
+        if (!sameOwner) useAuthStore.getState().clearLocalSession();
+      }
+    };
+    reload();
+    window.addEventListener(OFFLINE_DRAFT_EVENT, reload);
+    window.addEventListener('storage', storage);
+    window.addEventListener('online', connection);
+    window.addEventListener('offline', connection);
+    const expiry = window.setInterval(reload, 30000);
+    return () => {
+      window.removeEventListener(OFFLINE_DRAFT_EVENT, reload);
+      window.removeEventListener('storage', storage);
+      window.removeEventListener('online', connection);
+      window.removeEventListener('offline', connection);
+      window.clearInterval(expiry);
+    };
+  }, [user]);
   const assets = useQuery({
     queryKey: ['production-assets'],
     queryFn: () => productionRequest<{ id: number; name: string }[]>('/assets'),
@@ -89,8 +181,14 @@ export default function OperatorWorkspace() {
     setDraft(empty());
     setEditing(null);
     setError('');
+    setOfflineReview(null);
+    reviewing.current = null;
+    setReviewed(false);
+    setReviewReady(false);
+    setCurrentEntry(null);
   };
   const edit = (entry: OperatorEntry) => {
+    clear();
     setEditing(entry);
     setError('');
     setDraft({
@@ -104,6 +202,8 @@ export default function OperatorWorkspace() {
     });
   };
   const save = async (status: 'open' | 'resolved') => {
+    if (!online || (offlineReview && (!reviewReady || !reviewed))) return;
+    const generation = identityGeneration.current;
     setBusy(true);
     setError('');
     try {
@@ -116,10 +216,18 @@ export default function OperatorWorkspace() {
       await productionRequest(
         editing ? `/operator/entries/${editing.id}` : '/operator/entries',
         editing
-          ? { ...mutable, version: editing.version, status }
+          ? {
+              ...mutable,
+              version: editing.version,
+              status,
+              ...(offlineReview
+                ? { offlineIntentId: offlineReview.id, offlineDraftedAt: offlineReview.createdAt }
+                : {}),
+            }
           : {
               ...mutable,
               requestId: draft.requestId,
+              ...(offlineReview ? { offlineDraftedAt: offlineReview.createdAt } : {}),
               machineId: Number(machine),
               shiftId: draft.shiftId ? Number(draft.shiftId) : null,
               kind: draft.kind,
@@ -135,14 +243,77 @@ export default function OperatorWorkspace() {
                   : null,
             },
       );
+      if (identityGeneration.current !== generation) return;
+      if (offlineReview && user && useAuthStore.getState().user?.id === user.id)
+        discardOfflineDraft(user.id, offlineReview.id);
       clear();
       await entries.refetch();
       if (history !== null) await events.refetch();
     } catch (failure) {
+      if (identityGeneration.current !== generation) return;
       setError(String(failure));
       await entries.refetch();
     } finally {
       setBusy(false);
+    }
+  };
+  const keepDraft = () => {
+    if (!user || !machine) return;
+    try {
+      const created = Date.now();
+      retainOfflineDraft({
+        id: editing ? crypto.randomUUID() : draft.requestId,
+        userId: user.id,
+        machineId: Number(machine),
+        createdAt: new Date(created).toISOString(),
+        expiresAt: new Date(created + OFFLINE_DRAFT_TTL).toISOString(),
+        form: { ...draft },
+        entry: editing
+          ? { id: editing.id, version: editing.version, kind: editing.kind, status: editing.status }
+          : null,
+        status: editing?.status ?? 'open',
+      });
+      clear();
+    } catch (failure) {
+      setError(String(failure));
+    }
+  };
+  const reviewDraft = async (item: OfflineOperatorDraft) => {
+    if (!user || item.userId !== user.id) return;
+    const generation = identityGeneration.current;
+    clear();
+    setMachine(String(item.machineId));
+    setDraft({ ...item.form });
+    setEditing(item.entry);
+    setOfflineReview(item);
+    reviewing.current = item.id;
+    if (!navigator.onLine) return;
+    try {
+      const latest = await productionRequest<{ entries: OperatorEntry[] }>(
+        `/operator/entries?machineId=${item.machineId}&status=all`,
+      );
+      let current = item.entry ? latest.entries.find((entry) => entry.id === item.entry!.id) : null;
+      if (item.entry && !current) {
+        const historyResult = await productionRequest<{ events: { snapshot: OperatorEntry }[] }>(
+          `/operator/entries/${item.entry.id}/history`,
+        );
+        current = historyResult.events[0]?.snapshot;
+      }
+      if (
+        identityGeneration.current !== generation ||
+        useAuthStore.getState().user?.id !== user.id ||
+        reviewing.current !== item.id
+      )
+        return;
+      setCurrentEntry(current ?? null);
+      setReviewReady(true);
+    } catch (failure) {
+      if (
+        identityGeneration.current === generation &&
+        useAuthStore.getState().user?.id === user.id &&
+        reviewing.current === item.id
+      )
+        setError(String(failure));
     }
   };
   const quantityReady =
@@ -156,6 +327,53 @@ export default function OperatorWorkspace() {
           'Record observations, assign follow-up actions and review the next shift’s outstanding work. Manual counts stay separate from measured production.',
         )}{' '}
       </Typography>
+      {(!online || entries.isError || live.isError) && (
+        <Alert severity="warning">
+          {t(
+            'Connection unavailable: displayed data is cached and may be stale. Drafts are not sent automatically.',
+            'Verbindung nicht verfügbar: Angezeigte Daten sind zwischengespeichert und möglicherweise veraltet. Entwürfe werden nicht automatisch gesendet.',
+          )}
+        </Alert>
+      )}
+      {editable && retained.length > 0 && (
+        <Paper variant="outlined" sx={{ p: 2 }}>
+          <Stack spacing={1}>
+            <Typography variant="h6">
+              {t('Drafts on this device', 'Entwürfe auf diesem Gerät')}
+            </Typography>
+            {retained.map((item) => (
+              <Stack
+                key={item.id}
+                spacing={1}
+                sx={{ borderBottom: 1, borderColor: 'divider', pb: 1 }}
+              >
+                <Typography sx={{ overflowWrap: 'anywhere' }}>
+                  {assets.data?.find((asset) => asset.id === item.machineId)?.name ??
+                    `#${item.machineId}`}{' '}
+                  · {item.form.text}
+                </Typography>
+                <Typography variant="body2">
+                  {t('Retained locally · expires', 'Lokal gespeichert · läuft ab')}{' '}
+                  {new Date(item.expiresAt).toLocaleString(useLanguage.getState().language)}
+                </Typography>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                  <Button onClick={() => void reviewDraft(item)}>
+                    {t('Review retained draft', 'Gespeicherten Entwurf prüfen')}
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (user) discardOfflineDraft(user.id, item.id);
+                      if (offlineReview?.id === item.id) clear();
+                    }}
+                  >
+                    {t('Discard draft', 'Entwurf verwerfen')}
+                  </Button>
+                </Stack>
+              </Stack>
+            ))}
+          </Stack>
+        </Paper>
+      )}
       <TextField
         select
         label={t('Handover machine')}
@@ -186,14 +404,26 @@ export default function OperatorWorkspace() {
             live.data?.machines.map((asset) => (
               <Paper key={asset.id} variant="outlined" sx={{ p: 2 }}>
                 <Typography variant="h6">
-                  {asset.shift?.job.reference || 'No active work order'} {asset.shift?.job.product}
+                  {asset.shift?.job.reference ||
+                    t('No active work order', 'Kein aktiver Arbeitsauftrag')}{' '}
+                  {asset.shift?.job.product}
                 </Typography>
                 <Typography>{asset.shift?.name}</Typography>
-                <LiveState machine={asset} updatedAt={live.dataUpdatedAt} failed={!!live.error} />
+                <LiveState
+                  machine={asset}
+                  updatedAt={live.dataUpdatedAt}
+                  failed={!online || !!live.error}
+                />
+                {!online && (
+                  <Typography variant="body2">
+                    {t('Cached observation from', 'Zwischengespeicherte Beobachtung vom')}{' '}
+                    {new Date(live.dataUpdatedAt).toLocaleString(useLanguage.getState().language)}
+                  </Typography>
+                )}
                 <Typography>
                   {t('Observed')}{' '}
                   {asset.production.observed?.toLocaleString(useLanguage.getState().language) ??
-                    'unknown'}{' '}
+                    t('Unknown')}{' '}
                   /{' '}
                   {asset.shift?.job.target?.toLocaleString(useLanguage.getState().language) ?? '—'}{' '}
                   {t('target')}{' '}
@@ -306,6 +536,43 @@ export default function OperatorWorkspace() {
                     ? `Review entry #${editing.id} · revision ${editing.version}`
                     : t('New handover entry')}
                 </Typography>
+                {offlineReview && (
+                  <Alert severity="warning">
+                    <Stack spacing={1}>
+                      <Typography>
+                        {t(
+                          'Review before sending. Nothing is submitted on reconnect. Changed server revisions are refused; discard this draft and edit the latest entry to resolve a conflict.',
+                          'Vor dem Senden prüfen. Beim Wiederverbinden wird nichts übermittelt. Geänderte Serverversionen werden abgelehnt; verwerfen Sie den Entwurf und bearbeiten Sie den neuesten Eintrag, um einen Konflikt zu lösen.',
+                        )}
+                      </Typography>
+                      {currentEntry && (
+                        <Typography sx={{ overflowWrap: 'anywhere' }}>
+                          {t('Current server entry', 'Aktueller Servereintrag')} #{currentEntry.id}{' '}
+                          · {t('Revision', 'Version')} {currentEntry.version}: {currentEntry.text}
+                        </Typography>
+                      )}
+                      <Button
+                        disabled={!online || busy}
+                        onClick={() => void reviewDraft(offlineReview)}
+                      >
+                        {t('Refresh review', 'Prüfung aktualisieren')}
+                      </Button>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={reviewed}
+                            disabled={!online || !reviewReady}
+                            onChange={(event) => setReviewed(event.target.checked)}
+                          />
+                        }
+                        label={t(
+                          'I reviewed the current context and this draft',
+                          'Ich habe den aktuellen Kontext und diesen Entwurf geprüft',
+                        )}
+                      />
+                    </Stack>
+                  </Alert>
+                )}
                 <TextField
                   select
                   label={t('Entry type')}
@@ -419,13 +686,22 @@ export default function OperatorWorkspace() {
                     )}
                   </>
                 )}
-                <Stack direction="row" spacing={1}>
-                  <Button type="submit" variant="contained" disabled={busy || !quantityReady}>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={
+                      busy ||
+                      !quantityReady ||
+                      !online ||
+                      (!!offlineReview && (!reviewReady || !reviewed))
+                    }
+                  >
                     {t('Save handover')}{' '}
                   </Button>
                   {editing && (
                     <Button
-                      disabled={busy}
+                      disabled={busy || !online || (!!offlineReview && (!reviewReady || !reviewed))}
                       onClick={() => void save(editing.status === 'open' ? 'resolved' : 'open')}
                     >
                       {editing.status === 'open' ? t('Resolve / mark reviewed') : t('Reopen entry')}
@@ -434,7 +710,19 @@ export default function OperatorWorkspace() {
                   <Button disabled={busy} onClick={clear}>
                     {t('New entry / cancel edit')}{' '}
                   </Button>
+                  <Button
+                    disabled={busy || !draft.text.trim() || !quantityReady || !!offlineReview}
+                    onClick={keepDraft}
+                  >
+                    {t('Keep draft on this device', 'Entwurf auf diesem Gerät speichern')}
+                  </Button>
                 </Stack>
+                <Typography variant="body2" color="text.secondary">
+                  {t(
+                    'Device drafts expire after 24 hours. Sign out to erase them on shared devices. Offline reloads require sign-in verification before drafts can be opened.',
+                    'Geräteentwürfe verfallen nach 24 Stunden. Auf gemeinsam genutzten Geräten zum Löschen abmelden. Nach Offline-Neuladen muss die Anmeldung vor dem Öffnen bestätigt werden.',
+                  )}
+                </Typography>
               </Stack>
             </Paper>
           )}

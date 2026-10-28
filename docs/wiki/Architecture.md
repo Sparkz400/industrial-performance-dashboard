@@ -1,5 +1,10 @@
 # Architecture
 
+[Data integrity and reviewed operations](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DATA_INTEGRITY.md)
+adds evidence-backed widgets, reviewed corrections, bounded calculated signals,
+explicit offline drafts, durable CMMS handoffs and versioned energy estimates.
+Frozen reports and physical qualification remain separate.
+
 [Factory operations](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/FACTORY_OPERATIONS.md)
 adds transactional setup-import receipts and work-order identities, scoped diagnostic
 and asset reads, and signed offline packages tied to a tested source/image revision.

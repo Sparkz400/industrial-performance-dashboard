@@ -3,6 +3,14 @@
 Performance Dashboard is development software. Its intended starting point is an
 owned simulator or an isolated test installation using OPC UA scalar signals.
 
+## Data integrity and reviewed operations
+
+The [six-feature integrity wave](DATA_INTEGRITY.md) replaces generated widget data,
+adds reviewed historian corrections and safe calculated signals, retains explicit
+offline operator drafts, and provides reviewed CMMS handoffs and versioned energy
+estimates. Frozen reports remain intact; physical/vendor acceptance and PR #63's
+72-hour endurance gate remain separate.
+
 ## Factory operations expansion
 
 The [six-workflow expansion](FACTORY_OPERATIONS.md) adds configuration bundles,

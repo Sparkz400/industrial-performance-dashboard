@@ -372,3 +372,4 @@ export type {
   AlarmReview,
   AlarmReplayReview,
 } from "./operationalDiagnostics.js";
+export * from "./derivedSignals.js";

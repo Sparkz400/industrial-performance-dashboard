@@ -39,6 +39,44 @@ export const useStatusStore = create<StatusState>((set, get) => {
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
   let retryDelay = 1000;
   let authenticationRejected = false;
+  let healthGeneration = 0;
+  let healthExpiry: ReturnType<typeof setTimeout> | null = null;
+  const unknownHealth = () =>
+    set({
+      status: defaultStatus,
+      isConnected: false,
+      isError: false,
+      statusText: 'Unknown: observation expired',
+    });
+  const acceptStatus = (updatedStatus: SystemStatus) => {
+    if (healthExpiry) clearTimeout(healthExpiry);
+    const observed = Date.parse(String(updatedStatus.lastUpdated ?? '')),
+      age = Date.now() - observed;
+    if (
+      !updatedStatus.database ||
+      !updatedStatus.opcua ||
+      !updatedStatus.overall ||
+      !Number.isFinite(age) ||
+      age < -5000 ||
+      age > 90000
+    ) {
+      unknownHealth();
+      return;
+    }
+    set({
+      status: updatedStatus,
+      lastChecked: new Date(observed),
+      isError: updatedStatus.overall.status === 'ERROR',
+      isConnected:
+        updatedStatus.overall.status === 'CONNECTED' &&
+        ['CONNECTED', 'OK', 'HEALTHY'].includes(
+          String(updatedStatus.database.status).toUpperCase(),
+        ) &&
+        ['CONNECTED', 'OK', 'HEALTHY'].includes(String(updatedStatus.opcua.status).toUpperCase()),
+      statusText: updatedStatus.overall.statusText || 'Unknown',
+    });
+    healthExpiry = setTimeout(unknownHealth, Math.max(0, 90000 - age));
+  };
 
   const stopRetry = () => {
     if (retryTimer) clearTimeout(retryTimer);
@@ -60,25 +98,33 @@ export const useStatusStore = create<StatusState>((set, get) => {
   };
 
   const refreshStatus = async () => {
-    if (useAuthStore.getState().user?.role !== 'admin') return;
+    const actor = useAuthStore.getState().user;
+    if (actor?.role !== 'admin') return;
     if (isPolling) return;
+    const generation = healthGeneration;
+    const stillAuthorized = () =>
+      generation === healthGeneration &&
+      useAuthStore.getState().user?.id === actor.id &&
+      useAuthStore.getState().user?.role === 'admin';
     isPolling = true;
     try {
       const res = await fetch(API_ENDPOINTS.status, { credentials: 'include' });
       if (!res.ok) throw new Error(`Failed to fetch status: ${res.status}`);
       const data = await res.json();
-      set({
-        status: data,
-        lastChecked: new Date(data.lastUpdated || Date.now()),
-        isError: data?.overall?.status === 'ERROR',
-        isConnected: data?.overall?.status === 'CONNECTED',
-        statusText: data?.overall?.statusText || 'Unknown',
-      });
+      if (!stillAuthorized()) return;
+      acceptStatus(data);
     } catch (err) {
+      if (!stillAuthorized()) return;
+      set({
+        status: defaultStatus,
+        isConnected: false,
+        isError: true,
+        statusText: 'Unknown: status request failed',
+      });
       console.error('[StatusStore] Error fetching status:', err);
     } finally {
       setTimeout(() => {
-        isPolling = false;
+        if (generation === healthGeneration) isPolling = false;
       }, 2000);
     }
   };
@@ -166,13 +212,7 @@ export const useStatusStore = create<StatusState>((set, get) => {
 
         socketInstance.on('statusUpdate', (updatedStatus: SystemStatus) => {
           if (updatedStatus?.database && updatedStatus?.opcua && updatedStatus?.overall) {
-            set({
-              status: updatedStatus,
-              lastChecked: new Date(updatedStatus.lastUpdated || Date.now()),
-              isError: updatedStatus.overall.status === 'ERROR',
-              isConnected: updatedStatus.overall.status === 'CONNECTED',
-              statusText: updatedStatus.overall.statusText || 'Unknown',
-            });
+            acceptStatus(updatedStatus);
           }
         });
 
@@ -186,6 +226,9 @@ export const useStatusStore = create<StatusState>((set, get) => {
     },
 
     cleanup: () => {
+      healthGeneration++;
+      isPolling = false;
+      if (healthExpiry) clearTimeout(healthExpiry);
       stopRetry();
       if (cleanupNotificationListeners) {
         cleanupNotificationListeners();

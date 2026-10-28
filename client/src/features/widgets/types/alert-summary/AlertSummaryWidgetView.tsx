@@ -16,7 +16,8 @@ interface AlertSummaryItem {
   ruleName: string;
   severity: string;
   nodeKey: string;
-  triggeredAt: string;
+  triggeredAt?: string;
+  createdAt?: string;
   status: string;
 }
 
@@ -48,7 +49,10 @@ const getSeverityColor = (severity: string): 'error' | 'warning' | 'info' | 'def
   }
 };
 
-const formatDate = (isoDate: string): string => new Date(isoDate).toLocaleString();
+const formatDate = (isoDate?: string): string =>
+  isoDate && Number.isFinite(Date.parse(isoDate))
+    ? new Date(isoDate).toLocaleString()
+    : 'Unknown event time';
 
 const AlertSummaryWidgetView = memo(function AlertSummaryWidgetView({
   recentAlerts,
@@ -79,7 +83,11 @@ const AlertSummaryWidgetView = memo(function AlertSummaryWidgetView({
 
       {/* Severity counts */}
       <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-        <Chip label={`Total: ${totalActive}`} size="small" variant="outlined" />
+        <Chip
+          label={`Latest active alerts shown: ${totalActive} (maximum 5)`}
+          size="small"
+          variant="outlined"
+        />
         {severityCounts.map((sc) => (
           <Chip
             key={sc.severity}
@@ -121,7 +129,7 @@ const AlertSummaryWidgetView = memo(function AlertSummaryWidgetView({
                   }
                   secondary={
                     <Typography variant="caption" color="text.secondary">
-                      {alert.nodeKey} - {formatDate(alert.triggeredAt)}
+                      {alert.nodeKey} - {formatDate(alert.createdAt ?? alert.triggeredAt)}
                     </Typography>
                   }
                 />

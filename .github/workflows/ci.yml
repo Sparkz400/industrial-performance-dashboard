@@ -104,6 +104,10 @@ jobs:
       - run: node scripts/test-operational-diagnostics.mjs
       - run: node scripts/test-work-orders.mjs
       - run: node scripts/test-asset-overview.mjs
+      - run: node scripts/test-measurement-corrections.mjs
+      - run: node scripts/test-signal-quality.mjs
+      - run: node scripts/test-offline-operator.mjs
+      - run: node scripts/test-maintenance-costs.mjs
       - run: node scripts/test-daily-workflows.mjs
         env:
           DAILY_BROWSER: "1"

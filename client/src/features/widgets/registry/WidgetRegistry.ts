@@ -66,7 +66,7 @@ export const widgetRegistry: WidgetRegistryType = {
   },
   currentAirConsumptionWidget: {
     component: React.lazy(() => import('../types/CurrentAirConsumptionWidget')),
-    settingsComponent: null,
+    settingsComponent: React.lazy(() => import('../types/EvidenceWidgetSettings')),
     minW: MIN_W,
     minH: MIN_H,
     defaultW: 4,
@@ -97,13 +97,13 @@ export const widgetRegistry: WidgetRegistryType = {
   },
   operationModePie: {
     component: React.lazy(() => import('../types/OperationModeWidgetPie')),
-    settingsComponent: null,
+    settingsComponent: React.lazy(() => import('../types/EvidenceWidgetSettings')),
     minW: MIN_W,
     minH: MIN_H,
     defaultW: 4,
     defaultH: 10,
-    title: 'Operation Mode Pie',
-    description: 'Shows operation mode distribution as a pie chart',
+    title: 'Observed State Distribution',
+    description: 'Shows measured state durations with explicit unknown coverage',
     category: WIDGET_CATEGORIES.ANALYTICS,
     icon: 'PieChart',
     defaultConfig: {},
@@ -119,9 +119,7 @@ export const widgetRegistry: WidgetRegistryType = {
     description: 'Shows system uptime rate per day',
     category: WIDGET_CATEGORIES.ANALYTICS,
     icon: 'AccessTime',
-    defaultConfig: {
-      expectedUptime: 99,
-    },
+    defaultConfig: {},
   },
   oeeGauge: {
     component: React.lazy(() => import('../types/oee-gauge/index')),

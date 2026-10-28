@@ -1,11 +1,12 @@
 import { useLanguage } from '@/i18n';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useT } from '@/i18n';
 import { operationRequest } from './api';
 import type { ProductionSignal } from '@performance-dashboard/shared';
+import EnergyCostPanel from './EnergyCostPanel';
 interface Meter {
   signal: ProductionSignal;
   maxGapSeconds: number;
@@ -55,6 +56,12 @@ export default function EnergyPanel({ machineId }: { machineId: number }) {
     [error, setError] = useState(''),
     [message, setMessage] = useState('');
   const [evidence, setEvidence] = useState({ kWh: '', toleranceKWh: '0', reference: '' });
+  useEffect(() => {
+    setShift('');
+    setDraft(null);
+    setError('');
+    setMessage('');
+  }, [machineId]);
   const meter = useQuery({
     queryKey: ['energy-meter', machineId],
     queryFn: () =>
@@ -309,6 +316,7 @@ export default function EnergyPanel({ machineId }: { machineId: number }) {
           </Stack>
         </Paper>
       )}
+      <EnergyCostPanel key={machineId} machineId={machineId} shiftId={shift} />
     </Stack>
   );
 }
