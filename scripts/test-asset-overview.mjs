@@ -296,7 +296,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   await expect(
     page
       .getByRole("region", { name: "Signal history chart", exact: true })
-      .locator("svg"),
+      .getByRole("img"),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Open signal alarms", exact: true })
