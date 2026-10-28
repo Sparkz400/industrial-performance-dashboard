@@ -141,6 +141,17 @@ class DatabaseManager {
     });
 
     pool.on("connect", (client) => {
+      // The pool's error listener is removed while a client is checked out.
+      client.on("error", (error: Error) => {
+        logger.error("PostgreSQL client disconnected", {
+          pool: poolState.name,
+          role: poolState.role,
+          error: error.message,
+        });
+        poolState.isHealthy = false;
+        this.scheduleReconnect(poolState);
+        this.refreshDatabaseStatus("Database client disconnected");
+      });
       this.wrapClientQuery(client as pg.PoolClient, poolState.name);
     });
 

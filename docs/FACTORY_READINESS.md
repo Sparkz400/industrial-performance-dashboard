@@ -167,3 +167,26 @@ unresolved. Subsequent failures now retain bounded page text, screenshots, URLs,
 failed requests and outstanding-request ages. The visibility threshold and
 application assertions are unchanged; neither failed attempt contributes any
 passing duration.
+
+### Database interruption follow-up
+
+Hosted endurance on `2ff19821` recorded an unexpected application exit during a
+database interruption. Its uploaded evidence did not contain the application
+stack, so the exact cause of that specific exit is not established. Failure
+receipts now include the bounded, credential-redacted application tail.
+
+A separate forced-disconnect regression reproduced a process crash when a pooled
+PostgreSQL client was checked out: the pool only handled errors from idle clients.
+Each connection now retains a client error listener while checked out. Failed
+queries still reject and transaction owners still release their own connections.
+`node scripts/test-database-client-errors.mjs` proves idle and active interrupted
+transactions roll back, the process survives, and a fresh pooled query succeeds.
+It uses a fresh owned database and terminates only that database's test sessions.
+
+The pre-fix crash and post-fix passing regression are preserved separately.
+Both builds, type checks, 265 unit tests and the harness regressions pass; lint
+has no errors and 13 existing warnings. Two local replacement smoke attempts
+stopped during startup because Docker Desktop's engine was unavailable, before
+the application workload began. Further full-application smoke, exact-head CI and
+a new complete 72-hour run are required; the earlier heading failure remains
+unresolved and physical-machine qualification remains open.

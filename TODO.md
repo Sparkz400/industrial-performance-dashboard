@@ -48,7 +48,9 @@ determine whether multi-day endurance has passed.
 FR02/FR03 evidence: [PR #63](https://github.com/Sparkz400/performance_dashboard/pull/63) and
 [validation record](docs/FACTORY_READINESS.md#software-validation--2026-10-28),
 including the isolated supervisor/comparison browser fixtures. FR01's harness and
-short-run recovery checks pass; its 72-hour elapsed-time gate is still open.
+short-run recovery checks pass, but later sustained/CI failures keep its 72-hour
+gate open. A reproduced checked-out database-client crash has a focused fix and
+forced-disconnect regression; replacement full-application acceptance is pending.
 
 ### Daily factory workflows — current implementation
 

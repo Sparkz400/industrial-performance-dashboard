@@ -947,6 +947,7 @@ try {
   await save({
     state: fatalError || !stopped ? "failed" : "interrupted",
     failure: safeFailure(fatalError ?? error),
+    applicationTail: safeFailure(appOutput),
     phase,
     failurePages,
     networkErrors,
@@ -960,7 +961,7 @@ try {
     join(directory, "application-tail.log"),
     safeFailure(appOutput),
   );
-  console.error(safeFailure(error));
+  console.error(safeFailure(fatalError ?? error));
   process.exitCode = 1;
 } finally {
   clearInterval(generator);
