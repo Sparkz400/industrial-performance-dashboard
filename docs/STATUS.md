@@ -29,6 +29,9 @@ work uses a separate checkout from PR #63's endurance repair and replacement run
   Full multi-day operation, browser-user capacity and physical qualification remain open.
   Installation endurance now has a separate full-application workload; only its
   completed receipts establish the actual duration and workload tested.
+  Failed sustained runs and a later database-interruption CI exit keep this gate
+  open. A checked-out client disconnect fix passes isolated rollback/recovery
+  regression; replacement endurance acceptance is pending.
 
 - Machine/site grants across REST, tRPC, sockets and exports; operator/supervisor roles.
 - Streaming raw history, reviewed retention, quality-aware hourly summaries and storage estimates.

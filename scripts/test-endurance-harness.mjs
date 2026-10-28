@@ -7,7 +7,12 @@ import { spawn } from "node:child_process";
 import { mkdtemp, readFile, rm, rmdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { browserGet, safeFailure, writeReceipt } from "./endurance-harness.mjs";
+import {
+  browserGet,
+  safeFailure,
+  writeReceipt,
+  captureFailurePages,
+} from "./endurance-harness.mjs";
 
 const receiptDirectory = await mkdtemp(join(tmpdir(), "pd-endurance-receipt-"));
 const receipt = join(receiptDirectory, "status.json");
@@ -93,7 +98,10 @@ const server = createServer((req, res) => {
       "Set-Cookie",
       "fixture-session=private-test-value; HttpOnly; SameSite=Lax; Path=/",
     );
-    res.end("<!doctype html><title>Owned browser transport fixture</title>");
+    res.end(
+      "<!doctype html><title>Owned browser transport fixture</title><h1>Owned diagnostic page</h1>" +
+        "x".repeat(5000),
+    );
   } else if (req.url === "/good") {
     res.setHeader("Content-Type", "application/json");
     res.end(
@@ -121,11 +129,23 @@ const server = createServer((req, res) => {
 server.listen(0, "127.0.0.1");
 await once(server, "listening");
 const url = `http://127.0.0.1:${server.address().port}`;
+const captureDirectory = await mkdtemp(join(tmpdir(), "pd-endurance-capture-"));
 let browser;
 try {
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
   await page.goto(url);
+  const [capture] = await captureFailurePages(browser, captureDirectory);
+  assert.equal(capture.url, url + "/");
+  assert(capture.text.startsWith("Owned diagnostic page"));
+  assert.equal(capture.text.length, 4000);
+  assert.equal(
+    (await readFile(join(captureDirectory, "browser-failure-0.png")))
+      .subarray(0, 8)
+      .toString("hex"),
+    "89504e470d0a1a0a",
+  );
+  assert.deepEqual(await captureFailurePages(undefined, captureDirectory), []);
   for (let i = 0; i < 3; i++) {
     assert.deepEqual(JSON.parse(await browserGet(page, url + "/good")), {
       authenticated: true,
@@ -193,6 +213,8 @@ try {
   );
 } finally {
   await browser?.close();
+  await rm(join(captureDirectory, "browser-failure-0.png"), { force: true });
+  await rmdir(captureDirectory);
   server.closeAllConnections();
   await new Promise((done) => server.close(done));
 }

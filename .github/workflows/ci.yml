@@ -89,6 +89,7 @@ jobs:
       - run: npm run build:server
       - run: npm run db:migrate -w server
       - run: npm run db:seed -w server
+      - run: node scripts/test-database-client-errors.mjs
       - run: node scripts/test-measurements.mjs
       - run: node scripts/test-p0.mjs
       - run: node scripts/test-tracing.mjs
