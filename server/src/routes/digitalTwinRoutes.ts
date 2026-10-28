@@ -15,24 +15,26 @@ const router = express.Router();
 
 // --- Schemas ---
 
-const idParamSchema = Joi.object({ id: Joi.number().integer().required() });
+const idParamSchema = Joi.object({
+  id: Joi.number().integer().positive().required(),
+});
 const instanceIdParamSchema = Joi.object({
-  id: Joi.number().integer().required(),
+  id: Joi.number().integer().positive().required(),
 });
 
 const createTemplateSchema = Joi.object({
   name: Joi.string().required().trim().min(1).max(255),
   description: Joi.string().allow("", null).optional(),
-  svgContent: Joi.string().required().min(10),
-  elementMappings: Joi.array().items(Joi.object()).default([]),
+  svgContent: Joi.string().required().min(10).max(524288),
+  elementMappings: Joi.array().items(Joi.object()).max(100).default([]),
   category: Joi.string().max(100).default("general"),
 });
 
 const updateTemplateSchema = Joi.object({
   name: Joi.string().trim().min(1).max(255),
   description: Joi.string().allow("", null),
-  svgContent: Joi.string().min(10),
-  elementMappings: Joi.array().items(Joi.object()),
+  svgContent: Joi.string().min(10).max(524288),
+  elementMappings: Joi.array().items(Joi.object()).max(100),
   category: Joi.string().max(100),
 }).min(1);
 
@@ -40,21 +42,29 @@ const createInstanceSchema = Joi.object({
   templateId: Joi.number().integer().required(),
   machineId: Joi.number().integer().required(),
   name: Joi.string().required().trim().min(1).max(255),
-  nodeBindings: Joi.array().items(Joi.object()).default([]),
+  nodeBindings: Joi.array().items(Joi.object()).max(100).default([]),
   displayConfig: Joi.object().default({}),
 });
 
 const updateInstanceSchema = Joi.object({
   name: Joi.string().trim().min(1).max(255),
-  nodeBindings: Joi.array().items(Joi.object()),
+  nodeBindings: Joi.array().items(Joi.object()).max(100),
   displayConfig: Joi.object(),
   isActive: Joi.boolean(),
 }).min(1);
 
 const elementHistorySchema = Joi.object({
   elementId: Joi.string().required(),
-  startDate: Joi.string().isoDate().required(),
-  endDate: Joi.string().isoDate().required(),
+  startDate: Joi.string()
+    .isoDate()
+    .strict()
+    .pattern(/(?:Z|[+-]\d{2}:\d{2})$/)
+    .required(),
+  endDate: Joi.string()
+    .isoDate()
+    .strict()
+    .pattern(/(?:Z|[+-]\d{2}:\d{2})$/)
+    .required(),
 });
 
 // --- Template Routes ---
@@ -134,6 +144,7 @@ router.delete(
 
 router.get(
   "/instances",
+  validateQuery(Joi.object({ machineId: Joi.number().integer().positive() })),
   asyncHandler(async (req: Request, res: Response) => {
     const machineId = req.query.machineId
       ? Number(req.query.machineId)

@@ -38,6 +38,7 @@ export class MeasurementSpool {
       CREATE TABLE IF NOT EXISTS measurements (
         sequence INTEGER PRIMARY KEY, id TEXT NOT NULL UNIQUE, payload TEXT NOT NULL
       );
+      CREATE INDEX IF NOT EXISTS measurements_machine ON measurements(json_extract(payload, '$.machineId'));
     `);
   }
 
@@ -96,6 +97,19 @@ export class MeasurementSpool {
       this.database.prepare("SELECT count(*) AS count FROM measurements").get()!
         .count,
     );
+  }
+
+  machineHealth(machineId: number) {
+    const row = this.database
+      .prepare(
+        "SELECT count(*) AS pending,min(json_extract(payload,'$.receivedAt')) AS oldest,sum(CASE WHEN json_extract(payload,'$.receivedAt') IS NULL THEN 1 ELSE 0 END) AS unknown FROM measurements WHERE json_extract(payload,'$.machineId')=?",
+      )
+      .get(machineId)!;
+    return {
+      pending: Number(row.pending),
+      oldestReceivedAt: typeof row.oldest === "string" ? row.oldest : null,
+      unknownReceiveTimes: Number(row.unknown ?? 0),
+    };
   }
 
   health() {

@@ -1,5 +1,9 @@
 # Architecture
 
+[Factory operations](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/FACTORY_OPERATIONS.md)
+adds transactional setup-import receipts and work-order identities, scoped diagnostic
+and asset reads, and signed offline packages tied to a tested source/image revision.
+
 [Factory readiness](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/FACTORY_READINESS.md)
 adds scoped supervisor line/action workflows, attributable maintenance corrections,
 fair comparisons of frozen shift reports and full-application endurance testing.

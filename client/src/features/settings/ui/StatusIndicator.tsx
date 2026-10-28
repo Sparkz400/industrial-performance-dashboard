@@ -99,7 +99,15 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
         {getStatusIcon()}
       </Box>
       <CardContent sx={{ pt: 4, pl: 2, pb: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 1,
+            flexWrap: 'wrap',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+          }}
+        >
           <Box>
             <Typography variant="h6" fontWeight="medium" gutterBottom>
               {label}

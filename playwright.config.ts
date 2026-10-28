@@ -26,18 +26,21 @@ export default defineConfig({
     },
   ],
 
-  webServer: [
-    {
-      command: "npm run start:server",
-      url: "http://127.0.0.1:3001/api/v1/csrf-token",
-      reuseExistingServer: !process.env.CI,
-      timeout: 90_000,
-    },
-    {
-      command: "npm run start:client",
-      port: 5173,
-      reuseExistingServer: !process.env.CI,
-      timeout: 30_000,
-    },
-  ],
+  webServer:
+    process.env.E2E_EXTERNAL_SERVER === "1"
+      ? undefined
+      : [
+          {
+            command: "npm run start:server",
+            url: "http://127.0.0.1:3001/api/v1/csrf-token",
+            reuseExistingServer: !process.env.CI,
+            timeout: 90_000,
+          },
+          {
+            command: "npm run start:client",
+            port: 5173,
+            reuseExistingServer: !process.env.CI,
+            timeout: 30_000,
+          },
+        ],
 });

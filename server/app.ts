@@ -6,6 +6,10 @@ import energyRoutes from "./src/routes/energyRoutes.js";
 import historyRoutes from "./src/routes/historyRoutes.js";
 import planningRoutes from "./src/routes/planningRoutes.js";
 import comparisonRoutes from "./src/routes/comparisonRoutes.js";
+import configBundleRoutes from "./src/routes/configBundleRoutes.js";
+import diagnosticsRoutes from "./src/routes/diagnosticsRoutes.js";
+import alarmReviewRoutes from "./src/routes/alarmReviewRoutes.js";
+import workOrderRoutes from "./src/routes/workOrderRoutes.js";
 import "dotenv/config";
 
 // Initialize OpenTelemetry tracing BEFORE importing any instrumented modules
@@ -141,6 +145,10 @@ export function createApp() {
   app.use("/api/v1/history", historyRoutes);
   app.use("/api/v1/planning", planningRoutes);
   app.use("/api/v1/comparisons", comparisonRoutes);
+  app.use("/api/v1/configuration", configBundleRoutes);
+  app.use("/api/v1/diagnostics", diagnosticsRoutes);
+  app.use("/api/v1/alarm-review", alarmReviewRoutes);
+  app.use("/api/v1/work-orders", workOrderRoutes);
   app.use("/api/v1/maintenance", maintenanceRoutes);
   app.use("/api/v1/quality", qualityRoutes);
   app.use("/api/v1/lines", lineRoutes);

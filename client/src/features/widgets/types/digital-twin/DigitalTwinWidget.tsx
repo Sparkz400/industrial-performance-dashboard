@@ -25,7 +25,11 @@ interface DigitalTwinWidgetProps {
 const DigitalTwinWidget: React.FC<DigitalTwinWidgetProps> = ({ config = {}, onError }) => {
   const instanceId = (config.instanceId as number) ?? 0;
   const { data: instance, isLoading, error } = useTwinInstance(instanceId);
-  const liveData = useDigitalTwinLiveData(instance?.bindings ?? []);
+  const liveData = useDigitalTwinLiveData(
+    instance?.values ?? {},
+    instance?.connection ?? 'unknown',
+    !error,
+  );
   const [selectedBinding, setSelectedBinding] = useState<TwinNodeBinding | null>(null);
 
   useEffect(() => {
@@ -120,7 +124,9 @@ const DigitalTwinWidget: React.FC<DigitalTwinWidgetProps> = ({ config = {}, onEr
                   <Typography variant="h4" sx={{ my: 2 }}>
                     {typeof liveData[selectedBinding.nodeKey].value === 'number'
                       ? (liveData[selectedBinding.nodeKey].value as number).toFixed(2)
-                      : liveData[selectedBinding.nodeKey].value}
+                      : liveData[selectedBinding.nodeKey].value == null
+                        ? 'Unknown'
+                        : String(liveData[selectedBinding.nodeKey].value)}
                     {selectedBinding.unit && (
                       <Typography
                         component="span"

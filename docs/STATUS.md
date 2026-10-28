@@ -3,6 +3,14 @@
 Performance Dashboard is development software. Its intended starting point is an
 owned simulator or an isolated test installation using OPC UA scalar signals.
 
+## Factory operations expansion
+
+The [six-workflow expansion](FACTORY_OPERATIONS.md) adds configuration bundles,
+connection diagnostics, alarm review, vendor-neutral work-order files, a practical
+asset overview, and repeatable demonstration/signed release packaging. Validation
+is recorded separately from physical-machine and ERP vendor acceptance. The new
+work uses a separate checkout from PR #63's endurance repair and replacement run.
+
 ## Implemented and covered by focused tests
 
 - Scoped supervisor line investigations and maintenance assignment corrections,

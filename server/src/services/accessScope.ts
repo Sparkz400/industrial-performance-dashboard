@@ -128,6 +128,7 @@ export async function changeAccess<T>(
 }
 
 const parents = {
+  twin: "digital_twin_instances",
   shift: "production_shifts",
   entry: "operator_entries",
   alarm: "alert_history",

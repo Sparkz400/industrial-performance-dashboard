@@ -29,6 +29,16 @@ functionality.
 
 ## Execution update — 2026-10-26
 
+### Factory operations expansion — 2026-10-28
+
+The user authorized all six next steps: portable setup bundles (I05), connection
+diagnostics (C09), alarm usefulness (A06), reviewed work-order exchange (I03),
+practical asset overview (U08), and repeatable demonstration/release packaging
+(P02/P04). See [implementation, usage and limits](docs/FACTORY_OPERATIONS.md).
+This is a separate wave from PR #63 and does not close its 72-hour gate. Broader
+backlog acceptance remains open where vendor, physical, trust or scale requirements
+extend beyond these bounded software workflows.
+
 ### Factory readiness — 2026-10-28
 
 Priorities 1–3 from the next-wave review cover full-application endurance,

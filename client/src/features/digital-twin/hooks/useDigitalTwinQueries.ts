@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/utils/api';
 import { API_ENDPOINTS } from '@/config/config';
+import type { AssetReading } from './useDigitalTwinLiveData';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -42,6 +43,8 @@ export interface TwinInstance {
   svgContent: string;
   createdAt: string;
   updatedAt: string;
+  connection: string;
+  values: Record<string, AssetReading>;
 }
 
 export interface CreateTwinTemplateRequest {
@@ -65,8 +68,23 @@ export interface UpdateTwinInstanceRequest {
 
 export interface ElementHistoryPoint {
   timestamp: string;
-  value: number;
+  value: number | null;
 }
+
+type StoredTemplate = Omit<TwinTemplate, 'elements'> & { elementMappings: TwinElementDefinition[] };
+type StoredInstance = Omit<TwinInstance, 'bindings'> & {
+  nodeBindings: TwinNodeBinding[];
+  bindings?: TwinNodeBinding[];
+};
+const templateResult = (row: StoredTemplate): TwinTemplate => ({
+  ...row,
+  elements: row.elementMappings ?? [],
+});
+const instanceResult = (row: StoredInstance): TwinInstance => ({
+  ...row,
+  bindings: row.bindings ?? row.nodeBindings ?? [],
+  values: row.values ?? {},
+});
 
 export interface ElementHistoryFilters {
   elementId: string;
@@ -94,7 +112,10 @@ const twinKeys = {
 export function useTwinTemplates() {
   return useQuery({
     queryKey: twinKeys.templates(),
-    queryFn: () => api.get(API_ENDPOINTS.digitalTwins.templates) as Promise<TwinTemplate[]>,
+    queryFn: async () =>
+      ((await api.get(API_ENDPOINTS.digitalTwins.templates)) as StoredTemplate[]).map(
+        templateResult,
+      ),
   });
 }
 
@@ -105,7 +126,10 @@ export function useTwinTemplates() {
 export function useTwinTemplate(id: number) {
   return useQuery({
     queryKey: twinKeys.template(id),
-    queryFn: () => api.get(API_ENDPOINTS.digitalTwins.templateById(id)) as Promise<TwinTemplate>,
+    queryFn: async () =>
+      templateResult(
+        (await api.get(API_ENDPOINTS.digitalTwins.templateById(id))) as StoredTemplate,
+      ),
     enabled: id > 0,
   });
 }
@@ -116,8 +140,11 @@ export function useTwinTemplate(id: number) {
 export function useCreateTwinTemplate() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateTwinTemplateRequest) =>
-      api.post(API_ENDPOINTS.digitalTwins.templates, data) as Promise<TwinTemplate>,
+    mutationFn: ({ elements, ...data }: CreateTwinTemplateRequest) =>
+      api.post(API_ENDPOINTS.digitalTwins.templates, {
+        ...data,
+        elementMappings: elements,
+      }) as Promise<TwinTemplate>,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: twinKeys.templates() });
     },
@@ -131,11 +158,11 @@ export function useCreateTwinTemplate() {
 export function useTwinInstances(machineId?: number) {
   return useQuery({
     queryKey: twinKeys.instances(machineId),
-    queryFn: () => {
+    queryFn: async () => {
       const url = machineId
         ? `${API_ENDPOINTS.digitalTwins.instances}?machineId=${machineId}`
         : API_ENDPOINTS.digitalTwins.instances;
-      return api.get(url) as Promise<TwinInstance[]>;
+      return ((await api.get(url)) as StoredInstance[]).map(instanceResult);
     },
   });
 }
@@ -147,8 +174,15 @@ export function useTwinInstances(machineId?: number) {
 export function useTwinInstance(id: number) {
   return useQuery({
     queryKey: twinKeys.instance(id),
-    queryFn: () => api.get(API_ENDPOINTS.digitalTwins.instanceById(id)) as Promise<TwinInstance>,
+    queryFn: async () => {
+      const result = (await api.get(API_ENDPOINTS.digitalTwins.instanceById(id))) as {
+        instance: StoredInstance;
+        values: Record<string, AssetReading>;
+      };
+      return { ...instanceResult(result.instance), values: result.values };
+    },
     enabled: id > 0,
+    refetchInterval: 5000,
   });
 }
 
@@ -158,8 +192,11 @@ export function useTwinInstance(id: number) {
 export function useCreateTwinInstance() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateTwinInstanceRequest) =>
-      api.post(API_ENDPOINTS.digitalTwins.instances, data) as Promise<TwinInstance>,
+    mutationFn: ({ bindings, ...data }: CreateTwinInstanceRequest) =>
+      api.post(API_ENDPOINTS.digitalTwins.instances, {
+        ...data,
+        nodeBindings: bindings,
+      }) as Promise<TwinInstance>,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: twinKeys.instances() });
     },
@@ -172,8 +209,11 @@ export function useCreateTwinInstance() {
 export function useUpdateTwinTemplate() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: Partial<CreateTwinTemplateRequest> & { id: number }) =>
-      api.put(API_ENDPOINTS.digitalTwins.templateById(id), data) as Promise<TwinTemplate>,
+    mutationFn: ({ id, elements, ...data }: Partial<CreateTwinTemplateRequest> & { id: number }) =>
+      api.put(API_ENDPOINTS.digitalTwins.templateById(id), {
+        ...data,
+        ...(elements ? { elementMappings: elements } : {}),
+      }) as Promise<TwinTemplate>,
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: twinKeys.templates() });
       queryClient.invalidateQueries({ queryKey: twinKeys.template(variables.id) });
@@ -200,8 +240,11 @@ export function useDeleteTwinTemplate() {
 export function useUpdateTwinInstance() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: UpdateTwinInstanceRequest & { id: number }) =>
-      api.put(API_ENDPOINTS.digitalTwins.instanceById(id), data) as Promise<TwinInstance>,
+    mutationFn: ({ id, bindings, ...data }: UpdateTwinInstanceRequest & { id: number }) =>
+      api.put(API_ENDPOINTS.digitalTwins.instanceById(id), {
+        ...data,
+        ...(bindings ? { nodeBindings: bindings } : {}),
+      }) as Promise<TwinInstance>,
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: twinKeys.instances() });
       queryClient.invalidateQueries({ queryKey: twinKeys.instance(variables.id) });
@@ -237,15 +280,16 @@ export function useElementHistory(
 ) {
   return useQuery({
     queryKey: twinKeys.elementHistory(instanceId, elementId, startDate, endDate),
-    queryFn: () => {
+    queryFn: async () => {
       const params = new URLSearchParams();
       params.set('elementId', elementId);
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
-      return api.get(
+      const response = (await api.get(
         `${API_ENDPOINTS.digitalTwins.elementHistory(instanceId)}?${params.toString()}`,
-      ) as Promise<ElementHistoryPoint[]>;
+      )) as { dataPoints: ElementHistoryPoint[] };
+      return response.dataPoints;
     },
-    enabled: instanceId > 0 && !!elementId,
+    enabled: instanceId > 0 && !!elementId && !!startDate && !!endDate,
   });
 }

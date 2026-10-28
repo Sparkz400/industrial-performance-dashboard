@@ -9,6 +9,11 @@ endurance, scoped supervisor workflows and fair comparisons of frozen shift
 reports. These extend M1–M3 software evidence; they do not close the physical pilot
 gate or establish sustained capacity before the long-running workload completes.
 
+The separately authorized [factory-operations expansion](FACTORY_OPERATIONS.md)
+adds setup transfer, operational diagnostics, reviewed work-order files, asset
+visualization and repeatable demonstration/release packaging. Vendor-specific ERP
+adapters and physical acceptance remain gated by actual pilot evidence.
+
 ## Destination
 
 Make Performance Dashboard a dependable, self-hosted way to understand production

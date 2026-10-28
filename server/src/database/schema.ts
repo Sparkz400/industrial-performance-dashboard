@@ -23,6 +23,18 @@ export const retentionPolicies = pgTable("retention_policies", {
   days: integer("days").notNull(),
   version: integer("version").notNull().default(1),
 });
+
+export const workOrderImports = pgTable("work_order_imports", {
+  id: serial("id").primaryKey(),
+  source: text("source").notNull(),
+  externalId: text("external_id").notNull(),
+  machineId: integer("machine_id").notNull().references(() => machines.id, { onDelete: "restrict" }),
+  shiftId: integer("shift_id").notNull().references(() => productionShifts.id, { onDelete: "restrict" }),
+  payload: jsonb("payload").notNull(),
+  digest: text("digest").notNull(),
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, t => [uniqueIndex("work_order_source_external").on(t.source, t.externalId)]);
 export const retentionPreviews = pgTable("retention_previews", {
   id: text("id").primaryKey(),
   machineId: integer("machine_id").notNull(),
@@ -1420,3 +1432,13 @@ export const retentionPreviewRows = pgTable(
   },
   (t) => [primaryKey({ columns: [t.previewId, t.timestamp, t.measurementId] })],
 );
+
+export const configBundleImports = pgTable("config_bundle_imports", {
+  id: text("id").primaryKey(),
+  machineId: integer("machine_id").notNull().references(() => machines.id, { onDelete: "restrict" }),
+  digest: text("digest").notNull(),
+  snapshot: jsonb("snapshot").notNull(),
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  rolledBackAt: timestamp("rolled_back_at", { withTimezone: true }),
+});

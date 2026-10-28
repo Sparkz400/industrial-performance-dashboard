@@ -364,3 +364,11 @@ export type {
   ComparisonPeriod,
   PeriodComparison,
 } from "./comparison.js";
+export type * from "./configBundle.js";
+export type {
+  MonitoredSignalDiagnostic,
+  CollectorConnectionDiagnostic,
+  ConnectionDiagnostics,
+  AlarmReview,
+  AlarmReplayReview,
+} from "./operationalDiagnostics.js";

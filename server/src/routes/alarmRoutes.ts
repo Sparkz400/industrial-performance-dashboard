@@ -21,6 +21,7 @@ const alarmsQuerySchema = Joi.object({
     .valid("active", "acknowledged", "resolved", "silenced")
     .optional(),
   machineId: Joi.number().integer().optional(),
+  nodeKey: Joi.string().min(1).max(200).optional(),
   limit: Joi.number().integer().min(1).max(5000).default(100),
   offset: Joi.number().integer().min(0).default(0),
   startDate: Joi.date().iso().optional(),
@@ -36,6 +37,7 @@ router.get(
         severity?: string;
         status?: string;
         machineId?: number;
+        nodeKey?: string;
         limit?: number;
         offset?: number;
         startDate?: string;

@@ -1,3 +1,7 @@
+import {
+  collectorDiagnostics,
+  observeSignal,
+} from "../services/collectorDiagnostics.js";
 import { createMachineSession } from "../services/machineIdentity.js";
 import * as opcua from "node-opcua";
 import { EventEmitter } from "events";
@@ -85,6 +89,10 @@ export async function connectAndSubscribe(
   dynamicMapping?: OpcuaMappingConfig,
   machineId?: number,
 ): Promise<OpcuaConnectionResult | null> {
+  const diagnostic = collectorDiagnostics.begin(
+    machineId,
+    dynamicMapping || opcuaMapping,
+  );
   const MAX_RETRIES = 3;
   let retryCount = 0;
   let lastError: Error | null = null;
@@ -97,6 +105,8 @@ export async function connectAndSubscribe(
     securityOptions.securityPolicy || config.OPCUA_SECURITY_POLICY;
 
   while (retryCount < MAX_RETRIES) {
+    diagnostic.attempts++;
+    diagnostic.state = "connecting";
     let client: opcua.OPCUAClient | null = null;
     try {
       logger.info(
@@ -113,7 +123,25 @@ export async function connectAndSubscribe(
 
       client = opcua.OPCUAClient.create(clientOptions);
       const metadataByKey = new Map<string, SignalMetadata>();
+      client.on("start_reconnection", () => {
+        diagnostic.state = "reconnecting";
+        diagnostic.lastConnectionEventAt = new Date().toISOString();
+      });
+      client.on("after_reconnection", (error) => {
+        if (!error) {
+          diagnostic.reconnects++;
+          diagnostic.state = "connected";
+        }
+        diagnostic.lastConnectionEventAt = new Date().toISOString();
+      });
+      client.on("close", () => {
+        diagnostic.state = "disconnected";
+        diagnostic.lastConnectionEventAt = new Date().toISOString();
+      });
       client.on("connection_lost", () => {
+        diagnostic.connectionLosses++;
+        diagnostic.state = "reconnecting";
+        diagnostic.lastConnectionEventAt = new Date().toISOString();
         for (const [key, node] of Object.entries(
           dynamicMapping || opcuaMapping,
         )) {
@@ -164,6 +192,8 @@ export async function connectAndSubscribe(
         securityMode,
       );
       const namespaces = await session.readNamespaceArray();
+      diagnostic.state = "connected";
+      diagnostic.lastConnectionEventAt = new Date().toISOString();
       logger.info("[ConnectAndSub] Session created successfully.");
 
       // Create subscription
@@ -178,18 +208,25 @@ export async function connectAndSubscribe(
       });
 
       subscription.on("started", () => {
+        diagnostic.revisedPublishingMs = subscription.publishingInterval;
         logger.info(
           `[ConnectAndSub] Subscription started (ID: ${subscription.subscriptionId})`,
         );
       });
 
+      subscription.on("internal_error", () => {
+        diagnostic.subscriptionErrors++;
+      });
       subscription.on("terminated", () => {
+        for (const signal of diagnostic.signals)
+          if (signal.state !== "rejected") signal.state = "terminated";
         logger.warn("[ConnectAndSub] Subscription terminated.");
       });
 
       // Subscribe to all mapped nodes (use dynamic mapping if provided, else fallback to static)
       const activeMapping = dynamicMapping || opcuaMapping;
       for (const [key, nodeConfig] of Object.entries(activeMapping)) {
+        const signal = diagnostic.signals.find((s) => s.key === key)!;
         try {
           let unit: string | null = null;
           // EngineeringUnits is optional; absence is unknown, never an inferred unit.
@@ -236,7 +273,28 @@ export async function connectAndSubscribe(
             opcua.TimestampsToReturn.Both,
           );
 
+          monitoredItem.on("initialized", () => {
+            signal.state = "monitoring";
+            signal.statusCode = monitoredItem.statusCode.toString();
+            signal.revisedSamplingMs =
+              monitoredItem.monitoringParameters.samplingInterval;
+            signal.revisedQueueSize =
+              monitoredItem.monitoringParameters.queueSize;
+          });
+          monitoredItem.on("err", () => {
+            signal.state = "rejected";
+            signal.statusCode = monitoredItem.statusCode.toString();
+          });
+          monitoredItem.on("terminated", () => {
+            if (signal.state !== "rejected") signal.state = "terminated";
+          });
           monitoredItem.on("changed", (dataValue: opcua.DataValue) => {
+            observeSignal(
+              signal,
+              new Date(),
+              dataValue.sourceTimestamp,
+              dataValue.statusCode.toString(),
+            );
             opcuaEmitter.emit("nodeChanged", {
               key,
               label: nodeConfig.label,
@@ -255,6 +313,7 @@ export async function connectAndSubscribe(
             `[ConnectAndSub] Monitoring node: ${key} (${nodeConfig.nodeId})`,
           );
         } catch (monitorErr: any) {
+          signal.state = "rejected";
           logger.error(
             `[ConnectAndSub] Failed to monitor node ${key}: ${monitorErr.message}`,
           );
@@ -279,6 +338,12 @@ export async function connectAndSubscribe(
             for (let i = 0; i < entries.length; i++) {
               const [key, mapping] = entries[i];
               const value = values[i];
+              observeSignal(
+                diagnostic.signals.find((s) => s.key === key)!,
+                new Date(),
+                value.sourceTimestamp,
+                value.statusCode.toString(),
+              );
               opcuaEmitter.emit("nodeChanged", {
                 key,
                 label: mapping.label,
@@ -293,12 +358,13 @@ export async function connectAndSubscribe(
               });
             }
           })
-          .catch((error) =>
+          .catch((error) => {
+            diagnostic.heartbeatFailures++;
             logger.warn(
               "OPC UA read heartbeat failed; coverage becomes unknown after the configured gap",
               error,
-            ),
-          )
+            );
+          })
           .finally(() => {
             reading = false;
           });
@@ -344,6 +410,8 @@ export async function connectAndSubscribe(
     }
   }
 
+  diagnostic.state = "failed";
+  diagnostic.lastConnectionEventAt = new Date().toISOString();
   logger.error(
     `[ConnectAndSub] Failed to connect after ${MAX_RETRIES} attempts. Last error: ${lastError?.message || "Unknown error"}.`,
   );

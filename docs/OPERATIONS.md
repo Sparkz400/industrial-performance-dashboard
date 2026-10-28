@@ -1,5 +1,9 @@
 # Install, back up, restore and upgrade
 
+For configuration-only transfer and signed, versioned offline release candidates,
+see [factory operations](FACTORY_OPERATIONS.md). Verify release signatures with an
+independently trusted public key before using the offline installer.
+
 Use Node.js 24, Docker Compose and an image that passed CI and an exact-image
 security scan. The commands below manage a single-company installation with one
 collector, PostgreSQL 16 and named volumes. Run them from the repository root.

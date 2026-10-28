@@ -161,6 +161,8 @@ const SettingsPage: React.FC = () => {
       sx={{
         p: { xs: 2, md: 3 },
         maxWidth: 1400,
+        width: '100%',
+        minWidth: 0,
         mx: 'auto',
         height: '100%',
         display: 'flex',

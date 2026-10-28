@@ -51,6 +51,38 @@ export async function authorizeAssetRequest(
   };
   let found: RegExpExecArray | null;
   if (read && path === "/access/me") return;
+  if (read && path === "/digital-twins/instances") {
+    assertMachine(query.machineId);
+    return;
+  }
+  if (
+    read &&
+    (found = match(/^\/digital-twins\/instances\/(\d+)(?:\/element-history)?$/))
+  ) {
+    await assertResource("twin", found[1]);
+    return;
+  }
+  if (
+    canSupervise(scope.role) &&
+    (found = match(
+      /^\/work-orders\/machines\/(\d+)\/(preview|apply|completions)$/,
+    )) &&
+    ((read && found[2] === "completions") ||
+      (method === "POST" && ["preview", "apply"].includes(found[2])))
+  ) {
+    assertMachine(found[1]);
+    return;
+  }
+  if (
+    read &&
+    canSupervise(scope.role) &&
+    (found = match(
+      /^\/(diagnostics|alarm-review)\/machines\/(\d+)(?:\/replay\/\d+)?$/,
+    ))
+  ) {
+    assertMachine(found[2]);
+    return;
+  }
   if (
     read &&
     canSupervise(scope.role) &&

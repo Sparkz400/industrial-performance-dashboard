@@ -11,6 +11,10 @@ const MaintenancePanel = React.lazy(() => import('./MaintenancePanel'));
 const EnergyPanel = React.lazy(() => import('./EnergyPanel'));
 const HistoryPanel = React.lazy(() => import('./HistoryPanel'));
 const ComparisonPanel = React.lazy(() => import('./ComparisonPanel'));
+const ConnectionDiagnosticsPanel = React.lazy(() => import('./ConnectionDiagnosticsPanel'));
+const AlarmReviewPanel = React.lazy(() => import('./AlarmReviewPanel'));
+const WorkOrderPanel = React.lazy(() => import('./WorkOrderPanel'));
+const AssetOverviewPanel = React.lazy(() => import('./AssetOverviewPanel'));
 /**
  *
  */
@@ -23,6 +27,47 @@ export default function OperationsPage() {
     queryKey: ['production-assets'],
     queryFn: () => operationRequest<{ id: number; name: string }[]>('/production/assets'),
   });
+  const panels = [
+    { name: 'Planning', content: <PlanningPanel machineId={Number(machine)} /> },
+    { name: 'Maintenance', content: <MaintenancePanel machineId={Number(machine)} /> },
+    { name: 'Energy and losses', content: <EnergyPanel machineId={Number(machine)} /> },
+    { name: 'History', content: <HistoryPanel machineId={Number(machine)} /> },
+    ...(canSupervise
+      ? [
+          { name: 'Production line', de: 'Produktionslinie', content: <LinePanel /> },
+          {
+            name: 'Alarm actions',
+            de: 'Alarmmaßnahmen',
+            content: <MaintenanceActionsPanel machineId={Number(machine)} />,
+          },
+          {
+            name: 'Comparisons',
+            de: 'Vergleiche',
+            content: <ComparisonPanel machineId={Number(machine)} />,
+          },
+          {
+            name: 'Connection diagnostics',
+            de: 'Verbindungsdiagnose',
+            content: <ConnectionDiagnosticsPanel machineId={Number(machine)} />,
+          },
+          {
+            name: 'Alarm usefulness',
+            de: 'Alarmbewertung',
+            content: <AlarmReviewPanel machineId={Number(machine)} />,
+          },
+          {
+            name: 'Work orders',
+            de: 'Arbeitsaufträge',
+            content: <WorkOrderPanel machineId={Number(machine)} />,
+          },
+        ]
+      : []),
+    {
+      name: 'Asset overview',
+      de: 'Anlagenübersicht',
+      content: <AssetOverviewPanel machineId={Number(machine)} />,
+    },
+  ];
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1250, width: '100%', mx: 'auto' }}>
       <Stack spacing={3}>
@@ -57,27 +102,12 @@ export default function OperationsPage() {
           scrollButtons="auto"
           aria-label={t('Daily operations')}
         >
-          {[
-            'Planning',
-            'Maintenance',
-            'Energy and losses',
-            'History',
-            ...(canSupervise ? ['Production line', 'Alarm actions', 'Comparisons'] : []),
-          ].map((name, i) => (
+          {panels.map(({ name, de }, i) => (
             <Tab
               id={`operations-tab-${i}`}
               aria-controls={`operations-panel-${i}`}
               key={name}
-              label={t(
-                name,
-                name === 'Production line'
-                  ? 'Produktionslinie'
-                  : name === 'Alarm actions'
-                    ? 'Alarmmaßnahmen'
-                    : name === 'Comparisons'
-                      ? 'Vergleiche'
-                      : undefined,
-              )}
+              label={t(name, de)}
             />
           ))}
         </Tabs>
@@ -89,21 +119,7 @@ export default function OperationsPage() {
             key={`${machine}:${tab}`}
           >
             <Suspense fallback={<Typography role="status">{t('Loading…')}</Typography>}>
-              {tab === 0 ? (
-                <PlanningPanel machineId={Number(machine)} />
-              ) : tab === 1 ? (
-                <MaintenancePanel machineId={Number(machine)} />
-              ) : tab === 2 ? (
-                <EnergyPanel machineId={Number(machine)} />
-              ) : tab === 3 ? (
-                <HistoryPanel machineId={Number(machine)} />
-              ) : tab === 4 && canSupervise ? (
-                <LinePanel />
-              ) : tab === 5 && canSupervise ? (
-                <MaintenanceActionsPanel machineId={Number(machine)} />
-              ) : tab === 6 && canSupervise ? (
-                <ComparisonPanel machineId={Number(machine)} />
-              ) : null}
+              {panels.at(tab)?.content}
             </Suspense>
           </Box>
         )}

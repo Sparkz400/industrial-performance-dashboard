@@ -120,6 +120,20 @@
       "when": 1793170894914,
       "tag": "0016_maintenance_action_revisions",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793175126241,
+      "tag": "0017_work_order_exchange",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793175270118,
+      "tag": "0018_configuration_bundles",
+      "breakpoints": true
     }
   ]
 }

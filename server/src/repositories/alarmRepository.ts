@@ -83,6 +83,7 @@ export const alarmRepository = {
     severity?: string;
     status?: string;
     machineId?: number;
+    nodeKey?: string;
     limit?: number;
     offset?: number;
     startDate?: string;
@@ -97,6 +98,8 @@ export const alarmRepository = {
       conditions.push(sql`${alertHistory.status} = ${filters.status}`);
     if (filters?.machineId != null)
       conditions.push(eq(alertHistory.machineId, filters.machineId));
+    if (filters?.nodeKey != null)
+      conditions.push(eq(alertHistory.nodeKey, filters.nodeKey));
     if (filters?.startDate)
       conditions.push(gte(alertHistory.createdAt, new Date(filters.startDate)));
     if (filters?.endDate)
