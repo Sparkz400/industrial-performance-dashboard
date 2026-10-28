@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { join } from "node:path";
 import { writeFile, rename } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
 
@@ -51,4 +52,29 @@ export function safeFailure(error) {
       "$1: [redacted]",
     )
     .replace(/connect\.sid=[^\s;"']+/gi, "connect.sid=[redacted]");
+}
+
+export async function captureFailurePages(browser, directory) {
+  const failurePages = [];
+  for (const [index, page] of (
+    browser?.contexts().flatMap((context) => context.pages()) ?? []
+  ).entries()) {
+    const snapshot = { index, url: page.url() };
+    try {
+      snapshot.text = safeFailure(
+        (await page.locator("body").innerText({ timeout: 2000 })).slice(
+          0,
+          4000,
+        ),
+      );
+      await page.screenshot({
+        path: join(directory, `browser-failure-${index}.png`),
+        timeout: 3000,
+      });
+    } catch (captureError) {
+      snapshot.captureError = safeFailure(captureError);
+    }
+    failurePages.push(snapshot);
+  }
+  return failurePages;
 }

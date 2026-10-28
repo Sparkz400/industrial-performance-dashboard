@@ -158,3 +158,12 @@ cleanup receipt are retained separately, and its elapsed time is not acceptance.
 
 A new clean-revision run must complete its own full 72-hour workload. Browser
 transport acceptance still does not qualify physical equipment or deployment.
+
+The clean replacement on `b9bc8338` also failed, after about 43 seconds of
+workload: one browser did not show the operations heading within the existing
+five-second visibility check. The application stayed alive and cleanup completed.
+That attempt lacked a failure-page capture, so its precise cause remains
+unresolved. Subsequent failures now retain bounded page text, screenshots, URLs,
+failed requests and outstanding-request ages. The visibility threshold and
+application assertions are unchanged; neither failed attempt contributes any
+passing duration.

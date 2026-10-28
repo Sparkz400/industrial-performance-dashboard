@@ -22,7 +22,12 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { chromium, expect } from "@playwright/test";
 import { createSmtpFixture } from "./test-report-jobs.mjs";
-import { browserGet, safeFailure, writeReceipt } from "./endurance-harness.mjs";
+import {
+  browserGet,
+  safeFailure,
+  writeReceipt,
+  captureFailurePages,
+} from "./endurance-harness.mjs";
 
 // This harness owns every endpoint. It never loads the installation's .env.
 const { values: options } = parseArgs({
@@ -130,6 +135,8 @@ let app,
   phase = "startup";
 let appOutput = "",
   pageErrors = [],
+  networkErrors = [],
+  pendingRequests = new Map(),
   pageErrorCount = 0,
   fatalError,
   appStartedAt,
@@ -529,6 +536,25 @@ try {
       viewport: { width: i % 2 ? 768 : 1440, height: 900 },
     });
     const page = await context.newPage();
+    page.on("request", (request) => {
+      pendingRequests.set(request, {
+        path: new URL(request.url()).pathname,
+        type: request.resourceType(),
+        startedAt: Date.now(),
+      });
+      if (pendingRequests.size > 200)
+        pendingRequests.delete(pendingRequests.keys().next().value);
+    });
+    page.on("requestfinished", (request) => pendingRequests.delete(request));
+    page.on("requestfailed", (request) => {
+      pendingRequests.delete(request);
+      networkErrors.push({
+        phase,
+        path: new URL(request.url()).pathname,
+        error: request.failure()?.errorText,
+      });
+      networkErrors = networkErrors.slice(-40);
+    });
     page.on("response", (response) => {
       if (response.status() >= 400 && response.url().startsWith(api))
         console.log(
@@ -911,10 +937,20 @@ try {
     completedAt: new Date().toISOString(),
   });
 } catch (error) {
+  const failedPendingRequests = [...pendingRequests.values()].map(
+    ({ startedAt, ...request }) => ({
+      ...request,
+      elapsedMs: Date.now() - startedAt,
+    }),
+  );
+  const failurePages = await captureFailurePages(browser, directory);
   await save({
     state: fatalError || !stopped ? "failed" : "interrupted",
     failure: safeFailure(fatalError ?? error),
     phase,
+    failurePages,
+    networkErrors,
+    pendingRequests: failedPendingRequests,
     pageErrors: pageErrors.map((item) => ({
       ...item,
       message: safeFailure(item.message),
