@@ -59,6 +59,7 @@ if (process.argv[2] === "child") {
   assert(["localhost", "127.0.0.1"].includes(process.env.DB_HOST));
   const database = "pd_client_error_" + randomUUID().replaceAll("-", "");
   const directory = resolve(".local", database);
+  await mkdir(resolve(".local"), { recursive: true });
   await mkdir(directory, { recursive: false });
   const admin = new pg.Client({
     host: process.env.DB_HOST,
