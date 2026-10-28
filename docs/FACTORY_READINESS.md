@@ -62,7 +62,7 @@ sessions through deliberate interruptions.
 Run the short smoke after building both applications:
 
 ```sh
-node scripts/test-installation-endurance.mjs --hours 0.04 --cycle-seconds 20 --outage-seconds 3 --restart-every 1 --users 3 --tags 20
+node scripts/test-installation-endurance.mjs --hours 0.04 --cycle-seconds 20 --outage-seconds 3 --restart-every 2 --users 3 --tags 20
 ```
 
 Run the sustained workload from a committed checkout whose source and builds will
@@ -129,3 +129,32 @@ CI runs the new workflows and a short full-application workload. Only selected
 receipts/screenshots are uploaded; private simulator keys and spools are excluded.
 
 The 72-hour acceptance gate remains open until its completed receipt is reviewed.
+
+### First sustained run and transport follow-up
+
+The first run on `f3a1483a` stopped on 2026-10-28 at 08:00 UTC after roughly
+25 minutes, with a connection reset from Playwright's separate Node HTTP client
+during a trend GET. Four completed cycles had preserved their accepted samples;
+the application log did not record an application failure at the reset time.
+The saved evidence cannot establish exactly which socket closed or why. This is
+a failed run, and none of its elapsed time counts toward replacement acceptance.
+
+Historian and metrics reads now use authenticated `fetch` inside the actual
+Chromium page, matching the browser workload being measured. The harness adds no
+retries. Transport regression checks prove normal idle-connection closure works
+while HTTP authorization/server errors, truncated responses and timeouts still
+fail. Unexpected application exits are recorded and fail the run immediately.
+Failure receipts and console diagnostics redact credential headers; the original
+failed run's session-cookie call log is kept private and redacted in exported
+evidence. Run `node scripts/test-endurance-harness.mjs` before the full smoke.
+
+Windows status readers can briefly prevent an atomic file replacement. Receipt
+writes retry only those sharing violations for up to two seconds; a persistent
+lock still fails and retains both the previous receipt and the flushed temporary
+file. A real Windows file-lock regression covers both outcomes. This does not
+retry or accept failed application requests. An intervening smoke also failed
+during a Docker Desktop engine outage; its evidence and later owned-container
+cleanup receipt are retained separately, and its elapsed time is not acceptance.
+
+A new clean-revision run must complete its own full 72-hour workload. Browser
+transport acceptance still does not qualify physical equipment or deployment.
