@@ -176,6 +176,18 @@ try {
   ])
     assert(!redacted.includes(secret));
   assert(redacted.includes("ECONNRESET") && redacted.includes("retained"));
+  for (const name of [
+    "cookie",
+    "set-cookie",
+    "authorization",
+    "proxy-authorization",
+    "x-csrf-token",
+  ])
+    assert(
+      !safeFailure(
+        JSON.stringify({ headers: { [name]: "private-json-header" } }),
+      ).includes("private-json-header"),
+    );
   console.log(
     "PASS: durable receipts tolerate transient Windows reader locks and preserve evidence on persistent locks; browser GETs survive idle closure; HTTP/auth/truncated/timeout failures remain failures; credentials are redacted",
   );
