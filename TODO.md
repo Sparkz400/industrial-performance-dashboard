@@ -45,7 +45,7 @@ determine whether multi-day endurance has passed.
 - [x] **FR03 — Fair comparisons:** frozen shift evidence, explicit incomparable
   reasons, optional verified energy differences and non-causal service context.
 
-FR02/FR03 evidence: the factory-readiness implementation and
+FR02/FR03 evidence: [PR #63](https://github.com/Sparkz400/performance_dashboard/pull/63) and
 [validation record](docs/FACTORY_READINESS.md#software-validation--2026-10-28),
 including the isolated supervisor/comparison browser fixtures. FR01's harness and
 short-run recovery checks pass; its 72-hour elapsed-time gate is still open.

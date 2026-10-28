@@ -4,6 +4,10 @@ This wave extends the existing daily workflows. It does not qualify a physical
 machine, a production installation or a universal capacity limit. All automated
 acceptance uses owned simulators and isolated databases.
 
+[PR #63](https://github.com/Sparkz400/performance_dashboard/pull/63) tracks the
+implementation and hosted checks. The sustained workload is a separate acceptance
+gate; use its completed receipt rather than the PR's short CI smoke duration.
+
 ## Supervisor workflows
 
 Daily operations exposes production-line investigations and alarm maintenance
