@@ -9,7 +9,6 @@ import {
   readFile,
   writeFile,
   appendFile,
-  rename,
   statfs,
   copyFile,
 } from "node:fs/promises";
@@ -23,6 +22,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { chromium, expect } from "@playwright/test";
 import { createSmtpFixture } from "./test-report-jobs.mjs";
+import { browserGet, safeFailure, writeReceipt } from "./endurance-harness.mjs";
 
 // This harness owns every endpoint. It never loads the installation's .env.
 const { values: options } = parseArgs({
@@ -133,6 +133,7 @@ let appOutput = "",
   pageErrorCount = 0,
   fatalError,
   appStartedAt,
+  expectedAppStop = false,
   lastEmissionAt = Date.now(),
   maximumTimerGapMs = 0,
   lastSample,
@@ -146,10 +147,7 @@ const save = async (updates = {}) => {
     heartbeatAt: new Date().toISOString(),
     measuredHours: (Date.now() - begun) / 3600000,
   });
-  await writeFile(statePath + ".tmp", JSON.stringify(state, null, 2), {
-    flush: true,
-  });
-  await rename(statePath + ".tmp", statePath);
+  await writeReceipt(statePath, state);
 };
 const run = async (exe, args) => {
   const child = spawn(exe, args, {
@@ -192,6 +190,7 @@ const wait = async (predicate, label, timeout = 60000) => {
   );
 };
 const killApp = async () => {
+  expectedAppStop = true;
   if (app && app.exitCode === null && app.signalCode === null) {
     const exited = once(app, "exit");
     app.kill("SIGKILL");
@@ -479,6 +478,7 @@ try {
     RATE_LIMIT_MAX_REQUESTS: "1000000",
   };
   const startApp = async () => {
+    expectedAppStop = false;
     appStartedAt = Date.now();
     app = spawn(process.execPath, [join(root, "server/dist/app.js")], {
       env,
@@ -490,6 +490,20 @@ try {
       stream.on("data", (d) => {
         appOutput = (appOutput + d).slice(-32768);
       });
+    app.once("exit", (code, signal) => {
+      state.lastAppExit = {
+        at: new Date().toISOString(),
+        code,
+        signal,
+        planned: expectedAppStop,
+      };
+      if (!expectedAppStop)
+        failRun(
+          new Error(
+            `Application exited unexpectedly (code ${code}, signal ${signal})`,
+          ),
+        );
+    });
     await wait(async () => {
       assert.equal(app.exitCode, null, "Application exited: " + appOutput);
       const r = await fetch(api + "/healthz", {
@@ -538,17 +552,8 @@ try {
     sessions.push(session);
     await login(session);
   }
-  const jsonGet = async (session, path) => {
-    const response = await session.context.request.get(api + path, {
-      timeout: 15000,
-    });
-    try {
-      assert.equal(response.status(), 200, await response.text());
-      return await response.json();
-    } finally {
-      await response.dispose();
-    }
-  };
+  const jsonGet = async (session, path) =>
+    JSON.parse(await browserGet(session.page, api + path));
   await wait(
     async () =>
       Number(
@@ -708,12 +713,7 @@ try {
         ).rowCount > 0,
       "Scheduled PDF/email did not complete",
     );
-    const metricsResponse = await sessions[0].context.request.get(
-      api + "/metrics",
-    );
-    assert.equal(metricsResponse.status(), 200);
-    const metrics = await metricsResponse.text();
-    await metricsResponse.dispose();
+    const metrics = await browserGet(sessions[0].page, api + "/metrics");
     const residentBytes = Number(
       /^process_resident_memory_bytes (\d+)/m.exec(metrics)?.[1],
     );
@@ -913,12 +913,18 @@ try {
 } catch (error) {
   await save({
     state: fatalError || !stopped ? "failed" : "interrupted",
-    failure: fatalError?.stack ?? error.message,
+    failure: safeFailure(fatalError ?? error),
     phase,
-    pageErrors,
+    pageErrors: pageErrors.map((item) => ({
+      ...item,
+      message: safeFailure(item.message),
+    })),
   });
-  await writeFile(join(directory, "application-tail.log"), appOutput);
-  console.error(error);
+  await writeFile(
+    join(directory, "application-tail.log"),
+    safeFailure(appOutput),
+  );
+  console.error(safeFailure(error));
   process.exitCode = 1;
 } finally {
   clearInterval(generator);
