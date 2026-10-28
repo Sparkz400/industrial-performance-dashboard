@@ -36,6 +36,28 @@ export const useStatusStore = create<StatusState>((set, get) => {
   let isPolling = false;
   let cleanupNotificationListeners: (() => void) | null = null;
   let cleanupSpcListeners: (() => void) | null = null;
+  let retryTimer: ReturnType<typeof setTimeout> | null = null;
+  let retryDelay = 1000;
+  let authenticationRejected = false;
+
+  const stopRetry = () => {
+    if (retryTimer) clearTimeout(retryTimer);
+    retryTimer = null;
+  };
+  const rejectAuthentication = () => {
+    if (authenticationRejected) return;
+    authenticationRejected = true;
+    stopRetry();
+    window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+  };
+  const retry = () => {
+    if (retryTimer || authenticationRejected || !socketInstance || socketInstance.active) return;
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      socketInstance?.connect();
+    }, retryDelay);
+    retryDelay = Math.min(30000, retryDelay * 2);
+  };
 
   const refreshStatus = async () => {
     if (useAuthStore.getState().user?.role !== 'admin') return;
@@ -84,18 +106,22 @@ export const useStatusStore = create<StatusState>((set, get) => {
 
     initSocket: () => {
       if (socketInstance) return;
+      authenticationRejected = false;
+      retryDelay = 1000;
 
       const token = getStoredCsrfToken();
       try {
         socketInstance = io(WEBSOCKET_ADDR, {
-          reconnectionAttempts: 5,
           reconnectionDelay: 3000,
+          reconnectionDelayMax: 30000,
           transports: ['websocket'],
           withCredentials: true,
           auth: { token: token || undefined },
         });
 
         socketInstance.on('connect', () => {
+          stopRetry();
+          retryDelay = 1000;
           set({ socketConnected: true, socket: socketInstance });
           setupPolling();
 
@@ -112,21 +138,28 @@ export const useStatusStore = create<StatusState>((set, get) => {
         });
 
         socketInstance.on('disconnect', (reason) => {
-          set({ socketConnected: false });
-          if (reason === 'io server disconnect') {
-            window.dispatchEvent(new CustomEvent('auth:unauthorized'));
-            return;
-          }
+          set({
+            socketConnected: false,
+            isConnected: false,
+            status: defaultStatus,
+            statusText: 'Unknown',
+          });
+          if (reason === 'io server disconnect') retry();
           setupPolling();
           refreshStatus();
         });
 
+        socketInstance.on('sessionStatus', (status) => {
+          if (status === 'revoked') rejectAuthentication();
+        });
+
         socketInstance.on('connect_error', (error) => {
           set({ socketConnected: false });
-          if (/^Authentication/.test(error.message)) {
-            window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+          if (error.data?.code === 'AUTH_REQUIRED' || /^Authentication/.test(error.message)) {
+            rejectAuthentication();
             return;
           }
+          retry();
           setupPolling();
           refreshStatus();
         });
@@ -153,6 +186,7 @@ export const useStatusStore = create<StatusState>((set, get) => {
     },
 
     cleanup: () => {
+      stopRetry();
       if (cleanupNotificationListeners) {
         cleanupNotificationListeners();
         cleanupNotificationListeners = null;
@@ -166,6 +200,7 @@ export const useStatusStore = create<StatusState>((set, get) => {
         socketInstance.off('disconnect');
         socketInstance.off('connect_error');
         socketInstance.off('statusUpdate');
+        socketInstance.off('sessionStatus');
         socketInstance.disconnect();
         socketInstance = null;
       }

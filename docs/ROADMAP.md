@@ -4,6 +4,11 @@ Updated **2026-10-26**. Status: **proposed direction and backlog, not a release
 commitment**. This roadmap builds on the [capability assessment and research](RESEARCH.md).
 The [TODO list](../TODO.md) is the single source of task completion status.
 
+The 2026-10-28 [factory-readiness wave](FACTORY_READINESS.md) focuses on full-stack
+endurance, scoped supervisor workflows and fair comparisons of frozen shift
+reports. These extend M1–M3 software evidence; they do not close the physical pilot
+gate or establish sustained capacity before the long-running workload completes.
+
 ## Destination
 
 Make Performance Dashboard a dependable, self-hosted way to understand production

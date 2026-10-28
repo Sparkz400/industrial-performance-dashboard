@@ -1344,6 +1344,8 @@ export const maintenanceActions = pgTable(
   "maintenance_actions",
   {
     id: serial("id").primaryKey(),
+    version: integer("version").notNull().default(1),
+    revisions: jsonb("revisions").notNull().default([]),
     machineId: integer("machine_id")
       .notNull()
       .references(() => machines.id),

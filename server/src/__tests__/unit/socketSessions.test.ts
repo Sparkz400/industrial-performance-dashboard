@@ -155,9 +155,13 @@ it("rejects unsigned handshakes without accumulating store listeners and accepts
       const disconnected = new Promise<void>((resolve) =>
         client.once("disconnect", () => resolve()),
       );
+      const sessionStatus = new Promise<string>((resolve) =>
+        client.once("sessionStatus", resolve),
+      );
       const { sessionEvents } = await import("../../services/sessionAccess.js");
       sessionEvents.emit("sessionRevoked", id);
       await disconnected;
+      expect(await sessionStatus).toBe("revoked");
       expect(client.connected).toBe(false);
     } finally {
       client.disconnect();
@@ -208,7 +212,97 @@ it("disconnects an expired socket even if it sends no further requests", async (
     const disconnected = new Promise<void>((resolve) =>
       client.once("disconnect", () => resolve()),
     );
+    const sessionStatus = new Promise<string>((resolve) =>
+      client.once("sessionStatus", resolve),
+    );
     await disconnected;
+    expect(await sessionStatus).toBe("revoked");
+    expect(client.connected).toBe(false);
+  } finally {
+    client.disconnect();
+    await new Promise<void>((resolve) => io.close(() => resolve()));
+  }
+});
+
+it("fails closed during session-store outages, then accepts the unchanged session after recovery", async () => {
+  const store = new session.MemoryStore(),
+    server = createServer();
+  const originalGet = store.get.bind(store);
+  let unavailable = false;
+  vi.spyOn(store, "get").mockImplementation((id, callback) =>
+    unavailable
+      ? callback(new Error("owned database outage"))
+      : originalGet(id, callback),
+  );
+  const { io } = createSocketServer(
+    server,
+    store as unknown as Parameters<typeof createSocketServer>[1],
+  );
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  if (!address || typeof address === "string")
+    throw new Error("Missing listener");
+  const id = "outage-fixture",
+    cookie = new session.Cookie();
+  cookie.maxAge = 60000;
+  await new Promise<void>((resolve, reject) =>
+    store.set(
+      id,
+      { cookie, userId: 7, userRole: "viewer", username: "fixture" },
+      (error) => (error ? reject(error) : resolve()),
+    ),
+  );
+  const signature = createHmac("sha256", config.SESSION_SECRET)
+    .update(id)
+    .digest("base64")
+    .replace(/=+$/, "");
+  const client = connect(`http://127.0.0.1:${address.port}`, {
+    transports: ["websocket"],
+    reconnection: false,
+    autoConnect: false,
+    extraHeaders: {
+      cookie: `connect.sid=${encodeURIComponent(`s:${id}.${signature}`)}`,
+    },
+  });
+  const connectClient = () =>
+    new Promise<void>((resolve, reject) => {
+      client.once("connect", resolve);
+      client.once("connect_error", reject);
+      client.connect();
+    });
+  try {
+    await connectClient();
+    const status = new Promise<string>((resolve) =>
+      client.once("sessionStatus", resolve),
+    );
+    const disconnected = new Promise<void>((resolve) =>
+      client.once("disconnect", () => resolve()),
+    );
+    unavailable = true;
+    expect(await status).toBe("unavailable");
+    await disconnected;
+    expect(io.sockets.sockets.size).toBe(0);
+    const failure = new Promise<Error & { data?: { code: string } }>(
+      (resolve) => client.once("connect_error", resolve),
+    );
+    client.connect();
+    expect((await failure).data?.code).toBe("SESSION_UNAVAILABLE");
+    expect(io.sockets.sockets.size).toBe(0);
+    unavailable = false;
+    await connectClient();
+    expect(client.connected).toBe(true);
+    const revoked = new Promise<string>((resolve) =>
+      client.once("sessionStatus", resolve),
+    );
+    const ended = new Promise<void>((resolve) =>
+      client.once("disconnect", () => resolve()),
+    );
+    await new Promise<void>((resolve, reject) =>
+      store.destroy(id, (error) => (error ? reject(error) : resolve())),
+    );
+    expect(await revoked).toBe("revoked");
+    await ended;
     expect(client.connected).toBe(false);
   } finally {
     client.disconnect();

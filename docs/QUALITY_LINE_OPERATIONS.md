@@ -1,9 +1,11 @@
 # Quality, line losses and unattended operations
 
-These workflows are evaluation software. Advanced quality, line configuration,
-SPC approval and alarm-action screens currently require an administrator. Existing
+These workflows are evaluation software. Advanced quality and SPC approval
+currently require an administrator. Line investigations and alarm-action screens
+also support supervisors with access to the affected machines. Existing
 machine-scoped operator service inspections remain available under their existing
-permissions. The new forms are in English. Hardware capacity, process stability,
+permissions. Line and alarm-action forms support English/German; advanced quality
+forms remain English. Hardware capacity, process stability,
 site acceptance and multi-day reliability remain separate qualification gates.
 
 ## Batch quality and genealogy
@@ -104,7 +106,8 @@ linked service inspection. A clearance before service does not demonstrate recov
 Subsequent episodes of the same rule or health incident mark it `recurred`, including
 episodes between the inspection and action completion; `recovered-observed` describes the
 observed interval, not permanent resolution. Reassignment and correction workflows
-are not included in this first version.
+now retain attributable revision history and reject stale edits; see
+[factory readiness](FACTORY_READINESS.md).
 
 ## Storage, late data and reviewed scheduling
 

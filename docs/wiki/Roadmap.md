@@ -1,5 +1,10 @@
 # Roadmap
 
+[Factory readiness](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/FACTORY_READINESS.md)
+adds scoped supervisor line/action workflows, attributable maintenance corrections,
+fair comparisons of frozen shift reports and full-application endurance testing.
+Short runs do not establish multi-day reliability; physical qualification remains open.
+
 The proposed direction is a dependable, self-hosted view of new and existing
 industrial equipment, starting with one company, one line and a reconciled shift.
 Current compatibility and qualification limits still apply.

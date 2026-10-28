@@ -5,6 +5,13 @@ owned simulator or an isolated test installation using OPC UA scalar signals.
 
 ## Implemented and covered by focused tests
 
+- Scoped supervisor line investigations and maintenance assignment corrections,
+  with attributable history and stale-version rejection; English/German advanced
+  operational screens.
+- Frozen shift-revision comparisons with product mix, schedule, definitions,
+  coverage and corrections visible. Incomparable periods have no difference claim;
+  service context does not imply causation. See [factory readiness](FACTORY_READINESS.md).
+
 - Quality-aware batch summaries with unknown values, frozen recipes, inspections,
   verified rework and declared lot genealogy; approved SPC reference capability.
 - Line definitions, blocked/starved/microstop/cycle evidence and uncertainty-aware candidates.
@@ -12,6 +19,8 @@ owned simulator or an isolated test installation using OPC UA scalar signals.
 - Measured disk runway, exact reviewed retention schedules, offline image packaging
   and configurable synthetic endurance workloads. See [scope and limits](QUALITY_LINE_OPERATIONS.md).
   Full multi-day operation, browser-user capacity and physical qualification remain open.
+  Installation endurance now has a separate full-application workload; only its
+  completed receipts establish the actual duration and workload tested.
 
 - Machine/site grants across REST, tRPC, sockets and exports; operator/supervisor roles.
 - Streaming raw history, reviewed retention, quality-aware hourly summaries and storage estimates.

@@ -78,7 +78,15 @@ recipes, inspections/rework/lot traceability, reviewed SPC reference baselines,
 line-loss investigations and linked alarm maintenance actions. It also documents
 measured disk runway, reviewed retention scheduling, offline image packages and
 configurable multi-day synthetic workloads. Advanced screens currently require
-an administrator; multi-day reliability and supported capacity remain unqualified.
+an administrator except scoped supervisor line investigations and alarm actions;
+multi-day reliability and supported capacity remain unqualified.
+
+[Factory readiness](docs/FACTORY_READINESS.md) extends those supervisor workflows
+with attributable, versioned maintenance corrections and English/German screens.
+Saved shift revisions can be compared with explicit coverage, product-mix and
+definition checks; differences are withheld when evidence is not comparable.
+Installation endurance exercises the real collector, alarms, scheduled reports
+and signed-in browser sessions. A short run does not qualify 72-hour operation.
 
 ## Where it is going
 

@@ -359,3 +359,8 @@ export type {
 } from "./reports.js";
 export type { ReplaySample, ReplayEvent, IncidentReplay } from "./replay.js";
 export { replayObservation, replayPoints } from "./replay.js";
+export type {
+  ComparisonReason,
+  ComparisonPeriod,
+  PeriodComparison,
+} from "./comparison.js";

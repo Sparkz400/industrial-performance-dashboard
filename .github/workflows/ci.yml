@@ -91,10 +91,14 @@ jobs:
       - run: node scripts/test-access.mjs
       - run: node scripts/test-history.mjs
       - run: node scripts/test-quality-line.mjs
+      - run: node scripts/test-supervisor-workflows.mjs
+      - run: node scripts/test-period-comparisons.mjs
       - run: node scripts/test-daily-workflows.mjs
         env:
           DAILY_BROWSER: "1"
       - run: node scripts/test-production.mjs
+      - name: Full-application endurance smoke (not 72-hour acceptance)
+        run: node scripts/test-installation-endurance.mjs --hours 0.04 --cycle-seconds 20 --outage-seconds 3 --restart-every 2 --users 3 --tags 20
       - run: npm run test:e2e
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
@@ -106,6 +110,9 @@ jobs:
             test-results/
             .local/production-evidence/
             .local/daily-evidence/
+            .local/pd-installation-*/status.json
+            .local/pd-installation-*/cycles.jsonl
+            .local/pd-installation-*/browser-*.png
           retention-days: 7
   container:
     name: Container build

@@ -51,6 +51,25 @@ export async function authorizeAssetRequest(
   };
   let found: RegExpExecArray | null;
   if (read && path === "/access/me") return;
+  if (
+    read &&
+    canSupervise(scope.role) &&
+    (found = match(/^\/comparisons\/machines\/(\d+)$/))
+  ) {
+    assertMachine(found[1]);
+    return;
+  }
+  // These routes validate line membership or the action's machine before accessing data.
+  if (
+    canSupervise(scope.role) &&
+    ((path === "/lines" && (read || method === "POST")) ||
+      (read && /^\/lines\/\d+\/report$/.test(path)) ||
+      (/^\/maintenance-actions\/machines\/\d+(?:\/owners)?$/.test(path) &&
+        (read || method === "POST")) ||
+      (/^\/maintenance-actions\/\d+\/(revise|complete)$/.test(path) &&
+        method === "POST"))
+  )
+    return;
   if (read && (found = match(/^\/planning\/shifts\/(\d+)\/revisions\/\d+$/))) {
     await assertResource("shift", found[1]);
     return;

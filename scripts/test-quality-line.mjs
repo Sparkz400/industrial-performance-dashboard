@@ -290,6 +290,10 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
       [m[0]],
     )
   ).rows[0].id;
+  await pool.query(
+    "INSERT INTO machine_grants(user_id,machine_id) VALUES($1,$2)",
+    [users.supervisor.id, m[0]],
+  );
   const action = await request(
     "POST",
     `/maintenance-actions/machines/${m[0]}`,
@@ -326,8 +330,8 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   await request(
     "POST",
     `/maintenance-actions/${action.id}/complete`,
-    { serviceEventId: 999999, note: "No inspection" },
-    400,
+    { version: action.version, serviceEventId: 999999, note: "No inspection" },
+    409,
   );
   const plan = (
     await pool.query(
@@ -342,6 +346,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
     )
   ).rows[0].id;
   await request("POST", `/maintenance-actions/${action.id}/complete`, {
+    version: action.version,
     serviceEventId: event,
     note: "Fixture service complete",
   });
@@ -632,7 +637,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
     [plan],
   );
   await page.getByRole("tab", { name: "Alarm actions", exact: true }).click();
-  await expect(page.getByText(/recurred/)).toBeVisible();
+  await expect(page.getByText(/Alarm recurred/)).toBeVisible();
   await page.screenshot({
     path: ".local/daily-evidence/maintenance-actions.png",
     fullPage: true,
@@ -661,15 +666,25 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   await page
     .getByLabel("Reference period end", { exact: true })
     .fill(referenceInputs[1]);
+  const prepared = page.waitForResponse(
+    (response) =>
+      response.url().endsWith(`/spc/profiles/${spc.id}/compute`) &&
+      response.request().method() === "POST",
+  );
   await page
     .getByRole("button", { name: "Prepare baseline for review", exact: true })
     .click();
+  const preparedResponse = await prepared;
+  assert.equal(preparedResponse.status(), 200, await preparedResponse.text());
+  const preparedBaseline = await preparedResponse.json();
+  assert.equal(preparedBaseline.evidence.sampleCount, 100);
   await page
     .getByRole("combobox", { name: "Reference baseline", exact: true })
     .click();
   await page
-    .getByRole("option", { name: /pending review/ })
-    .first()
+    .getByRole("option", {
+      name: new RegExp(`^${preparedBaseline.id} · pending review`),
+    })
     .click();
   await expect(
     page.getByRole("combobox", { name: /^Reference baseline/ }),

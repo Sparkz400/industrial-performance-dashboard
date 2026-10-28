@@ -2,6 +2,7 @@ import { Router } from "express";
 import Joi from "joi";
 import manager from "../database/dbConnection.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
+import { accessScope, assertMachine } from "../services/accessScope.js";
 import { requireRole } from "../middleware/auth.js";
 import {
   validateBody,
@@ -15,15 +16,23 @@ import {
   type LineSample,
 } from "../services/lineAnalysis.js";
 const router = Router();
-router.use(requireRole("admin"));
+router.use(requireRole("admin", "supervisor"));
 const id = Joi.object({ id: Joi.number().integer().positive().required() });
 const key = Joi.string().trim().min(1).max(200);
 router.get(
   "/",
   asyncHandler(async (_req, res) => {
+    const scope = accessScope.getStore()!;
     res.json(
-      (await manager.pool.query("SELECT * FROM production_lines ORDER BY id"))
-        .rows,
+      (
+        await manager.pool.query(
+          `SELECT * FROM production_lines l WHERE $1 OR NOT EXISTS (
+        SELECT 1 FROM jsonb_array_elements(l.config->'machines') m
+        WHERE NOT ((m->>'machineId')::int = ANY($2::int[]))
+      ) ORDER BY id`,
+          [scope.role === "admin", scope.machineIds],
+        )
+      ).rows,
     );
   }),
 );
@@ -72,6 +81,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const config = req.body as LineConfig,
       ids = config.machines.map((m) => m.machineId);
+    ids.forEach((id) => assertMachine(id));
     for (const m of config.machines) {
       const codes = Object.values(m.states).flat();
       if (new Set(codes).size !== codes.length)
@@ -137,6 +147,8 @@ router.get(
     if (!line) throw new NotFoundError("Line");
     const config = line.config as LineConfig,
       signals = new Map<string, { id: number; key: string }>();
+    config.machines.forEach((m) => assertMachine(m.machineId));
+    config.buffers.forEach((b) => assertMachine(b.machineId));
     for (const m of config.machines)
       for (const key of [m.stateKey, m.cycleKey, m.outputKey])
         if (key) signals.set(`${m.machineId}:${key}`, { id: m.machineId, key });

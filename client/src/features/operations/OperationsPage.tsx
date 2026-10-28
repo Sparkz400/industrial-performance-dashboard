@@ -10,11 +10,12 @@ const PlanningPanel = React.lazy(() => import('./PlanningPanel'));
 const MaintenancePanel = React.lazy(() => import('./MaintenancePanel'));
 const EnergyPanel = React.lazy(() => import('./EnergyPanel'));
 const HistoryPanel = React.lazy(() => import('./HistoryPanel'));
+const ComparisonPanel = React.lazy(() => import('./ComparisonPanel'));
 /**
  *
  */
 export default function OperationsPage() {
-  const admin = useAuthStore((s) => s.user?.role === 'admin');
+  const canSupervise = useAuthStore((s) => ['admin', 'supervisor'].includes(s.user?.role ?? ''));
   const t = useT(),
     [machine, setMachine] = useState(''),
     [tab, setTab] = useState(0);
@@ -61,13 +62,22 @@ export default function OperationsPage() {
             'Maintenance',
             'Energy and losses',
             'History',
-            ...(admin ? ['Production line', 'Alarm actions'] : []),
+            ...(canSupervise ? ['Production line', 'Alarm actions', 'Comparisons'] : []),
           ].map((name, i) => (
             <Tab
               id={`operations-tab-${i}`}
               aria-controls={`operations-panel-${i}`}
               key={name}
-              label={t(name)}
+              label={t(
+                name,
+                name === 'Production line'
+                  ? 'Produktionslinie'
+                  : name === 'Alarm actions'
+                    ? 'Alarmmaßnahmen'
+                    : name === 'Comparisons'
+                      ? 'Vergleiche'
+                      : undefined,
+              )}
             />
           ))}
         </Tabs>
@@ -87,11 +97,13 @@ export default function OperationsPage() {
                 <EnergyPanel machineId={Number(machine)} />
               ) : tab === 3 ? (
                 <HistoryPanel machineId={Number(machine)} />
-              ) : tab === 4 ? (
+              ) : tab === 4 && canSupervise ? (
                 <LinePanel />
-              ) : (
+              ) : tab === 5 && canSupervise ? (
                 <MaintenanceActionsPanel machineId={Number(machine)} />
-              )}
+              ) : tab === 6 && canSupervise ? (
+                <ComparisonPanel machineId={Number(machine)} />
+              ) : null}
             </Suspense>
           </Box>
         )}

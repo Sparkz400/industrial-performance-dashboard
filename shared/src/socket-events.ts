@@ -154,6 +154,7 @@ export interface AlertNotification {
 
 /** Events emitted from server to client */
 export interface ServerToClientEvents {
+  sessionStatus: (status: "revoked" | "unavailable") => void;
   statusUpdate: (status: SystemStatus) => void;
   opcuaUpdate: (data: OpcuaNodeData) => void;
   machineStatusUpdate: (data: MachineStatusUpdate) => void;

@@ -29,6 +29,27 @@ functionality.
 
 ## Execution update — 2026-10-26
 
+### Factory readiness — 2026-10-28
+
+Priorities 1–3 from the next-wave review cover full-application endurance,
+supervisor/maintenance workflows and fair period comparisons. See
+[scope and acceptance](docs/FACTORY_READINESS.md). Physical-machine qualification
+remains separate. Completion receipts, not the existence of a test harness,
+determine whether multi-day endurance has passed.
+
+- [ ] **FR01 — Full-application endurance:** real OPC UA collection, durable replay,
+  alarms, scheduled reports and browser sessions through owned interruptions;
+  short smoke plus a separately recorded 72-hour run.
+- [x] **FR02 — Supervisor work:** scoped line/action access, attributable maintenance
+  corrections, stale-edit rejection, English/German and narrow-screen acceptance.
+- [x] **FR03 — Fair comparisons:** frozen shift evidence, explicit incomparable
+  reasons, optional verified energy differences and non-causal service context.
+
+FR02/FR03 evidence: the factory-readiness implementation and
+[validation record](docs/FACTORY_READINESS.md#software-validation--2026-10-28),
+including the isolated supervisor/comparison browser fixtures. FR01's harness and
+short-run recovery checks pass; its 72-hour elapsed-time gate is still open.
+
 ### Daily factory workflows — current implementation
 
 The authorized scope is priorities **1–4, 6 and 7** from the next-wave review.

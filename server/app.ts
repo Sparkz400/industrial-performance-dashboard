@@ -5,6 +5,7 @@ import maintenanceActionRoutes from "./src/routes/maintenanceActionRoutes.js";
 import energyRoutes from "./src/routes/energyRoutes.js";
 import historyRoutes from "./src/routes/historyRoutes.js";
 import planningRoutes from "./src/routes/planningRoutes.js";
+import comparisonRoutes from "./src/routes/comparisonRoutes.js";
 import "dotenv/config";
 
 // Initialize OpenTelemetry tracing BEFORE importing any instrumented modules
@@ -139,6 +140,7 @@ export function createApp() {
   app.use("/api/v1/access", accessRoutes);
   app.use("/api/v1/history", historyRoutes);
   app.use("/api/v1/planning", planningRoutes);
+  app.use("/api/v1/comparisons", comparisonRoutes);
   app.use("/api/v1/maintenance", maintenanceRoutes);
   app.use("/api/v1/quality", qualityRoutes);
   app.use("/api/v1/lines", lineRoutes);
