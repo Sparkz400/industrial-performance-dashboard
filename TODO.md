@@ -282,7 +282,7 @@ below retain their unfulfilled acceptance criteria.
   responses disclose resolution and any truncation, with regression tests above the cap.
   Completed: [PR #40](https://github.com/Sparkz400/performance_dashboard/pull/40);
   [validation and limits](docs/P0_ACCEPTANCE.md).
-- [ ] **H03 — Carry coverage and quality into every view** · P0 · M0 · Improve · M. Depends: H02.
+- [x] **H03 — Carry coverage and quality into every view** · P0 · M0 · Improve · M. Depends: H02.
   Done: trend, tooltip, KPI and report contracts distinguish bad quality, missing samples,
   stale values and valid zero; source/receive times and known gaps remain inspectable.
   Continuous interpolation across an unknown interval is never implied without disclosure.
@@ -291,6 +291,8 @@ below retain their unfulfilled acceptance criteria.
   propagates quality/staleness/unknown states and exposes source evidence; see
   [integrity verification](docs/DATA_INTEGRITY.md#verification). Experimental screens
   retain their separate qualification requirements.
+  Completed software: [implementation `019be8e0`](https://github.com/Sparkz400/performance_dashboard/commit/019be8e068e06e3abbb0ab14c472ca58c61d508e);
+  [verification and separate qualification boundaries](docs/DATA_INTEGRITY.md#local-checkpoint-validation--2026-10-28).
 - [ ] **H04 — Stream and bound historical exports** · P1 · M2 · Improve · M. Depends: H01.
   Done: large exports use bounded memory, cancellation and query limits, retain identity,
   units, timestamps and quality, and clearly label raw versus aggregated output. Protect
@@ -303,10 +305,12 @@ below retain their unfulfilled acceptance criteria.
   Done: benchmark existing indexes first; implement only justified indexes/partitioning
   and rollups retaining count, extrema and quality coverage. Compare raw/aggregate results
   and preserve state durations and counter semantics instead of averaging every tag.
-- [ ] **H07 — Handle late and corrected measurements predictably** · P1 · M2 · New · L. Depends: H01.
+- [x] **H07 — Handle late and corrected measurements predictably** · P1 · M2 · New · L. Depends: H01.
   Done: event-time ordering, duplicate identities and late arrivals have a defined policy;
   affected aggregates are recomputed with provenance and finalized reports keep their
   original revision. Test out-of-order timestamps and invalid/future clock readings.
+  Completed software: [implementation `019be8e0`](https://github.com/Sparkz400/performance_dashboard/commit/019be8e068e06e3abbb0ab14c472ca58c61d508e);
+  [verification and separate qualification boundaries](docs/DATA_INTEGRITY.md#local-checkpoint-validation--2026-10-28).
 - [ ] **H08 — Complete authenticated edge-to-central history** · P2 · M4 · Improve · XL. Depends: F04, H01, I01, E01.
   Done: edge identity and allowed schemas are checked; receiver writes canonical records
   transactionally and acknowledges committed identities. Resume after lost responses,
@@ -317,11 +321,12 @@ below retain their unfulfilled acceptance criteria.
   using measured capacity, while preserving all acknowledged records within that boundary.
   Progress: One-million-event cap, 64 MiB reserve and visible backlog/failure status stop acquisition before loss. Configurable capacity, forecasting and full retention policy remain open.
 
-- [ ] **H10 — Add reusable derived signals safely** · P2 · M3 · New · L. Depends: H02, H04.
+- [x] **H10 — Add reusable derived signals safely** · P2 · M3 · New · L. Depends: H02, H04.
   Done: a bounded expression model supports units, quality propagation and versioning;
   no arbitrary server code executes. Test division by zero, incompatible units, missing
   inputs and replay reproducibility before using a derived value in production KPIs.
-
+  Completed software: [implementation `019be8e0`](https://github.com/Sparkz400/performance_dashboard/commit/019be8e068e06e3abbb0ab14c472ca58c61d508e);
+  [verification and separate qualification boundaries](docs/DATA_INTEGRITY.md#local-checkpoint-validation--2026-10-28).
 ## Production and OEE
 
 - [ ] **O01 — Make shifts and calendars first-class** · P1 · M1 · New · L. Depends: H01.
@@ -424,10 +429,12 @@ below retain their unfulfilled acceptance criteria.
   Done: templates bind verified signals, stale/bad quality is visible, and users can
   navigate from a component to history and maintenance context. Sanitized content cannot
   escape its boundary; describe this as visualization, not a physics simulation.
-- [ ] **U09 — Define a safe offline operator mode** · P2 · M3 · New · L. Depends: U03, I01.
+- [x] **U09 — Define a safe offline operator mode** · P2 · M3 · New · L. Depends: U03, I01.
   Done: cached data is explicitly stale, logout clears protected local material, and
   queued application edits have stable identities, conflict review and expiry. A reconnect
   does not duplicate notes/counts or imply machine actions occurred while offline.
+  Completed software: [implementation `019be8e0`](https://github.com/Sparkz400/performance_dashboard/commit/019be8e068e06e3abbb0ab14c472ca58c61d508e);
+  [verification and separate qualification boundaries](docs/DATA_INTEGRITY.md#local-checkpoint-validation--2026-10-28).
 - [ ] **U10 — Reduce dashboard loading and rendering cost** · P1 · M2 · Improve · M. Depends: U02, D04.
   Done: measure startup, navigation, memory and live-update behavior on an ordinary
   operator device; reduce large dashboard bundles and unnecessary renders where profiles
@@ -569,10 +576,12 @@ below retain their unfulfilled acceptance criteria.
   Done: distinguish power from energy, integrate only appropriate samples, handle meter
   resets and units, and report kWh or utility consumption per good unit with coverage.
   Reconcile one meter interval against an independent reading.
-- [ ] **M05 — Add optional cost and emissions estimates** · P2 · M3 · New · M. Depends: M04.
+- [x] **M05 — Add optional cost and emissions estimates** · P2 · M3 · New · M. Depends: M04.
   Done: user-supplied tariff/currency/emission-factor versions and validity periods are
   explicit; missing factors stop the estimate. Label results as estimates with allocation
   assumptions, not billing-grade measurements or certified emissions statements.
+  Completed software: [implementation `019be8e0`](https://github.com/Sparkz400/performance_dashboard/commit/019be8e068e06e3abbb0ab14c472ca58c61d508e);
+  [verification and separate qualification boundaries](docs/DATA_INTEGRITY.md#local-checkpoint-validation--2026-10-28).
 - [ ] **M06 — Compare idle losses and improvement actions** · P2 · M3 · New · M. Depends: M04, O02.
   Done: correlate consumption with production/idle states, show candidate avoidable usage
   and compare normalized periods after an action. Retain changes in product mix, operating
@@ -592,10 +601,12 @@ below retain their unfulfilled acceptance criteria.
   Done: import a sanitized order/product contract with preview, external IDs, idempotency
   and rejection reporting; export completion facts without silently editing ERP records.
   A named pilot validates field meanings before a vendor-specific connector is promised.
-- [ ] **I04 — Provide a CMMS handoff contract** · P2 · M3 · New · M. Depends: I01, M01.
+- [x] **I04 — Provide a CMMS handoff contract** · P2 · M3 · New · M. Depends: I01, M01.
   Done: a maintenance suggestion can be exported or explicitly submitted to a configured
   destination with asset/event identity and delivery status; duplicate delivery cannot
   create uncontrolled duplicate work orders. Keep review and remote-write permissions explicit.
+  Completed software: [implementation `019be8e0`](https://github.com/Sparkz400/performance_dashboard/commit/019be8e068e06e3abbb0ab14c472ca58c61d508e);
+  [verification and separate qualification boundaries](docs/DATA_INTEGRITY.md#local-checkpoint-validation--2026-10-28).
 - [ ] **I05 — Support portable configuration bundles** · P1 · M2 · Improve · M. Depends: C04, F07.
   Done: bundle dashboards, mappings, rules and relevant revisions with schema version,
   secret exclusion, conflict preview and rollback; imports cannot overwrite unrelated
