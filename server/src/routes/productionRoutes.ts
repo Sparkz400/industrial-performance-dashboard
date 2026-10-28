@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { createHash } from "node:crypto";
 import Joi from "joi";
 import { and, eq, desc, asc, gte, lte, sql } from "drizzle-orm";
 import type {
@@ -122,12 +123,26 @@ export async function report(
     profile.idealCycleMs = range.idealCycleMs;
   }
   const samples: Parameters<typeof calculateShift>[0]["samples"] = {};
+  const measurementEvidence = new Map<
+    string,
+    {
+      id: number;
+      timestamp: Date;
+      value: number | null;
+      statusCode: string | null;
+      correctionRevision: number;
+      receivedAt: Date | null;
+    }
+  >();
   for (const signal of Object.values(profile.signals)) {
     const filter = and(
       eq(opcuaData.machineId, shift.machineId),
       eq(opcuaData.nodeKey, signal.nodeKey),
     );
     const projection = {
+      id: opcuaData.id,
+      correctionRevision: opcuaData.correctionRevision,
+      receivedAt: opcuaData.receivedAt,
       timestamp: opcuaData.timestamp,
       value: opcuaData.value,
       statusCode: opcuaData.statusCode,
@@ -157,7 +172,10 @@ export async function report(
       );
     const ordered = [...previous, ...rows];
     const unique = new Map<number, (typeof ordered)[number]>();
-    for (const row of ordered) unique.set(row.timestamp.getTime(), row);
+    for (const row of ordered) {
+      unique.set(row.timestamp.getTime(), row);
+      measurementEvidence.set(`${row.timestamp.toISOString()}:${row.id}`, row);
+    }
     samples[signal.nodeKey] = [...unique.values()].map((row) => ({
       ...row,
       value:
@@ -188,6 +206,26 @@ export async function report(
     samples,
   });
   result.planVersion = shift.planVersion;
+  const evidenceRows = [...measurementEvidence.values()].sort(
+    (a, b) => a.timestamp.getTime() - b.timestamp.getTime() || a.id - b.id,
+  );
+  const received = evidenceRows
+    .flatMap((row) => (row.receivedAt ? [row.receivedAt.toISOString()] : []))
+    .sort();
+  result.measurementEvidence = {
+    digest: createHash("sha256")
+      .update(JSON.stringify(evidenceRows))
+      .digest("hex"),
+    samples: evidenceRows.length,
+    correctedSamples: evidenceRows.filter((row) => row.correctionRevision > 0)
+      .length,
+    lateSamples: evidenceRows.filter(
+      (row) =>
+        row.receivedAt &&
+        row.receivedAt.getTime() - row.timestamp.getTime() > 300_000,
+    ).length,
+    latestReceivedAt: received.at(-1) ?? null,
+  };
   if (!range && shift.runs.length) {
     result.runs = [];
     for (const plan of shift.runs)

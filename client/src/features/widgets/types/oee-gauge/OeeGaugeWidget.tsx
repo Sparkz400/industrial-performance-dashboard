@@ -3,6 +3,7 @@ import { Box, Typography } from '@mui/material';
 import { useOeeData } from './useOeeData';
 import OeeGaugeWidgetView from './OeeGaugeWidgetView';
 import type { WidgetConfig } from '@/types';
+import OeeEvidence from './OeeEvidence';
 
 interface OeeGaugeWidgetProps {
   config?: WidgetConfig;
@@ -44,26 +45,32 @@ const OeeGaugeWidget: React.FC<OeeGaugeWidgetProps> = ({ config = {}, onError })
     );
   }
 
-  if (error || (data && !data.dataComplete)) {
+  if (error || !data || !data.dataComplete) {
     return (
       <Box sx={{ p: 2 }}>
         <Typography role="status">
-          {error
-            ? 'OEE data unavailable'
-            : 'Incomplete measurement coverage — OEE is unavailable for this period.'}
+          {isLoading
+            ? 'Loading measured OEE…'
+            : error
+              ? 'OEE data unavailable'
+              : 'Incomplete measurement coverage — OEE is unavailable for this period.'}
         </Typography>
+        {!error && data && <OeeEvidence rows={[data.evidence]} />}
       </Box>
     );
   }
 
   return (
-    <OeeGaugeWidgetView
-      oee={data?.oee ?? 0}
-      availability={data?.availability ?? 0}
-      performance={data?.performance ?? 0}
-      quality={data?.quality ?? 0}
-      isLoading={isLoading}
-    />
+    <Box sx={{ height: '100%', overflow: 'auto' }}>
+      <OeeGaugeWidgetView
+        oee={data.oee}
+        availability={data.availability}
+        performance={data.performance}
+        quality={data.quality}
+        isLoading={isLoading}
+      />
+      <OeeEvidence rows={[data.evidence]} />
+    </Box>
   );
 };
 

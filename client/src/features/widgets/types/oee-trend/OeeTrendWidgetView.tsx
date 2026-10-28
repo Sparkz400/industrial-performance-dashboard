@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { ResponsiveLine } from '@nivo/line';
 import { Box, Typography, CircularProgress, useTheme } from '@mui/material';
 import type { OeeTrendPoint } from './useOeeTrendData';
+import OeeEvidence from '../oee-gauge/OeeEvidence';
 
 interface OeeTrendWidgetViewProps {
   data: OeeTrendPoint[];
@@ -71,6 +72,7 @@ const OeeTrendWidgetView: React.FC<OeeTrendWidgetViewProps> = ({ data, isLoading
           Gaps indicate incomplete measurement coverage.
         </Typography>
       )}
+      <OeeEvidence rows={data.map((point) => point.evidence)} />
 
       <Box sx={{ flexGrow: 1, width: '100%', minHeight: 0, position: 'relative' }}>
         {chartData.length > 0 ? (

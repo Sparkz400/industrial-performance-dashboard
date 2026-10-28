@@ -12,7 +12,14 @@ const createWebhookSchema = Joi.object({
   name: Joi.string().required().trim().min(1).max(255),
   url: Joi.string().required().uri().max(2048),
   events: Joi.array()
-    .items(Joi.string().valid("*", "alarm.triggered", "alarm.cleared"))
+    .items(
+      Joi.string().valid(
+        "*",
+        "alarm.triggered",
+        "alarm.cleared",
+        "cmms.handoff",
+      ),
+    )
     .min(1)
     .required(),
 });
@@ -21,7 +28,14 @@ const updateWebhookSchema = Joi.object({
   name: Joi.string().trim().min(1).max(255),
   url: Joi.string().uri().max(2048),
   events: Joi.array()
-    .items(Joi.string().valid("*", "alarm.triggered", "alarm.cleared"))
+    .items(
+      Joi.string().valid(
+        "*",
+        "alarm.triggered",
+        "alarm.cleared",
+        "cmms.handoff",
+      ),
+    )
     .min(1),
   isActive: Joi.boolean(),
 }).min(1);

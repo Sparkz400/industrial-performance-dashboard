@@ -33,6 +33,7 @@ jobs:
           node scripts/test-report-pdf.mjs
           python scripts/check-report-pdf.py
       - run: node scripts/test-dev-dependencies.mjs
+      - run: node scripts/test-release-package.mjs
       - run: npm run db:generate -w server
       - name: Reject uncommitted migration changes
         run: node -e "if(require('node:child_process').execFileSync('git',['status','--porcelain','--','server/drizzle'],{encoding:'utf8'}).trim())process.exit(1)"
@@ -44,6 +45,11 @@ jobs:
       - run: npm run lint
       - run: npm run format:check -w client
       - run: npm run test:coverage
+      - run: npx playwright install chromium
+        if: runner.os == 'Windows'
+      - name: Windows endurance transport and receipt regressions
+        if: runner.os == 'Windows'
+        run: node scripts/test-endurance-harness.mjs
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
@@ -83,6 +89,7 @@ jobs:
       - run: npm run build:server
       - run: npm run db:migrate -w server
       - run: npm run db:seed -w server
+      - run: node scripts/test-database-client-errors.mjs
       - run: node scripts/test-measurements.mjs
       - run: node scripts/test-p0.mjs
       - run: node scripts/test-tracing.mjs
@@ -91,11 +98,25 @@ jobs:
       - run: node scripts/test-access.mjs
       - run: node scripts/test-history.mjs
       - run: node scripts/test-quality-line.mjs
+      - run: node scripts/test-supervisor-workflows.mjs
+      - run: node scripts/test-period-comparisons.mjs
+      - run: node scripts/test-configuration-bundles.mjs
+      - run: node scripts/test-operational-diagnostics.mjs
+      - run: node scripts/test-work-orders.mjs
+      - run: node scripts/test-asset-overview.mjs
+      - run: node scripts/test-measurement-corrections.mjs
+      - run: node scripts/test-signal-quality.mjs
+      - run: node scripts/test-offline-operator.mjs
+      - run: node scripts/test-maintenance-costs.mjs
       - run: node scripts/test-daily-workflows.mjs
         env:
           DAILY_BROWSER: "1"
       - run: node scripts/test-production.mjs
-      - run: npm run test:e2e
+      - name: Endurance transport and receipt regressions
+        run: node scripts/test-endurance-harness.mjs
+      - name: Full-application endurance recovery cycles (not 72-hour acceptance)
+        run: node scripts/test-installation-endurance.mjs --hours 0.04 --cycle-seconds 20 --outage-seconds 3 --restart-every 2 --users 3 --tags 20
+      - run: node scripts/test-browser-isolated.mjs
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
@@ -106,6 +127,9 @@ jobs:
             test-results/
             .local/production-evidence/
             .local/daily-evidence/
+            .local/pd-installation-*/status.json
+            .local/pd-installation-*/cycles.jsonl
+            .local/pd-installation-*/browser-*.png
           retention-days: 7
   container:
     name: Container build

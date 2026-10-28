@@ -40,6 +40,16 @@ type TypedServer = SocketIOServer<
   SocketData
 >;
 
+const sessionError = (code: "AUTH_REQUIRED" | "SESSION_UNAVAILABLE") =>
+  Object.assign(
+    new Error(
+      code === "AUTH_REQUIRED"
+        ? "Authentication required"
+        : "Session service unavailable",
+    ),
+    { data: { code } },
+  );
+
 export interface SocketServices {
   io: TypedServer;
   statusService: StatusSocketService;
@@ -111,20 +121,20 @@ export function createSocketServer(
     cookieParser(config.COOKIE_SECRET)(req, res, (cookieErr?: unknown) => {
       if (cookieErr) {
         logger.error("Socket.IO Cookie parsing error:", cookieErr);
-        return next(new Error("Authentication error: Invalid cookies"));
+        return next(sessionError("AUTH_REQUIRED"));
       }
 
       sessionMiddleware(req, res, (sessionErr?: unknown) => {
         if (sessionErr) {
           logger.error("Socket.IO Session parsing error:", sessionErr);
-          return next(new Error("Authentication error: Invalid session"));
+          return next(sessionError("SESSION_UNAVAILABLE"));
         }
 
         if (!req.session?.userId) {
           logger.warn(
             `Socket.IO: Unauthenticated connection attempt for ${socket.id}. Rejecting.`,
           );
-          return next(new Error("Authentication required"));
+          return next(sessionError("AUTH_REQUIRED"));
         }
 
         void getSessionUser(req.session)
@@ -134,7 +144,7 @@ export function createSocketServer(
               !req.session.cookie.expires ||
               new Date(req.session.cookie.expires).getTime() <= Date.now()
             )
-              return next(new Error("Authentication required"));
+              return next(sessionError("AUTH_REQUIRED"));
             socket.data.user = {
               authenticated: true,
               id: user.id,
@@ -153,15 +163,19 @@ export function createSocketServer(
             );
             next();
           })
-          .catch(next);
+          .catch(() => next(sessionError("SESSION_UNAVAILABLE")));
       });
     });
   });
 
-  const revokeSession = (id: string) =>
+  const revokeSession = (id: string) => {
+    io.in(`session:${id}`).emit("sessionStatus", "revoked");
     io.in(`session:${id}`).disconnectSockets(true);
-  const revokeUser = (id: number) =>
+  };
+  const revokeUser = (id: number) => {
+    io.in(`user:${id}`).emit("sessionStatus", "revoked");
     io.in(`user:${id}`).disconnectSockets(true);
+  };
   sessionEvents.on("sessionRevoked", revokeSession);
   sessionEvents.on("userRevoked", revokeUser);
   io.engine.on("close", () => {
@@ -175,38 +189,62 @@ export function createSocketServer(
     void socket.join(`session:${req.sessionID}`);
     void socket.join(`user:${socket.data.user.id}`);
     const expiresAt = new Date(req.session.cookie.expires!).getTime();
+    const disconnect = (error: unknown) => {
+      if (!socket.connected) return;
+      const revoked =
+        (error as { data?: { code?: string } })?.data?.code === "AUTH_REQUIRED";
+      socket.emit("sessionStatus", revoked ? "revoked" : "unavailable");
+      socket.disconnect(true);
+    };
     const expiry = setTimeout(
-      () => socket.disconnect(true),
+      () => disconnect(sessionError("AUTH_REQUIRED")),
       Math.max(0, Math.min(2147483647, expiresAt - Date.now())),
     );
     const validate = async () => {
-      await new Promise<void>((resolve, reject) =>
-        req.session.reload((error) => (error ? reject(error) : resolve())),
+      // A missing session is revoked; a failed store read is unavailable, never authenticated.
+      const stored = await new Promise<session.SessionData | null | undefined>(
+        (resolve, reject) =>
+          sessionStore.get(req.sessionID, (error, data) =>
+            error ? reject(error) : resolve(data),
+          ),
       );
-      const user = await getSessionUser(req.session);
+      if (
+        !stored ||
+        !stored.cookie.expires ||
+        new Date(stored.cookie.expires).getTime() <= Date.now()
+      )
+        throw sessionError("AUTH_REQUIRED");
+      const user = await getSessionUser(stored);
       if (
         !user ||
+        user.id !== socket.data.user.id ||
         user.role !== socket.data.user.role ||
         Date.now() >= expiresAt
       )
-        throw new Error("Session revoked");
+        throw sessionError("AUTH_REQUIRED");
     };
     let checking = false;
     const check = setInterval(() => {
       if (checking) return;
       checking = true;
       void validate()
-        .catch(() => socket.disconnect(true))
+        .catch(disconnect)
         .finally(() => {
           checking = false;
         });
     }, 1000);
     socket.use((_packet, next) => {
       void validate()
-        .then(() => next())
-        .catch(() => {
-          socket.disconnect(true);
-          next(new Error("Authentication required"));
+        .then(() =>
+          socket.connected ? next() : next(sessionError("AUTH_REQUIRED")),
+        )
+        .catch((error) => {
+          disconnect(error);
+          next(
+            error instanceof Error
+              ? error
+              : sessionError("SESSION_UNAVAILABLE"),
+          );
         });
     });
     socket.on("acknowledgeAlert", async ({ id }) => {
@@ -243,7 +281,7 @@ export function createSocketServer(
       logger.warn(
         `Unauthenticated socket ${socket.id} connected despite middleware. Disconnecting.`,
       );
-      return socket.disconnect(true);
+      return disconnect(sessionError("AUTH_REQUIRED"));
     }
 
     logger.info(

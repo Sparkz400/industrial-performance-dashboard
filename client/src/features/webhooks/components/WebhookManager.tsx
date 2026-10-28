@@ -35,17 +35,20 @@ import type { Webhook } from '@/types';
 import { API_BASE_URL } from '@/config/config';
 import protectedFetch from '@/utils/protectedFetch';
 import { useQuery } from '@tanstack/react-query';
+import { useT } from '@/i18n';
 
 const AVAILABLE_EVENTS = [
   { value: '*', label: 'All supported alarm events' },
   { value: 'alarm.triggered', label: 'Alarm Triggered' },
   { value: 'alarm.cleared', label: 'Alarm Cleared' },
+  { value: 'cmms.handoff', label: 'Reviewed maintenance handoff' },
 ];
 
 /**
  *
  */
 export default function WebhookManager() {
+  const t = useT();
   const [createdSecret, setCreatedSecret] = useState('');
   const deliveries = useQuery({
     queryKey: ['webhook-deliveries'],
@@ -343,7 +346,9 @@ export default function WebhookManager() {
             >
               {AVAILABLE_EVENTS.map((event) => (
                 <MenuItem key={event.value} value={event.value}>
-                  {event.label}
+                  {event.value === 'cmms.handoff'
+                    ? t(event.label, 'Geprüfte Instandhaltungsübergabe')
+                    : event.label}
                 </MenuItem>
               ))}
             </Select>

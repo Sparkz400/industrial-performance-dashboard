@@ -43,6 +43,11 @@ interface DataPoint {
   value: number | null;
   rawValue: unknown;
   statusCode: string | null;
+  sourceTimestamp?: string | null;
+  receivedAt?: string | null;
+  correctionRevision?: number;
+  reportedStatusCode?: string | null;
+  sourceClockState?: string;
 }
 
 interface BatchDataSeries {
@@ -537,7 +542,7 @@ export const batchService = {
     const setpoints = (recipe.setpoints ?? {}) as Record<string, number>;
 
     const result = await getReadDb().execute(
-      sql`SELECT node_key, timestamp, value, raw_value, status_code
+      sql`SELECT node_key, timestamp, value, raw_value, status_code,source_timestamp,received_at,correction_revision,reported_status_code,source_clock_state
           FROM opcua_data
           WHERE machine_id = ${batch.machineId}
             AND timestamp >= ${batch.startedAt} AND timestamp < ${endTime}
@@ -555,6 +560,11 @@ export const batchService = {
       value: string | null;
       raw_value: unknown;
       status_code: string | null;
+      source_timestamp: string | null;
+      received_at: string | null;
+      correction_revision: number;
+      reported_status_code: string | null;
+      source_clock_state: string;
     }[]) {
       if (!seriesMap.has(row.node_key)) {
         seriesMap.set(row.node_key, []);
@@ -569,6 +579,11 @@ export const batchService = {
             : null,
         rawValue: row.raw_value,
         statusCode: row.status_code,
+        sourceTimestamp: row.source_timestamp,
+        receivedAt: row.received_at,
+        correctionRevision: row.correction_revision,
+        reportedStatusCode: row.reported_status_code,
+        sourceClockState: row.source_clock_state,
       });
     }
 

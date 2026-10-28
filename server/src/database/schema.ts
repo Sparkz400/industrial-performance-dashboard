@@ -23,6 +23,30 @@ export const retentionPolicies = pgTable("retention_policies", {
   days: integer("days").notNull(),
   version: integer("version").notNull().default(1),
 });
+
+export const workOrderImports = pgTable(
+  "work_order_imports",
+  {
+    id: serial("id").primaryKey(),
+    source: text("source").notNull(),
+    externalId: text("external_id").notNull(),
+    machineId: integer("machine_id")
+      .notNull()
+      .references(() => machines.id, { onDelete: "restrict" }),
+    shiftId: integer("shift_id")
+      .notNull()
+      .references(() => productionShifts.id, { onDelete: "restrict" }),
+    payload: jsonb("payload").notNull(),
+    digest: text("digest").notNull(),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [uniqueIndex("work_order_source_external").on(t.source, t.externalId)],
+);
 export const retentionPreviews = pgTable("retention_previews", {
   id: text("id").primaryKey(),
   machineId: integer("machine_id").notNull(),
@@ -174,6 +198,9 @@ export const opcuaData = pgTable(
     value: doublePrecision("value"),
     rawValue: jsonb("raw_value").$type<number | string | boolean | null>(),
     statusCode: text("status_code"),
+    reportedStatusCode: text("reported_status_code"),
+    sourceClockState: text("source_clock_state").notNull().default("unknown"),
+    correctionRevision: integer("correction_revision").notNull().default(0),
     dataType: text("data_type"),
     sourceTimestamp: timestamp("source_timestamp", { withTimezone: true }),
     receivedAt: timestamp("received_at", { withTimezone: true }),
@@ -1344,6 +1371,8 @@ export const maintenanceActions = pgTable(
   "maintenance_actions",
   {
     id: serial("id").primaryKey(),
+    version: integer("version").notNull().default(1),
+    revisions: jsonb("revisions").notNull().default([]),
     machineId: integer("machine_id")
       .notNull()
       .references(() => machines.id),
@@ -1417,4 +1446,117 @@ export const retentionPreviewRows = pgTable(
     timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
   },
   (t) => [primaryKey({ columns: [t.previewId, t.timestamp, t.measurementId] })],
+);
+
+export const configBundleImports = pgTable("config_bundle_imports", {
+  id: text("id").primaryKey(),
+  machineId: integer("machine_id")
+    .notNull()
+    .references(() => machines.id, { onDelete: "restrict" }),
+  digest: text("digest").notNull(),
+  snapshot: jsonb("snapshot").notNull(),
+  createdBy: integer("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  rolledBackAt: timestamp("rolled_back_at", { withTimezone: true }),
+});
+
+export const measurementCorrections = pgTable(
+  "measurement_corrections",
+  {
+    id: text("id").primaryKey(),
+    machineId: integer("machine_id")
+      .notNull()
+      .references(() => machines.id, { onDelete: "restrict" }),
+    measurementId: integer("measurement_id").notNull(),
+    measuredAt: timestamp("measured_at", { withTimezone: true }).notNull(),
+    revision: integer("revision").notNull(),
+    before: jsonb("before").notNull(),
+    after: jsonb("after").notNull(),
+    reason: text("reason").notNull(),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [unique().on(t.measuredAt, t.measurementId, t.revision)],
+);
+
+export const derivedSignalDefinitions = pgTable(
+  "derived_signal_definitions",
+  {
+    id: serial("id").primaryKey(),
+    machineId: integer("machine_id")
+      .notNull()
+      .references(() => machines.id, { onDelete: "restrict" }),
+    name: text("name").notNull(),
+    version: integer("version").notNull(),
+    expression: jsonb("expression").notNull(),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [unique().on(t.machineId, t.name, t.version)],
+);
+
+export const cmmsHandoffs = pgTable(
+  "cmms_handoffs",
+  {
+    id: text("id").primaryKey(),
+    machineId: integer("machine_id")
+      .notNull()
+      .references(() => machines.id, { onDelete: "restrict" }),
+    actionId: integer("action_id")
+      .notNull()
+      .references(() => maintenanceActions.id, { onDelete: "restrict" }),
+    actionVersion: integer("action_version").notNull(),
+    webhookId: integer("webhook_id")
+      .notNull()
+      .references(() => webhooks.id, { onDelete: "restrict" }),
+    deliveryId: integer("delivery_id")
+      .notNull()
+      .unique()
+      .references(() => webhookDeliveries.id, { onDelete: "restrict" }),
+    destinationDigest: text("destination_digest").notNull(),
+    payload: jsonb("payload").notNull(),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [unique().on(t.actionId, t.webhookId)],
+);
+
+export const energyTariffs = pgTable(
+  "energy_tariffs",
+  {
+    id: serial("id").primaryKey(),
+    machineId: integer("machine_id")
+      .notNull()
+      .references(() => machines.id, { onDelete: "restrict" }),
+    version: integer("version").notNull(),
+    validFrom: timestamp("valid_from", { withTimezone: true }).notNull(),
+    validTo: timestamp("valid_to", { withTimezone: true }).notNull(),
+    currency: text("currency").notNull(),
+    pricePerKwh: doublePrecision("price_per_kwh").notNull(),
+    kgCo2ePerKwh: doublePrecision("kg_co2e_per_kwh"),
+    reference: text("reference").notNull(),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [unique().on(t.machineId, t.version)],
 );

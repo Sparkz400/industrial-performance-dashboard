@@ -33,7 +33,7 @@ their signals, and build a shared view of a production line.
 - Commission namespace-aware machine profiles and create a machine dashboard.
 - Track running/idle/fault/unknown intervals, classify stops and reconcile a shift report.
 - Persist alarm transitions and signed webhook retries with authenticated acknowledgment.
-- Enforce admin/viewer access and disconnect revoked or expired sessions.
+- Enforce role and machine/site access and disconnect revoked or expired sessions.
 
 Additional experimental screens include statistical process control, digital
 twins, recipes and compliance records. Their presence is not a support or
@@ -78,7 +78,25 @@ recipes, inspections/rework/lot traceability, reviewed SPC reference baselines,
 line-loss investigations and linked alarm maintenance actions. It also documents
 measured disk runway, reviewed retention scheduling, offline image packages and
 configurable multi-day synthetic workloads. Advanced screens currently require
-an administrator; multi-day reliability and supported capacity remain unqualified.
+an administrator except scoped supervisor line investigations and alarm actions;
+multi-day reliability and supported capacity remain unqualified.
+
+[Factory readiness](docs/FACTORY_READINESS.md) extends those supervisor workflows
+with attributable, versioned maintenance corrections and English/German screens.
+Saved shift revisions can be compared with explicit coverage, product-mix and
+definition checks; differences are withheld when evidence is not comparable.
+Installation endurance exercises the real collector, alarms, scheduled reports
+and signed-in browser sessions. A short run does not qualify 72-hour operation.
+
+[Data integrity and reviewed operations](docs/DATA_INTEGRITY.md) adds observed-data
+widgets, attributable measurement corrections, bounded calculated signals, explicit
+offline drafts, reviewed CMMS handoff and versioned energy estimates.
+
+[Factory operations](docs/FACTORY_OPERATIONS.md) adds reviewed setup bundles with
+rollback, connection diagnostics, alarm usefulness/replay, local work-order exchange
+and a scoped interactive asset view. It includes a repeatable synthetic walkthrough
+and signed, versioned offline release candidates with revision-specific evidence.
+ERP vendor acceptance, publisher trust and physical qualification remain separate.
 
 ## Where it is going
 

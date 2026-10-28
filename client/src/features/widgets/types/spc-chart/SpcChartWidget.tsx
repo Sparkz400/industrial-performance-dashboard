@@ -5,6 +5,9 @@ import { Box, Typography, CircularProgress } from '@mui/material';
 import { ResponsiveLine, type LineSeries, type LineCustomSvgLayerProps } from '@nivo/line';
 import { useSpcChartData } from '@/features/spc/hooks/useSpcQueries';
 import type { WidgetConfig } from '@/types';
+import WidgetReadingEvidence from '../WidgetReadingEvidence';
+import { widgetReadings } from '../../hooks/widgetReadings';
+import { useTimeRangeStore } from '@/stores/useTimeRangeStore';
 
 interface SpcChartWidgetProps {
   config?: WidgetConfig;
@@ -14,7 +17,19 @@ interface SpcChartWidgetProps {
 const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError }) => {
   const theme = useTheme();
   const profileId = (config.profileId as number) ?? 0;
-  const { data, isLoading, error } = useSpcChartData(profileId);
+  const range = useTimeRangeStore((state) => state.timeRange);
+  const { data, isLoading, error } = useSpcChartData(
+    profileId,
+    range.start?.toISOString(),
+    range.end?.toISOString(),
+  );
+  const readings = useMemo(
+    () =>
+      widgetReadings(
+        (data?.dataPoints ?? []).map((point) => ({ ...point, time: point.timestamp })),
+      ),
+    [data],
+  );
 
   useEffect(() => {
     if (error && onError) {
@@ -28,14 +43,18 @@ const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError })
     return [
       {
         id: 'values',
-        data: data.dataPoints.map((p) => ({
+        data: readings.map((p) => ({
           x: new Date(p.timestamp),
           y: p.value,
-          isAnomaly: p.isAnomaly,
+          isAnomaly:
+            p.value != null &&
+            data.ucl != null &&
+            data.lcl != null &&
+            (p.value > data.ucl || p.value < data.lcl),
         })),
       },
     ];
-  }, [data]);
+  }, [data, readings]);
 
   // Custom layer to draw UCL, LCL, and mean horizontal lines
   const controlLimitsLayer = useMemo(() => {
@@ -118,6 +137,13 @@ const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError })
     );
   }
 
+  if (error)
+    return (
+      <Box sx={{ p: 2 }}>
+        <Typography role="status">SPC history is unavailable.</Typography>
+      </Box>
+    );
+
   if (!data || !data.dataPoints.length) {
     return (
       <Box
@@ -142,11 +168,20 @@ const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError })
     : undefined;
 
   return (
-    <Box sx={{ width: '100%', height: '100%', p: 1 }}>
+    <Box sx={{ width: '100%', height: '100%', p: 1, overflow: 'auto' }}>
       <Typography variant="subtitle2" sx={{ mb: 0.5, textAlign: 'center' }}>
         {data.profile.name}
       </Typography>
-      <Box sx={{ width: '100%', height: 'calc(100% - 24px)' }}>
+      <Typography role="status" variant="caption">
+        Sampled observations; continuity is not verified. Bad readings and gaps longer than 60
+        seconds remain unknown.{' '}
+        {data.truncated ? 'Truncated at 5000 observations; narrow the requested window.' : ''}
+      </Typography>
+      <Typography variant="caption" display="block">
+        Window: {data.start ?? 'Unknown'} — {data.end ?? 'Unknown'}. Current projected measurements
+        against stored limits; corrections do not rewrite recorded alert decisions.
+      </Typography>
+      <Box sx={{ width: '100%', height: '65%', minHeight: 160 }}>
         <ResponsiveLine
           data={chartData}
           margin={{ top: 10, right: 70, bottom: 50, left: 60 }}
@@ -154,8 +189,8 @@ const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError })
           xFormat="time:%Y-%m-%d %H:%M"
           yScale={{
             type: 'linear',
-            min: data.lcl - (data.ucl - data.lcl) * 0.2,
-            max: data.ucl + (data.ucl - data.lcl) * 0.2,
+            min: 'auto',
+            max: 'auto',
           }}
           axisBottom={{
             format: '%H:%M',
@@ -204,6 +239,7 @@ const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError })
           theme={createChartTheme(theme)}
         />
       </Box>
+      <WidgetReadingEvidence rows={readings} />
     </Box>
   );
 };

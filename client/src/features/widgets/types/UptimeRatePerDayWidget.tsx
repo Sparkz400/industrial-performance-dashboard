@@ -1,126 +1,70 @@
-import { createChartTheme } from '@/theme/chartTheme';
-import React, { memo, useMemo } from 'react';
-import { Box, Typography, useTheme } from '@mui/material';
-import { ResponsiveLine } from '@nivo/line';
+import React from 'react';
+import { Box, Typography, Alert, LinearProgress } from '@mui/material';
 import type { WidgetConfig } from '@/types';
-
-interface UptimeDataPoint {
-  x: string;
-  y: number;
-}
-
-interface NivoLineSeries {
-  id: string;
-  color: string;
-  data: UptimeDataPoint[];
-}
-
-interface UptimeLineChartWidgetProps {
-  config?: WidgetConfig;
-}
-
-const UptimeLineChartWidget = memo<UptimeLineChartWidgetProps>(({ config }) => {
-  const expectedUptime = (config?.expectedUptime as number) || 99;
-  const theme = useTheme();
-
-  const uptimeData = useMemo((): UptimeDataPoint[] => {
-    const today = new Date();
-    const points: UptimeDataPoint[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dd = String(date.getDate()).padStart(2, '0');
-      const mm = String(date.getMonth() + 1).padStart(2, '0');
-      points.push({
-        x: `${dd}.${mm}`,
-        y: parseFloat((80 + Math.random() * 20).toFixed(1)),
-      });
-    }
-    return points;
-  }, []);
-
-  const chartData = useMemo(
-    (): NivoLineSeries[] => [
-      { id: 'Uptime', color: theme.palette.primary.main, data: uptimeData },
-      {
-        id: 'Expected',
-        color: '#F44336',
-        data: uptimeData.map((p) => ({ x: p.x, y: expectedUptime })),
-      },
-    ],
-    [uptimeData, expectedUptime, theme.palette.primary.main],
-  );
-
-  const nivoTheme = useMemo(() => createChartTheme(theme), [theme]);
-
-  const allValues = uptimeData.map((d) => d.y).concat(expectedUptime);
-  const minY = Math.max(Math.min(...allValues) - 2, 0);
-  const maxY = Math.min(Math.max(...allValues) + 2, 100);
-
+import { useWidgetEvidence } from '../hooks/useWidgetEvidence';
+import { useT } from '@/i18n';
+/**
+ * Show uptime only for fully observed UTC periods.
+ * @param root0 Widget options.
+ * @param root0.config Saved machine selection.
+ */
+export default function UptimeRatePerDayWidget({ config = {} }: { config?: WidgetConfig }) {
+  const machineId = config.machineId as number | undefined;
+  const { data, isLoading, error } = useWidgetEvidence(machineId),
+    t = useT();
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', p: 2 }}>
-      <Typography variant="h6" gutterBottom>
-        Uptime Rate (Last 7 Days)
+    <Box sx={{ p: 2, overflow: 'auto', height: '100%' }}>
+      <Typography variant="h6">
+        {t('Uptime — last seven UTC days', 'Betriebszeit — letzte sieben UTC-Tage')}
       </Typography>
-      <Box sx={{ flexGrow: 1, width: '100%', minHeight: 0 }}>
-        <ResponsiveLine
-          data={chartData}
-          theme={nivoTheme}
-          margin={{ top: 10, right: 20, bottom: 40, left: 50 }}
-          xScale={{ type: 'point' }}
-          yScale={{ type: 'linear', min: minY, max: maxY }}
-          curve="monotoneX"
-          colors={(d: { color: string }) => d.color}
-          lineWidth={2}
-          enablePoints={true}
-          pointSize={8}
-          pointColor={{ theme: 'background' }}
-          pointBorderWidth={2}
-          pointBorderColor={{ from: 'serieColor' }}
-          enableArea={false}
-          enableGridX={false}
-          axisTop={null}
-          axisRight={null}
-          axisBottom={{
-            tickSize: 0,
-            tickPadding: 8,
-          }}
-          axisLeft={{
-            tickSize: 0,
-            tickPadding: 8,
-            format: (v: number) => `${v}%`,
-          }}
-          useMesh={true}
-          animate={true}
-          motionConfig="gentle"
-          legends={[
-            {
-              anchor: 'bottom',
-              direction: 'row',
-              translateY: 36,
-              itemWidth: 100,
-              itemHeight: 16,
-              itemTextColor: theme.palette.text.secondary,
-              symbolSize: 8,
-              symbolShape: 'circle',
-            },
-          ]}
-          defs={[
-            {
-              id: 'expected-line',
-              type: 'patternLines',
-              spacing: 4,
-              rotation: -45,
-              lineWidth: 1,
-              color: '#F44336',
-            },
-          ]}
-        />
-      </Box>
+      {!machineId ? (
+        <Alert severity="info">
+          {t(
+            'Select a machine in widget settings',
+            'Maschine in den Widget-Einstellungen auswählen',
+          )}
+        </Alert>
+      ) : isLoading ? (
+        <Typography>{t('Loading…', 'Wird geladen…')}</Typography>
+      ) : error ? (
+        <Alert severity="error">{String(error)}</Alert>
+      ) : !data ? (
+        <Typography>{t('Unknown', 'Unbekannt')}</Typography>
+      ) : (
+        <>
+          <Typography variant="caption">
+            {data.profileName} · {t('Current commissioned profile', 'Aktuell freigegebenes Profil')}
+          </Typography>
+          {data.days.map((day) => (
+            <Box key={day.start} sx={{ my: 1 }}>
+              <Typography>
+                {day.start.slice(0, 10)}:{' '}
+                {day.uptimePercent == null
+                  ? t('Unknown', 'Unbekannt')
+                  : `${day.uptimePercent.toFixed(1)}%`}
+              </Typography>
+              {day.uptimePercent != null && (
+                <LinearProgress
+                  aria-label={`${day.start.slice(0, 10)} uptime`}
+                  variant="determinate"
+                  value={day.uptimePercent}
+                />
+              )}
+              <Typography variant="caption">
+                {t('Coverage', 'Abdeckung')}: {day.coveragePercent.toFixed(1)}% ·{' '}
+                {t('Unknown', 'Unbekannt')}: {(day.seconds.unknown / 60).toFixed(1)} min
+                {day.corrected > 0 ? ` · ${t('Reviewed corrections', 'Geprüfte Korrekturen')}` : ''}
+              </Typography>
+            </Box>
+          ))}
+          <Typography variant="caption">
+            {t(
+              'Running time / full day. Today ends at the observation time; incomplete days have no uptime percentage.',
+              'Laufzeit / ganzer Tag. Heute endet zur Beobachtungszeit; unvollständige Tage haben keinen Betriebszeitanteil.',
+            )}
+          </Typography>
+        </>
+      )}
     </Box>
   );
-});
-
-UptimeLineChartWidget.displayName = 'UptimeLineChartWidget';
-
-export default UptimeLineChartWidget;
+}

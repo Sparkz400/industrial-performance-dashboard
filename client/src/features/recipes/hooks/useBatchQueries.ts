@@ -53,6 +53,11 @@ export interface BatchDataSeries {
     value: number | null;
     rawValue: unknown;
     statusCode: string | null;
+    sourceTimestamp?: string | null;
+    receivedAt?: string | null;
+    correctionRevision?: number;
+    reportedStatusCode?: string | null;
+    sourceClockState?: string;
   }>;
   setpoint?: number;
   targetValue: number;

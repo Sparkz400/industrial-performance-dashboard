@@ -37,7 +37,7 @@ const handleResponse = async (response: Response): Promise<unknown> => {
     } catch (_e) {
       // ignore JSON parse error, keep generic message
     }
-    throw new Error(message);
+    throw Object.assign(new Error(message), { status: response.status });
   }
 
   try {

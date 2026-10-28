@@ -9,17 +9,23 @@ export interface OeeData {
   performance: number;
   quality: number;
   dataComplete: boolean;
+  evidence?: OeeResponse;
 }
 
 export interface OeeResponse {
   oee: number;
-  availability: { availability: number };
-  performance: { performance: number };
-  quality: { quality: number };
+  availability: { availability: number; unknownTimeMinutes?: number; totalTimeMinutes?: number };
+  performance: { performance: number; dataComplete?: boolean; totalCount?: number };
+  quality: { quality: number; dataComplete?: boolean; goodCount?: number; rejectCount?: number };
+  startDate?: string;
+  endDate?: string;
   dataComplete: boolean;
 }
 
-/** Convert API ratios and nested metrics into display percentages. */
+/**
+ * Convert API ratios and nested metrics into display percentages.
+ * @param result Measured OEE response.
+ */
 export function toOeeDisplay(result: OeeResponse): OeeData {
   return {
     oee: result.oee * 100,
@@ -27,6 +33,7 @@ export function toOeeDisplay(result: OeeResponse): OeeData {
     performance: result.performance.performance * 100,
     quality: result.quality.quality * 100,
     dataComplete: result.dataComplete,
+    evidence: result,
   };
 }
 

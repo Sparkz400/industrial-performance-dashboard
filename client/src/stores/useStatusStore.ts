@@ -36,27 +36,95 @@ export const useStatusStore = create<StatusState>((set, get) => {
   let isPolling = false;
   let cleanupNotificationListeners: (() => void) | null = null;
   let cleanupSpcListeners: (() => void) | null = null;
+  let retryTimer: ReturnType<typeof setTimeout> | null = null;
+  let retryDelay = 1000;
+  let authenticationRejected = false;
+  let healthGeneration = 0;
+  let healthExpiry: ReturnType<typeof setTimeout> | null = null;
+  const unknownHealth = () =>
+    set({
+      status: defaultStatus,
+      isConnected: false,
+      isError: false,
+      statusText: 'Unknown: observation expired',
+    });
+  const acceptStatus = (updatedStatus: SystemStatus) => {
+    if (healthExpiry) clearTimeout(healthExpiry);
+    const observed = Date.parse(String(updatedStatus.lastUpdated ?? '')),
+      age = Date.now() - observed;
+    if (
+      !updatedStatus.database ||
+      !updatedStatus.opcua ||
+      !updatedStatus.overall ||
+      !Number.isFinite(age) ||
+      age < -5000 ||
+      age > 90000
+    ) {
+      unknownHealth();
+      return;
+    }
+    set({
+      status: updatedStatus,
+      lastChecked: new Date(observed),
+      isError: updatedStatus.overall.status === 'ERROR',
+      isConnected:
+        updatedStatus.overall.status === 'CONNECTED' &&
+        ['CONNECTED', 'OK', 'HEALTHY'].includes(
+          String(updatedStatus.database.status).toUpperCase(),
+        ) &&
+        ['CONNECTED', 'OK', 'HEALTHY'].includes(String(updatedStatus.opcua.status).toUpperCase()),
+      statusText: updatedStatus.overall.statusText || 'Unknown',
+    });
+    healthExpiry = setTimeout(unknownHealth, Math.max(0, 90000 - age));
+  };
+
+  const stopRetry = () => {
+    if (retryTimer) clearTimeout(retryTimer);
+    retryTimer = null;
+  };
+  const rejectAuthentication = () => {
+    if (authenticationRejected) return;
+    authenticationRejected = true;
+    stopRetry();
+    window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+  };
+  const retry = () => {
+    if (retryTimer || authenticationRejected || !socketInstance || socketInstance.active) return;
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      socketInstance?.connect();
+    }, retryDelay);
+    retryDelay = Math.min(30000, retryDelay * 2);
+  };
 
   const refreshStatus = async () => {
-    if (useAuthStore.getState().user?.role !== 'admin') return;
+    const actor = useAuthStore.getState().user;
+    if (actor?.role !== 'admin') return;
     if (isPolling) return;
+    const generation = healthGeneration;
+    const stillAuthorized = () =>
+      generation === healthGeneration &&
+      useAuthStore.getState().user?.id === actor.id &&
+      useAuthStore.getState().user?.role === 'admin';
     isPolling = true;
     try {
       const res = await fetch(API_ENDPOINTS.status, { credentials: 'include' });
       if (!res.ok) throw new Error(`Failed to fetch status: ${res.status}`);
       const data = await res.json();
-      set({
-        status: data,
-        lastChecked: new Date(data.lastUpdated || Date.now()),
-        isError: data?.overall?.status === 'ERROR',
-        isConnected: data?.overall?.status === 'CONNECTED',
-        statusText: data?.overall?.statusText || 'Unknown',
-      });
+      if (!stillAuthorized()) return;
+      acceptStatus(data);
     } catch (err) {
+      if (!stillAuthorized()) return;
+      set({
+        status: defaultStatus,
+        isConnected: false,
+        isError: true,
+        statusText: 'Unknown: status request failed',
+      });
       console.error('[StatusStore] Error fetching status:', err);
     } finally {
       setTimeout(() => {
-        isPolling = false;
+        if (generation === healthGeneration) isPolling = false;
       }, 2000);
     }
   };
@@ -84,18 +152,22 @@ export const useStatusStore = create<StatusState>((set, get) => {
 
     initSocket: () => {
       if (socketInstance) return;
+      authenticationRejected = false;
+      retryDelay = 1000;
 
       const token = getStoredCsrfToken();
       try {
         socketInstance = io(WEBSOCKET_ADDR, {
-          reconnectionAttempts: 5,
           reconnectionDelay: 3000,
+          reconnectionDelayMax: 30000,
           transports: ['websocket'],
           withCredentials: true,
           auth: { token: token || undefined },
         });
 
         socketInstance.on('connect', () => {
+          stopRetry();
+          retryDelay = 1000;
           set({ socketConnected: true, socket: socketInstance });
           setupPolling();
 
@@ -112,34 +184,35 @@ export const useStatusStore = create<StatusState>((set, get) => {
         });
 
         socketInstance.on('disconnect', (reason) => {
-          set({ socketConnected: false });
-          if (reason === 'io server disconnect') {
-            window.dispatchEvent(new CustomEvent('auth:unauthorized'));
-            return;
-          }
+          set({
+            socketConnected: false,
+            isConnected: false,
+            status: defaultStatus,
+            statusText: 'Unknown',
+          });
+          if (reason === 'io server disconnect') retry();
           setupPolling();
           refreshStatus();
         });
 
+        socketInstance.on('sessionStatus', (status) => {
+          if (status === 'revoked') rejectAuthentication();
+        });
+
         socketInstance.on('connect_error', (error) => {
           set({ socketConnected: false });
-          if (/^Authentication/.test(error.message)) {
-            window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+          if (error.data?.code === 'AUTH_REQUIRED' || /^Authentication/.test(error.message)) {
+            rejectAuthentication();
             return;
           }
+          retry();
           setupPolling();
           refreshStatus();
         });
 
         socketInstance.on('statusUpdate', (updatedStatus: SystemStatus) => {
           if (updatedStatus?.database && updatedStatus?.opcua && updatedStatus?.overall) {
-            set({
-              status: updatedStatus,
-              lastChecked: new Date(updatedStatus.lastUpdated || Date.now()),
-              isError: updatedStatus.overall.status === 'ERROR',
-              isConnected: updatedStatus.overall.status === 'CONNECTED',
-              statusText: updatedStatus.overall.statusText || 'Unknown',
-            });
+            acceptStatus(updatedStatus);
           }
         });
 
@@ -153,6 +226,10 @@ export const useStatusStore = create<StatusState>((set, get) => {
     },
 
     cleanup: () => {
+      healthGeneration++;
+      isPolling = false;
+      if (healthExpiry) clearTimeout(healthExpiry);
+      stopRetry();
       if (cleanupNotificationListeners) {
         cleanupNotificationListeners();
         cleanupNotificationListeners = null;
@@ -166,6 +243,7 @@ export const useStatusStore = create<StatusState>((set, get) => {
         socketInstance.off('disconnect');
         socketInstance.off('connect_error');
         socketInstance.off('statusUpdate');
+        socketInstance.off('sessionStatus');
         socketInstance.disconnect();
         socketInstance = null;
       }

@@ -79,7 +79,14 @@ const KpiSummaryBar: React.FC = () => {
   const isConnected = useStatusStore((s) => s.isConnected);
   const isError = useStatusStore((s) => s.isError);
 
-  const systemHealth = isConnected ? 'Healthy' : isError ? 'Error' : 'Degraded';
+  const systemHealth =
+    status?.overall?.status === 'UNKNOWN'
+      ? 'Unknown'
+      : isConnected
+        ? 'Healthy'
+        : isError
+          ? 'Error'
+          : 'Degraded';
   const systemColor = isConnected
     ? theme.palette.success.main
     : isError
@@ -135,13 +142,6 @@ const KpiSummaryBar: React.FC = () => {
         icon={<AccessTimeIcon sx={{ fontSize: 20 }} />}
         color={opcuaColor}
         delay={0.1}
-      />
-      <KpiCard
-        label="Uptime"
-        value="99.2%"
-        icon={<AccessTimeIcon sx={{ fontSize: 20 }} />}
-        color={theme.palette.primary.main}
-        delay={0.15}
       />
     </Box>
   );

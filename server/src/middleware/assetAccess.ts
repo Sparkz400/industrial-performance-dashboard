@@ -51,6 +51,95 @@ export async function authorizeAssetRequest(
   };
   let found: RegExpExecArray | null;
   if (read && path === "/access/me") return;
+  if (read && (found = match(/^\/widget-evidence\/machines\/(\d+)$/))) {
+    assertMachine(found[1]);
+    return;
+  }
+  if (
+    (found = match(/^\/derived-signals\/machines\/(\d+)(?:\/\d+\/evaluate)?$/))
+  ) {
+    if (!read && (method !== "POST" || !canSupervise(scope.role))) denied();
+    assertMachine(found[1]);
+    return;
+  }
+  if (
+    (found = match(
+      /^\/cmms\/machines\/(\d+)\/(destinations|preview|handoffs)$/,
+    ))
+  ) {
+    if (!canSupervise(scope.role) || (!read && method !== "POST")) denied();
+    assertMachine(found[1]);
+    return;
+  }
+  if ((found = match(/^\/energy-costs\/machines\/(\d+)\/tariffs$/))) {
+    if (!read && (method !== "POST" || !canSupervise(scope.role))) denied();
+    assertMachine(found[1]);
+    return;
+  }
+  if (read && (found = match(/^\/energy-costs\/shifts\/(\d+)$/))) {
+    await assertResource("shift", found[1]);
+    return;
+  }
+  if (
+    (found = match(
+      /^\/history\/(\d+)\/(measurements|corrections)(?:\/preview)?$/,
+    ))
+  ) {
+    if (!read && (method !== "POST" || !canSupervise(scope.role))) denied();
+    assertMachine(found[1]);
+    return;
+  }
+  if (read && path === "/digital-twins/instances") {
+    assertMachine(query.machineId);
+    return;
+  }
+  if (
+    read &&
+    (found = match(/^\/digital-twins\/instances\/(\d+)(?:\/element-history)?$/))
+  ) {
+    await assertResource("twin", found[1]);
+    return;
+  }
+  if (
+    canSupervise(scope.role) &&
+    (found = match(
+      /^\/work-orders\/machines\/(\d+)\/(preview|apply|completions)$/,
+    )) &&
+    ((read && found[2] === "completions") ||
+      (method === "POST" && ["preview", "apply"].includes(found[2])))
+  ) {
+    assertMachine(found[1]);
+    return;
+  }
+  if (
+    read &&
+    canSupervise(scope.role) &&
+    (found = match(
+      /^\/(diagnostics|alarm-review)\/machines\/(\d+)(?:\/replay\/\d+)?$/,
+    ))
+  ) {
+    assertMachine(found[2]);
+    return;
+  }
+  if (
+    read &&
+    canSupervise(scope.role) &&
+    (found = match(/^\/comparisons\/machines\/(\d+)$/))
+  ) {
+    assertMachine(found[1]);
+    return;
+  }
+  // These routes validate line membership or the action's machine before accessing data.
+  if (
+    canSupervise(scope.role) &&
+    ((path === "/lines" && (read || method === "POST")) ||
+      (read && /^\/lines\/\d+\/report$/.test(path)) ||
+      (/^\/maintenance-actions\/machines\/\d+(?:\/owners)?$/.test(path) &&
+        (read || method === "POST")) ||
+      (/^\/maintenance-actions\/\d+\/(revise|complete)$/.test(path) &&
+        method === "POST"))
+  )
+    return;
   if (read && (found = match(/^\/planning\/shifts\/(\d+)\/revisions\/\d+$/))) {
     await assertResource("shift", found[1]);
     return;

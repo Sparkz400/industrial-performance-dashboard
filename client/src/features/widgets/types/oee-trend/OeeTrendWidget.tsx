@@ -46,6 +46,12 @@ const OeeTrendWidget: React.FC<OeeTrendWidgetProps> = ({ config = {}, onError })
     );
   }
 
+  if (error)
+    return (
+      <Box sx={{ p: 2 }}>
+        <Typography role="status">OEE history is unavailable.</Typography>
+      </Box>
+    );
   return <OeeTrendWidgetView data={data ?? []} isLoading={isLoading} />;
 };
 

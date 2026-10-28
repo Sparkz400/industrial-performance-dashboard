@@ -17,6 +17,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ResponsiveLine, type LineSeries, type LineCustomSvgLayerProps } from '@nivo/line';
 import { useSpcProfile, useSpcChartData } from '../hooks/useSpcQueries';
 import SpcAlertsList from '../components/SpcAlertsList';
+import WidgetReadingEvidence from '@/features/widgets/types/WidgetReadingEvidence';
+import { widgetReadings } from '@/features/widgets/hooks/widgetReadings';
+import { localInput } from '@/features/operations/api';
 
 const SpcChartPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,8 +30,8 @@ const SpcChartPage: React.FC = () => {
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-  const [startDate, setStartDate] = useState(oneDayAgo.toISOString().slice(0, 16));
-  const [endDate, setEndDate] = useState(now.toISOString().slice(0, 16));
+  const [startDate, setStartDate] = useState(localInput(oneDayAgo.toISOString()));
+  const [endDate, setEndDate] = useState(localInput(now.toISOString()));
 
   const {
     data: profile,
@@ -41,8 +44,15 @@ const SpcChartPage: React.FC = () => {
     error: chartError,
   } = useSpcChartData(
     profileId,
-    new Date(startDate).toISOString(),
-    new Date(endDate).toISOString(),
+    Number.isFinite(Date.parse(startDate)) ? new Date(startDate).toISOString() : undefined,
+    Number.isFinite(Date.parse(endDate)) ? new Date(endDate).toISOString() : undefined,
+  );
+  const readings = useMemo(
+    () =>
+      widgetReadings(
+        (chartData?.dataPoints ?? []).map((point) => ({ ...point, time: point.timestamp })),
+      ),
+    [chartData],
   );
 
   const nivoData: LineSeries[] = useMemo(() => {
@@ -50,14 +60,18 @@ const SpcChartPage: React.FC = () => {
     return [
       {
         id: 'values',
-        data: chartData.dataPoints.map((p) => ({
+        data: readings.map((p) => ({
           x: new Date(p.timestamp),
           y: p.value,
-          isAnomaly: p.isAnomaly,
+          isAnomaly:
+            p.value != null &&
+            chartData.ucl != null &&
+            chartData.lcl != null &&
+            (p.value > chartData.ucl || p.value < chartData.lcl),
         })),
       },
     ];
-  }, [chartData]);
+  }, [chartData, readings]);
 
   const controlLimitsLayer = useMemo(() => {
     if (!chartData) return undefined;
@@ -182,6 +196,11 @@ const SpcChartPage: React.FC = () => {
           )}
         </Stack>
 
+        <Typography role="status" variant="caption">
+          Sampled observations; continuity is not verified. Bad readings and gaps longer than 60
+          seconds remain unknown.{' '}
+          {chartData?.truncated ? 'Truncated at 5000 observations; narrow the window.' : ''}
+        </Typography>
         {isLoading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
             <CircularProgress />
@@ -258,11 +277,12 @@ const SpcChartPage: React.FC = () => {
             </Typography>
           </Box>
         )}
+        <WidgetReadingEvidence rows={readings} />
       </Paper>
 
       <Paper sx={{ p: 2 }}>
         <Typography variant="h6" sx={{ mb: 2 }}>
-          Alerts for this Profile
+          Recorded alerts for this profile (corrections do not rewrite past decisions)
         </Typography>
         <SpcAlertsList profileId={profileId} />
       </Paper>

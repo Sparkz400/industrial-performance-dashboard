@@ -1,4 +1,5 @@
 import { useLanguage } from '@/i18n';
+import HistoryCorrectionsPanel from './HistoryCorrectionsPanel';
 import React, { useState } from 'react';
 import {
   Alert,
@@ -77,6 +78,7 @@ export default function HistoryPanel({ machineId }: { machineId: number }) {
   return (
     <Stack spacing={3}>
       <Typography variant="h5">{t('History')}</Typography>
+      <HistoryCorrectionsPanel key={machineId} machineId={machineId} />
       {error && <Alert severity="error">{error}</Alert>}
       <Paper sx={{ p: 2 }}>
         <Stack spacing={2}>

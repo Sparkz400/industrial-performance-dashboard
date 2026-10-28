@@ -1,4 +1,5 @@
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
+import { machineScope } from "../services/accessScope.js";
 
 import db from "../database/db.js";
 import { getReadDb } from "../database/db.js";
@@ -107,10 +108,17 @@ export const digitalTwinRepository = {
     const query = db.select().from(digitalTwinInstances);
     if (machineId !== undefined) {
       return query
-        .where(eq(digitalTwinInstances.machineId, machineId))
+        .where(
+          and(
+            eq(digitalTwinInstances.machineId, machineId),
+            machineScope(digitalTwinInstances.machineId),
+          ),
+        )
         .orderBy(digitalTwinInstances.name);
     }
-    return query.orderBy(digitalTwinInstances.name);
+    return query
+      .where(machineScope(digitalTwinInstances.machineId))
+      .orderBy(digitalTwinInstances.name);
   },
 
   async findInstanceById(id: number) {

@@ -1,3 +1,5 @@
+import { useT } from '@/i18n';
+import { useAuthStore } from '@/stores/useAuthStore';
 import React, { useState } from 'react';
 import { Alert, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
@@ -51,6 +53,19 @@ interface Report {
  *
  */
 export default function LinePanel() {
+  const t = useT(),
+    recovery = useAuthStore((s) => s.user?.recoveryMode);
+  const stateName = (state: string) =>
+    new Map(
+      Object.entries({
+        running: t('running', 'läuft'),
+        idle: t('idle', 'Leerlauf'),
+        fault: t('fault', 'Störung'),
+        blocked: t('blocked', 'blockiert'),
+        starved: t('starved', 'Materialmangel'),
+        unknown: t('unknown', 'unbekannt'),
+      }),
+    ).get(state) ?? state;
   const [name, setName] = useState(''),
     [stages, setStages] = useState<Stage[]>([]),
     [buffers, setBuffers] = useState<Buffer[]>([]),
@@ -86,12 +101,28 @@ export default function LinePanel() {
   const update = (index: number, value: Partial<Stage>) =>
     setStages(stages.map((s, i) => (i === index ? { ...s, ...value } : s)));
   return (
-    <Stack spacing={2}>
-      <Typography variant="h5">Production line losses</Typography>
-      {error && <Alert severity="error">{error}</Alert>}
+    <Stack
+      spacing={2}
+      sx={{ minWidth: 0, overflowWrap: 'anywhere', '& .MuiButton-root': { minHeight: 44 } }}
+    >
+      <Typography variant="h5">
+        {t('Production line losses', 'Verluste der Produktionslinie')}
+      </Typography>
+      {(error || assets.error || lines.error) && (
+        <Alert severity="error">{error || String(assets.error || lines.error)}</Alert>
+      )}
+      {lines.isLoading && <Typography role="status">{t('Loading…')}</Typography>}
+      {!lines.isLoading && !lines.error && !lines.data?.length && (
+        <Typography>
+          {t(
+            'No production line is available for your assigned machines.',
+            'Für Ihre zugewiesenen Maschinen ist keine Produktionslinie verfügbar.',
+          )}
+        </Typography>
+      )}
       <TextField
         select
-        label="Production line"
+        label={t('Production line', 'Produktionslinie')}
         value={line}
         onChange={(e) => {
           setLine(e.target.value);
@@ -106,7 +137,7 @@ export default function LinePanel() {
       </TextField>
       <TextField
         type="datetime-local"
-        label="Line report start"
+        label={t('Line report start', 'Beginn des Linienberichts')}
         slotProps={{ inputLabel: { shrink: true } }}
         value={start}
         onChange={(e) => {
@@ -116,7 +147,7 @@ export default function LinePanel() {
       />
       <TextField
         type="datetime-local"
-        label="Line report end"
+        label={t('Line report end', 'Ende des Linienberichts')}
         slotProps={{ inputLabel: { shrink: true } }}
         value={end}
         onChange={(e) => {
@@ -126,7 +157,7 @@ export default function LinePanel() {
       />
       <TextField
         type="number"
-        label="Line output target"
+        label={t('Line output target', 'Ausbringungsziel der Linie')}
         value={target}
         onChange={(e) => {
           setTarget(e.target.value);
@@ -145,29 +176,53 @@ export default function LinePanel() {
           )
         }
       >
-        Analyze line
+        {t('Analyze line', 'Linie analysieren')}
       </Button>
       {report && (
         <>
           <Alert severity="info">
-            Observed output: {report.observedOutput ?? 'Unknown'} · Target shortfall:{' '}
-            {report.targetShortfall ?? 'Unknown'}
+            {t('Observed output', 'Beobachtete Ausbringung')}:{' '}
+            {report.observedOutput ?? t('Unknown', 'Unbekannt')} ·{' '}
+            {t('Target shortfall', 'Zielabweichung')}:{' '}
+            {report.targetShortfall ?? t('Unknown', 'Unbekannt')}
           </Alert>
           {report.uncertainty.map((s) => (
             <Typography key={s} color="text.secondary">
-              {s}
+              {t(
+                s,
+                new Map(
+                  Object.entries({
+                    'Candidates rank observed idle/fault time, then median cycle duration when at least 10 cycles are observed. Adjacent blocked/starved totals support investigation, not causal proof; cycle comparisons require equivalent work per cycle.':
+                      'Kandidaten werden nach beobachtetem Leerlauf/Störung und dann nach der mittleren Zyklusdauer bei mindestens 10 Zyklen geordnet. Benachbarte Blockier- und Materialmangelzeiten unterstützen die Untersuchung, belegen aber keine Ursache. Zyklusvergleiche erfordern gleichwertige Arbeit pro Zyklus.',
+                    'Buffer counts are sampled observations, not time occupancy. Cycle tag must emit one duration per completed cycle.':
+                      'Pufferwerte sind einzelne Messungen, keine Belegungsdauer. Das Zyklussignal muss eine Dauer pro abgeschlossenem Zyklus liefern.',
+                    'Line output is incomplete or no unique terminal machine exists; target shortfall is unknown.':
+                      'Die Ausbringung ist unvollständig oder es gibt keine eindeutige Endmaschine; die Zielabweichung ist unbekannt.',
+                    'Some machines have less than 80% state coverage; their bottleneck rank is withheld.':
+                      'Einige Maschinen haben weniger als 80 % Zustandsabdeckung; für sie wird kein Engpassrang angezeigt.',
+                  }),
+                ).get(s),
+              )}
             </Typography>
           ))}
-          <Typography variant="h6">Likely bottlenecks</Typography>
+          <Typography variant="h6">{t('Likely bottlenecks', 'Mögliche Engpässe')}</Typography>
           {!report.candidates.length && (
-            <Typography>No candidate has sufficient supporting data.</Typography>
+            <Typography>
+              {t(
+                'No candidate has sufficient supporting data.',
+                'Für keinen Kandidaten liegen ausreichende Daten vor.',
+              )}
+            </Typography>
           )}
           {report.candidates.map((c) => (
             <Paper key={c.machineId} sx={{ p: 2 }}>
               <Typography>
-                {machineName(c.machineId)} · observed idle/fault {c.lossSeconds}s · upstream blocked{' '}
-                {c.upstreamBlockedSeconds}s · downstream starved {c.downstreamStarvedSeconds}s ·
-                median cycle {c.cycleP50Ms ?? 'Unknown'} ms · coverage{' '}
+                {machineName(c.machineId)} ·{' '}
+                {t('observed idle/fault', 'beobachteter Leerlauf/Störung')} {c.lossSeconds}s ·{' '}
+                {t('upstream blocked', 'vorgelagert blockiert')} {c.upstreamBlockedSeconds}s ·{' '}
+                {t('downstream starved', 'nachgelagerter Materialmangel')}{' '}
+                {c.downstreamStarvedSeconds}s ·{t('median cycle', 'Median der Zykluszeit')}{' '}
+                {c.cycleP50Ms ?? t('Unknown', 'Unbekannt')} ms · {t('coverage', 'Abdeckung')}{' '}
                 {(c.coverage * 100).toFixed(1)}%
               </Typography>
             </Paper>
@@ -177,38 +232,47 @@ export default function LinePanel() {
               <Typography variant="h6">{machineName(m.machineId)}</Typography>
               <Typography>
                 {Object.entries(m.seconds)
-                  .map(([k, v]) => `${k}: ${v.toFixed(1)}s`)
+                  .map(([k, v]) => `${stateName(k)}: ${v.toFixed(1)}s`)
                   .join(' · ')}
               </Typography>
               <Typography>
-                Microstops: {m.microstops.count} / {m.microstops.seconds}s. Cycle readings:{' '}
-                {m.cycles.count}, excluded {m.cycles.excluded}; median {m.cycles.p50 ?? 'Unknown'}{' '}
-                ms, p95 {m.cycles.p95 ?? 'Unknown'} ms.
+                {t('Microstops', 'Mikrostopps')}: {m.microstops.count} / {m.microstops.seconds}s.{' '}
+                {t('Cycle readings', 'Zyklusmessungen')}: {m.cycles.count},{' '}
+                {t('excluded', 'ausgeschlossen')} {m.cycles.excluded}; {t('median', 'Median')}{' '}
+                {m.cycles.p50 ?? t('Unknown', 'Unbekannt')} ms, p95{' '}
+                {m.cycles.p95 ?? t('Unknown', 'Unbekannt')} ms.
               </Typography>
             </Paper>
           ))}
           {report.buffers.map((b, i) => (
             <Typography key={i}>
-              Buffer {machineName(b.from)} → {machineName(b.to)}: {b.samples} readings,{' '}
-              {b.emptyReadings} empty, {b.fullReadings} full.
+              {t('Buffer', 'Puffer')} {machineName(b.from)} → {machineName(b.to)}: {b.samples}{' '}
+              {t('readings', 'Messungen')}, {b.emptyReadings} {t('empty', 'leer')}, {b.fullReadings}{' '}
+              {t('full', 'voll')}.
             </Typography>
           ))}
         </>
       )}
-      <Typography variant="h6">Define a line</Typography>
+      <Typography variant="h6">{t('Define a line', 'Linie definieren')}</Typography>
       <Alert severity="info">
-        Map the actual machine state codes. Cycle tags must emit one duration in milliseconds per
-        completed cycle. Save a new definition when mappings change.
+        {t(
+          'Map the actual machine state codes. Cycle tags must emit one duration in milliseconds per completed cycle. Save a new definition when mappings change.',
+          'Ordnen Sie die tatsächlichen Maschinenzustände zu. Zyklussignale müssen eine Dauer in Millisekunden pro abgeschlossenem Zyklus liefern. Speichern Sie bei geänderten Zuordnungen eine neue Definition.',
+        )}
       </Alert>
-      <TextField label="Line name" value={name} onChange={(e) => setName(e.target.value)} />
       <TextField
-        label="Maximum sample gap (seconds)"
+        label={t('Line name', 'Linienname')}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+      <TextField
+        label={t('Maximum sample gap (seconds)', 'Maximale Messlücke (Sekunden)')}
         type="number"
         value={gap}
         onChange={(e) => setGap(e.target.value)}
       />
       <TextField
-        label="Microstop limit (seconds)"
+        label={t('Microstop limit (seconds)', 'Grenze für Mikrostopps (Sekunden)')}
         type="number"
         value={stop}
         onChange={(e) => setStop(e.target.value)}
@@ -218,7 +282,7 @@ export default function LinePanel() {
           <Stack spacing={2}>
             <TextField
               select
-              label={`Stage ${i + 1} machine`}
+              label={t(`Stage ${i + 1} machine`, `Stufe ${i + 1}: Maschine`)}
               value={s.machineId || ''}
               onChange={(e) => update(i, { machineId: Number(e.target.value) })}
             >
@@ -229,24 +293,33 @@ export default function LinePanel() {
               ))}
             </TextField>
             <TextField
-              label={`Stage ${i + 1} state tag`}
+              label={t(`Stage ${i + 1} state tag`, `Stufe ${i + 1}: Zustandssignal`)}
               value={s.stateKey}
               onChange={(e) => update(i, { stateKey: e.target.value })}
             />
             <TextField
-              label={`Stage ${i + 1} cycle duration tag (optional)`}
+              label={t(
+                `Stage ${i + 1} cycle duration tag (optional)`,
+                `Stufe ${i + 1}: Zyklusdauersignal (optional)`,
+              )}
               value={s.cycleKey}
               onChange={(e) => update(i, { cycleKey: e.target.value })}
             />
             <TextField
-              label={`Stage ${i + 1} output counter tag (optional)`}
+              label={t(
+                `Stage ${i + 1} output counter tag (optional)`,
+                `Stufe ${i + 1}: Ausbringungszähler (optional)`,
+              )}
               value={s.outputKey}
               onChange={(e) => update(i, { outputKey: e.target.value })}
             />
             {Object.entries(s.states).map(([state, codes]) => (
               <TextField
                 key={state}
-                label={`Stage ${i + 1} ${state} codes, comma separated`}
+                label={t(
+                  `Stage ${i + 1} ${state} codes, comma separated`,
+                  `Stufe ${i + 1}: ${stateName(state)}-Codes, kommagetrennt`,
+                )}
                 value={codes}
                 onChange={(e) =>
                   update(i, {
@@ -261,7 +334,7 @@ export default function LinePanel() {
               />
             ))}
             <Button onClick={() => setStages(stages.filter((_, n) => n !== i))}>
-              Remove stage {i + 1}
+              {t('Remove stage', 'Stufe entfernen')} {i + 1}
             </Button>
           </Stack>
         </Paper>
@@ -280,7 +353,7 @@ export default function LinePanel() {
           ])
         }
       >
-        Add machine stage
+        {t('Add machine stage', 'Maschinenstufe hinzufügen')}
       </Button>
       {buffers.map((b, i) => (
         <Paper key={i} sx={{ p: 2 }}>
@@ -295,7 +368,10 @@ export default function LinePanel() {
               <TextField
                 select
                 key={field}
-                label={`Buffer ${i + 1} ${field === 'from' ? 'upstream machine' : field === 'to' ? 'downstream machine' : 'measurement machine'}`}
+                label={t(
+                  `Buffer ${i + 1} ${field === 'from' ? 'upstream machine' : field === 'to' ? 'downstream machine' : 'measurement machine'}`,
+                  `Puffer ${i + 1}: ${field === 'from' ? 'vorgelagerte Maschine' : field === 'to' ? 'nachgelagerte Maschine' : 'Messmaschine'}`,
+                )}
                 value={value || ''}
                 onChange={(e) =>
                   setBuffers(
@@ -315,14 +391,14 @@ export default function LinePanel() {
               </TextField>
             ))}
             <TextField
-              label={`Buffer ${i + 1} occupancy tag`}
+              label={t(`Buffer ${i + 1} occupancy tag`, `Puffer ${i + 1}: Belegungssignal`)}
               value={b.nodeKey}
               onChange={(e) =>
                 setBuffers(buffers.map((x, n) => (n === i ? { ...x, nodeKey: e.target.value } : x)))
               }
             />
             <TextField
-              label={`Buffer ${i + 1} capacity`}
+              label={t(`Buffer ${i + 1} capacity`, `Puffer ${i + 1}: Kapazität`)}
               type="number"
               value={b.capacity}
               onChange={(e) =>
@@ -332,7 +408,7 @@ export default function LinePanel() {
               }
             />
             <Button onClick={() => setBuffers(buffers.filter((_, n) => n !== i))}>
-              Remove buffer {i + 1}
+              {t('Remove buffer', 'Puffer entfernen')} {i + 1}
             </Button>
           </Stack>
         </Paper>
@@ -342,10 +418,10 @@ export default function LinePanel() {
           setBuffers([...buffers, { from: 0, to: 0, machineId: 0, nodeKey: '', capacity: 10 }])
         }
       >
-        Add connecting buffer
+        {t('Add connecting buffer', 'Verbindungspuffer hinzufügen')}
       </Button>
       <Button
-        disabled={busy || !name || stages.length < 2}
+        disabled={busy || recovery || !name || stages.length < 2}
         onClick={() =>
           void run(async () => {
             const saved = await operationRequest<Line>('/lines', 'POST', {
@@ -373,7 +449,7 @@ export default function LinePanel() {
           })
         }
       >
-        Save line definition
+        {t('Save line definition', 'Liniendefinition speichern')}
       </Button>
     </Stack>
   );

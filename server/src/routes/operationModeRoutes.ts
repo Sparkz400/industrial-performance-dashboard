@@ -6,11 +6,12 @@ import { getReadDb } from "../database/db.js";
 import { opcuaData } from "../database/schema.js";
 import { validateQuery } from "../middleware/validation.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
+import { assertMachine } from "../services/accessScope.js";
 
 const router = Router();
 
 const operationModeSchema = Joi.object({
-  machineId: Joi.number().integer().positive().optional(),
+  machineId: Joi.number().integer().positive().required(),
   limit: Joi.number().integer().min(1).max(5000).default(1000),
   offset: Joi.number().integer().min(0).default(0),
   startDate: Joi.date().iso().optional(),
@@ -28,6 +29,7 @@ router.get(
       endDate?: string;
     };
     const readDb = getReadDb();
+    assertMachine(req.query.machineId);
 
     const conditions = [eq(opcuaData.nodeKey, "OperationMode")];
     if (req.query.machineId != null)
@@ -37,24 +39,37 @@ router.get(
     if (endDate) conditions.push(lte(opcuaData.timestamp, new Date(endDate)));
 
     const result = await readDb
-      .select({ timestamp: opcuaData.timestamp, value: opcuaData.value })
+      .select({
+        timestamp: opcuaData.timestamp,
+        value: opcuaData.value,
+        rawValue: opcuaData.rawValue,
+        statusCode: opcuaData.statusCode,
+        reportedStatusCode: opcuaData.reportedStatusCode,
+        sourceClockState: opcuaData.sourceClockState,
+        correctionRevision: opcuaData.correctionRevision,
+        sourceTimestamp: opcuaData.sourceTimestamp,
+        receivedAt: opcuaData.receivedAt,
+        signalMetadata: opcuaData.signalMetadata,
+      })
       .from(opcuaData)
       .where(and(...conditions))
-      .orderBy(asc(opcuaData.timestamp))
+      .orderBy(asc(opcuaData.timestamp), asc(opcuaData.id))
       .limit(limit)
       .offset(offset);
 
-    const data = result.map(
-      (row: { timestamp: Date; value: number | null }) => ({
-        timestamp: row.timestamp.toISOString(),
-        time: new Date(row.timestamp).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        }),
-        mode: row.value,
+    const data = result.map((row) => ({
+      ...row,
+      timestamp: row.timestamp.toISOString(),
+      time: new Date(row.timestamp).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
       }),
-    );
+      mode:
+        row.statusCode?.startsWith("Good") && row.sourceClockState !== "future"
+          ? row.value
+          : null,
+    }));
     res.json(data);
   }),
 );

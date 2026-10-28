@@ -22,3 +22,11 @@ it('displays validated percentages from the API', () => {
   expect(screen.getByText('90%')).toBeVisible();
 });
 import React from 'react';
+it('keeps a missing response unknown instead of rendering zero gauges', () => {
+  vi.mocked(useOeeData).mockReturnValue({ data: undefined, isLoading: false } as ReturnType<
+    typeof useOeeData
+  >);
+  render(<OeeGaugeWidget config={{ machineId: 1 }} />);
+  expect(screen.getByRole('status')).toHaveTextContent('Incomplete measurement coverage');
+  expect(screen.queryByText('0')).not.toBeInTheDocument();
+});

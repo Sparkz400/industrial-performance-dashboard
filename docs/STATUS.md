@@ -3,7 +3,30 @@
 Performance Dashboard is development software. Its intended starting point is an
 owned simulator or an isolated test installation using OPC UA scalar signals.
 
+## Data integrity and reviewed operations
+
+The [six-feature integrity wave](DATA_INTEGRITY.md) replaces generated widget data,
+adds reviewed historian corrections and safe calculated signals, retains explicit
+offline operator drafts, and provides reviewed CMMS handoffs and versioned energy
+estimates. Frozen reports remain intact; physical/vendor acceptance and PR #63's
+72-hour endurance gate remain separate.
+
+## Factory operations expansion
+
+The [six-workflow expansion](FACTORY_OPERATIONS.md) adds configuration bundles,
+connection diagnostics, alarm review, vendor-neutral work-order files, a practical
+asset overview, and repeatable demonstration/signed release packaging. Validation
+is recorded separately from physical-machine and ERP vendor acceptance. The new
+work uses a separate checkout from PR #63's endurance repair and replacement run.
+
 ## Implemented and covered by focused tests
+
+- Scoped supervisor line investigations and maintenance assignment corrections,
+  with attributable history and stale-version rejection; English/German advanced
+  operational screens.
+- Frozen shift-revision comparisons with product mix, schedule, definitions,
+  coverage and corrections visible. Incomparable periods have no difference claim;
+  service context does not imply causation. See [factory readiness](FACTORY_READINESS.md).
 
 - Quality-aware batch summaries with unknown values, frozen recipes, inspections,
   verified rework and declared lot genealogy; approved SPC reference capability.
@@ -12,6 +35,11 @@ owned simulator or an isolated test installation using OPC UA scalar signals.
 - Measured disk runway, exact reviewed retention schedules, offline image packaging
   and configurable synthetic endurance workloads. See [scope and limits](QUALITY_LINE_OPERATIONS.md).
   Full multi-day operation, browser-user capacity and physical qualification remain open.
+  Installation endurance now has a separate full-application workload; only its
+  completed receipts establish the actual duration and workload tested.
+  Failed sustained runs and a later database-interruption CI exit keep this gate
+  open. A checked-out client disconnect fix passes isolated rollback/recovery
+  regression; replacement endurance acceptance is pending.
 
 - Machine/site grants across REST, tRPC, sockets and exports; operator/supervisor roles.
 - Streaming raw history, reviewed retention, quality-aware hourly summaries and storage estimates.

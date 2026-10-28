@@ -89,7 +89,7 @@ function aggregationExpression(
     case "max":
       return sql<number>`max(${opcuaData.value})`;
     case "last":
-      return sql<number>`(array_agg(${opcuaData.value} ORDER BY ${opcuaData.timestamp} DESC))[1]`;
+      return sql<number>`(array_agg(${opcuaData.value} ORDER BY ${opcuaData.timestamp} DESC, ${opcuaData.id} DESC))[1]`;
     case "avg":
     default:
       return sql<number>`avg(${opcuaData.value})`;
@@ -121,12 +121,13 @@ export const trendingDataService = {
         gte(opcuaData.timestamp, startDate),
         lte(opcuaData.timestamp, endDate),
       );
-      const valid = sql`${opcuaData.statusCode} LIKE 'Good%' AND ${opcuaData.value} IS NOT NULL`;
+      const valid = sql`${opcuaData.statusCode} LIKE 'Good%' AND ${opcuaData.value} IS NOT NULL AND ${opcuaData.value} NOT IN ('NaN'::real,'Infinity'::real,'-Infinity'::real)`;
       const [summary] = await readDb
         .select({
           count: sql<number>`count(*)::int`,
           good: sql<number>`count(*) FILTER (WHERE ${valid})::int`,
           legacy: sql<number>`count(*) FILTER (WHERE ${opcuaData.signalMetadata} IS NULL)::int`,
+          corrected: sql<number>`count(*) FILTER (WHERE ${opcuaData.correctionRevision} > 0)::int`,
           first: sql<Date | null>`min(${opcuaData.timestamp})`,
           last: sql<Date | null>`max(${opcuaData.timestamp})`,
           min: sql<
@@ -162,6 +163,7 @@ export const trendingDataService = {
         sampleCount: summary.count,
         goodSampleCount: summary.good,
         legacySampleCount: summary.legacy,
+        correctedSampleCount: summary.corrected,
         requestedStart: startDate.toISOString(),
         requestedEnd: endDate.toISOString(),
         observedStart: iso(summary.first),
@@ -215,22 +217,37 @@ export const trendingDataService = {
             statusCode: opcuaData.statusCode,
             sourceTimestamp: opcuaData.sourceTimestamp,
             receivedAt: opcuaData.receivedAt,
+            correctionRevision: opcuaData.correctionRevision,
+            reportedStatusCode: opcuaData.reportedStatusCode,
+            sourceClockState: opcuaData.sourceClockState,
+            rawValue: opcuaData.rawValue,
           })
           .from(opcuaData)
           .where(condition)
-          .orderBy(asc(opcuaData.timestamp))
+          .orderBy(asc(opcuaData.timestamp), asc(opcuaData.id))
           .limit(MAX_POINTS_PER_SERIES + 1);
         // A concurrent arrival may invalidate the earlier count; disclose rather than hide it.
         series.truncated = rows.length > MAX_POINTS_PER_SERIES;
         series.data = rows.slice(0, MAX_POINTS_PER_SERIES).map((row) => ({
           timestamp: row.timestamp.toISOString(),
-          value: row.statusCode?.startsWith("Good") ? row.value : null,
+          value:
+            row.statusCode?.startsWith("Good") && Number.isFinite(row.value)
+              ? row.value
+              : null,
           statusCode: row.statusCode,
           sourceTimestamp: iso(row.sourceTimestamp),
           receivedAt: iso(row.receivedAt),
+          correctionRevision: row.correctionRevision,
+          reportedStatusCode: row.reportedStatusCode,
+          sourceClockState: row.sourceClockState,
+          rawValue: row.rawValue,
           sampleCount: 1,
           goodSampleCount:
-            row.statusCode?.startsWith("Good") && row.value != null ? 1 : 0,
+            row.statusCode?.startsWith("Good") &&
+            row.value != null &&
+            Number.isFinite(row.value)
+              ? 1
+              : 0,
         }));
       }
       seriesList.push(series);

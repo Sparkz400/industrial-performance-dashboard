@@ -38,6 +38,7 @@ export class MeasurementSpool {
       CREATE TABLE IF NOT EXISTS measurements (
         sequence INTEGER PRIMARY KEY, id TEXT NOT NULL UNIQUE, payload TEXT NOT NULL
       );
+      CREATE INDEX IF NOT EXISTS measurements_machine ON measurements(json_extract(payload, '$.machineId'));
     `);
   }
 
@@ -98,6 +99,19 @@ export class MeasurementSpool {
     );
   }
 
+  machineHealth(machineId: number) {
+    const row = this.database
+      .prepare(
+        "SELECT count(*) AS pending,min(json_extract(payload,'$.receivedAt')) AS oldest,sum(CASE WHEN json_extract(payload,'$.receivedAt') IS NULL THEN 1 ELSE 0 END) AS unknown FROM measurements WHERE json_extract(payload,'$.machineId')=?",
+      )
+      .get(machineId)!;
+    return {
+      pending: Number(row.pending),
+      oldestReceivedAt: typeof row.oldest === "string" ? row.oldest : null,
+      unknownReceiveTimes: Number(row.unknown ?? 0),
+    };
+  }
+
   health() {
     const row = this.database
       .prepare(
@@ -139,7 +153,18 @@ export class MeasurementSpool {
 }
 
 export function toMeasurementRow({ id, data }: SpoolEntry) {
-  const statusCode = data.statusCode ?? "Uncertain";
+  const reportedStatusCode = data.statusCode ?? "Uncertain";
+  const receivedAt = data.receivedAt ? new Date(data.receivedAt) : null;
+  const times = [
+    new Date(data.timestamp),
+    ...(data.sourceTimestamp ? [new Date(data.sourceTimestamp)] : []),
+  ];
+  const future =
+    receivedAt != null &&
+    times.some((time) => time.getTime() > receivedAt.getTime() + 300_000);
+  const sourceClockState =
+    receivedAt == null ? "unknown" : future ? "future" : "not-future";
+  const statusCode = future ? "BadSourceClock" : reportedStatusCode;
   const numericValue =
     typeof data.value === "boolean" ? Number(data.value) : data.value;
   return {
@@ -150,7 +175,7 @@ export function toMeasurementRow({ id, data }: SpoolEntry) {
     sourceTimestamp: data.sourceTimestamp
       ? new Date(data.sourceTimestamp)
       : null,
-    receivedAt: data.receivedAt ? new Date(data.receivedAt) : null,
+    receivedAt,
     signalMetadata: data.signalMetadata ?? null,
     value:
       statusCode.startsWith("Good") && typeof numericValue === "number"
@@ -158,6 +183,8 @@ export function toMeasurementRow({ id, data }: SpoolEntry) {
         : null,
     rawValue: data.value,
     statusCode,
+    reportedStatusCode,
+    sourceClockState,
     dataType: data.dataType ?? null,
     machineId: data.machineId ?? null,
   };

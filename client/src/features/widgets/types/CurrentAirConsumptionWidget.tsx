@@ -4,10 +4,11 @@ import { ResponsiveLine } from '@nivo/line';
 import { Box, Typography, useTheme } from '@mui/material';
 import type { WidgetConfig } from '@/types';
 import { useNodeData } from '../hooks/useNodeData';
+import WidgetReadingEvidence from './WidgetReadingEvidence';
 
 interface AirDataPoint {
-  x: string;
-  y: number;
+  x: number;
+  y: number | null;
 }
 
 interface NivoLineSeries {
@@ -26,7 +27,7 @@ const CurrentAirConsumptionWidget = memo<CurrentAirConsumptionWidgetProps>(({ co
   const nodeKey = (config?.nodeKey as string) ?? 'AirConsumption';
   const machineId = config?.machineId as number | undefined;
 
-  const { data, loading, error } = useNodeData({
+  const { data, loading, error, freshness } = useNodeData({
     nodeKey,
     machineId,
     maxPoints: 1440,
@@ -34,8 +35,8 @@ const CurrentAirConsumptionWidget = memo<CurrentAirConsumptionWidgetProps>(({ co
 
   const displayData = useMemo((): NivoLineSeries[] => {
     const sliced = data.slice(-60).map((pt) => ({
-      x: pt.time,
-      y: pt.value ?? 0,
+      x: Date.parse(pt.timestamp),
+      y: pt.value,
     }));
     return [
       {
@@ -67,19 +68,19 @@ const CurrentAirConsumptionWidget = memo<CurrentAirConsumptionWidgetProps>(({ co
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', p: 2 }}>
       <Typography variant="h6" gutterBottom>
-        Air Consumption (24H)
+        Observed Air Consumption
       </Typography>
       <Box sx={{ flexGrow: 1, width: '100%', minHeight: 0 }}>
         <ResponsiveLine
           data={displayData}
           theme={nivoTheme}
           margin={{ top: 10, right: 20, bottom: 40, left: 50 }}
-          xScale={{ type: 'point' }}
+          xScale={{ type: 'linear', min: 'auto', max: 'auto' }}
           yScale={{ type: 'linear', min: 'auto', max: 'auto', stacked: false }}
-          curve="monotoneX"
+          curve="linear"
           colors={[theme.palette.primary.main]}
           lineWidth={2}
-          enablePoints={false}
+          enablePoints={true}
           enableArea={true}
           areaOpacity={0.15}
           areaBlendMode="normal"
@@ -87,10 +88,11 @@ const CurrentAirConsumptionWidget = memo<CurrentAirConsumptionWidgetProps>(({ co
           axisTop={null}
           axisRight={null}
           axisBottom={{
+            format: (value: number) => new Date(value).toLocaleTimeString(),
             tickSize: 0,
             tickPadding: 8,
             tickRotation: -45,
-            tickValues: 'every 10',
+            tickValues: 5,
           }}
           axisLeft={{
             tickSize: 0,
@@ -98,7 +100,7 @@ const CurrentAirConsumptionWidget = memo<CurrentAirConsumptionWidgetProps>(({ co
             format: (v: number) => `${v}`,
           }}
           useMesh={true}
-          animate={true}
+          animate={false}
           motionConfig="gentle"
           defs={[
             {
@@ -114,8 +116,9 @@ const CurrentAirConsumptionWidget = memo<CurrentAirConsumptionWidgetProps>(({ co
         />
       </Box>
       <Typography variant="caption" color="text.secondary">
-        Live data — updates in real-time via OPC-UA. Showing last 60 points.
+        Current reading: {freshness}. Last 60 observed samples; gaps remain unknown.
       </Typography>
+      <WidgetReadingEvidence rows={data} />
     </Box>
   );
 });

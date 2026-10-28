@@ -4,19 +4,11 @@ import { ResponsiveLine } from '@nivo/line';
 import { Typography, Box, CircularProgress, useTheme } from '@mui/material';
 import type { OperationModeDataPoint } from './useOperationModeData';
 import type { WidgetConfig } from '@/types';
-
-export const modeMapping: Record<number, string> = {
-  0: 'Off',
-  1: 'Error State',
-  2: 'Setup Mode',
-  3: 'Auto (Not Started)',
-  4: 'Auto (Started & Idle)',
-  5: 'Auto (In Production)',
-};
+import WidgetReadingEvidence from '../WidgetReadingEvidence';
 
 interface NivoLineDataPoint {
-  x: string;
-  y: number;
+  x: number;
+  y: number | null;
 }
 
 interface NivoLineSeries {
@@ -52,7 +44,7 @@ const OperationModeWidgetView: React.FC<OperationModeWidgetViewProps> = ({
       {
         id: 'Operation Mode',
         color: '#66BB6A',
-        data: data.map((d) => ({ x: d.time, y: d.mode })),
+        data: data.map((d) => ({ x: Date.parse(d.timestamp), y: d.mode })),
       },
     ];
   }, [data]);
@@ -96,10 +88,15 @@ const OperationModeWidgetView: React.FC<OperationModeWidgetViewProps> = ({
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', p: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        <Typography variant="h6">Operation Mode Over Time</Typography>
+        <Typography variant="h6">Observed Operation Mode Codes</Typography>
         {loading && <CircularProgress size={20} sx={{ ml: 1 }} />}
       </Box>
 
+      {error && (
+        <Typography role="status" color="warning.main">
+          {error}
+        </Typography>
+      )}
       {lastUpdated && (
         <Typography variant="caption" color="text.secondary">
           Last updated: {lastUpdated.toLocaleTimeString()}
@@ -112,8 +109,8 @@ const OperationModeWidgetView: React.FC<OperationModeWidgetViewProps> = ({
             data={chartData}
             theme={nivoTheme}
             margin={{ top: 10, right: 20, bottom: 40, left: 120 }}
-            xScale={{ type: 'point' }}
-            yScale={{ type: 'linear', min: 0, max: 5 }}
+            xScale={{ type: 'linear', min: 'auto', max: 'auto' }}
+            yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
             curve="stepAfter"
             colors={['#66BB6A']}
             lineWidth={2}
@@ -128,6 +125,7 @@ const OperationModeWidgetView: React.FC<OperationModeWidgetViewProps> = ({
             axisTop={null}
             axisRight={null}
             axisBottom={{
+              format: (value: number) => new Date(value).toLocaleTimeString(),
               tickSize: 0,
               tickPadding: 8,
               tickRotation: -45,
@@ -135,17 +133,15 @@ const OperationModeWidgetView: React.FC<OperationModeWidgetViewProps> = ({
             axisLeft={{
               tickSize: 0,
               tickPadding: 8,
-              tickValues: [0, 1, 2, 3, 4, 5],
-              // eslint-disable-next-line security/detect-object-injection -- v is a numeric axis tick value
-              format: (v: number) => modeMapping[v] || String(v),
+              format: (v: number) => String(v),
             }}
             useMesh={true}
-            animate={true}
+            animate={false}
             motionConfig="gentle"
             tooltip={({
               point,
             }: {
-              point: { data: { x: string | number; y: string | number } };
+              point: { data: { x: string | number; y: string | number | null } };
             }) => (
               <Box
                 sx={{
@@ -157,9 +153,9 @@ const OperationModeWidgetView: React.FC<OperationModeWidgetViewProps> = ({
                   fontSize: '12px',
                 }}
               >
-                <strong>{point.data.x}</strong>
+                <strong>{new Date(Number(point.data.x)).toLocaleString()}</strong>
                 <br />
-                {modeMapping[point.data.y as number] || point.data.y}
+                {point.data.y}
               </Box>
             )}
           />
@@ -173,6 +169,7 @@ const OperationModeWidgetView: React.FC<OperationModeWidgetViewProps> = ({
           </Box>
         )}
       </Box>
+      <WidgetReadingEvidence rows={data} />
     </Box>
   );
 };

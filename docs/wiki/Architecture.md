@@ -1,5 +1,19 @@
 # Architecture
 
+[Data integrity and reviewed operations](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DATA_INTEGRITY.md)
+adds evidence-backed widgets, reviewed corrections, bounded calculated signals,
+explicit offline drafts, durable CMMS handoffs and versioned energy estimates.
+Frozen reports and physical qualification remain separate.
+
+[Factory operations](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/FACTORY_OPERATIONS.md)
+adds transactional setup-import receipts and work-order identities, scoped diagnostic
+and asset reads, and signed offline packages tied to a tested source/image revision.
+
+[Factory readiness](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/FACTORY_READINESS.md)
+adds scoped supervisor line/action workflows, attributable maintenance corrections,
+fair comparisons of frozen shift reports and full-application endurance testing.
+Short runs do not establish multi-day reliability; physical qualification remains open.
+
 The React client connects to the Node.js server through authenticated REST/tRPC
 and live socket updates. The collector buffers samples on local disk before
 writing PostgreSQL history. Shared TypeScript contracts connect the workspaces.
@@ -54,5 +68,6 @@ separates software checks from physical S7-1500 and operator acceptance.
 adds frozen batch recipes, inspection/rework/lot evidence, reviewed SPC reference
 periods, production-line analysis and alarm-linked maintenance actions. It also
 covers measured disk runway, exact reviewed retention schedules, offline image
-bundles and configurable synthetic endurance workloads. These administrator
-workflows do not establish multi-day reliability or supported hardware capacity.
+bundles and configurable synthetic endurance workloads. Scoped supervisor access
+now extends line investigations and alarm actions. These workflows do not establish
+multi-day reliability or supported hardware capacity.

@@ -10,11 +10,17 @@ const PlanningPanel = React.lazy(() => import('./PlanningPanel'));
 const MaintenancePanel = React.lazy(() => import('./MaintenancePanel'));
 const EnergyPanel = React.lazy(() => import('./EnergyPanel'));
 const HistoryPanel = React.lazy(() => import('./HistoryPanel'));
+const ComparisonPanel = React.lazy(() => import('./ComparisonPanel'));
+const ConnectionDiagnosticsPanel = React.lazy(() => import('./ConnectionDiagnosticsPanel'));
+const AlarmReviewPanel = React.lazy(() => import('./AlarmReviewPanel'));
+const WorkOrderPanel = React.lazy(() => import('./WorkOrderPanel'));
+const AssetOverviewPanel = React.lazy(() => import('./AssetOverviewPanel'));
+const DerivedSignalsPanel = React.lazy(() => import('./DerivedSignalsPanel'));
 /**
  *
  */
 export default function OperationsPage() {
-  const admin = useAuthStore((s) => s.user?.role === 'admin');
+  const canSupervise = useAuthStore((s) => ['admin', 'supervisor'].includes(s.user?.role ?? ''));
   const t = useT(),
     [machine, setMachine] = useState(''),
     [tab, setTab] = useState(0);
@@ -22,6 +28,52 @@ export default function OperationsPage() {
     queryKey: ['production-assets'],
     queryFn: () => operationRequest<{ id: number; name: string }[]>('/production/assets'),
   });
+  const panels = [
+    { name: 'Planning', content: <PlanningPanel machineId={Number(machine)} /> },
+    { name: 'Maintenance', content: <MaintenancePanel machineId={Number(machine)} /> },
+    { name: 'Energy and losses', content: <EnergyPanel machineId={Number(machine)} /> },
+    { name: 'History', content: <HistoryPanel machineId={Number(machine)} /> },
+    ...(canSupervise
+      ? [
+          { name: 'Production line', de: 'Produktionslinie', content: <LinePanel /> },
+          {
+            name: 'Alarm actions',
+            de: 'Alarmmaßnahmen',
+            content: <MaintenanceActionsPanel machineId={Number(machine)} />,
+          },
+          {
+            name: 'Comparisons',
+            de: 'Vergleiche',
+            content: <ComparisonPanel machineId={Number(machine)} />,
+          },
+          {
+            name: 'Connection diagnostics',
+            de: 'Verbindungsdiagnose',
+            content: <ConnectionDiagnosticsPanel machineId={Number(machine)} />,
+          },
+          {
+            name: 'Alarm usefulness',
+            de: 'Alarmbewertung',
+            content: <AlarmReviewPanel machineId={Number(machine)} />,
+          },
+          {
+            name: 'Work orders',
+            de: 'Arbeitsaufträge',
+            content: <WorkOrderPanel machineId={Number(machine)} />,
+          },
+        ]
+      : []),
+    {
+      name: 'Asset overview',
+      de: 'Anlagenübersicht',
+      content: <AssetOverviewPanel machineId={Number(machine)} />,
+    },
+    {
+      name: 'Calculated signals',
+      de: 'Berechnete Signale',
+      content: <DerivedSignalsPanel key={machine} machineId={Number(machine)} />,
+    },
+  ];
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1250, width: '100%', mx: 'auto' }}>
       <Stack spacing={3}>
@@ -56,18 +108,12 @@ export default function OperationsPage() {
           scrollButtons="auto"
           aria-label={t('Daily operations')}
         >
-          {[
-            'Planning',
-            'Maintenance',
-            'Energy and losses',
-            'History',
-            ...(admin ? ['Production line', 'Alarm actions'] : []),
-          ].map((name, i) => (
+          {panels.map(({ name, de }, i) => (
             <Tab
               id={`operations-tab-${i}`}
               aria-controls={`operations-panel-${i}`}
               key={name}
-              label={t(name)}
+              label={t(name, de)}
             />
           ))}
         </Tabs>
@@ -79,19 +125,7 @@ export default function OperationsPage() {
             key={`${machine}:${tab}`}
           >
             <Suspense fallback={<Typography role="status">{t('Loading…')}</Typography>}>
-              {tab === 0 ? (
-                <PlanningPanel machineId={Number(machine)} />
-              ) : tab === 1 ? (
-                <MaintenancePanel machineId={Number(machine)} />
-              ) : tab === 2 ? (
-                <EnergyPanel machineId={Number(machine)} />
-              ) : tab === 3 ? (
-                <HistoryPanel machineId={Number(machine)} />
-              ) : tab === 4 ? (
-                <LinePanel />
-              ) : (
-                <MaintenanceActionsPanel machineId={Number(machine)} />
-              )}
+              {panels.at(tab)?.content}
             </Suspense>
           </Box>
         )}

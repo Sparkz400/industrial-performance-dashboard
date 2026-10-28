@@ -7,6 +7,7 @@ import { toOeeDisplay, type OeeResponse } from '../oee-gauge/useOeeData';
 export type Granularity = 'hour' | 'day' | 'week';
 
 export interface OeeTrendPoint {
+  evidence?: OeeResponse;
   timestamp: string;
   oee: number;
   availability: number;

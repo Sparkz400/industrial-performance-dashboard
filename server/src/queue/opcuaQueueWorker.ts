@@ -1,3 +1,4 @@
+import { collectorDiagnostics } from "../services/collectorDiagnostics.js";
 import db from "../database/db.js";
 import { opcuaData } from "../database/schema.js";
 import logger from "../utils/logger.js";
@@ -23,17 +24,26 @@ export class OpcuaQueueWorker {
   }
 
   enqueue(data: OpcuaDataItem): void {
-    if (this.stopped) throw new Error("Measurement collector is stopped");
+    if (this.stopped) {
+      collectorDiagnostics.rejected(data.machineId);
+      throw new Error("Measurement collector is stopped");
+    }
     // Fail visibly if local storage is unavailable; never acknowledge a lost sample.
     try {
       this.getSpool().enqueue(data);
+      collectorDiagnostics.accepted(data.machineId);
     } catch (error) {
+      collectorDiagnostics.rejected(data.machineId);
       this.storageFailure = {
         at: new Date().toISOString(),
         message: error instanceof Error ? error.message : "Storage unavailable",
       };
       throw error;
     }
+  }
+
+  getMachineHealth(machineId: number) {
+    return this.getSpool().machineHealth(machineId);
   }
 
   getHealth() {
@@ -51,6 +61,8 @@ export class OpcuaQueueWorker {
       .insert(opcuaData)
       .values(batch.map(toMeasurementRow))
       .onConflictDoNothing();
+    for (const machineId of new Set(batch.map((entry) => entry.data.machineId)))
+      collectorDiagnostics.committed(machineId);
     for (const entry of batch) await alarmEvaluator.evaluate(entry);
     // Retrying after an ambiguous PostgreSQL commit is safe because event IDs are stable.
     this.getSpool().acknowledge(batch);

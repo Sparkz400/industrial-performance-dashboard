@@ -2,10 +2,11 @@ import manager from "../database/dbConnection.js";
 import { ValidationError } from "../utils/errors.js";
 // Shift source evidence is retained regardless of age. Deletion never activates itself.
 export const eligible = `d.machine_id=$1 AND d.timestamp < $2 AND d.id <= $3
+  AND d.correction_revision=0
   AND (d.received_at IS NULL OR d.received_at < now()-interval '24 hours')
   AND NOT EXISTS (SELECT 1 FROM batches b WHERE b.machine_id=d.machine_id AND d.timestamp>=b.started_at AND (b.completed_at IS NULL OR d.timestamp<b.completed_at))
   AND NOT EXISTS
-  (SELECT 1 FROM production_shifts s WHERE s.machine_id=d.machine_id AND d.timestamp >= s.start - interval '5 minutes' AND d.timestamp <= s.end)
+  (SELECT 1 FROM production_shifts s WHERE s.machine_id=d.machine_id AND d.timestamp >= s.start - interval '1 hour' AND d.timestamp <= s.end)
   AND NOT EXISTS (SELECT 1 FROM maintenance_plans p WHERE p.machine_id=d.machine_id AND p.config->>'active'='true'
     AND d.timestamp >= coalesce((SELECT max(e.created_at) FROM maintenance_events e WHERE e.plan_id=p.id AND e.serviced),p.created_at)-interval '5 minutes')`;
 export async function applyRetention(
@@ -60,7 +61,7 @@ export async function applyRetention(
         removed AS (DELETE FROM opcua_data d USING candidates c WHERE d.timestamp=c.timestamp AND d.id=c.id RETURNING d.*),
         summarized AS (INSERT INTO history_summaries(machine_id,node_key,bucket,samples,good,sum,min,max,identity)
           SELECT machine_id,node_key,date_trunc('hour',timestamp,'UTC'),count(*),count(*) FILTER(WHERE status_code LIKE 'Good%' AND value NOT IN ('NaN'::real,'Infinity'::real,'-Infinity'::real)),
-          sum(value) FILTER(WHERE status_code LIKE 'Good%' AND value NOT IN ('NaN'::real,'Infinity'::real,'-Infinity'::real)),min(value) FILTER(WHERE status_code LIKE 'Good%' AND value NOT IN ('NaN'::real,'Infinity'::real,'-Infinity'::real)),max(value) FILTER(WHERE status_code LIKE 'Good%' AND value NOT IN ('NaN'::real,'Infinity'::real,'-Infinity'::real)),
+          sum(value::double precision) FILTER(WHERE status_code LIKE 'Good%' AND value NOT IN ('NaN'::real,'Infinity'::real,'-Infinity'::real)),min(value) FILTER(WHERE status_code LIKE 'Good%' AND value NOT IN ('NaN'::real,'Infinity'::real,'-Infinity'::real)),max(value) FILTER(WHERE status_code LIKE 'Good%' AND value NOT IN ('NaN'::real,'Infinity'::real,'-Infinity'::real)),
           CASE WHEN count(signal_metadata)=0 THEN 'unknown' WHEN count(signal_metadata)<count(*) OR min(md5(signal_metadata::text))<>max(md5(signal_metadata::text)) THEN 'mixed' ELSE min(md5(signal_metadata::text)) END
           FROM removed GROUP BY 1,2,3 ON CONFLICT(machine_id,node_key,bucket) DO UPDATE SET
           samples=history_summaries.samples+excluded.samples,good=history_summaries.good+excluded.good,

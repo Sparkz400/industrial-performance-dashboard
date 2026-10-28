@@ -129,6 +129,13 @@ export const spcService = {
     const rows = await getReadDb()
       .select({
         timestamp: opcuaData.timestamp,
+        rawValue: opcuaData.rawValue,
+        statusCode: opcuaData.statusCode,
+        receivedAt: opcuaData.receivedAt,
+        sourceTimestamp: opcuaData.sourceTimestamp,
+        correctionRevision: opcuaData.correctionRevision,
+        reportedStatusCode: opcuaData.reportedStatusCode,
+        sourceClockState: opcuaData.sourceClockState,
         value: sql<
           number | null
         >`CASE WHEN ${opcuaData.statusCode} LIKE 'Good%' THEN ${opcuaData.value} ELSE NULL END`,
@@ -140,25 +147,28 @@ export const spcService = {
             AND ${opcuaData.timestamp} >= ${startDate}
             AND ${opcuaData.timestamp} <= ${endDate}`,
       )
-      .orderBy(opcuaData.timestamp);
+      .orderBy(opcuaData.timestamp, opcuaData.id)
+      .limit(5001);
 
     const ucl = profile.ucl;
     const lcl = profile.lcl;
     const mean = profile.mean;
 
-    const dataPoints = rows.map(
-      (row: { timestamp: Date | null; value: number | null }) => ({
-        timestamp: row.timestamp,
-        value: row.value,
-        isAnomaly:
-          ucl != null && lcl != null && row.value != null
-            ? row.value > ucl || row.value < lcl
-            : false,
-      }),
-    );
+    const dataPoints = rows.slice(0, 5000).map((row) => ({
+      ...row,
+      timestamp: row.timestamp,
+      value: row.value,
+      isAnomaly:
+        ucl != null && lcl != null && row.value != null
+          ? row.value > ucl || row.value < lcl
+          : false,
+    }));
 
     return {
       profile,
+      truncated: rows.length > 5000,
+      start: startDate.toISOString(),
+      end: endDate.toISOString(),
       dataPoints,
       ucl,
       lcl,

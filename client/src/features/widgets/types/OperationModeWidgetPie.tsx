@@ -1,111 +1,90 @@
-import { createChartTheme } from '@/theme/chartTheme';
-import React, { useState, useMemo, useCallback, memo } from 'react';
-import { Typography, ToggleButton, ToggleButtonGroup, Box, useTheme } from '@mui/material';
-import { ResponsivePie } from '@nivo/pie';
-
-interface PieDataItem {
-  id: string;
-  label: string;
-  value: number;
-  color: string;
-}
-
-type ViewType = 'today' | 'total';
-
-const COLORS: string[] = ['#6e6e70', '#ea2e2e', '#61503d', '#00C49F', '#90aa74', '#41af48'];
-
-const generateDummyPieDataToday = (): PieDataItem[] => [
-  { id: 'Off', label: 'Off', value: 5, color: COLORS[0] },
-  { id: 'Error State', label: 'Error State', value: 5, color: COLORS[1] },
-  { id: 'Setup Mode', label: 'Setup Mode', value: 10, color: COLORS[2] },
-  { id: 'Auto (Not Started)', label: 'Auto (Not Started)', value: 20, color: COLORS[3] },
-  { id: 'Auto (Idle)', label: 'Auto (Started & Idle)', value: 30, color: COLORS[4] },
-  { id: 'Auto (Production)', label: 'Auto (In Production)', value: 30, color: COLORS[5] },
-];
-
-const generateDummyPieDataTotal = (): PieDataItem[] => [
-  { id: 'Off', label: 'Off', value: 10, color: COLORS[0] },
-  { id: 'Error State', label: 'Error State', value: 5, color: COLORS[1] },
-  { id: 'Setup Mode', label: 'Setup Mode', value: 15, color: COLORS[2] },
-  { id: 'Auto (Not Started)', label: 'Auto (Not Started)', value: 20, color: COLORS[3] },
-  { id: 'Auto (Idle)', label: 'Auto (Started & Idle)', value: 25, color: COLORS[4] },
-  { id: 'Auto (Production)', label: 'Auto (In Production)', value: 25, color: COLORS[5] },
-];
-
-const TODAY_DATA: PieDataItem[] = generateDummyPieDataToday();
-const TOTAL_DATA: PieDataItem[] = generateDummyPieDataTotal();
-
-const OperationModePieWidget = memo(() => {
-  const [view, setView] = useState<ViewType>('total');
-  const theme = useTheme();
-
-  const handleViewChange = useCallback(
-    (_event: React.MouseEvent<HTMLElement>, newView: ViewType | null) => {
-      if (newView !== null) setView(newView);
-    },
-    [],
+/* eslint-disable security/detect-object-injection -- State names and indices come only from the fixed state list below. */
+import React, { useState } from 'react';
+import { Alert, Box, MenuItem, TextField, Typography, LinearProgress } from '@mui/material';
+import type { WidgetConfig } from '@/types';
+import { useWidgetEvidence } from '../hooks/useWidgetEvidence';
+import { useT } from '@/i18n';
+/**
+ * Show measured state durations including unknown intervals.
+ * @param root0 Widget options.
+ * @param root0.config Saved machine selection.
+ */
+export default function OperationModePieWidget({ config = {} }: { config?: WidgetConfig }) {
+  const machineId = config.machineId as number | undefined,
+    t = useT();
+  const { data, isLoading, error } = useWidgetEvidence(machineId);
+  const [period, setPeriod] = useState('today');
+  const days = period === 'today' ? data?.days.slice(-1) : data?.days;
+  const states = ['running', 'idle', 'fault', 'planned', 'unknown'];
+  const seconds = states.map((state) =>
+    (days ?? []).reduce((sum, day) => sum + day.seconds[state], 0),
   );
-
-  const data = useMemo((): PieDataItem[] => (view === 'today' ? TODAY_DATA : TOTAL_DATA), [view]);
-
-  const nivoTheme = useMemo(() => createChartTheme(theme), [theme]);
-
+  const total = seconds.reduce((a, b) => a + b, 0);
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 2 }}>
-      <Typography variant="h6" gutterBottom>
-        Operation Mode Distribution
+    <Box sx={{ p: 2, overflow: 'auto', height: '100%' }}>
+      <Typography variant="h6">
+        {t('Observed state distribution', 'Beobachtete Zustandsverteilung')}
       </Typography>
-      <ToggleButtonGroup
-        value={view}
-        exclusive
-        onChange={handleViewChange}
-        size="small"
-        sx={{
-          mb: 1,
-          '& .MuiToggleButton-root': { borderRadius: '8px', px: 2, fontSize: '0.75rem' },
-        }}
-      >
-        <ToggleButton className="no-drag" value="today">
-          Today
-        </ToggleButton>
-        <ToggleButton className="no-drag" value="total">
-          Total
-        </ToggleButton>
-      </ToggleButtonGroup>
-      <Box sx={{ flexGrow: 1, minHeight: 0 }}>
-        <ResponsivePie
-          data={data}
-          theme={nivoTheme}
-          margin={{ top: 20, right: 80, bottom: 40, left: 80 }}
-          innerRadius={0.5}
-          padAngle={2}
-          cornerRadius={6}
-          activeOuterRadiusOffset={8}
-          colors={{ datum: 'data.color' }}
-          borderWidth={0}
-          enableArcLabels={true}
-          arcLabelsSkipAngle={15}
-          arcLabelsTextColor={{ from: 'color', modifiers: [['brighter', 3]] }}
-          enableArcLinkLabels={true}
-          arcLinkLabelsSkipAngle={10}
-          arcLinkLabelsTextColor={theme.palette.text.secondary}
-          arcLinkLabelsThickness={1}
-          arcLinkLabelsColor={{ from: 'color' }}
-          arcLinkLabelsDiagonalLength={12}
-          arcLinkLabelsStraightLength={8}
-          valueFormat={(v: number) => `${v}%`}
-          animate={true}
-          motionConfig="gentle"
-          transitionMode="middleAngle"
-        />
-      </Box>
-      <Typography variant="caption" color="text.secondary">
-        Distribution for {view === 'today' ? 'today' : 'the entire operating period'}.
-      </Typography>
+      {!machineId ? (
+        <Alert severity="info">
+          {t(
+            'Select a machine in widget settings',
+            'Maschine in den Widget-Einstellungen auswählen',
+          )}
+        </Alert>
+      ) : isLoading ? (
+        <Typography>{t('Loading…', 'Wird geladen…')}</Typography>
+      ) : error ? (
+        <Alert severity="error">{String(error)}</Alert>
+      ) : !data ? (
+        <Typography>{t('Unknown', 'Unbekannt')}</Typography>
+      ) : (
+        <>
+          <TextField
+            select
+            fullWidth
+            label={t('Period', 'Zeitraum')}
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+            sx={{ my: 2 }}
+          >
+            <MenuItem value="today">{t('Today (UTC)', 'Heute (UTC)')}</MenuItem>
+            <MenuItem value="week">{t('Last seven UTC days', 'Letzte sieben UTC-Tage')}</MenuItem>
+          </TextField>
+          {states.map((state, i) => (
+            <Box key={state} sx={{ mb: 1.5 }}>
+              <Typography>
+                {t(
+                  state,
+                  (
+                    {
+                      running: 'Laufend',
+                      idle: 'Leerlauf',
+                      fault: 'Störung',
+                      planned: 'Geplant',
+                      unknown: 'Unbekannt',
+                    } as Record<string, string>
+                  )[state],
+                )}
+                : {(seconds[i] / 60).toFixed(1)} min
+              </Typography>
+              <LinearProgress
+                aria-label={state}
+                variant="determinate"
+                value={total ? (seconds[i] / total) * 100 : 0}
+                color={state === 'unknown' ? 'warning' : 'primary'}
+              />
+            </Box>
+          ))}
+          <Typography variant="caption">
+            {data?.profileName} ·{' '}
+            {t(
+              'Current profile; gaps and bad quality remain unknown.',
+              'Aktuelles Profil; Lücken und schlechte Qualität bleiben unbekannt.',
+            )}
+          </Typography>
+        </>
+      )}
     </Box>
   );
-});
-
-OperationModePieWidget.displayName = 'OperationModePieWidget';
-
-export default OperationModePieWidget;
+}

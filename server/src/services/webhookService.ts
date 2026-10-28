@@ -1,11 +1,16 @@
 import crypto from "crypto";
 import { notificationResume } from "./maintenanceActions.js";
+import { cmmsDestinationDigest } from "./cmmsHandoff.js";
 import { eq, and, isNull, lte, asc, sql } from "drizzle-orm";
 import db from "../database/db.js";
-import { webhooks, webhookDeliveries } from "../database/schema.js";
+import {
+  webhooks,
+  webhookDeliveries,
+  cmmsHandoffs,
+} from "../database/schema.js";
 import type { NewWebhook, WebhookRow } from "../database/schema.js";
 import logger from "../utils/logger.js";
-import { NotFoundError } from "../utils/errors.js";
+import { ConflictError, NotFoundError } from "../utils/errors.js";
 import type { WebhookEvent } from "@performance-dashboard/shared";
 import {
   assertSafeOutboundUrl,
@@ -107,13 +112,24 @@ export const webhookService = {
         .select()
         .from(webhooks)
         .where(eq(webhooks.id, delivery.webhookId));
-      const result = destination?.isActive
-        ? await deliverWebhook(
-            destination,
-            delivery.event as WebhookEvent,
-            delivery.id,
-          )
-        : { success: false, statusCode: 0 };
+      let reviewedDestination = true;
+      if (event.type === "cmms.handoff") {
+        const preserved = await tx.execute<{ destination_digest: string }>(
+          sql`SELECT destination_digest FROM cmms_handoffs WHERE delivery_id=${delivery.id}`,
+        );
+        reviewedDestination =
+          !!destination &&
+          preserved.rows[0]?.destination_digest ===
+            cmmsDestinationDigest(destination);
+      }
+      const result =
+        destination?.isActive && reviewedDestination
+          ? await deliverWebhook(
+              destination,
+              delivery.event as WebhookEvent,
+              delivery.id,
+            )
+          : { success: false, statusCode: 0 };
       const attempts = delivery.attempts + 1;
       await tx
         .update(webhookDeliveries)
@@ -202,6 +218,15 @@ export const webhookService = {
   },
 
   async deleteWebhook(id: number): Promise<void> {
+    const [preserved] = await db
+      .select({ id: cmmsHandoffs.id })
+      .from(cmmsHandoffs)
+      .where(eq(cmmsHandoffs.webhookId, id))
+      .limit(1);
+    if (preserved)
+      throw new ConflictError(
+        "This destination has preserved maintenance handoffs. Deactivate it instead of deleting delivery evidence.",
+      );
     const result = await db
       .delete(webhooks)
       .where(eq(webhooks.id, id))

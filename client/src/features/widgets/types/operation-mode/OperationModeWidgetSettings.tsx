@@ -59,7 +59,7 @@ const OperationModeWidgetSettings: React.FC<OperationModeWidgetSettingsProps> = 
       <FormControl fullWidth sx={{ mb: 3 }}>
         <InputLabel>Machine</InputLabel>
         <Select value={machineId} label="Machine" onChange={handleMachineChange}>
-          <MenuItem value="">All / Legacy</MenuItem>
+          <MenuItem value="">Select a machine</MenuItem>
           {machines.map((m) => (
             <MenuItem key={m.id} value={m.id}>
               {m.name} ({m.ip})

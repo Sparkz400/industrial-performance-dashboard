@@ -6,24 +6,33 @@ import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { ButtonLoader } from '@/shared/components/loading/index';
 import { useBackupRestore } from '../hooks/useBackupRestore';
+import ConfigurationBundlePanel from './ConfigurationBundlePanel';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 const BackupRestoreTab: React.FC = () => {
+  const admin = useAuthStore((s) => s.user?.role === 'admin');
   const { loading, fileInputRef, handleExportDashboards, handleFileSelected, handleImportClick } =
     useBackupRestore();
 
   return (
     <Card>
       <CardHeader
-        title="Dashboard Configuration Export & Import"
+        title="Configuration Export & Import"
         avatar={
           <Avatar>
             <SettingsBackupRestoreIcon />
           </Avatar>
         }
-        subheader="Layouts only. Full recovery also requires the database, measurements, certificates, reports and secret key; use the operations backup tool."
+        subheader="Setup bundles and local layouts. Full recovery also requires the database, measurements, certificates, reports and secret key; use the operations backup tool."
       />
       <Divider />
       <CardContent>
+        {admin && (
+          <>
+            <ConfigurationBundlePanel />
+            <Divider sx={{ my: 3 }} />
+          </>
+        )}
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 6 }}>
             <Card variant="outlined">

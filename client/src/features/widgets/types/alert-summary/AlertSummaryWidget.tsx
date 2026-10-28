@@ -10,7 +10,8 @@ interface AlertHistoryItem {
   ruleName: string;
   severity: string;
   nodeKey: string;
-  triggeredAt: string;
+  triggeredAt?: string;
+  createdAt?: string;
   status: string;
 }
 

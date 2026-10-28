@@ -53,19 +53,21 @@ export async function streamHistory(
     // Rank the last value without accumulating an unbounded array for a dense bucket.
     const source =
       params.aggregation === "last"
-        ? `(SELECT timestamp,node_key,value,status_code,
+        ? `(SELECT timestamp,node_key,value,status_code,correction_revision,signal_metadata,
         row_number() OVER (PARTITION BY node_key,floor((extract(epoch FROM timestamp)-extract(epoch FROM $3::timestamptz))/$5)
         ORDER BY timestamp DESC,id DESC) AS export_rank
         FROM opcua_data WHERE machine_id=$1 AND node_key=ANY($2) AND timestamp >= $3 AND timestamp <= $4) AS ranked`
         : "opcua_data";
     const query = aggregate
       ? `SELECT to_timestamp(floor((extract(epoch FROM timestamp)-extract(epoch FROM $3::timestamptz))/$5)*$5+extract(epoch FROM $3::timestamptz)) AS timestamp,
-      node_key,CASE WHEN bool_and(coalesce(status_code LIKE 'Good%' AND value IS NOT NULL,false)) THEN ${expression} ELSE NULL END AS value,
-      count(*) AS sample_count,count(*) FILTER(WHERE status_code LIKE 'Good%' AND value IS NOT NULL) AS good_sample_count,
-      CASE WHEN bool_and(coalesce(status_code LIKE 'Good%' AND value IS NOT NULL,false)) THEN 'Good' ELSE 'MixedOrBad' END AS status_code
+      node_key,CASE WHEN bool_and(coalesce(status_code LIKE 'Good%' AND value IS NOT NULL AND value NOT IN ('NaN'::real,'Infinity'::real,'-Infinity'::real),false)) THEN ${expression} ELSE NULL END AS value,
+      count(*) AS sample_count,count(*) FILTER(WHERE status_code LIKE 'Good%' AND value IS NOT NULL AND value NOT IN ('NaN'::real,'Infinity'::real,'-Infinity'::real)) AS good_sample_count,
+      CASE WHEN bool_and(coalesce(status_code LIKE 'Good%' AND value IS NOT NULL AND value NOT IN ('NaN'::real,'Infinity'::real,'-Infinity'::real),false)) THEN 'Good' ELSE 'MixedOrBad' END AS status_code,
+      count(*) FILTER(WHERE correction_revision>0) AS corrected_sample_count,
+      CASE WHEN count(signal_metadata)=0 THEN 'unknown' WHEN count(signal_metadata)<count(*) OR min(md5(signal_metadata::text))<>max(md5(signal_metadata::text)) THEN 'mixed' ELSE min(md5(signal_metadata::text)) END AS identity
       FROM ${source} ${params.aggregation === "last" ? "" : "WHERE machine_id=$1 AND node_key=ANY($2) AND timestamp >= $3 AND timestamp <= $4"} GROUP BY 1,node_key ORDER BY 1,node_key`
       : `
-      SELECT id, timestamp, node_key, value, raw_value, status_code, data_type, source_timestamp, received_at, signal_metadata
+      SELECT id, timestamp, node_key, value, raw_value, status_code, data_type, source_timestamp, received_at, signal_metadata, correction_revision, reported_status_code, source_clock_state
       FROM opcua_data WHERE machine_id=$1 AND node_key=ANY($2) AND timestamp >= $3 AND timestamp <= $4
       ORDER BY timestamp,id`;
     await connection.query(
@@ -115,8 +117,8 @@ export async function streamHistory(
     };
     await write(
       aggregate
-        ? "timestamp,nodeKey,value,sampleCount,goodSampleCount,statusCode\r\n"
-        : "id,timestamp,nodeKey,value,rawValue,statusCode,dataType,sourceTimestamp,receivedAt,signalMetadata\r\n",
+        ? "timestamp,nodeKey,value,sampleCount,goodSampleCount,statusCode,correctedSampleCount,identity\r\n"
+        : "id,timestamp,nodeKey,value,rawValue,statusCode,dataType,sourceTimestamp,receivedAt,signalMetadata,correctionRevision,reportedStatusCode,sourceClockState\r\n",
     );
     const deadline = Date.now() + 15 * 60000;
     for (;;) {
