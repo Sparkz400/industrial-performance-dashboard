@@ -118,6 +118,10 @@ jobs:
       - run: node scripts/test-changeovers.mjs
       - run: node scripts/test-lot-corrections.mjs
       - run: node scripts/test-data-ownership.mjs
+      - run: node scripts/test-limited-data.mjs
+      - run: node scripts/test-job-inspections.mjs
+      - run: node scripts/test-maintenance-records.mjs
+      - run: node scripts/test-improvement-actions.mjs
       - run: node scripts/test-quality-line.mjs
       - run: node scripts/test-supervisor-workflows.mjs
       - run: node scripts/test-period-comparisons.mjs

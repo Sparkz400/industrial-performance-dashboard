@@ -91,6 +91,15 @@ changes and failed sign-ins are now audited, and a destination's signing secret 
 returned only at creation (E05). Shift reports need no rollup fallback because retention
 protects their readings (H06 decision).
 
+## Backlog wave 8
+
+Machines with little or no automatic data run on reviewed manual state and count
+declarations that fill only unknown time and never verify a report (O10). Inspection plans
+and manual inspections cover a shift's products outside batches, with rework counted once
+and corrections kept (Q03). Service records link the stop and trend they concern and keep
+type-checked attachments (M01). Improvement actions are compared with normalised periods
+before and after them, with mix, hours and meter coverage shown (M06).
+
 ## Data integrity and reviewed operations
 
 The [six-feature integrity wave](DATA_INTEGRITY.md) replaces generated widget data,

@@ -140,6 +140,30 @@ requires every check to pass and starts the next interval. History is attributab
 and append-only; request IDs make retries idempotent and versions reject stale edits.
 Editing plan settings does not reset usage or replace the original signal profile.
 
+A record can also name the current classified stop of the same machine (from its last
+31 days) and a trend window of up to seven days with up to eight signals. In the service
+history these open the stop's shift report and an incident replay prefilled with the
+window. Each record keeps up to ten attachments of at most 5 MB: PNG, JPEG, PDF or UTF-8
+text whose content must match its declared type. Attachments are stored in PostgreSQL
+with size and SHA-256, so backups include them; names lose path separators and control
+characters, and downloads are always files with `nosniff` and a sandbox policy, never
+rendered in the application. Access follows the plan's machine grant
+(`test-maintenance-records.mjs`).
+
+## Improvement actions
+
+Supervisors record an improvement action (what changed, when) and choose saved shift
+report revisions from before and after it. Each side is normalised per scheduled hour:
+good parts, availability weighted by scheduled time, idle-and-fault share and kWh per
+good part. Shift count, scheduled hours, product mix and meter coverage of both sides
+stay visible. A difference is withheld while a revision is unverified or has unknown
+state, the sides use different definitions, a shift sits on the wrong side of the action,
+or the product mix differs by more than five percentage points; energy is withheld
+without complete meter coverage or with different meters. The page states that a
+difference is an association with the action, not proof that it caused it. Actions are
+immutable and revisions are checked against their digests; an action whose revision no
+longer verifies is marked on its own (`test-improvement-actions.mjs`).
+
 ## Energy and losses
 
 Configure a cumulative Wh/kWh meter with identity, scale, maximum sampling gap and

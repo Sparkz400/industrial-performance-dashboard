@@ -41,7 +41,7 @@ F07, F08, F09, F10 and D01. A following P1 gap wave closed R04, O05, H05, D05 an
 backlog wave 1 closed E01, R05, R02 and A08, and recorded research decisions
 ([decisions](docs/RESEARCH_DECISIONS.md)): I08, E06 and X02 closed as rejected; the rest
 stay open with explicit triggers.
-Backlog status: 74 checked and 34 open; I06 is withdrawn.
+Backlog status: 78 checked and 30 open; I06 is withdrawn.
 
 ### Data integrity and reviewed operations — 2026-10-28
 
@@ -495,10 +495,15 @@ below retain their unfulfilled acceptance criteria.
   Reviewed operator declarations now appear in the report beside measured counts (O05).
   Remaining: a supervised physical shift reconciliation (D06).
 
-- [ ] **O10 — Support machines with limited automatic data** · P2 · M2 · New · M. Depends: O02, U06.
+- [x] **O10 — Support machines with limited automatic data** · P2 · M2 · New · M. Depends: O02, U06.
   Done: authorized manual counts/state intervals and approved sensor/gateway signals can
   support a bounded workflow; provenance and coverage distinguish manual from automatic
   evidence. Users cannot manufacture a complete OEE number from missing inputs.
+  Completed (wave 8): profiles may leave out the state and/or counter signals (no signals: never
+  connected); operators declare state intervals that supervisors review; reviewed declarations fill
+  only unknown time, observed state wins over a contradiction and disagreeing declarations stay
+  unknown; reports name the state source, never verify with manual evidence and leave OEE unknown
+  for uncovered time (`test-limited-data.mjs`, [scope](docs/PRODUCTION_WORKFLOW.md#machines-with-limited-automatic-data)).
 
 ## User experience
 
@@ -730,14 +735,17 @@ below retain their unfulfilled acceptance criteria.
   reproduce Montgomery's piston-ring case; attribute charts are refused because live signals carry
   no inspected-unit counts ([scope](docs/QUALITY_LINE_OPERATIONS.md#declared-control-charts),
   `test-control-charts.mjs`). Reopen attribute charts when an inspection-count source exists.
-- [ ] **Q03 — Record inspections, rejects and rework** · P2 · M3 · New · L. Depends: O04, U03.
+- [x] **Q03 — Record inspections, rejects and rework** · P2 · M3 · New · L. Depends: O04, U03.
   Done: inspection plans and defect reasons link to product/job/batch; corrections
   retain history and do not double-count a reworked part as both new output and scrap.
   Manual inspection evidence is visibly distinct from automatic sensor evidence.
   Progress: attributable batch inspections, required defect reasons and owned rework
   closed only by a newer passing inspection ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62),
   [scope](docs/QUALITY_LINE_OPERATIONS.md#batch-quality-and-genealogy)). Recipes/batches
-  remain experimental. Remaining: inspection plans linked to product/job outside batches.
+  remain experimental. Completed (wave 8): append-only inspection plans per product and manual
+  inspections of a shift's job or runs; a passing reinspection moves parts from failed to reworked,
+  corrections supersede with a reason, and the summary lists planned checks without inspection
+  (`test-job-inspections.mjs`, [scope](docs/PRODUCTION_WORKFLOW.md#inspections-of-a-shifts-products)).
 - [x] **Q04 — Harden batch lifecycle and summaries** · P1 · M3 · Improve · M. Depends: O04.
   Done: concurrent starts, transitions, missing data and partial batches have tested
   behavior; summary windows use actual batch boundaries and product context. Start/stop
@@ -778,14 +786,17 @@ below retain their unfulfilled acceptance criteria.
 
 ## Maintenance and energy
 
-- [ ] **M01 — Add asset history and maintenance records** · P2 · M3 · New · M. Depends: C04, U04.
+- [x] **M01 — Add asset history and maintenance records** · P2 · M3 · New · M. Depends: C04, U04.
   Done: interventions, findings and attachments link to the asset and relevant trend/stop;
   an owner can close/reopen the application record with an audit trail. Existing CMMS
   identifiers can be stored without attempting to replace a complete CMMS.
   Progress: attributable append-only service history with incident links
   ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)), alarm-linked
   actions ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)) and CMMS
-  handoff identities (I04). Remaining: attachments and direct trend/stop links on records.
+  handoff identities (I04). Completed (wave 8): service records link a current classified stop and a
+  trend window that open the shift report and a prefilled replay, and keep up to ten type-checked
+  attachments in the database, downloaded only as files (`test-maintenance-records.mjs`,
+  [scope](docs/DAILY_OPERATIONS.md#maintenance)).
 - [x] **M02 — Track usage-based maintenance intervals** · P2 · M3 · New · M. Depends: M01, O05.
   Done: runtime/cycle counters support explicit resets and service baselines; due/overdue
   states show missing-data uncertainty. Replacing a component does not erase the parent
@@ -817,13 +828,15 @@ below retain their unfulfilled acceptance criteria.
   assumptions, not billing-grade measurements or certified emissions statements.
   Completed software: [implementation `019be8e0`](https://github.com/Sparkz400/performance_dashboard/commit/019be8e068e06e3abbb0ab14c472ca58c61d508e);
   [verification and separate qualification boundaries](docs/DATA_INTEGRITY.md#local-checkpoint-validation--2026-10-28).
-- [ ] **M06 — Compare idle losses and improvement actions** · P2 · M3 · New · M. Depends: M04, O02.
+- [x] **M06 — Compare idle losses and improvement actions** · P2 · M3 · New · M. Depends: M04, O02.
   Done: correlate consumption with production/idle states, show candidate avoidable usage
   and compare normalized periods after an action. Retain changes in product mix, operating
   hours and meter coverage so correlation is not presented as proof of causation.
   Progress: idle/changeover energy ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59))
-  and verified energy differences in fair comparisons (R06). Remaining: linking an
-  improvement action to before/after normalized periods.
+  and verified energy differences in fair comparisons (R06). Completed (wave 8): improvement
+  actions are judged against frozen revisions before and after them per scheduled hour, with product
+  mix, hours and meter coverage shown and deltas withheld when unfair (`test-improvement-actions.mjs`,
+  [scope](docs/DAILY_OPERATIONS.md#improvement-actions)).
 
 ## Integrations and extension points
 
