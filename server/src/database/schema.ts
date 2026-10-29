@@ -343,16 +343,32 @@ export const auditLogs = pgTable(
   ],
 );
 
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: varchar("username", { length: 100 }).notNull().unique(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
-  role: userRoleEnum("role").notNull().default("viewer"),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: serial("id").primaryKey(),
+    username: varchar("username", { length: 100 }).notNull().unique(),
+    // Identity-provider and service accounts may have no email and never have a password.
+    email: varchar("email", { length: 255 }).unique(),
+    passwordHash: varchar("password_hash", { length: 255 }),
+    role: userRoleEnum("role").notNull().default("viewer"),
+    isActive: boolean("is_active").default(true),
+    authSource: varchar("auth_source", { length: 10 })
+      .notNull()
+      .default("local"),
+    oidcIssuer: varchar("oidc_issuer", { length: 500 }),
+    oidcSubject: varchar("oidc_subject", { length: 255 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("users_oidc_identity").on(t.oidcIssuer, t.oidcSubject),
+    check(
+      "users_auth_source",
+      sql`${t.authSource} IN ('local','oidc','service') AND (${t.authSource} = 'local') = (${t.passwordHash} IS NOT NULL) AND (${t.authSource} = 'oidc') = (${t.oidcSubject} IS NOT NULL)`,
+    ),
+  ],
+);
 
 // --- Webhooks ---
 
@@ -1933,3 +1949,37 @@ export const energyTariffs = pgTable(
   },
   (t) => [unique().on(t.machineId, t.version)],
 );
+/** E02: an identity-provider group grants a non-admin role and site memberships at sign-in. */
+export const oidcGroupMappings = pgTable(
+  "oidc_group_mappings",
+  {
+    id: serial("id").primaryKey(),
+    groupName: varchar("group_name", { length: 256 }).notNull().unique(),
+    role: userRoleEnum("role").notNull(),
+    plantIds: jsonb("plant_ids").$type<number[]>().notNull().default([]),
+    updatedBy: integer("updated_by")
+      .notNull()
+      .references(() => users.id),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [check("oidc_group_not_admin", sql`${t.role} <> 'admin'`)],
+);
+/** E02: hashed, expiring read tokens of a service account; the token itself is shown once. */
+export const serviceTokens = pgTable("service_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  createdBy: integer("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

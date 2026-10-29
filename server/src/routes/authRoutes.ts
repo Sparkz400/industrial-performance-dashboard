@@ -19,7 +19,8 @@ import {
   fromDatabaseError,
 } from "../utils/errors.js";
 
-import { sessionEvents } from "../services/sessionAccess.js";
+import { beginSession, sessionEvents } from "../services/sessionAccess.js";
+import { oidcEnabled } from "../services/oidc.js";
 
 const router = express.Router();
 
@@ -69,6 +70,7 @@ router.post(
         updatedAt: users.updatedAt,
         role: users.role,
         isActive: users.isActive,
+        authSource: users.authSource,
       })
       .from(users)
       .where(eq(users.username, username));
@@ -102,42 +104,46 @@ router.post(
       );
     }
 
+    // Identity-provider and service accounts have no password.
+    if (!user.passwordHash || user.authSource !== "local") {
+      await failed(`no password for a ${user.authSource} account`, user);
+      throw new UnauthorizedError("Invalid username or password.");
+    }
     const passwordValid = await bcrypt.compare(password, user.passwordHash);
     if (!passwordValid) {
       await failed("wrong password", user);
       throw new UnauthorizedError("Invalid username or password.");
     }
+    // With single sign-on, only the named recovery accounts may use a password.
+    const recovery = oidcEnabled();
+    if (
+      recovery &&
+      !config.LOCAL_RECOVERY_ACCOUNTS.split(",")
+        .map((name) => name.trim())
+        .includes(user.username)
+    ) {
+      await failed("local sign-in disabled by single sign-on", user);
+      throw new ForbiddenError(`Sign in with ${config.OIDC_DISPLAY_NAME}.`);
+    }
 
-    // Regenerate session to prevent session fixation
-    await new Promise<void>((resolve, reject) => {
-      req.session.regenerate((err) => {
-        if (err) reject(new AppError("Login failed. Please try again.", 500));
-        else resolve();
-      });
-    });
-
-    req.session.userId = user.id;
-    req.session.userVersion = user.updatedAt?.toISOString();
-    req.session.userRole = user.role;
-    req.session.username = user.username;
-
-    await new Promise<void>((resolve, reject) => {
-      req.session.save((err) => {
-        if (err) reject(new AppError("Login failed. Please try again.", 500));
-        else resolve();
-      });
-    });
+    await beginSession(req, user);
 
     logger.info(
       `[Auth] User "${user.username}" (role: ${user.role}) logged in.`,
     );
+    if (recovery)
+      logger.warn(
+        `[Auth] Recovery account "${user.username}" signed in with a password while single sign-on is configured.`,
+      );
     await auditLogService.recordEvent(
       {
-        action: "auth.login",
+        action: recovery ? "auth.recovery_login" : "auth.login",
         entityType: "auth",
         entityId: user.id,
         entityName: user.username,
-        message: `User "${user.username}" logged in`,
+        message: recovery
+          ? `Recovery account "${user.username}" signed in with a password`
+          : `User "${user.username}" logged in`,
       },
       getAuditActor(req),
     );
@@ -232,6 +238,10 @@ router.post(
       throw new NotFoundError("User");
     }
 
+    if (!result[0].passwordHash)
+      throw new ValidationError(
+        "This account has no password; it signs in through the identity provider or a token.",
+      );
     const valid = await bcrypt.compare(currentPassword, result[0].passwordHash);
     if (!valid) {
       throw new UnauthorizedError("Current password is incorrect.");

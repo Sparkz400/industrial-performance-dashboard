@@ -253,6 +253,13 @@
       "when": 1793303573892,
       "tag": "0035_plc_alarms",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793305359222,
+      "tag": "0036_federated_identity",
+      "breakpoints": true
     }
   ]
 }

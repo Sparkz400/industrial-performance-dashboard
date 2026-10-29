@@ -64,6 +64,9 @@ import productionRoutes from "./src/routes/productionRoutes.js";
 import operatorRoutes from "./src/routes/operatorRoutes.js";
 import inspectionRoutes from "./src/routes/inspectionRoutes.js";
 import authRoutes from "./src/routes/authRoutes.js";
+import oidcRoutes from "./src/routes/oidcRoutes.js";
+import identityRoutes from "./src/routes/identityRoutes.js";
+import { serviceTokenAuth } from "./src/middleware/serviceToken.js";
 import systemRoutes from "./src/routes/systemRoutes.js";
 import dashboardRoutes from "./src/routes/dashboardRoutes.js";
 import opcuaRoutes from "./src/opc-ua/routes/opcuaRoutes.js";
@@ -154,10 +157,18 @@ export function createApp() {
     }
     next();
   });
+  app.use("/api/v1/auth/oidc", oidcRoutes);
   app.use("/api/v1/auth", authRoutes);
   app.use("/api/v1/share", shareRoutes);
-  app.use("/api/v1", requireAuth, requireMutationAccess, requireAssetAccess);
+  app.use(
+    "/api/v1",
+    serviceTokenAuth,
+    requireAuth,
+    requireMutationAccess,
+    requireAssetAccess,
+  );
   app.use("/api/v1/access", accessRoutes);
+  app.use("/api/v1/identity", requireRole("admin"), identityRoutes);
   app.use("/api/v1/history", historyRoutes);
   app.use("/api/v1/cmms", cmmsRoutes);
   app.use("/api/v1/energy-costs", energyCostRoutes);
