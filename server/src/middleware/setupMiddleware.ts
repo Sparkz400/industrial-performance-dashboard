@@ -30,7 +30,7 @@ export function setupMiddleware(app: express.Application): MiddlewareContext {
   app.use(
     cors({
       origin: config.CLIENT_URL,
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       credentials: true,
     }),
   );

@@ -110,6 +110,16 @@ their version and are blocked from the page, storage, session and API; previousl
 registration existed and the CSP blocked widget frames (I07,
 [protocol](CUSTOM_WIDGETS.md)).
 
+## Backlog wave 10
+
+Machines that publish JSON over MQTT can be read through a TLS broker with exact topic
+mappings; a message is acknowledged only after it is stored durably and a redelivery is
+stored once (C06, plain MQTT; Sparkplug not selected). PLC alarms and conditions can be
+observed read-only per machine, with ConditionRefresh as the only method the collector
+calls (A07). Serial Modbus RTU devices are read through an RTU-to-TCP gateway with the
+existing adapter, and unsupported devices are listed; ranking against a real inventory
+remains (C07, [compatibility](COMPATIBILITY.md)).
+
 ## Data integrity and reviewed operations
 
 The [six-feature integrity wave](DATA_INTEGRITY.md) replaces generated widget data,

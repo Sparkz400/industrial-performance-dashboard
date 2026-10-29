@@ -52,6 +52,10 @@ export async function authorizeAssetRequest(
   let found: RegExpExecArray | null;
   if (read && path === "/access/me") return;
   if (read && path === "/widget-runtime/registrations") return;
+  if (read && (found = match(/^\/plc-alarms\/machines\/(\d+)$/))) {
+    assertMachine(found[1]);
+    return;
+  }
   if (read && (found = match(/^\/widget-evidence\/machines\/(\d+)$/))) {
     assertMachine(found[1]);
     return;

@@ -27,6 +27,10 @@ export interface OpcuaNodeData {
   dataType: string;
   statusCode: string;
   machineId?: number;
+  /** Deterministic identity from a redelivering source such as MQTT. */
+  eventId?: string;
+  /** Already in the durable spool before acknowledgment; the bridge must not queue it again. */
+  alreadySpooled?: boolean;
 }
 
 export interface OpcuaConnectionResult {

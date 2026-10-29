@@ -19,7 +19,7 @@ The plan has six stages:
 6. Evidence-backed intelligence: governed analytical questions and demand-led extensions.
 
 Stages are acceptance gates, not promised release dates. The core remains read-only
-toward machines; physical-machine qualification is separate from automated checks.
+toward machines (ConditionRefresh for PLC alarms is the one approved method call); physical-machine qualification is separate from automated checks.
 
 - [Full roadmap and milestone criteria](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/ROADMAP.md)
 - [TODO priorities, dependencies and completion checks](https://github.com/Sparkz400/performance_dashboard/blob/main/TODO.md)

@@ -97,6 +97,29 @@ availability and OEE stay unknown rather than being computed from missing inputs
 state, uptime widgets and retention rollups treat a missing state signal as unknown
 (`test-limited-data.mjs`).
 
+## MQTT sources
+
+Machines that publish JSON over MQTT are read through **Commission machine → MQTT
+sources** (administrators). A source names an `mqtts://` broker, its CA certificate
+(pinned; plain `mqtt://` is refused), an optional subscribe-only username and password
+(sealed like machine credentials and never returned) and up to 50 mappings. Each
+mapping ties one **exact topic** to one signal key with JSON pointers to the value and
+to the source timestamp. Wildcards, `$` system topics and keys that already have
+another source are refused. The broker's ACL should allow this client to subscribe to
+those topics only and to publish nothing.
+
+The collector holding the collector lock subscribes with QoS 1 and a persistent session
+(MQTT 3.1.1) and never publishes. A message is acknowledged to the broker only after its
+readings are in the durable spool; if storage fails, the broker redelivers it. Each
+reading's identity is derived from source, signal, source time and value, so a
+redelivered or repeated message is stored once, in the spool and in PostgreSQL. Late
+readings keep their source time. A message without a readable source timestamp, a
+non-JSON payload, a payload over 16 KiB or an unmapped topic is refused and counted
+(no time, no sample); a missing value or one of the wrong type is stored as a bad sample. Time without
+messages stays unknown. The status line shows connection state, readings received,
+refused messages and the last refusal. Sparkplug B is not decoded
+(`test-mqtt-ingestion.mjs`).
+
 ## Inspections of a shift's products
 
 Supervisors keep an inspection plan per product and machine (append-only; the latest

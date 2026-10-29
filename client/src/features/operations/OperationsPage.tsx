@@ -20,6 +20,7 @@ const AssetOverviewPanel = React.lazy(() => import('./AssetOverviewPanel'));
 const DerivedSignalsPanel = React.lazy(() => import('./DerivedSignalsPanel'));
 const ChangeoverPanel = React.lazy(() => import('./ChangeoverPanel'));
 const ImprovementActionsPanel = React.lazy(() => import('./ImprovementActionsPanel'));
+const PlcAlarmsPanel = React.lazy(() => import('./PlcAlarmsPanel'));
 /**
  *
  */
@@ -88,6 +89,11 @@ export default function OperationsPage() {
       name: 'Calculated signals',
       de: 'Berechnete Signale',
       content: <DerivedSignalsPanel key={machine} machineId={Number(machine)} />,
+    },
+    {
+      name: 'PLC alarms',
+      de: 'SPS-Alarme',
+      content: <PlcAlarmsPanel machineId={Number(machine)} />,
     },
   ];
   // Role changes can shorten the tab list since the tab was remembered.

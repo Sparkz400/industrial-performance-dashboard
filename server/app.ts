@@ -77,6 +77,8 @@ import webhookRoutes from "./src/routes/webhookRoutes.js";
 import shareRoutes, { embedFramePolicy } from "./src/routes/shareRoutes.js";
 import customWidgetRoutes from "./src/routes/customWidgetRoutes.js";
 import widgetRuntimeRoutes from "./src/routes/widgetRuntimeRoutes.js";
+import mqttRoutes from "./src/routes/mqttRoutes.js";
+import plcAlarmRoutes from "./src/routes/plcAlarmRoutes.js";
 import alarmRoutes from "./src/routes/alarmRoutes.js";
 import annotationRoutes from "./src/routes/annotationRoutes.js";
 import nodeDataRoutes from "./src/routes/nodeDataRoutes.js";
@@ -197,6 +199,8 @@ export function createApp() {
     customWidgetRoutes,
   );
   app.use("/api/v1/widget-runtime", requireAuth, widgetRuntimeRoutes);
+  app.use("/api/v1/mqtt", requireAuth, requireRole("admin"), mqttRoutes);
+  app.use("/api/v1/plc-alarms", requireAuth, plcAlarmRoutes);
   app.use("/api/v1/alarms", requireAuth, alarmRoutes);
   app.use("/api/v1/annotations", requireAuth, annotationRoutes);
   app.use("/api/v1/node-data", requireAuth, nodeDataRoutes);
