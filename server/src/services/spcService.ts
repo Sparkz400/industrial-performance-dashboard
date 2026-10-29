@@ -17,6 +17,11 @@ import {
 } from "./spcEvaluator.js";
 import logger from "../utils/logger.js";
 import { NotFoundError, ValidationError } from "../utils/errors.js";
+import {
+  chartPoints,
+  referenceLimits,
+  type ChartType,
+} from "./controlCharts.js";
 
 /** EventEmitter for SPC alert events — consumed by opcuaBridge to broadcast via Socket.IO */
 export const spcEvents = new EventEmitter();
@@ -92,6 +97,9 @@ export const spcService = {
   },
 
   async updateProfile(id: number, data: Partial<SpcProfileInput>) {
+    // A subgroup size belongs only to an X̄-R declaration.
+    if (data.chartType !== undefined && data.chartType !== "xbar-r")
+      data = { ...data, subgroupSize: null };
     const updated = await spcRepository.updateProfile(id, data);
     if (!updated) {
       throw new NotFoundError("SPC Profile");
@@ -234,6 +242,77 @@ export const spcService = {
       ucl,
       lcl,
       mean,
+    };
+  },
+
+  /** The declared control chart for a window, with limits from the approved reference period. */
+  async getControlChart(profileId: number, startDate: Date, endDate: Date) {
+    const profile = await spcRepository.findProfileById(profileId);
+    if (!profile) throw new NotFoundError("SPC Profile");
+    const type = profile.chartType as ChartType | null;
+    if (!type)
+      throw new ValidationError(
+        "Declare the data assumption (individual measurements or rational subgroups) before using a control chart",
+      );
+    const baseline = (
+      await db.execute<{
+        id: number;
+        evidence: {
+          samples: { value: number | string | null }[];
+          profile: { machineId: number | null; nodeKey: string };
+        };
+      }>(
+        sql`SELECT id, evidence FROM spc_baselines WHERE profile_id=${profileId} AND approved_at IS NOT NULL AND NOT superseded ORDER BY approved_at DESC LIMIT 1`,
+      )
+    ).rows[0];
+    if (
+      !baseline ||
+      baseline.evidence.profile.machineId !== profile.machineId ||
+      baseline.evidence.profile.nodeKey !== profile.nodeKey
+    )
+      throw new ValidationError(
+        "Approve a reference period for this signal before using a control chart",
+      );
+    const n = type === "xbar-r" ? profile.subgroupSize! : 1;
+    let limits;
+    try {
+      limits = referenceLimits(
+        type,
+        baseline.evidence.samples.map((s) => Number(s.value)),
+        n,
+      );
+    } catch (error) {
+      throw new ValidationError((error as Error).message);
+    }
+    const window = await this.getChartData(profileId, startDate, endDate);
+    return {
+      chartType: type,
+      subgroupSize: type === "xbar-r" ? n : null,
+      baseline: { id: baseline.id, referencePoints: limits.points },
+      primary: {
+        label: type === "xbar-r" ? "Subgroup mean" : "Individual",
+        ...limits.primary,
+      },
+      secondary: {
+        label: type === "xbar-r" ? "Range" : "Moving range",
+        ...limits.secondary,
+      },
+      points: chartPoints(
+        type,
+        window.dataPoints.map((p) => ({
+          at: new Date(p.timestamp).toISOString(),
+          value: p.value,
+        })),
+        limits,
+        n,
+      ),
+      truncated: window.truncated,
+      assumptions:
+        type === "xbar-r"
+          ? `Consecutive good readings form rational subgroups of ${n}; σ is estimated from within-subgroup ranges (R̄/d2). A bad reading ends a subgroup.`
+          : "Individual readings are assumed independent and approximately normal; σ is estimated from the average moving range (MR̄/1.128). A bad reading leaves the next moving range unknown.",
+      specificationLimits:
+        "Control limits describe the approved reference process, not specification limits; capability uses separate specification limits.",
     };
   },
 

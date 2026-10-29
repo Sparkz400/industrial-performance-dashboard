@@ -15,7 +15,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ResponsiveLine, type LineSeries, type LineCustomSvgLayerProps } from '@nivo/line';
-import { useSpcProfile, useSpcChartData } from '../hooks/useSpcQueries';
+import { useSpcProfile, useSpcChartData, useSpcControlChart } from '../hooks/useSpcQueries';
 import SpcAlertsList from '../components/SpcAlertsList';
 import WidgetReadingEvidence from '@/features/widgets/types/WidgetReadingEvidence';
 import { widgetReadings } from '@/features/widgets/hooks/widgetReadings';
@@ -43,6 +43,11 @@ const SpcChartPage: React.FC = () => {
     isLoading: chartLoading,
     error: chartError,
   } = useSpcChartData(
+    profileId,
+    Number.isFinite(Date.parse(startDate)) ? new Date(startDate).toISOString() : undefined,
+    Number.isFinite(Date.parse(endDate)) ? new Date(endDate).toISOString() : undefined,
+  );
+  const controlChart = useSpcControlChart(
     profileId,
     Number.isFinite(Date.parse(startDate)) ? new Date(startDate).toISOString() : undefined,
     Number.isFinite(Date.parse(endDate)) ? new Date(endDate).toISOString() : undefined,
@@ -278,6 +283,57 @@ const SpcChartPage: React.FC = () => {
           </Box>
         )}
         <WidgetReadingEvidence rows={readings} />
+      </Paper>
+
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Typography variant="h6" sx={{ mb: 1 }}>
+          Declared control chart
+        </Typography>
+        {controlChart.error ? (
+          <Typography color="text.secondary">{(controlChart.error as Error).message}</Typography>
+        ) : controlChart.data ? (
+          <Stack spacing={1}>
+            <Typography>
+              {controlChart.data.chartType === 'xbar-r'
+                ? `X̄-R chart, subgroups of ${controlChart.data.subgroupSize}`
+                : 'I-MR chart'}{' '}
+              · limits from approved reference {controlChart.data.baseline.id} (
+              {controlChart.data.baseline.referencePoints} points)
+            </Typography>
+            <Box
+              component="table"
+              aria-label="Control limits"
+              sx={{ borderCollapse: 'collapse', '& td, & th': { pr: 2, textAlign: 'left' } }}
+            >
+              <thead>
+                <tr>
+                  <th>Chart</th>
+                  <th>LCL</th>
+                  <th>Center</th>
+                  <th>UCL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[controlChart.data.primary, controlChart.data.secondary].map((l) => (
+                  <tr key={l.label}>
+                    <td>{l.label}</td>
+                    <td>{l.lcl.toFixed(4)}</td>
+                    <td>{l.center.toFixed(4)}</td>
+                    <td>{l.ucl.toFixed(4)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </Box>
+            <Typography role="status">
+              {controlChart.data.points.length} points;{' '}
+              {controlChart.data.points.filter((p) => p.outOfControl).length} out of control
+              {controlChart.data.truncated ? ' (window truncated)' : ''}.
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {controlChart.data.assumptions} {controlChart.data.specificationLimits}
+            </Typography>
+          </Stack>
+        ) : null}
       </Paper>
 
       <Paper sx={{ p: 2 }}>

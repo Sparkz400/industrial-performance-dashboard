@@ -111,6 +111,8 @@ jobs:
       - run: node scripts/test-line-analysis.mjs
       - run: node scripts/test-examples.mjs
       - run: node scripts/test-offline-destinations.mjs
+      - run: node scripts/test-control-charts.mjs
+      - run: node scripts/test-alarm-email.mjs
       - run: node scripts/test-history.mjs
       - run: node scripts/test-quality-line.mjs
       - run: node scripts/test-supervisor-workflows.mjs

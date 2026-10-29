@@ -72,6 +72,20 @@ The reference tests reproduce the [NIST example](https://www.itl.nist.gov/div898
 with LSL=8, USL=20, mean=16 and s=2: Cp=1 and Cpk=2/3. Synthetic test approvals
 exercise the workflow and are not evidence of a real stable process.
 
+## Declared control charts
+
+A profile may declare its data assumption: **individual measurements** (I-MR chart) or
+**rational subgroups** of 2–10 consecutive readings (X̄-R chart). Without a declaration,
+or without an approved reference period for the same signal, no control chart is shown.
+Limits come from the approved reference readings with the standard constants (I-MR:
+X̄ ± 2.66·MR̄, MR ≤ 3.267·MR̄; X̄-R: X̿ ± A2·R̄, R between D3·R̄ and D4·R̄), never from
+the window being judged, and need at least 21 readings or 20 subgroups. A bad reading
+ends a subgroup or leaves the next moving range unknown. The chart page lists both
+charts' limits, the points out of control and the assumption made; control limits are
+not specification limits. Attribute charts (p, np, c, u) are not offered: live signals
+carry no counts of inspected units. The X̄-R constants reproduce Montgomery's
+piston-ring limits (`controlCharts.test.ts`, `test-control-charts.mjs`).
+
 ## Live SPC evaluation
 
 Live evaluation judges each machine's samples per profile in arrival order:

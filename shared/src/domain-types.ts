@@ -264,7 +264,11 @@ export interface AuditLogEntry {
 export interface Webhook {
   id: number;
   name: string;
-  url: string;
+  kind?: "webhook" | "email";
+  url: string | null;
+  recipients?: string[];
+  minSeverity?: string | null;
+  machineIds?: number[];
   secret: string;
   events: string[];
   isActive: boolean;
@@ -405,6 +409,9 @@ export interface SpcProfile {
   mean: number | null;
   stddev: number | null;
   sensitivity: number;
+  /** Declared data assumption for the control chart. */
+  chartType?: "individuals" | "xbar-r" | null;
+  subgroupSize?: number | null;
   isActive: boolean;
   lastComputedAt: string | null;
   createdBy: number | null;

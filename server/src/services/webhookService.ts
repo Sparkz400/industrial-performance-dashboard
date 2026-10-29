@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { notificationResume } from "./maintenanceActions.js";
 import { cmmsDestinationDigest } from "./cmmsHandoff.js";
+import { reportEmailService } from "./reportEmailService.js";
 import { eq, and, isNull, isNotNull, lte, asc, sql } from "drizzle-orm";
 import db from "../database/db.js";
 import {
@@ -10,7 +11,11 @@ import {
 } from "../database/schema.js";
 import type { NewWebhook, WebhookRow } from "../database/schema.js";
 import logger from "../utils/logger.js";
-import { ConflictError, NotFoundError } from "../utils/errors.js";
+import {
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+} from "../utils/errors.js";
 import type { WebhookEvent } from "@performance-dashboard/shared";
 import {
   assertSafeOutboundUrl,
@@ -126,9 +131,21 @@ export const webhookService = {
           preserved.rows[0]?.destination_digest ===
             cmmsDestinationDigest(destination);
       }
-      const result =
-        destination?.isActive && reviewedDestination
-          ? await deliverWebhook(
+      const result = !(destination?.isActive && reviewedDestination)
+        ? {
+            success: false,
+            statusCode: 0,
+            message: destination?.isActive
+              ? "Destination changed after the handoff was reviewed"
+              : "Destination is inactive or deleted",
+          }
+        : destination.kind === "email"
+          ? await deliverEmail(
+              destination,
+              delivery.event as WebhookEvent,
+              delivery.id,
+            )
+          : await deliverWebhook(
               destination,
               {
                 id: delivery.id,
@@ -136,14 +153,7 @@ export const webhookService = {
                 ...(delivery.event as WebhookEvent),
               },
               delivery.id,
-            )
-          : {
-              success: false,
-              statusCode: 0,
-              message: destination?.isActive
-                ? "Destination changed after the handoff was reviewed"
-                : "Destination is inactive or deleted",
-            };
+            );
       const attempts = delivery.attempts + 1;
       await tx
         .update(webhookDeliveries)
@@ -225,18 +235,29 @@ export const webhookService = {
 
   async createWebhook(input: {
     name: string;
-    url: string;
+    kind?: "webhook" | "email";
+    url?: string;
+    recipients?: string[];
+    minSeverity?: string | null;
+    machineIds?: number[];
     events: string[];
     createdBy?: number;
   }): Promise<WebhookRow> {
-    const safeUrl = await assertSafeOutboundUrl(input.url, "Webhook URL");
+    const email = input.kind === "email";
+    const url = email
+      ? null
+      : (await assertSafeOutboundUrl(input.url!, "Webhook URL")).toString();
 
     const secret = generateSecret();
     const [created] = await db
       .insert(webhooks)
       .values({
         name: input.name,
-        url: safeUrl.toString(),
+        kind: email ? "email" : "webhook",
+        url,
+        recipients: email ? (input.recipients ?? []) : [],
+        minSeverity: input.minSeverity ?? null,
+        machineIds: input.machineIds ?? [],
         events: input.events,
         secret,
         isActive: true,
@@ -251,16 +272,37 @@ export const webhookService = {
     input: {
       name?: string;
       url?: string;
+      recipients?: string[];
+      minSeverity?: string | null;
+      machineIds?: number[];
       events?: string[];
       isActive?: boolean;
     },
   ): Promise<WebhookRow> {
+    const [existing] = await db
+      .select({ kind: webhooks.kind })
+      .from(webhooks)
+      .where(eq(webhooks.id, id));
+    if (!existing) throw new NotFoundError("Webhook");
+    if (
+      existing.kind === "email"
+        ? input.url !== undefined ||
+          input.events?.some((e) => !e.startsWith("alarm."))
+        : input.recipients !== undefined
+    )
+      throw new ValidationError(
+        "Email destinations take recipients and alarm events; webhooks take a URL",
+      );
     const updates: Partial<NewWebhook> = { updatedAt: new Date() };
     if (input.name !== undefined) updates.name = input.name;
     if (input.url !== undefined) {
       const safeUrl = await assertSafeOutboundUrl(input.url, "Webhook URL");
       updates.url = safeUrl.toString();
     }
+    if (input.recipients !== undefined) updates.recipients = input.recipients;
+    if (input.minSeverity !== undefined)
+      updates.minSeverity = input.minSeverity;
+    if (input.machineIds !== undefined) updates.machineIds = input.machineIds;
     if (input.events !== undefined) updates.events = input.events;
     if (input.isActive !== undefined) updates.isActive = input.isActive;
 
@@ -305,7 +347,9 @@ export const webhookService = {
       timestamp: new Date().toISOString(),
     };
 
-    return deliverWebhook(webhook, testEvent);
+    return webhook.kind === "email"
+      ? deliverEmail(webhook, testEvent)
+      : deliverWebhook(webhook, testEvent);
   },
 
   async triggerEvent(
@@ -336,6 +380,66 @@ export const webhookService = {
   },
 };
 
+/** Alarm mail through SMTP_*. The delivery ID is the Message-ID, so retries are one message. */
+async function deliverEmail(
+  destination: WebhookRow,
+  event: WebhookEvent,
+  deliveryId?: number,
+): Promise<{ success: boolean; statusCode: number; message: string }> {
+  const payload = event.payload as Record<string, unknown>;
+  const subject =
+    event.type === "test"
+      ? "[Performance Dashboard] Test notification"
+      : `[Performance Dashboard] ${event.type === "alarm.cleared" ? "Cleared" : "Alarm"}: ${String(payload.source ?? payload.nodeKey ?? "alarm")} (${String(payload.severity ?? "unknown")})`;
+  const text = [
+    `Event: ${event.type}`,
+    ...[
+      "machineId",
+      "nodeKey",
+      "message",
+      "value",
+      "threshold",
+      "conditionState",
+      "triggeredAt",
+      "clearedAt",
+    ]
+      .filter((key) => payload[key] != null)
+      .map((key) => `${key}: ${String(payload[key])}`),
+    `Recorded: ${event.timestamp}`,
+    "This message reports recorded data; check the machine before acting.",
+  ].join("\n");
+  try {
+    const rejected = await reportEmailService.sendText(
+      destination.recipients,
+      subject,
+      text,
+      `<delivery-${deliveryId ?? `test-${Date.now()}`}@performance-dashboard>`,
+    );
+    return rejected.length
+      ? {
+          success: false,
+          statusCode: 0,
+          message: `Rejected recipients: ${rejected.join(", ")}`,
+        }
+      : {
+          success: true,
+          statusCode: 250,
+          message: "Accepted by the mail server",
+        };
+  } catch (error) {
+    const code = String((error as { code?: unknown }).code);
+    return {
+      success: false,
+      statusCode: 0,
+      message: ["EDNS", "ECONNECTION", "ETIMEDOUT", "ESOCKET"].includes(code)
+        ? "Mail server unreachable; check the network and SMTP_HOST, then retry"
+        : error instanceof Error && error.message === "SMTP is not configured"
+          ? "SMTP is not configured"
+          : "SMTP delivery failed; check the mail server and retry",
+    };
+  }
+}
+
 async function deliverWebhook(
   webhook: WebhookRow,
   event: WebhookEvent,
@@ -345,7 +449,10 @@ async function deliverWebhook(
   const signature = signPayload(body, webhook.secret);
 
   try {
-    const safeUrl = await assertSafeOutboundUrl(webhook.url, "Webhook URL");
+    const safeUrl = await assertSafeOutboundUrl(
+      webhook.url ?? "",
+      "Webhook URL",
+    );
     const response = await fetchSafeOutbound(safeUrl.toString(), {
       method: "POST",
       headers: {

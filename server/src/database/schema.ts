@@ -322,7 +322,13 @@ export const users = pgTable("users", {
 export const webhooks = pgTable("webhooks", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
-  url: varchar("url", { length: 2048 }).notNull(),
+  // "webhook" posts signed JSON to url; "email" sends alarm mail to recipients via SMTP_*.
+  kind: varchar("kind", { length: 10 }).notNull().default("webhook"),
+  url: varchar("url", { length: 2048 }),
+  recipients: jsonb("recipients").$type<string[]>().default([]).notNull(),
+  // Alarm routing: lowest severity delivered, and machines (empty means all).
+  minSeverity: varchar("min_severity", { length: 20 }),
+  machineIds: jsonb("machine_ids").$type<number[]>().default([]).notNull(),
   secret: varchar("secret", { length: 255 }).notNull(),
   events: jsonb("events").default([]).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
@@ -470,6 +476,9 @@ export const spcProfiles = pgTable(
     mean: real("mean"),
     stddev: real("stddev"),
     sensitivity: real("sensitivity").default(3.0),
+    // Declared data assumption: "individuals" (I-MR) or "xbar-r" with subgroupSize 2–10.
+    chartType: varchar("chart_type", { length: 20 }),
+    subgroupSize: integer("subgroup_size"),
     isActive: boolean("is_active").default(true),
     lastComputedAt: timestamp("last_computed_at", { withTimezone: true }),
     createdBy: integer("created_by").references(() => users.id, {

@@ -142,6 +142,7 @@ export const API_ENDPOINTS = {
     profileById: (id: number) => `${API_BASE_URL}/spc/profiles/${id}`,
     computeBaseline: (id: number) => `${API_BASE_URL}/spc/profiles/${id}/compute`,
     chartData: (id: number) => `${API_BASE_URL}/spc/profiles/${id}/chart-data`,
+    controlChart: (id: number) => `${API_BASE_URL}/spc/profiles/${id}/control-chart`,
     alerts: `${API_BASE_URL}/spc/alerts`,
     acknowledgeAlert: (id: number) => `${API_BASE_URL}/spc/alerts/${id}/acknowledge`,
   },
