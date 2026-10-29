@@ -292,7 +292,7 @@ below retain their unfulfilled acceptance criteria.
   fixtures pass. If Sparkplug is selected, qualify birth/death, rebirth, session and metric
   identity; broker delivery guarantees are not advertised as end-to-end exactly-once history.
   Decision 2026-10-29: DEFER until P01 names an MQTT-only source; Sparkplug rebirth commands would need an explicit exception to read-only operation. [decision](docs/RESEARCH_DECISIONS.md#c06--add-mqtt-ingestion-and-evaluate-sparkplug).
-  Completed (wave 10, deferral lifted by the owner; plain MQTT, Sparkplug not selected): `mqtts` sources with a pinned CA,
+  Completed ([PR #77](https://github.com/Sparkz400/performance_dashboard/pull/77); deferral lifted by the owner; plain MQTT, Sparkplug not selected): `mqtts` sources with a pinned CA,
   sealed subscribe-only credentials and exact-topic JSON-pointer mappings; QoS 1 with acknowledgment only after the
   durable spool; deterministic reading identity so redeliveries are stored once; refused messages counted
   (`test-mqtt-ingestion.mjs` on an owned TLS broker with ACLs, [scope](docs/PRODUCTION_WORKFLOW.md#mqtt-sources)).
@@ -304,7 +304,7 @@ below retain their unfulfilled acceptance criteria.
   Progress: Modbus TCP (read-only 03/04) is the provisional adapter with owned fixtures.
   Blocker: ranking needs the real pilot device inventory (P01).
   Decision 2026-10-29: DEFER. Modbus TCP 03/04 stays the only provisional adapter; rank options by the documented rule once the P01 inventory exists. [decision](docs/RESEARCH_DECISIONS.md#c07--select-one-brownfield-protocol-extension).
-  Progress (wave 10): serial RTU devices through an RTU-to-TCP gateway use the existing adapter by unit identifier
+  Progress ([PR #77](https://github.com/Sparkz400/performance_dashboard/pull/77)): serial RTU devices through an RTU-to-TCP gateway use the existing adapter by unit identifier
   (`modbusRead.test.ts` two-unit gateway fixture, [recipe](docs/LEGACY_GATEWAY.md#serial-rtu-devices-through-a-tcp-gateway));
   unsupported devices are listed in [compatibility](docs/COMPATIBILITY.md). Still open: ranking against the P01 inventory.
 - [x] **C08 — Suggest mappings from OPC UA information models** · P2 · M3 · New · L. Depends: C04.
@@ -659,7 +659,7 @@ below retain their unfulfilled acceptance criteria.
   mapping with an owned server; preserve source event identity. Read-only observation is
   the default; PLC-side acknowledgment remains outside this task.
   Decision 2026-10-29: DEFER. S7-1500 A&C needs FW V2.9+ and a runtime licence; build once P01 confirms configured, wanted PLC alarms and approves ConditionRefresh as the only method call. [decision](docs/RESEARCH_DECISIONS.md#a07--evaluate-opc-ua-alarms-and-conditions-ingestion).
-  Completed (wave 10, deferral lifted and ConditionRefresh approved by the owner): per-machine read-only observation
+  Completed ([PR #77](https://github.com/Sparkz400/performance_dashboard/pull/77); deferral lifted and ConditionRefresh approved by the owner): per-machine read-only observation
   stores events with EventId, condition, source, severity, message and states, refreshes on connect, reconnect and
   RefreshRequired, marks replayed state, keeps information-only events and never acknowledges
   (`test-plc-alarms.mjs` on an owned server, [scope](docs/DAILY_OPERATIONS.md#plc-alarms)). The pilot's alarm
