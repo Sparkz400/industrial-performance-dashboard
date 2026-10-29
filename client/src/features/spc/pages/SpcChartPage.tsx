@@ -291,7 +291,7 @@ const SpcChartPage: React.FC = () => {
         </Typography>
         {controlChart.error ? (
           <Typography color="text.secondary">{(controlChart.error as Error).message}</Typography>
-        ) : controlChart.data ? (
+        ) : controlChart.data?.primary ? (
           <Stack spacing={1}>
             <Typography>
               {controlChart.data.chartType === 'xbar-r'
