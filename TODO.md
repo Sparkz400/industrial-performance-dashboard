@@ -379,7 +379,7 @@ below retain their unfulfilled acceptance criteria.
   increments (gap, reset and rollover rules of the profile) for commissioned production signals;
   `test-history-rollups.mjs` removes 6,006 readings in two batches and finds the kept values equal to
   the shift calculation on those readings ([scope](docs/DAILY_OPERATIONS.md)).
-  Decision (wave 7): no report fallback to rollups is needed. Shift reports keep their raw
+  Decision ([PR #74](https://github.com/Sparkz400/performance_dashboard/pull/74)): no report fallback to rollups is needed. Shift reports keep their raw
   readings because retention protects every recorded shift, and the configurable OEE widget
   uses its own mapping, so it shows removed windows as unknown instead of borrowing profile
   rollups ([scope](docs/DAILY_OPERATIONS.md#history-storage-and-retention)).
@@ -463,7 +463,7 @@ below retain their unfulfilled acceptance criteria.
   changeovers rather than ranking unrelated jobs or operators.
   Progress: changeover is an explicit stop category with energy/loss accounting
   ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)).
-  Completed (wave 7): a changeover runs from the last running state of one product run to the
+  Completed ([PR #74](https://github.com/Sparkz400/performance_dashboard/pull/74)): a changeover runs from the last running state of one product run to the
   first of the next product, minus breaks, beside operator-classified changeover time; unknown
   state, runs without running state and cross-shift transitions are listed unmeasured (runs inside
   a shift cannot overlap); only the same transition on the same machine is grouped against an
@@ -754,7 +754,7 @@ below retain their unfulfilled acceptance criteria.
   without promising a complete supply-chain or regulated recall system.
   Progress: declared lots, unit/quantity checks, cycle rejection and a bidirectional
   bounded trace report ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)).
-  Completed (wave 7): appended lot corrections and voids with reason and actor; balances,
+  Completed ([PR #74](https://github.com/Sparkz400/performance_dashboard/pull/74)): appended lot corrections and voids with reason and actor; balances,
   cycle checks and the trace use the latest correction, void links stop connecting batches,
   and the trace exports every correction of its links (`test-lot-corrections.mjs`,
   [scope](docs/QUALITY_LINE_OPERATIONS.md#batch-quality-and-genealogy)). Recipes and batches
@@ -971,7 +971,7 @@ below retain their unfulfilled acceptance criteria.
   Done: deployment operators can identify stored/exported data and optional external
   flows; export, deletion, retention and access review have explicit scope and audit
   records. Do not claim jurisdictional compliance from settings alone.
-  Completed (wave 7): [data ownership](docs/DATA_OWNERSHIP.md) lists stored data, secrets,
+  Completed ([PR #74](https://github.com/Sparkz400/performance_dashboard/pull/74)): [data ownership](docs/DATA_OWNERSHIP.md) lists stored data, secrets,
   exports, outbound flows, deletion and retention rules and audit scope. Exports, retention
   steps (including scheduled runs and report-file pruning), configuration deletions and
   destination changes are now audited; failed sign-ins and grant/account changes keep
