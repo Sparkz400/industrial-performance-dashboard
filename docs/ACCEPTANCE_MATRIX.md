@@ -1,7 +1,7 @@
 # Feature acceptance matrix
 
 Closes TODO **F01** (screen-by-screen product contract) and **F10** (feature-level
-evidence). Recorded 2026-10-29 on `codex/p0-closure`. It lists what each enabled screen
+evidence). Recorded 2026-10-29 in [PR #66](https://github.com/Sparkz400/performance_dashboard/pull/66). It lists what each enabled screen
 is supported to do and the kind of evidence behind it. A passing CI run never promotes
 an experimental module or a new machine family to supported; that needs this table to
 change with new evidence.

@@ -152,7 +152,7 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Done: preserve fixtures for trend truncation, same-key machines, unwired alerts/webhooks,
   edge receive; map enabled screens to supported, experimental or
   disabled states and link each reproduced issue to its owning task.
-  Completed on `codex/p0-closure`: every route and tab is classified with its owning
+  Completed: [PR #66](https://github.com/Sparkz400/performance_dashboard/pull/66); every route and tab is classified with its owning
   task in the [acceptance matrix](docs/ACCEPTANCE_MATRIX.md); trend, same-key, alarm
   and edge fixtures are listed in [P0 acceptance](docs/P0_ACCEPTANCE.md).
 - [x] **F02 — Isolate SPC state and baselines** · P0 · M0 · Improve · M. Depends: F01, H01.
@@ -186,7 +186,7 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Done: negative tests cover admin/viewer, REST, tRPC, sockets, reports, shares and exports;
   machine identifiers cannot bypass authorization. Document one-company deployment
   limits and close any unintended access found before accepting the affected feature.
-  Completed on `codex/p0-closure`: a generated matrix covers all 244 policy routes and
+  Completed: [PR #66](https://github.com/Sparkz400/performance_dashboard/pull/66); a generated matrix covers all 244 policy routes and
   every tRPC procedure for each non-admin role with granted, foreign and absent
   identifiers (`accessMatrix.test.ts`), plus an anonymous sweep. The audit closed a
   socket broadcast of every machine's alarms, a live-value room collision and an
@@ -196,7 +196,7 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Done: revocation/expiry work for page, API and live updates; shared views reveal only
   selected data, have explicit lifetime and embedding rules, and exclude administrative
   metadata. Expired sessions/shares stop receiving newly streamed data.
-  Completed on `codex/p0-closure`: administrators create expiring (≤30 days), hashed,
+  Completed: [PR #66](https://github.com/Sparkz400/performance_dashboard/pull/66); administrators create expiring (≤30 days), hashed,
   revocable links to frozen trend selections with a bounded window and per-link
   embedding origins. Every refresh re-checks the link and its creator; revoked or
   expired pages clear their data. `shareService.test.ts`, `test-shares.mjs`;
@@ -217,7 +217,7 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   collection, crash/outage replay, scheduled PDF/download, email attachment and report
   persistence checks pass. [Migration evidence and limits](docs/REPORTING.md).
   Maintainers must rescan each release.
-  Completed on `codex/p0-closure`: CodeQL, Trivy (image `sha256:8c03215…`), npm audit,
+  Completed: [PR #66](https://github.com/Sparkz400/performance_dashboard/pull/66); CodeQL, Trivy (image `sha256:8c03215…`), npm audit,
   Dependabot and secret scanning report zero open findings for `04383cae`; outbound URL,
   SVG, body-size, CSRF and secrets boundaries have tests; residual risks have an owner
   and mitigation. [Review record](docs/SECURITY_BOUNDARIES.md#release-security-review-f09).
@@ -230,7 +230,7 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   investigate the first-route timeouts observed in the parallel 2026-10-26 test run.
   Progress: top-level mocks and separate app-bootstrap budget resolve the observed
   harness issues; [feature evidence](docs/P0_ACCEPTANCE.md) names remaining negative tests.
-  Completed on `codex/p0-closure`: [acceptance matrix](docs/ACCEPTANCE_MATRIX.md) with
+  Completed: [PR #66](https://github.com/Sparkz400/performance_dashboard/pull/66); [acceptance matrix](docs/ACCEPTANCE_MATRIX.md) with
   per-screen state, happy/failure evidence and U/D/B/S/P levels; no row claims physical evidence.
 
 Implemented and locally validated on `codex/production-shift-workflow`; integration
@@ -792,7 +792,7 @@ below retain their unfulfilled acceptance criteria.
   Done: diagrams name acquisition, database, web and optional outbound paths; least-privilege
   identities, TLS termination, firewall assumptions and metrics exposure are verified in
   an isolated deployment. No open internet access to a PLC is required by the design.
-  Completed on `codex/p0-closure`: new installations and restores run the app as a
+  Completed: [PR #66](https://github.com/Sparkz400/performance_dashboard/pull/66); new installations and restores run the app as a
   non-superuser database owner with a separate bootstrap superuser; `test-operations.mjs`
   verifies the role, refuses `COPY … TO PROGRAM`, and still passes install, restore,
   earlier-image upgrade and rollback. Loopback publishing, internal database network,

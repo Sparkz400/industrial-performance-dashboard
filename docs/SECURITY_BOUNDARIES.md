@@ -2,7 +2,7 @@
 
 Closes TODO **F07** (access audit), **F08** (shares and embeds), **F09** (release
 security review) and **D01** (OT deployment boundary) for the software, recorded
-2026-10-29 on `codex/p0-closure`. Physical-machine, customer-network and production
+2026-10-29 in [PR #66](https://github.com/Sparkz400/performance_dashboard/pull/66). Physical-machine, customer-network and production
 publisher-key acceptance remain separate. Re-run the checks below for the exact
 revision and image you deploy; this record does not certify a different build.
 
