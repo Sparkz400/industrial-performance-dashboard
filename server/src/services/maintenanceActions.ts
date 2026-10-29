@@ -94,3 +94,29 @@ export async function validateMaintenanceAction(
       "Choose active owners with permission to operate this machine",
     );
 }
+
+/**
+ * The machine's latest maintenance actions with measured outcome: open, recurred (the same
+ * alarm rule fired again after the service event), awaiting-recovery or recovered-observed.
+ */
+export async function maintenanceActionOutcomes(machineId: number) {
+  const result = await manager.pool.query(
+    `SELECT a.*,h.rule_name,h.resolved_at,
+    (SELECT count(*)::int FROM alert_history r WHERE r.machine_id=a.machine_id AND r.rule_id IS NOT DISTINCT FROM h.rule_id AND (h.rule_id IS NOT NULL OR (h.metadata->>'healthKey' IS NOT NULL AND r.metadata->>'healthKey'=h.metadata->>'healthKey')) AND r.id<>h.id AND r.created_at>=a.created_at) AS repeated_alarms,
+    (SELECT count(*)::int FROM webhook_deliveries d WHERE d.event->'payload'->>'machineId'=a.machine_id::text AND d.delivered_at IS NULL AND d.attempts>0) AS notification_failures,
+    CASE WHEN a.completed_at IS NULL THEN 'open'
+      WHEN EXISTS(SELECT 1 FROM alert_history r WHERE r.machine_id=a.machine_id AND r.rule_id IS NOT DISTINCT FROM h.rule_id AND (h.rule_id IS NOT NULL OR (h.metadata->>'healthKey' IS NOT NULL AND r.metadata->>'healthKey'=h.metadata->>'healthKey')) AND r.id<>h.id AND r.created_at>=e.created_at) THEN 'recurred'
+      WHEN h.resolved_at IS NULL OR h.resolved_at<e.created_at THEN 'awaiting-recovery'
+      ELSE 'recovered-observed' END AS outcome
+    FROM maintenance_actions a JOIN alert_history h ON h.id=a.alarm_id
+    LEFT JOIN maintenance_events e ON e.id=a.service_event_id WHERE a.machine_id=$1 ORDER BY a.id DESC LIMIT 100`,
+    [machineId],
+  );
+  return result.rows as ({
+    id: number;
+    rule_name: string | null;
+    repeated_alarms: number;
+    completed_at: Date | null;
+    outcome: "open" | "recurred" | "awaiting-recovery" | "recovered-observed";
+  } & Record<string, unknown>)[];
+}

@@ -1,6 +1,5 @@
 import { Router } from "express";
 import Joi from "joi";
-import { createHash } from "node:crypto";
 import { and, eq, gte, lte, asc, desc, sql } from "drizzle-orm";
 import db from "../database/db.js";
 import {
@@ -23,7 +22,7 @@ import {
   type ComparisonSnapshot,
 } from "../services/periodComparison.js";
 import { evaluateImprovement } from "../services/improvementEvaluation.js";
-import { canonicalJson } from "../utils/canonicalJson.js";
+import { isIntact } from "../services/savedRevisions.js";
 import {
   ConflictError,
   NotFoundError,
@@ -53,25 +52,7 @@ async function readRevision(machineId: number, id: number) {
   if (!row) throw new NotFoundError("Report revision for this machine");
   const revision = row.revision,
     snapshot = revision.snapshot as ComparisonSnapshot;
-  if (
-    !snapshot ||
-    snapshot.revision !== "shift-v1" ||
-    snapshot.machineId !== machineId ||
-    snapshot.id !== revision.shiftId ||
-    !snapshot.profile ||
-    !snapshot.seconds ||
-    !snapshot.quantities ||
-    !snapshot.oee ||
-    !snapshot.job ||
-    !Array.isArray(snapshot.reasons) ||
-    !Array.isArray(snapshot.issues) ||
-    ![snapshot.start, snapshot.end, snapshot.generatedAt].every((date) =>
-      Number.isFinite(Date.parse(date)),
-    ) ||
-    Date.parse(snapshot.end) <= Date.parse(snapshot.start) ||
-    createHash("sha256").update(canonicalJson(snapshot)).digest("hex") !==
-      revision.digest
-  )
+  if (!isIntact(revision, machineId))
     throw new ConflictError(
       "Report revision cannot be verified; save a new revision before comparing",
     );

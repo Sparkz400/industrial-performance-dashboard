@@ -95,6 +95,8 @@ import digitalTwinRoutes from "./src/routes/digitalTwinRoutes.js";
 import edgeRoutes from "./src/routes/edgeRoutes.js";
 import edgeSyncRoutes from "./src/routes/edgeSyncRoutes.js";
 import edgeAdminRoutes from "./src/routes/edgeAdminRoutes.js";
+import forecastRoutes from "./src/routes/forecastRoutes.js";
+import recommendationRoutes from "./src/routes/recommendationRoutes.js";
 
 // --- Tier 1 Route modules ---
 import plantRoutes from "./src/routes/plantRoutes.js";
@@ -241,6 +243,8 @@ export function createApp() {
   app.use("/api/v1/digital-twins", requireAuth, digitalTwinRoutes);
   app.use("/api/v1/edge", requireAuth, edgeRoutes);
   app.use("/api/v1/edges", edgeAdminRoutes);
+  app.use("/api/v1/forecasts", forecastRoutes);
+  app.use("/api/v1/recommendations", recommendationRoutes);
 
   // --- tRPC API ---
   app.use(

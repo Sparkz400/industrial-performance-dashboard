@@ -2081,3 +2081,59 @@ export const edgeLink = pgTable(
   },
   (t) => [check("edge_link_single", sql`${t.id} = 1`)],
 );
+/** X06: a person's decision on a recommendation; accepting links the action taken. */
+export const recommendationDecisions = pgTable(
+  "recommendation_decisions",
+  {
+    id: serial("id").primaryKey(),
+    machineId: integer("machine_id")
+      .notNull()
+      .references(() => machines.id, { onDelete: "restrict" }),
+    key: varchar("key", { length: 300 }).notNull(),
+    decision: varchar("decision", { length: 10 }).notNull(),
+    reason: text("reason"),
+    improvementActionId: integer("improvement_action_id").references(
+      () => improvementActions.id,
+    ),
+    maintenanceActionId: integer("maintenance_action_id").references(
+      () => maintenanceActions.id,
+    ),
+    decidedBy: integer("decided_by")
+      .notNull()
+      .references(() => users.id),
+    decidedAt: timestamp("decided_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("recommendation_decision_key").on(t.machineId, t.key),
+    check(
+      "recommendation_decision_kind",
+      sql`(${t.decision} = 'dismissed' AND ${t.reason} IS NOT NULL) OR (${t.decision} = 'accepted' AND (${t.improvementActionId} IS NOT NULL OR ${t.maintenanceActionId} IS NOT NULL))`,
+    ),
+  ],
+);
+/** X06: what supervisors were shown and did, to compare recommendations with the ranked loss list. */
+export const usefulnessEvents = pgTable(
+  "usefulness_events",
+  {
+    id: serial("id").primaryKey(),
+    machineId: integer("machine_id")
+      .notNull()
+      .references(() => machines.id, { onDelete: "restrict" }),
+    source: varchar("source", { length: 20 }).notNull(),
+    event: varchar("event", { length: 20 }).notNull(),
+    key: varchar("key", { length: 300 }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("usefulness_machine_at").on(t.machineId, t.at),
+    check(
+      "usefulness_event_kind",
+      sql`${t.source} IN ('recommendations','ranked-losses') AND ${t.event} IN ('shown','accepted','dismissed')`,
+    ),
+  ],
+);
