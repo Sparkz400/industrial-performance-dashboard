@@ -104,34 +104,55 @@ export function validateProfile(input: unknown): ProductionProfile {
   return profile;
 }
 
+/** Runs a read-only check on the machine's live session, or on a short-lived one of its own. */
+export async function withMachineSession<T>(
+  machineId: number,
+  use: (
+    session: opcua.ClientSession,
+    machine: typeof machines.$inferSelect,
+  ) => Promise<T>,
+): Promise<T> {
+  const [machine] = await db
+    .select()
+    .from(machines)
+    .where(eq(machines.id, machineId));
+  if (!machine) throw new NotFoundError("Machine");
+  let session =
+    multiMachineManager.getMachineConnection(machineId)?.connection?.session;
+  let client: opcua.OPCUAClient | undefined;
+  try {
+    if (!session) {
+      client = opcua.OPCUAClient.create({
+        ...(await certificateManager.getClientOptions(
+          machine.securityMode ?? "None",
+          machine.securityPolicy ?? "None",
+        )),
+        connectionStrategy: { maxRetry: 0 },
+        transportTimeout: 10000,
+      });
+      await client.connect(machine.endpointUrl);
+      session = await createMachineSession(
+        client,
+        machineId,
+        machine.endpointUrl,
+        machine.securityMode ?? "None",
+      );
+    }
+    return await use(session, machine);
+  } finally {
+    if (client) {
+      try {
+        await session?.close();
+      } finally {
+        await client.disconnect();
+      }
+    }
+  }
+}
+
 export const commissioningService = {
   async inspect(machineId: number, profile?: ProductionProfile) {
-    const [machine] = await db
-      .select()
-      .from(machines)
-      .where(eq(machines.id, machineId));
-    if (!machine) throw new NotFoundError("Machine");
-    let session =
-      multiMachineManager.getMachineConnection(machineId)?.connection?.session;
-    let client: opcua.OPCUAClient | undefined;
-    try {
-      if (!session) {
-        client = opcua.OPCUAClient.create({
-          ...(await certificateManager.getClientOptions(
-            machine.securityMode ?? "None",
-            machine.securityPolicy ?? "None",
-          )),
-          connectionStrategy: { maxRetry: 0 },
-          transportTimeout: 10000,
-        });
-        await client.connect(machine.endpointUrl);
-        session = await createMachineSession(
-          client,
-          machineId,
-          machine.endpointUrl,
-          machine.securityMode ?? "None",
-        );
-      }
+    return withMachineSession(machineId, async (session, machine) => {
       const namespaces = await session.readNamespaceArray();
       const mappings = profile
         ? Object.entries(profile.signals).map(([role, signal]) => {
@@ -196,15 +217,7 @@ export const commissioningService = {
           "Profile units and scale are operator declarations; verify against the source",
         ],
       };
-    } finally {
-      if (client) {
-        try {
-          await session?.close();
-        } finally {
-          await client.disconnect();
-        }
-      }
-    }
+    });
   },
 
   async save(machineId: number, profile: ProductionProfile, userId: number) {
