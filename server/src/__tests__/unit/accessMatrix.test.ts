@@ -126,6 +126,8 @@ describe("REST access matrix", () => {
       "GET /production/shifts",
       // Public metadata of registered widgets; no machine data.
       "GET /widget-runtime/registrations",
+      // Edge sites with machines in the caller's scope only (edgeAdminRoutes overview).
+      "GET /edges/overview",
     ];
     const supervisorChecked = [
       "GET /lines",
@@ -171,6 +173,7 @@ describe("REST access matrix", () => {
       "GET /alerts/history",
       "GET /alerts/rules",
       "GET /dashboards",
+      "GET /edges/overview",
       "GET /lines",
       "GET /production/assets",
       "GET /production/operator/owners",

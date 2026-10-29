@@ -52,6 +52,8 @@ export async function authorizeAssetRequest(
   let found: RegExpExecArray | null;
   if (read && path === "/access/me") return;
   if (read && path === "/widget-runtime/registrations") return;
+  // E03: the handler lists only sites with machines in the caller's scope.
+  if (read && path === "/edges/overview") return;
   if (read && (found = match(/^\/plc-alarms\/machines\/(\d+)$/))) {
     assertMachine(found[1]);
     return;

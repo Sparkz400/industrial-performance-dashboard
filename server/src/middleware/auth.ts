@@ -12,6 +12,12 @@ declare module "express-session" {
     userRole?: UserRole;
     username?: string;
     userVersion?: string;
+    oidcIssuer?: string;
+    oidcSubject?: string;
+    oidcSid?: string;
+    oidcAuthTime?: number;
+    oidcPending?: import("../services/oidc.js").PendingSignIn;
+    oidcError?: { message: string; at: number };
   }
 }
 

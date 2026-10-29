@@ -137,6 +137,7 @@ flowchart LR
 | Least-privilege process | App container runs as UID 1000; preview proxy is read-only with all capabilities dropped | `test-container.mjs`, `operate.mjs` |
 | Metrics and diagnostics | `/metrics` and support downloads require an authenticated administrator | `anonymous.test.ts` (anonymous 401), `accessMatrix.test.ts` (no non-admin route to system diagnostics) |
 | Outbound traffic | Off unless configured; private targets refused by default | `outboundUrlSafety.test.ts` |
+| Non-browser credentials | Service tokens (GET on the integration read endpoints only) and edge tokens (`/api/v1/edge-sync` only) are bearer secrets stored as SHA-256; their requests create no cookie session and need no CSRF token. The OIDC back-channel endpoint accepts only signed, fresh logout tokens ([identity](IDENTITY.md), [edge sites](MULTI_SITE.md)) | `test-oidc.mjs`, `test-edge-history.mjs` |
 
 Installations made before this change keep their original database roles, where the
 application role is the bootstrap superuser. To adopt the reduced role, back up and

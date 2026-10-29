@@ -155,6 +155,28 @@ const envVarsSchema = Joi.object({
   ADMIN_API_KEY: Joi.string()
     .optional()
     .description("API key for accessing admin/debug endpoints"),
+  // E02: single sign-on is off unless an issuer is configured.
+  OIDC_ISSUER: Joi.string()
+    .uri({ scheme: ["https"] })
+    .optional(),
+  OIDC_CLIENT_ID: Joi.string().when("OIDC_ISSUER", {
+    is: Joi.exist(),
+    then: Joi.required(),
+  }),
+  OIDC_CLIENT_SECRET: Joi.string().when("OIDC_ISSUER", {
+    is: Joi.exist(),
+    then: Joi.required(),
+  }),
+  OIDC_REDIRECT_URI: Joi.string().uri().when("OIDC_ISSUER", {
+    is: Joi.exist(),
+    then: Joi.required(),
+  }),
+  OIDC_CA_FILE: Joi.string().optional(),
+  OIDC_SCOPES: Joi.string().default("openid profile email groups"),
+  OIDC_GROUPS_CLAIM: Joi.string().default("groups"),
+  OIDC_DISPLAY_NAME: Joi.string().max(60).default("Single sign-on"),
+  OIDC_MAX_SESSION_HOURS: Joi.number().min(1).max(24).default(8),
+  LOCAL_RECOVERY_ACCOUNTS: Joi.string().allow("").default(""),
   OPCUA_BATCH_SIZE: Joi.number()
     .integer()
     .min(1)
@@ -221,9 +243,11 @@ const envVarsSchema = Joi.object({
     .description("Cloud server URL for edge sync"),
   EDGE_SYNC_INTERVAL_MS: Joi.number()
     .integer()
-    .min(5000)
+    .min(1000)
     .default(30000)
     .description("Edge sync interval (ms)"),
+  // H08: an edge ships rows only up to an id recorded this long ago (longest open write).
+  EDGE_SETTLE_MS: Joi.number().integer().min(1000).max(600000).default(30000),
   EDGE_SYNC_BATCH_SIZE: Joi.number()
     .integer()
     .min(10)
@@ -326,6 +350,16 @@ export interface AppConfig {
   OPCUA_HEALTH_CHECK_INTERVAL: number;
   LOG_LEVEL: string;
   ADMIN_API_KEY?: string;
+  OIDC_ISSUER?: string;
+  OIDC_CLIENT_ID?: string;
+  OIDC_CLIENT_SECRET?: string;
+  OIDC_REDIRECT_URI?: string;
+  OIDC_CA_FILE?: string;
+  OIDC_SCOPES: string;
+  OIDC_GROUPS_CLAIM: string;
+  OIDC_DISPLAY_NAME: string;
+  OIDC_MAX_SESSION_HOURS: number;
+  LOCAL_RECOVERY_ACCOUNTS: string;
   OPCUA_BATCH_SIZE: number;
   OPCUA_SPOOL_PATH: string;
   OPCUA_SPOOL_MAX_ENTRIES: number;
@@ -343,6 +377,7 @@ export interface AppConfig {
   EDGE_CLOUD_URL: string;
   EDGE_SYNC_INTERVAL_MS: number;
   EDGE_SYNC_BATCH_SIZE: number;
+  EDGE_SETTLE_MS: number;
   EDGE_DATA_RETENTION_DAYS: number;
   EDGE_LIGHTWEIGHT_MODE: boolean;
   OTEL_ENABLED: boolean;

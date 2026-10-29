@@ -1,16 +1,14 @@
 import { expect, test } from "@playwright/test";
 import { login } from "./login";
 
-test("edge status explicitly disables central history and retains queue visibility", async ({
+test("an unlinked installation offers edge enrollment and no manual sync", async ({
   page,
 }) => {
   await login(page);
   await page.goto("/settings");
-  await page.getByRole("tab", { name: "Edge Status" }).click();
-  await expect(
-    page.getByText(/Edge synchronization is disabled/),
-  ).toBeVisible();
-  await expect(page.getByText(/Retained pending records:/)).toBeVisible();
+  await page.getByRole("tab", { name: "Edges" }).click();
+  await expect(page.getByText("Link to a central installation")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Enroll as edge" })).toBeDisabled();
   await expect(page.getByRole("button", { name: /sync now/i })).toHaveCount(0);
 });
 

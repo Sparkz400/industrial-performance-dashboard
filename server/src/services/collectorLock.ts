@@ -66,6 +66,9 @@ function watch(client: PoolClient) {
  * Takes the collector lock on a dedicated session. `taken` runs only when the lock was lost
  * and another collector holds it once the database is reachable again.
  */
+/** Whether this process collects: only the lock holder connects to machines or ships history. */
+export const holdsCollectorLock = () => holder !== undefined;
+
 export async function acquireCollectorLock(
   taken: () => void,
   retryEveryMs = 5000,

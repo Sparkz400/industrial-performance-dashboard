@@ -23,7 +23,8 @@ FROM cgr.dev/chainguard/wolfi-base:latest@sha256:360896efb0753a5701c48f860e17130
 ARG SOURCE_REVISION=unversioned
 LABEL org.opencontainers.image.revision=$SOURCE_REVISION
 WORKDIR /app
-ENV NODE_ENV=production
+# An edge reports this revision to its central installation (E04 staged upgrades).
+ENV NODE_ENV=production SOURCE_REVISION=$SOURCE_REVISION
 RUN apk upgrade --no-cache && apk add --no-cache nodejs-24 ca-certificates tzdata \
     && addgroup -g 1000 node && adduser -D -u 1000 -G node node
 COPY --from=dependencies /app/node_modules node_modules

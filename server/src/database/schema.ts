@@ -271,6 +271,8 @@ export const opcuaData = pgTable(
       table.nodeKey,
       table.timestamp,
     ),
+    // H08: an edge ships committed rows in id order.
+    index("idx_opcua_data_id").on(table.id),
   ],
 );
 
@@ -343,16 +345,32 @@ export const auditLogs = pgTable(
   ],
 );
 
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: varchar("username", { length: 100 }).notNull().unique(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
-  role: userRoleEnum("role").notNull().default("viewer"),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: serial("id").primaryKey(),
+    username: varchar("username", { length: 100 }).notNull().unique(),
+    // Identity-provider and service accounts may have no email and never have a password.
+    email: varchar("email", { length: 255 }).unique(),
+    passwordHash: varchar("password_hash", { length: 255 }),
+    role: userRoleEnum("role").notNull().default("viewer"),
+    isActive: boolean("is_active").default(true),
+    authSource: varchar("auth_source", { length: 10 })
+      .notNull()
+      .default("local"),
+    oidcIssuer: varchar("oidc_issuer", { length: 500 }),
+    oidcSubject: varchar("oidc_subject", { length: 255 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("users_oidc_identity").on(t.oidcIssuer, t.oidcSubject),
+    check(
+      "users_auth_source",
+      sql`${t.authSource} IN ('local','oidc','service') AND (${t.authSource} = 'local') = (${t.passwordHash} IS NOT NULL) AND (${t.authSource} = 'oidc') = (${t.oidcSubject} IS NOT NULL)`,
+    ),
+  ],
+);
 
 // --- Webhooks ---
 
@@ -1932,4 +1950,134 @@ export const energyTariffs = pgTable(
       .defaultNow(),
   },
   (t) => [unique().on(t.machineId, t.version)],
+);
+/** E02: an identity-provider group grants a non-admin role and site memberships at sign-in. */
+export const oidcGroupMappings = pgTable(
+  "oidc_group_mappings",
+  {
+    id: serial("id").primaryKey(),
+    groupName: varchar("group_name", { length: 256 }).notNull().unique(),
+    role: userRoleEnum("role").notNull(),
+    plantIds: jsonb("plant_ids").$type<number[]>().notNull().default([]),
+    updatedBy: integer("updated_by")
+      .notNull()
+      .references(() => users.id),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [check("oidc_group_not_admin", sql`${t.role} <> 'admin'`)],
+);
+/** E02: hashed, expiring read tokens of a service account; the token itself is shown once. */
+export const serviceTokens = pgTable("service_tokens", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  createdBy: integer("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+/** H08/E04 central side: an enrolled edge installation, bound to one site. */
+export const edgeNodes = pgTable("edge_nodes", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  plantId: integer("plant_id")
+    .notNull()
+    .references(() => plants.id),
+  // One-time enrollment code and the issued token, both stored as SHA-256 only.
+  enrollmentHash: varchar("enrollment_hash", { length: 64 }).unique(),
+  enrollmentExpiresAt: timestamp("enrollment_expires_at", {
+    withTimezone: true,
+  }),
+  tokenHash: varchar("token_hash", { length: 64 }).unique(),
+  enrolledAt: timestamp("enrolled_at", { withTimezone: true }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  lastContactAt: timestamp("last_contact_at", { withTimezone: true }),
+  lastBatchAt: timestamp("last_batch_at", { withTimezone: true }),
+  acknowledgedCursor: integer("acknowledged_cursor").notNull().default(0),
+  backlog: integer("backlog"),
+  newestReadingAt: timestamp("newest_reading_at", { withTimezone: true }),
+  softwareVersion: varchar("software_version", { length: 40 }),
+  schemaVersion: integer("schema_version"),
+  targetVersion: varchar("target_version", { length: 40 }),
+  appliedConfigRevision: integer("applied_config_revision"),
+  configRejection: text("config_rejection"),
+  createdBy: integer("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+/** A machine of an edge, stored centrally as its own site-qualified machine. */
+export const edgeMachines = pgTable(
+  "edge_machines",
+  {
+    edgeId: integer("edge_id")
+      .notNull()
+      .references(() => edgeNodes.id),
+    remoteMachineId: integer("remote_machine_id").notNull(),
+    machineId: integer("machine_id")
+      .notNull()
+      .unique()
+      .references(() => machines.id),
+    remoteName: varchar("remote_name", { length: 255 }).notNull(),
+    definitionDigest: varchar("definition_digest", { length: 64 }),
+  },
+  (t) => [primaryKey({ columns: [t.edgeId, t.remoteMachineId] })],
+);
+/** E04: append-only sync settings for an edge; the edge applies or rejects each revision. */
+export const edgeConfigRevisions = pgTable(
+  "edge_config_revisions",
+  {
+    id: serial("id").primaryKey(),
+    edgeId: integer("edge_id")
+      .notNull()
+      .references(() => edgeNodes.id),
+    revision: integer("revision").notNull(),
+    schemaVersion: integer("schema_version").notNull(),
+    settings: jsonb("settings").notNull(),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [unique("edge_config_revision").on(t.edgeId, t.revision)],
+);
+/** H08 edge side: the single link to a central installation. */
+export const edgeLink = pgTable(
+  "edge_link",
+  {
+    id: integer("id").primaryKey().default(1),
+    centralUrl: text("central_url").notNull(),
+    caCertificate: text("ca_certificate").notNull(),
+    sealedToken: text("sealed_token").notNull(),
+    edgeName: varchar("edge_name", { length: 100 }).notNull(),
+    cursor: integer("cursor").notNull().default(0),
+    horizonId: integer("horizon_id"),
+    horizonAt: timestamp("horizon_at", { withTimezone: true }),
+    lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+    lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    configRevision: integer("config_revision").notNull().default(0),
+    settings: jsonb("settings").notNull().default({}),
+    configRejection: text("config_rejection"),
+    enrolledBy: integer("enrolled_by")
+      .notNull()
+      .references(() => users.id),
+    enrolledAt: timestamp("enrolled_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [check("edge_link_single", sql`${t.id} = 1`)],
 );

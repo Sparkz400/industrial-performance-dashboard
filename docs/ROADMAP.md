@@ -144,11 +144,11 @@ flowchart LR
   K --> O[Operator and production workflows]
   O --> B[Durable integration outbox]
   B --> E[ERP or CMMS]
-  S -. proposed authenticated edge replication .-> Z[Central history]
+  S -. authenticated edge replication .-> Z[Central history]
 ```
 
-This is the **target** data path, not an assertion that outbox, edge replication or
-versioned calculations already exist. Keep the current live broadcast path useful,
+This is the **target** data path. The outbox and edge replication exist
+([edge sites](MULTI_SITE.md)); fully versioned calculations do not. Keep the current live broadcast path useful,
 but make received, durably buffered, persisted and complete-history states distinct.
 
 Key contracts to establish before dependent features:

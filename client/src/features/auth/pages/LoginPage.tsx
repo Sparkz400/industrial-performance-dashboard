@@ -1,5 +1,6 @@
 import { translate as t, useLanguage } from '@/i18n';
-import React, { useState, type FormEvent } from 'react';
+import React, { useEffect, useState, type FormEvent } from 'react';
+import { API_BASE_URL } from '@/config/config';
 import {
   Box,
   Card,
@@ -27,6 +28,18 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   const { login, isLoading, error, clearError } = useAuthStore();
+  const [sso, setSso] = useState<{
+    enabled: boolean;
+    displayName: string;
+    error: string | null;
+  } | null>(null);
+  useEffect(() => {
+    // The server reports a failed single sign-on once, instead of putting it in the URL.
+    fetch(`${API_BASE_URL}/auth/oidc/config`, { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setSso)
+      .catch(() => setSso(null));
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -105,6 +118,35 @@ export default function LoginPage() {
               </Alert>
             )}
 
+            {sso?.error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {sso.error}
+              </Alert>
+            )}
+            {sso?.enabled && (
+              <>
+                <Button
+                  component="a"
+                  href={`${API_BASE_URL}/auth/oidc/start`}
+                  variant="contained"
+                  fullWidth
+                  size="large"
+                  sx={{ py: 1.5, fontWeight: 600 }}
+                >
+                  {t('Sign in with', 'Anmelden mit')} {sso.displayName}
+                </Button>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 2, mb: 1, textAlign: 'center' }}
+                >
+                  {t(
+                    'Local sign-in is for recovery accounts only.',
+                    'Die lokale Anmeldung ist nur für Notfallkonten.',
+                  )}
+                </Typography>
+              </>
+            )}
             <Box component="form" onSubmit={handleSubmit} noValidate>
               <TextField
                 label={t('Username')}

@@ -168,12 +168,6 @@ export const API_ENDPOINTS = {
     instanceById: (id: number) => `${API_BASE_URL}/digital-twins/instances/${id}`,
     elementHistory: (id: number) => `${API_BASE_URL}/digital-twins/instances/${id}/element-history`,
   },
-  edge: {
-    status: `${API_BASE_URL}/edge/status`,
-    config: `${API_BASE_URL}/edge/config`,
-    triggerSync: `${API_BASE_URL}/edge/sync/trigger`,
-    ingest: `${API_BASE_URL}/edge/ingest`,
-  },
 } as const;
 
 export default {

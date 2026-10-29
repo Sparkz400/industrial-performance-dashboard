@@ -183,8 +183,9 @@ export const complianceService = {
       throw new NotFoundError("User");
     }
 
-    const verified = await bcrypt.compare(password, userRows[0].passwordHash);
-    return { verified };
+    // An account without a password (identity provider, service) cannot sign this way.
+    const hash = userRows[0].passwordHash;
+    return { verified: hash ? await bcrypt.compare(password, hash) : false };
   },
 
   async verifyAuditIntegrity(dateRange?: {

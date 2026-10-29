@@ -230,7 +230,7 @@ await dailyFixture(
         "/recipes",
         "/batches",
         "/digital-twins/instances",
-        "/edge/config",
+        "/edge/link",
         "/webhooks",
         "/custom-widgets",
         "/access/configuration",

@@ -15,6 +15,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/utils/api';
 import { API_BASE_URL } from '@/config/config';
 import type { UserRole } from '@performance-dashboard/shared';
+import IdentityPanel from './IdentityPanel';
 
 interface Configuration {
   accounts: { id: number; username: string; role: UserRole; isActive: boolean }[];
@@ -309,6 +310,9 @@ export default function AccessTab() {
           </Button>
         </Stack>
       </Paper>
+      {configuration.data && (
+        <IdentityPanel sites={configuration.data.sites} assets={configuration.data.assets} />
+      )}
     </Stack>
   );
 }

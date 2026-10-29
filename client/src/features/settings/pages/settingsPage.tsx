@@ -100,7 +100,7 @@ const SettingsPage: React.FC = () => {
               content: <WebhookManager />,
             },
             {
-              label: 'Edge Status',
+              label: 'Edges',
               icon: <StorageIcon />,
               content: <EdgeSettingsPanel />,
             },

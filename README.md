@@ -48,7 +48,10 @@ raised controls, recessed charts and orange accents. Status indicators retain
 their distinct colors and labels. Keyboard focus and reduced-motion preferences
 are supported; the style does not change measurement or quality semantics.
 
-Edge synchronization is disabled until canonical central ingestion is implemented.
+Sites can run their own installation and send committed history to a central one, which
+shows each site's availability and data coverage ([edge sites](docs/MULTI_SITE.md)).
+Single sign-on through OIDC and read-only service tokens are available
+([identity](docs/IDENTITY.md)).
 The AI assistant and external AI-provider integration have been removed.
 Administrators can share selected trend widgets through expiring, revocable read-only
 links; legacy alarm email/chat/SMS channels are disabled.
