@@ -499,7 +499,7 @@ below retain their unfulfilled acceptance criteria.
   Done: authorized manual counts/state intervals and approved sensor/gateway signals can
   support a bounded workflow; provenance and coverage distinguish manual from automatic
   evidence. Users cannot manufacture a complete OEE number from missing inputs.
-  Completed (wave 8): profiles may leave out the state and/or counter signals (no signals: never
+  Completed ([PR #75](https://github.com/Sparkz400/performance_dashboard/pull/75)): profiles may leave out the state and/or counter signals (no signals: never
   connected); operators declare state intervals that supervisors review; reviewed declarations fill
   only unknown time, observed state wins over a contradiction and disagreeing declarations stay
   unknown; reports name the state source, never verify with manual evidence and leave OEE unknown
@@ -742,7 +742,7 @@ below retain their unfulfilled acceptance criteria.
   Progress: attributable batch inspections, required defect reasons and owned rework
   closed only by a newer passing inspection ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62),
   [scope](docs/QUALITY_LINE_OPERATIONS.md#batch-quality-and-genealogy)). Recipes/batches
-  remain experimental. Completed (wave 8): append-only inspection plans per product and manual
+  remain experimental. Completed ([PR #75](https://github.com/Sparkz400/performance_dashboard/pull/75)): append-only inspection plans per product and manual
   inspections of a shift's job or runs; a passing reinspection moves parts from failed to reworked,
   corrections supersede with a reason, and the summary lists planned checks without inspection
   (`test-job-inspections.mjs`, [scope](docs/PRODUCTION_WORKFLOW.md#inspections-of-a-shifts-products)).
@@ -793,7 +793,7 @@ below retain their unfulfilled acceptance criteria.
   Progress: attributable append-only service history with incident links
   ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)), alarm-linked
   actions ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)) and CMMS
-  handoff identities (I04). Completed (wave 8): service records link a current classified stop and a
+  handoff identities (I04). Completed ([PR #75](https://github.com/Sparkz400/performance_dashboard/pull/75)): service records link a current classified stop and a
   trend window that open the shift report and a prefilled replay, and keep up to ten type-checked
   attachments in the database, downloaded only as files (`test-maintenance-records.mjs`,
   [scope](docs/DAILY_OPERATIONS.md#maintenance)).
@@ -833,7 +833,7 @@ below retain their unfulfilled acceptance criteria.
   and compare normalized periods after an action. Retain changes in product mix, operating
   hours and meter coverage so correlation is not presented as proof of causation.
   Progress: idle/changeover energy ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59))
-  and verified energy differences in fair comparisons (R06). Completed (wave 8): improvement
+  and verified energy differences in fair comparisons (R06). Completed ([PR #75](https://github.com/Sparkz400/performance_dashboard/pull/75)): improvement
   actions are judged against frozen revisions before and after them per scheduled hour, with product
   mix, hours and meter coverage shown and deltas withheld when unfair (`test-improvement-actions.mjs`,
   [scope](docs/DAILY_OPERATIONS.md#improvement-actions)).
