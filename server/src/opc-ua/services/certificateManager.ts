@@ -444,10 +444,14 @@ class CertificateManagerService {
       const baseOptions: opcua.OPCUAClientOptions = {
         applicationName: this.applicationName,
         applicationUri: this.applicationUri!,
+        // Jitter spreads reconnects when many machines lose the same network at once.
+        // node-opcua's reconnection copies only initialDelay/maxDelay (not the randomisation
+        // factor), so each client also gets its own initial delay between 1 and 1.5 seconds.
         connectionStrategy: {
-          initialDelay: 1000,
+          initialDelay: Math.round(1000 * (1 + Math.random() * 0.5)),
           maxRetry: 3,
           maxDelay: 10 * 1000,
+          randomisationFactor: 0.5,
         },
         endpointMustExist: false,
         keepSessionAlive: true,

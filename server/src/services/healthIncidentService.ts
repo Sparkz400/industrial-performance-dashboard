@@ -1,10 +1,11 @@
-import { asc, gt } from "drizzle-orm";
+import { asc, count, gt, isNotNull } from "drizzle-orm";
 import db from "../database/db.js";
-import { machineProfiles } from "../database/schema.js";
+import { machineProfiles, webhookDeliveries } from "../database/schema.js";
 import worker from "../queue/opcuaQueueWorker.js";
 import alarmEvaluator from "./alarmService.js";
 import { liveProduction } from "./liveProductionService.js";
 import logger from "../utils/logger.js";
+import config from "../config/config.js";
 import { escalateMaintenanceActions } from "./maintenanceActions.js";
 import { storageRunway } from "./storageRunway.js";
 import { runRetentionSchedules } from "./historyRetention.js";
@@ -54,10 +55,23 @@ class HealthIncidentService {
       await alarmEvaluator.observeHealth(
         `disk-runway-${disk.kind}`,
         null,
-        disk.daysToReserve == null ? null : disk.daysToReserve < 2,
+        disk.daysToReserve == null
+          ? null
+          : disk.daysToReserve < config.STORAGE_RUNWAY_ALERT_DAYS,
         "Storage runway",
         `${disk.kind}: ${disk.daysToReserve == null ? "unknown" : disk.daysToReserve.toFixed(1) + " days to reserve"} based on observed free-space decline`,
       );
+    const [{ n: deadLetters }] = await db
+      .select({ n: count() })
+      .from(webhookDeliveries)
+      .where(isNotNull(webhookDeliveries.deadLetteredAt));
+    await alarmEvaluator.observeHealth(
+      "integration-dead-letter",
+      null,
+      deadLetters > 0,
+      "Integration delivery stopped",
+      `${deadLetters} webhook deliveries stopped retrying. Inspect and requeue them under Settings → Webhooks.`,
+    );
     let health: ReturnType<typeof worker.getHealth>;
     try {
       health = worker.getHealth();
@@ -82,10 +96,20 @@ class HealthIncidentService {
       "collector-backlog",
       null,
       health.pendingMeasurements > 0 &&
-        ((health.oldestReceivedAgeSeconds ?? 0) >= 60 ||
-          health.unknownReceiveTimes > 0),
+        ((health.oldestReceivedAgeSeconds ?? 0) >=
+          config.COLLECTOR_BACKLOG_ALERT_SECONDS ||
+          health.unknownReceiveTimes > 0 ||
+          // Warn before the capacity stop, while acquisition still accepts samples.
+          health.pendingMeasurements >= health.capacityMeasurements * 0.8),
       "Collector backlog",
-      `Pending measurements: ${health.pendingMeasurements}; oldest receive age: ${health.oldestReceivedAgeSeconds == null ? "unknown" : Math.round(health.oldestReceivedAgeSeconds) + " seconds"}.`,
+      `Pending measurements: ${health.pendingMeasurements} of ${health.capacityMeasurements}; oldest receive age: ${health.oldestReceivedAgeSeconds == null ? "unknown" : Math.round(health.oldestReceivedAgeSeconds) + " seconds"}; committed last minute: ${health.committedLastMinute}${health.writeFailure ? `; last write failure: ${health.writeFailure.message}` : ""}.`,
+    );
+    await alarmEvaluator.observeHealth(
+      "collector-quarantine",
+      null,
+      health.quarantinedMeasurements > 0,
+      "Collector quarantined measurements",
+      `${health.quarantinedMeasurements} measurements were refused by PostgreSQL and kept on the collector. Export them from the Production page, then requeue after the cause is fixed.`,
     );
     await alarmEvaluator.observeHealth(
       "collector-space",

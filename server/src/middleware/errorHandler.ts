@@ -1,6 +1,10 @@
 import type { Request, Response, NextFunction } from "express";
 import logger from "../utils/logger.js";
-import { AppError, ValidationError } from "../utils/errors.js";
+import {
+  AppError,
+  ValidationError,
+  fromDatabaseError,
+} from "../utils/errors.js";
 import { CSRF_HEADER_NAME } from "../utils/csrf.js";
 
 interface ErrorResponse {
@@ -57,6 +61,11 @@ export function errorHandler(invalidCsrfTokenError: unknown) {
       res.status(403).json(body);
       return;
     }
+
+    // Drizzle wraps PostgreSQL errors; a unique violation is a conflict, not a server fault.
+    const databaseCause = (err as { cause?: { code?: string } }).cause;
+    if (!(err instanceof AppError) && databaseCause?.code === "23505")
+      err = fromDatabaseError(databaseCause);
 
     // --- Operational (known) errors ---
     if (err instanceof AppError) {

@@ -48,6 +48,17 @@ are observations since the current process started; missing diagnostics remain u
 The spool still acknowledges only durable writes and retains entries until PostgreSQL
 confirms them. Diagnostics do not infer an exact lost-sample count.
 
+Subscription limits are per endpoint. The collector requests a 500 ms publishing
+interval, a queue of 10 per signal and 100 notifications per publish; **Custom
+subscription limits for this endpoint** in the machine form overrides them
+(publishing 50–60,000 ms, queue 1–1,000, notifications 0–10,000 where 0 means the
+server's limit). The server may revise them; diagnostics show requested and revised
+values and the overflow indications the server reports when a queue drops values.
+Raise the queue or shorten publishing only with the PLC owner's approval. Each client
+waits a randomised 1–1.5 seconds before its first reconnect attempt so machines that
+lose the same network do not reconnect at the same instant
+(`scripts/test-subscription-limits.mjs`: seven clients against one owned server).
+
 **Alarm usefulness** shows bounded historical incidents, repetitions, acknowledgement
 delays, suppression and available delivery evidence. Read-only threshold replay uses
 recorded measurements and marks incomplete or ambiguous evidence explicitly. It does

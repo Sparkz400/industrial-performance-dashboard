@@ -85,12 +85,16 @@ explicit machine or an all-machine rule. Rules are applied as configured when
 processing resumes; historical configuration revision replay remains unqualified.
 
 Configure **Settings → Webhooks** for `alarm.triggered` and `alarm.cleared`.
-HMAC-SHA256 signs the exact JSON body in `X-Webhook-Signature`. Persisted delivery
-IDs are sent in `X-Webhook-Delivery-Id`; receivers **must deduplicate** that ID.
-Delivery is at least once: a receiver can commit before its response is lost.
-Failed deliveries retry with exponential delay capped at 15 minutes; inactive
-destinations retain pending deliveries. Attempts and last status are available
-at the administrator-only `/api/v1/webhooks/deliveries` endpoint. The test button
+HMAC-SHA256 signs the exact JSON body in `X-Webhook-Signature`. The body carries the
+persisted delivery `id` and `schemaVersion`; the ID is also sent in
+`X-Webhook-Delivery-Id` and receivers **must deduplicate** it. Delivery is at least
+once: a receiver can commit before its response is lost. Failed deliveries retry
+with exponential delay capped at 15 minutes. After 100 failed attempts (about a day,
+including while a destination is inactive) a delivery stops retrying, an incident
+opens and an administrator can inspect and requeue it under **Settings → Webhooks**.
+Attempts, last status and error are available at the administrator-only
+`/api/v1/webhooks/deliveries` endpoint; see the
+[integration contract](INTEGRATION_API.md#outbound-events-webhooks). The test button
 is separate from actual alarm wiring. Email, Slack, Teams and SMS channel delivery
 is disabled; old records remain, with secrets excluded from responses. Other
 previously advertised webhook event families are not implemented. Existing

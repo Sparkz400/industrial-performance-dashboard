@@ -23,6 +23,7 @@ export type {
   UserInfo,
   Machine,
   MachineFormData,
+  SubscriptionLimits,
   MachineAuthentication,
   MachineAuthenticationInput,
   NodeMapping,

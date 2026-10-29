@@ -73,6 +73,16 @@ const machineSchema = Joi.object({
     privateKeyPem: Joi.string().max(32768).allow(""),
     certificateExpiresAt: Joi.string().isoDate(),
   }),
+  // Bounds keep one endpoint from requesting server-straining or meaningless limits.
+  subscription: Joi.object({
+    publishingIntervalMs: Joi.number().integer().min(50).max(60000).required(),
+    queueSize: Joi.number().integer().min(1).max(1000).required(),
+    maxNotificationsPerPublish: Joi.number()
+      .integer()
+      .min(0)
+      .max(10000)
+      .required(),
+  }).allow(null),
   isActive: Joi.boolean().default(true),
 });
 

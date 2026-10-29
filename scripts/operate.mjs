@@ -217,6 +217,8 @@ function stack(image, environment, databaseImage = "postgres:16-alpine") {
       },
       db: {
         image: databaseImage,
+        // Docker's 64 MB default /dev/shm fails parallel VACUUM and queries on large history.
+        shm_size: "256mb",
         environment: {
           POSTGRES_USER: "postgres",
           POSTGRES_DB: "performance_dashboard",

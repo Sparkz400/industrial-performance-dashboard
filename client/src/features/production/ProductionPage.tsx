@@ -77,6 +77,12 @@ export default function ProductionPage() {
     queryFn: () =>
       productionRequest<{
         pendingMeasurements: number;
+        capacityMeasurements: number;
+        spoolBytes: number | null;
+        oldestReceivedAgeSeconds: number | null;
+        committedLastMinute: number;
+        quarantinedMeasurements: number;
+        writeFailure: { at: string; message: string } | null;
         storageFailure: { at: string; message: string } | null;
       }>('/health'),
     enabled: admin,
@@ -180,12 +186,52 @@ export default function ProductionPage() {
               severity={
                 health.data.storageFailure
                   ? 'error'
-                  : health.data.pendingMeasurements > 1000
+                  : health.data.writeFailure || health.data.pendingMeasurements > 1000
                     ? 'warning'
                     : 'info'
               }
             >
-              {t('Collector backlog:')} {health.data.pendingMeasurements} {t('measurements.')}{' '}
+              {t('Collector backlog:')} {health.data.pendingMeasurements} /{' '}
+              {health.data.capacityMeasurements} {t('measurements.')}{' '}
+              {health.data.spoolBytes != null &&
+                `${(health.data.spoolBytes / 1048576).toFixed(1)} MiB · `}
+              {t('Oldest:')}{' '}
+              {health.data.oldestReceivedAgeSeconds == null
+                ? '—'
+                : `${Math.round(health.data.oldestReceivedAgeSeconds)} s`}{' '}
+              · {t('Written last minute:')} {health.data.committedLastMinute}.{' '}
+              {health.data.writeFailure &&
+                `${t('Last database write failed:')} ${health.data.writeFailure.message} (${health.data.writeFailure.at}). `}
+              {health.data.quarantinedMeasurements > 0 && (
+                <>
+                  {t('Quarantined (refused by the database):')}{' '}
+                  {health.data.quarantinedMeasurements}.{' '}
+                  <Button
+                    size="small"
+                    onClick={() =>
+                      run(async () =>
+                        downloadJson(
+                          await productionRequest('/quarantine'),
+                          'quarantined-measurements.json',
+                        ),
+                      )
+                    }
+                  >
+                    {t('Export quarantined')}
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() =>
+                      run(async () => {
+                        await productionRequest('/quarantine/requeue', {});
+                        await health.refetch();
+                      })
+                    }
+                  >
+                    {t('Retry quarantined')}
+                  </Button>{' '}
+                </>
+              )}
               {health.data.storageFailure
                 ? `${health.data.storageFailure.message} at ${health.data.storageFailure.at}. Restore storage and restart collection; unreceived time is unknown.`
                 : t('Unreceived intervals remain unknown.')}

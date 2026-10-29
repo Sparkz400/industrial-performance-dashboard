@@ -26,6 +26,10 @@ import { spcService, spcEvents } from "./services/spcService.js";
 import { edgeSyncService } from "./services/edgeSyncService.js";
 import { healthIncidentService } from "./services/healthIncidentService.js";
 import { stopConfiguredGateway } from "./gateway/configuredGateway.js";
+import {
+  acquireCollectorLock,
+  releaseCollectorLock,
+} from "./services/collectorLock.js";
 
 interface Services {
   io: SocketServer;
@@ -163,6 +167,41 @@ export async function startOpcuaServices({
   if (config.RECOVERY_MODE) return;
   opcuaQueueWorker.start();
 
+  multiMachineManager.on(
+    "machineStatusChanged",
+    (data: { machineId: number; status: string }) => {
+      machineService.broadcastStatusChange(data);
+    },
+  );
+  const lockIncident = (held: boolean) =>
+    alarmEvaluator
+      .observeHealth(
+        "collector-lock",
+        null,
+        !held,
+        "Second collector",
+        "Another collector holds this database's collector lock; this instance does not connect to machines.",
+      )
+      .catch((error) => logger.warn("Collector lock incident failed", error));
+  const stopCollecting = () => {
+    void multiMachineManager
+      .disconnectAll()
+      .catch((error) => logger.error("Collector disconnect failed", error));
+    void opcuaConnectionManager
+      .disconnectConnection()
+      .catch((error) => logger.error("Collector disconnect failed", error));
+    void lockIncident(false);
+  };
+  // A restart may find the old process's session not yet reaped; wait instead of giving up.
+  while (!(await acquireCollectorLock(stopCollecting).catch(() => false))) {
+    logger.error(
+      "Another collector holds this database's collector lock. Machines stay disconnected; retrying in 5 seconds.",
+    );
+    await lockIncident(false);
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
+  await lockIncident(true);
+
   logger.info("Initializing multi-machine OPC UA manager...");
   try {
     await multiMachineManager.initialize();
@@ -185,13 +224,6 @@ export async function startOpcuaServices({
       err,
     );
   }
-
-  multiMachineManager.on(
-    "machineStatusChanged",
-    (data: { machineId: number; status: string }) => {
-      machineService.broadcastStatusChange(data);
-    },
-  );
 }
 
 /** Gracefully shut down all services. */
@@ -244,6 +276,9 @@ export function createShutdown(
       await opcuaQueueWorker.stop();
       await webhookService.stop();
       edgeSyncService.stopSyncLoop();
+      await releaseCollectorLock().catch((error) =>
+        logger.warn("[Shutdown] Collector lock release failed", error),
+      );
 
       logger.info("[Shutdown] Closing Database pool...");
       await dbClient.end();

@@ -113,7 +113,7 @@ new client.Gauge({
       const rows = await query<{ job: string; state: string; n: number }>(
         `SELECT 'report_generation' AS job, status AS state, count(*)::int AS n FROM report_history GROUP BY status
          UNION ALL SELECT 'report_email', email_status, count(*)::int FROM report_history WHERE email_status <> 'not-requested' GROUP BY email_status
-         UNION ALL SELECT 'webhook_delivery', CASE WHEN attempts > 0 THEN 'retrying' ELSE 'pending' END, count(*)::int FROM webhook_deliveries WHERE delivered_at IS NULL GROUP BY 2
+         UNION ALL SELECT 'webhook_delivery', CASE WHEN dead_lettered_at IS NOT NULL THEN 'dead_letter' WHEN attempts > 0 THEN 'retrying' ELSE 'pending' END, count(*)::int FROM webhook_deliveries WHERE delivered_at IS NULL GROUP BY 2
          UNION ALL SELECT 'retention', status, count(*)::int FROM retention_schedules GROUP BY status`,
       );
       for (const row of rows) this.labels(row.job, row.state).set(row.n);

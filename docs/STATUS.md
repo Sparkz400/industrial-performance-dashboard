@@ -30,6 +30,19 @@ owner, priority, due time and reference (R02). Deleting a report schedule cancel
 pending runs and email, and opt-in `REPORT_RETENTION_DAYS` removes old PDFs (R05).
 Alarm rules are scoped per site on every read path (E01).
 
+## Backlog wave 2
+
+One collector per database holds a PostgreSQL advisory lock; a second waits with an
+incident. Subscription limits are set per endpoint, overflow is visible and reconnect
+attempts are spread (C09). Spool capacity, reserve and alert thresholds are
+configurable; operators see backlog bytes, age, write rate and failures, and records
+PostgreSQL refuses are quarantined for audited export and retry (H09). Webhooks are a
+durable outbox with schema versions, dead letters and audited requeue (I01), under a
+bounded [integration API contract](INTEGRATION_API.md) with a runnable example (I02).
+Raw and retained-summary history answer identically, and an index benchmark records
+which indexes the history endpoints use (H06). The database container gets 256 MB of
+shared memory for parallel maintenance on large history.
+
 ## Data integrity and reviewed operations
 
 The [six-feature integrity wave](DATA_INTEGRITY.md) replaces generated widget data,

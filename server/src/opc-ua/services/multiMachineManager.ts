@@ -105,6 +105,7 @@ class MultiMachineManager extends EventEmitter {
     const securityOptions = {
       securityMode: machine.securityMode ?? "None",
       securityPolicy: machine.securityPolicy ?? "None",
+      subscription: machine.subscription ?? undefined,
     };
 
     logger.info(

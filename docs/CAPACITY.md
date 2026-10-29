@@ -51,6 +51,44 @@ required outage window and tested backup/restore duration. A rising queue or sta
 signal requires investigation; a successful reconnect does not reconstruct missed
 measurements.
 
+## History index benchmark (H06)
+
+`node scripts/benchmark-history.mjs` loads a synthetic, regular dataset into an owned
+database, times the real history endpoints over HTTP and records which `opcua_data`
+indexes each one used (`pg_stat_user_indexes` deltas). On 2026-10-29 (Node 24.22.1,
+PostgreSQL 16.15, 16 logical CPUs, warm cache, no concurrent ingestion): 10 machines ×
+10 tags every 10 s for 6 days, every 50th sample bad, **5,184,000 rows**; the heap was
+579 MiB and its four indexes 379 MiB, about **194 bytes per stored sample**.
+
+| Endpoint (20 requests each) | p50 | p95 | Indexes used |
+| --- | ---: | ---: | --- |
+| History summaries, 6 days hourly | 60 ms | 90 ms | machine/tag/time + event identity |
+| Incident replay, 48 h, 2 tags | 42 ms | 57 ms | machine/tag/time + event identity |
+| Trend, 24 h, 2 tags, 60 s buckets | 41 ms | 49 ms | machine/tag/time + event identity |
+| Aggregates, 6 days hourly | 28 ms | 34 ms | machine/tag/time + event identity |
+| Latest value, one tag | 57 ms | 132 ms | machine/tag/time |
+
+Decisions from this run:
+
+- No new index, partitioning or materialized rollup is justified at this size; every
+  endpoint stays well under the 441 ms trend p95 of the pilot benchmark above.
+- `idx_opcua_data_machine_node_timestamp` serves every endpoint. The unique
+  `(timestamp, event_id)` constraint that makes replay idempotent leads with time, so the
+  planner also combines it with the machine index for time ranges.
+- `idx_opcua_data_node_key_timestamp` (62 MiB here) was used by none of these endpoints,
+  because every read API now requires a machine. It is kept until a pilot confirms zero
+  scans over a representative week with
+  `SELECT indexrelname, idx_scan FROM pg_stat_user_indexes WHERE relname='opcua_data'`.
+- Raw and retained-summary history answer identically (`test-history.mjs`), so retention
+  can reclaim raw rows without changing hourly counts, extrema, sums or quality coverage.
+  State durations and counter increments are not yet rolled up separately (H06 remains open).
+
+For storage sizing, multiply ~194 bytes by samples per day (100 tags at 1 Hz is
+8.64 million samples, about 1.6 GiB per day before retention) and confirm on the target
+host. The local test container kept Docker's 64 MiB `/dev/shm`, which is too small for
+a parallel VACUUM at this size; installations created by `docker-compose.yml` or
+`operate.mjs` now give PostgreSQL 256 MiB.
+
 ## Daily historian follow-through
 
 The daily workflow test streams 200,000 raw rows while queries and ingestion continue

@@ -18,6 +18,7 @@ export class CollectorDiagnostics {
   begin(
     machineId: number | undefined,
     mapping: OpcuaMappingConfig,
+    limits = { publishingIntervalMs: 500, queueSize: 10 },
   ): CollectorConnectionDiagnostic {
     const now = new Date().toISOString();
     const record: CollectorConnectionDiagnostic = {
@@ -28,14 +29,14 @@ export class CollectorDiagnostics {
       connectionLosses: 0,
       heartbeatFailures: 0,
       subscriptionErrors: 0,
-      requestedPublishingMs: 500,
+      requestedPublishingMs: limits.publishingIntervalMs,
       revisedPublishingMs: null,
       lastConnectionEventAt: now,
       signals: Object.entries(mapping).map(([key, m]) => ({
         key,
         requestedSamplingMs: m.samplingInterval ?? 500,
         revisedSamplingMs: null,
-        requestedQueueSize: 10,
+        requestedQueueSize: limits.queueSize,
         revisedQueueSize: null,
         state: "pending",
         statusCode: null,

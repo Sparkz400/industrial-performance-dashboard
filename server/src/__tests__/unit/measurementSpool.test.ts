@@ -143,6 +143,30 @@ describe("durable measurement spool", () => {
         .value,
     ).toBe(16777217);
   });
+  it("keeps quarantined records on disk and requeues them under the same ID", () => {
+    const dir = mkdtempSync(join(tmpdir(), "dashboard-spool-"));
+    directories.push(dir);
+    const file = join(dir, "queue.sqlite");
+    let spool = new MeasurementSpool(file);
+    spool.enqueue(sample);
+    spool.enqueue({ ...sample, key: "Refused" });
+    const [, refused] = spool.peek(10);
+    spool.quarantine(refused, "owned refusal");
+    spool.close();
+    spool = new MeasurementSpool(file);
+    try {
+      expect(spool.count()).toBe(1);
+      expect(spool.health().quarantinedMeasurements).toBe(1);
+      expect(spool.quarantined(10)).toMatchObject([
+        { id: refused.id, reason: "owned refusal", data: { key: "Refused" } },
+      ]);
+      expect(spool.requeueQuarantined()).toBe(1);
+      expect(spool.peek(10).map((e) => e.id)).toContain(refused.id);
+      expect(spool.health().quarantinedMeasurements).toBe(0);
+    } finally {
+      spool.close();
+    }
+  });
   it("rejects invalid data before acknowledging it", () => {
     const spool = new MeasurementSpool(":memory:");
     try {

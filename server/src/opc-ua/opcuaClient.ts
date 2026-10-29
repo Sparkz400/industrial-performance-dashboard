@@ -83,15 +83,27 @@ export async function initializeCertificates(): Promise<void> {
 /**
  * Connect to OPC UA server and subscribe to nodes
  */
+export const DEFAULT_SUBSCRIPTION = {
+  publishingIntervalMs: 500,
+  queueSize: 10,
+  maxNotificationsPerPublish: 100,
+};
+
 export async function connectAndSubscribe(
   endpointUrl: string,
-  securityOptions: { securityMode?: string; securityPolicy?: string } = {},
+  securityOptions: {
+    securityMode?: string;
+    securityPolicy?: string;
+    subscription?: typeof DEFAULT_SUBSCRIPTION;
+  } = {},
   dynamicMapping?: OpcuaMappingConfig,
   machineId?: number,
 ): Promise<OpcuaConnectionResult | null> {
+  const limits = securityOptions.subscription ?? DEFAULT_SUBSCRIPTION;
   const diagnostic = collectorDiagnostics.begin(
     machineId,
     dynamicMapping || opcuaMapping,
+    limits,
   );
   const MAX_RETRIES = 3;
   let retryCount = 0;
@@ -199,10 +211,10 @@ export async function connectAndSubscribe(
       // Create subscription
       logger.info("[ConnectAndSub] Creating subscription...");
       const subscription = opcua.ClientSubscription.create(session, {
-        requestedPublishingInterval: 500,
+        requestedPublishingInterval: limits.publishingIntervalMs,
         requestedLifetimeCount: 100,
         requestedMaxKeepAliveCount: 10,
-        maxNotificationsPerPublish: 100,
+        maxNotificationsPerPublish: limits.maxNotificationsPerPublish,
         publishingEnabled: true,
         priority: 1,
       });
@@ -268,7 +280,7 @@ export async function connectAndSubscribe(
             {
               samplingInterval: nodeConfig.samplingInterval ?? 500,
               discardOldest: true,
-              queueSize: 10,
+              queueSize: limits.queueSize,
             },
             opcua.TimestampsToReturn.Both,
           );

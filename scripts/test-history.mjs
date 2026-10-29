@@ -128,6 +128,10 @@ await dailyFixture(async ({ pool, call, users, actors, api, expect }) => {
     "INSERT INTO opcua_data(machine_id,node_key,timestamp,value,status_code) VALUES($1,'Count','2026-01-02',999999,'Good')",
     [machine],
   );
+  // H06: the same query answered from raw rows now and from retained summaries later.
+  const summaryPath = `/api/v1/history/${machine}/summaries?nodeKey=Count&start=2026-01-01T00:00:00Z&end=2026-01-04T00:00:00Z`;
+  const fromRaw = await (await call("viewer", "GET", summaryPath)).json();
+  assert.equal(fromRaw[0].retained_samples, 0);
   let result;
   do {
     const response = await call(
@@ -164,6 +168,15 @@ await dailyFixture(async ({ pool, call, users, actors, api, expect }) => {
   );
   assert.equal(summaries.status(), 200);
   assert.equal((await summaries.json())[0].average, null);
+  const fromSummaries = await (await call("viewer", "GET", summaryPath)).json();
+  assert.equal(fromSummaries.length, fromRaw.length);
+  for (const [i, raw] of fromRaw.entries()) {
+    const kept = fromSummaries[i];
+    for (const field of ["bucket", "samples", "good", "min", "max", "average", "identity"])
+      assert.deepEqual(kept[field], raw[field], `${raw.bucket} ${field}`);
+    assert.ok(Math.abs(kept.sum - raw.sum) <= Math.abs(raw.sum) * 1e-12, `${raw.bucket} sum`);
+  }
+  assert.ok(fromSummaries.every((row) => row.retained_samples > 0));
   const metrics = {
     rows: 200000,
     concurrentHistoryRequests: latencies.length,

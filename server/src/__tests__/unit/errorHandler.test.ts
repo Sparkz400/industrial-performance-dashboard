@@ -95,6 +95,29 @@ describe("errorHandler", () => {
     );
   });
 
+  it("maps a wrapped PostgreSQL unique violation to 409 without the query", () => {
+    const res = createMockRes();
+    const wrapped = Object.assign(
+      new Error("Failed query: insert ... params: secret"),
+      {
+        cause: {
+          code: "23505",
+          detail: "Key (endpoint_url)=(opc.tcp://x) already exists.",
+        },
+      },
+    );
+
+    handler(wrapped, createMockReq(), res, next);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: "CONFLICT",
+        error: "A machine with this endpoint URL already exists",
+      }),
+    );
+  });
+
   it("should handle UnauthorizedError", () => {
     const res = createMockRes();
     const req = createMockReq();

@@ -3,6 +3,7 @@ import Joi from "joi";
 import { validateBody, validateParams } from "../middleware/validation.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { webhookService } from "../services/webhookService.js";
+import { auditLogService, getAuditActor } from "../services/auditLogService.js";
 
 const router = express.Router();
 
@@ -58,6 +59,35 @@ router.get(
   "/deliveries",
   asyncHandler(async (_req, res) => {
     res.json(await webhookService.listDeliveries());
+  }),
+);
+
+// Dead-letter inspection: the exact queued event, without destination secrets.
+router.get(
+  "/deliveries/:id",
+  validateParams(idParamSchema),
+  asyncHandler(async (req: Request<{ id: string }>, res: Response) => {
+    res.json(await webhookService.getDelivery(Number(req.params.id)));
+  }),
+);
+
+router.post(
+  "/deliveries/:id/requeue",
+  validateParams(idParamSchema),
+  asyncHandler(async (req: Request<{ id: string }>, res: Response) => {
+    const requeued = await webhookService.requeueDelivery(
+      Number(req.params.id),
+    );
+    await auditLogService.recordEvent(
+      {
+        action: "webhook.delivery.requeued",
+        entityType: "webhook_delivery",
+        entityId: requeued.id,
+        message: `Requeued dead-lettered delivery ${requeued.id}`,
+      },
+      getAuditActor(req),
+    );
+    res.json(requeued);
   }),
 );
 

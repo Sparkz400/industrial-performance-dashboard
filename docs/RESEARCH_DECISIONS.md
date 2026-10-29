@@ -15,7 +15,7 @@ They follow the ROADMAP's "Decisions that remain conditional" defaults: OPC UA p
 | X04 | DEFER | Open | No completed-run history to backtest |
 | X06 | DEFER | Open | A ranked loss list exists; the usefulness comparison needs users; M06 is open |
 | C06 | DEFER | Open | No MQTT source; C05 is open; Sparkplug host duties conflict with read-only operation |
-| H08 | DEFER | Open | No multi-site customer; I01 is open; identities are not site-qualified |
+| H08 | DEFER | Open | No multi-site customer; identities are not site-qualified (I01 is done in wave 2) |
 | E02 | DEFER | Open | No selected IdP |
 | P01 | Guide and hypotheses drafted | Open | Needs an operator, an engineer and a production lead |
 | P06 | Baseline protocol drafted | Open | Needs P01 and the D06 pilot |
@@ -134,7 +134,7 @@ Database outages are already absorbed: the spool holds 1,000,000 entries, about 
 Trigger: the pilot owner agrees RPO/RTO (ROADMAP "Recovery objectives") and the D06 restore drill measurably misses them. Example: measured fresh-host restore time exceeds the RTO, or host-loss exposure (the spool lives on the same host) exceeds the RPO.
 
 **Smallest build when triggered.**
-- A collector lease: a session advisory lock on a dedicated connection taken before any OPC UA session. Stop the subscriptions when that connection is lost.
+- A collector lease: a session advisory lock on a dedicated connection taken before any OPC UA session. Stop the subscriptions when that connection is lost. *Built in backlog wave 2 as a startup guard (`server/src/services/collectorLock.ts`, `scripts/test-collector-lock.mjs`); fencing below is still open.*
 - A lease epoch stamped on spooled samples and checked in the `processBatch` transaction (fencing).
 - Test: two app processes against one isolated database and owned simulator produce no duplicate samples, and `kill -9` of the holder triggers takeover.
 - Limit: this does not detect a second installation using a *different* database. That remains procedural.
@@ -350,7 +350,7 @@ Reopen trigger, all of:
 - `server/src/services/edgeSyncService.ts` returns 501 (F04 honest boundary). `docs/P0_ACCEPTANCE.md:21` and `docs/STATUS.md:122` agree.
 - Idempotency foundation: stable per-sample event IDs with a unique `(timestamp, event_id)` (`schema.ts:218`).
 - Identity is site-local: `machine_id` is a local integer, and `signalId` hashes `endpointUrl`, which can collide across sites with equal private IPs (`measurementIdentity.ts`).
-- E01 (site permissions) is done in backlog wave 1; I01 (outbox) is open.
+- E01 (site permissions) is done in backlog wave 1; I01 (outbox) is done in backlog wave 2.
 
 **External evidence.** [Ignition store-and-forward](https://docs.inductiveautomation.com/docs/8.3/platform/store-and-forward) (S01): removal only after database confirmation. This matches the AGENTS.md rule.
 
@@ -360,7 +360,7 @@ Reopen trigger, all of:
 3. Defer and keep 501.
 
 **Decision: DEFER. Keep the item open.**
-- Blockers: no named multi-site customer; I01 open.
+- Blocker: no named multi-site customer (I01 is done).
 - Trigger (RESEARCH "Is central multi-site hosting actually required?"): a sponsor names at least two sites, link reliability, residency, and who needs central views.
 
 **Smallest build when triggered.**

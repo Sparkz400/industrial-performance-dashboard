@@ -46,6 +46,13 @@ export interface MachineAuthenticationInput extends MachineAuthentication {
   privateKeyPem?: string;
 }
 
+/** Per-endpoint OPC UA subscription limits; null means collector defaults. */
+export interface SubscriptionLimits {
+  publishingIntervalMs: number;
+  queueSize: number;
+  maxNotificationsPerPublish: number;
+}
+
 export interface Machine {
   id: number;
   name: string;
@@ -61,6 +68,7 @@ export interface Machine {
   updatedAt: string;
   mappingCount?: number;
   authentication?: MachineAuthentication;
+  subscription?: SubscriptionLimits | null;
 }
 
 export interface MachineFormData {
@@ -72,6 +80,7 @@ export interface MachineFormData {
   securityPolicy: string;
   isActive: boolean;
   authentication?: MachineAuthenticationInput;
+  subscription?: SubscriptionLimits | null;
 }
 
 export interface NodeMapping {
@@ -266,6 +275,9 @@ export interface Webhook {
 }
 
 export interface WebhookEvent {
+  /** Delivery ID; stable across retries and requeues. Absent on test events. */
+  id?: number;
+  schemaVersion?: number;
   type: string;
   payload: Record<string, unknown>;
   timestamp: string;

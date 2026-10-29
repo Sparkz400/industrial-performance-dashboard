@@ -30,7 +30,7 @@ export async function storageRunway() {
     {
       kind: "collector",
       path: resolve(dirname(config.OPCUA_SPOOL_PATH)),
-      reserve: 64 * 1024 * 1024,
+      reserve: config.OPCUA_SPOOL_RESERVE_MB * 1024 * 1024,
     },
     ...(process.env.PD_DATABASE_STORAGE_PATH
       ? [

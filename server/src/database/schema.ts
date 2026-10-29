@@ -139,6 +139,12 @@ export const machines = pgTable("machines", {
   resourcePath: varchar("resource_path").default(""),
   securityMode: varchar("security_mode").default("None"),
   securityPolicy: varchar("security_policy").default("None"),
+  // Per-endpoint subscription limits; null uses the collector defaults.
+  subscription: jsonb("subscription").$type<{
+    publishingIntervalMs: number;
+    queueSize: number;
+    maxNotificationsPerPublish: number;
+  }>(),
   isActive: boolean("is_active").default(true),
   status: varchar("status").default("disconnected"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
@@ -904,12 +910,16 @@ export const webhookDeliveries = pgTable("webhook_deliveries", {
     .notNull()
     .references(() => webhooks.id, { onDelete: "cascade" }),
   event: jsonb("event").notNull(),
+  // Version of the payload shape when queued; bump the default when the shape changes.
+  schemaVersion: integer("schema_version").notNull().default(1),
   attempts: integer("attempts").notNull().default(0),
   nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
   deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+  deadLetteredAt: timestamp("dead_lettered_at", { withTimezone: true }),
   lastStatus: integer("last_status"),
+  lastError: text("last_error"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
