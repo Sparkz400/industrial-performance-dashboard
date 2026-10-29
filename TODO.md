@@ -611,7 +611,7 @@ below retain their unfulfilled acceptance criteria.
   UTC quiet hours and one-time overdue escalation through webhooks are implemented
   ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)). Remaining:
   alarm email destinations and routing beyond webhooks.
-  Completed (wave 5): email destinations in the same durable outbox (quiet hours, retries, dead
+  Completed ([PR #72](https://github.com/Sparkz400/performance_dashboard/pull/72)): email destinations in the same durable outbox (quiet hours, retries, dead
   letters, requeue; Message-ID = delivery ID), SMTP credentials only in the environment, and routing
   of every destination by lowest severity and machine. `test-alarm-email.mjs` routes three alarms,
   rides out a mail-server outage as one message and sets a destination up in the browser.
@@ -713,7 +713,7 @@ below retain their unfulfilled acceptance criteria.
   requires a qualified baseline and shows sample size/assumptions instead of false precision.
   Progress: Cp/Cpk use separate specification limits and only an approved reference
   period ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)).
-  Completed (wave 5): profiles declare individual measurements (I-MR) or rational subgroups
+  Completed ([PR #72](https://github.com/Sparkz400/performance_dashboard/pull/72)): profiles declare individual measurements (I-MR) or rational subgroups
   (X̄-R, n 2–10); limits come from the approved reference with the standard constants and
   reproduce Montgomery's piston-ring case; attribute charts are refused because live signals carry
   no inspected-unit counts ([scope](docs/QUALITY_LINE_OPERATIONS.md#declared-control-charts),
