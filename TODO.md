@@ -41,7 +41,7 @@ F07, F08, F09, F10 and D01. A following P1 gap wave closed R04, O05, H05, D05 an
 backlog wave 1 closed E01, R05, R02 and A08, and recorded research decisions
 ([decisions](docs/RESEARCH_DECISIONS.md)): I08, E06 and X02 closed as rejected; the rest
 stay open with explicit triggers.
-Backlog status: 78 checked and 30 open; I06 is withdrawn.
+Backlog status: 80 checked and 28 open; I06 is withdrawn.
 
 ### Data integrity and reviewed operations — 2026-10-28
 
@@ -299,10 +299,16 @@ below retain their unfulfilled acceptance criteria.
   Progress: Modbus TCP (read-only 03/04) is the provisional adapter with owned fixtures.
   Blocker: ranking needs the real pilot device inventory (P01).
   Decision 2026-10-29: DEFER. Modbus TCP 03/04 stays the only provisional adapter; rank options by the documented rule once the P01 inventory exists. [decision](docs/RESEARCH_DECISIONS.md#c07--select-one-brownfield-protocol-extension).
-- [ ] **C08 — Suggest mappings from OPC UA information models** · P2 · M3 · New · L. Depends: C04.
+- [x] **C08 — Suggest mappings from OPC UA information models** · P2 · M3 · New · L. Depends: C04.
   Done: detect declared Machinery/selected companion-model capabilities using namespace
   URIs and type information; show suggestions with provenance and confidence, require
   approval, and fall back cleanly when a server only exposes proprietary tags.
+  Completed (wave 9): commissioning detects companion models by namespace URI, proposes a declared
+  Machinery item state (CurrentState/Number, Machinery 1.04 state numbers, NotAvailable unmapped) with
+  high confidence and name matches with low confidence, each with browse path, type and rule; proposals
+  only fill the reviewed form, and servers without a model are reported as such
+  (`test-mapping-suggestions.mjs` on owned Machinery and proprietary servers,
+  [scope](docs/PRODUCTION_WORKFLOW.md#commissioning)). Real vendor servers remain C10.
 - [x] **C09 — Expose subscription limits and diagnostics** · P1 · M2 · Improve · M. Depends: C01, H01.
   Done: requested/revised sampling, queue sizes, rejected items, reconnects and late/stale
   data are visible; load tests avoid reconnect storms and reveal overflow risk. Limits
@@ -878,10 +884,15 @@ below retain their unfulfilled acceptance criteria.
   Completed: [PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64);
   `scripts/test-configuration-bundles.mjs`; [scope](docs/FACTORY_OPERATIONS.md#reusable-setup).
 - **I06 — Withdrawn:** TIA MCP is a separate product. No integration is planned.
-- [ ] **I07 — Qualify the custom-widget runtime** · P3 · M5 · Improve · L. Depends: F07, U06.
+- [x] **I07 — Qualify the custom-widget runtime** · P3 · M5 · Improve · L. Depends: F07, U06.
   Done: prove actual rendering, iframe isolation, origin-checked messaging, permissions,
   versioning and removal; a malicious test widget cannot access unrelated data or parent
   credentials. Do not call manifest registration alone a working widget SDK.
+  Completed (wave 9): dashboards render registered widgets in an `allow-scripts` sandbox with an
+  opaque origin, hear only their own frame's handshake, send only declared `readSeries` data with the
+  viewer's access, pin the manifest version and explain changed, disabled or removed widgets; the CSP
+  frames only active widget origins. A hostile widget is blocked from the page, storage, cookies, API
+  and navigation (`test-custom-widgets.mjs`, [protocol](docs/CUSTOM_WIDGETS.md)).
 - [x] **I08 — Evaluate connector packaging for contributors** · P3 · M5 · Research · M. Depends: C10, I02.
   Done: use lessons from two real adapters to choose a minimal extension interface,
   fixture contract and compatibility policy. Prefer existing module patterns; do not

@@ -122,6 +122,8 @@ jobs:
       - run: node scripts/test-job-inspections.mjs
       - run: node scripts/test-maintenance-records.mjs
       - run: node scripts/test-improvement-actions.mjs
+      - run: node scripts/test-mapping-suggestions.mjs
+      - run: node scripts/test-custom-widgets.mjs
       - run: node scripts/test-quality-line.mjs
       - run: node scripts/test-supervisor-workflows.mjs
       - run: node scripts/test-period-comparisons.mjs
