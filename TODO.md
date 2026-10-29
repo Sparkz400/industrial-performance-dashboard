@@ -303,7 +303,7 @@ below retain their unfulfilled acceptance criteria.
   Done: detect declared Machinery/selected companion-model capabilities using namespace
   URIs and type information; show suggestions with provenance and confidence, require
   approval, and fall back cleanly when a server only exposes proprietary tags.
-  Completed (wave 9): commissioning detects companion models by namespace URI, proposes a declared
+  Completed ([PR #76](https://github.com/Sparkz400/performance_dashboard/pull/76)): commissioning detects companion models by namespace URI, proposes a declared
   Machinery item state (CurrentState/Number, Machinery 1.04 state numbers, NotAvailable unmapped) with
   high confidence and name matches with low confidence, each with browse path, type and rule; proposals
   only fill the reviewed form, and servers without a model are reported as such
@@ -888,7 +888,7 @@ below retain their unfulfilled acceptance criteria.
   Done: prove actual rendering, iframe isolation, origin-checked messaging, permissions,
   versioning and removal; a malicious test widget cannot access unrelated data or parent
   credentials. Do not call manifest registration alone a working widget SDK.
-  Completed (wave 9): dashboards render registered widgets in an `allow-scripts` sandbox with an
+  Completed ([PR #76](https://github.com/Sparkz400/performance_dashboard/pull/76)): dashboards render registered widgets in an `allow-scripts` sandbox with an
   opaque origin, hear only their own frame's handshake, send only declared `readSeries` data with the
   viewer's access, pin the manifest version and explain changed, disabled or removed widgets; the CSP
   frames only active widget origins. A hostile widget is blocked from the page, storage, cookies, API
