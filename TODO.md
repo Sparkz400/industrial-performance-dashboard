@@ -41,7 +41,7 @@ F07, F08, F09, F10 and D01. A following P1 gap wave closed R04, O05, H05, D05 an
 backlog wave 1 closed E01, R05, R02 and A08, and recorded research decisions
 ([decisions](docs/RESEARCH_DECISIONS.md)): I08, E06 and X02 closed as rejected; the rest
 stay open with explicit triggers.
-Backlog status: 70 checked and 38 open; I06 is withdrawn.
+Backlog status: 71 checked and 37 open; I06 is withdrawn.
 
 ### Data integrity and reviewed operations — 2026-10-28
 
@@ -366,7 +366,7 @@ below retain their unfulfilled acceptance criteria.
   makes restores cancel pending deletions; `test-operations.mjs` backs up while a deletion
   is scheduled, runs it on the source, restores, and proves the raw rows return, no summary
   double-counts them and neither the schedule nor a replay deletes anything.
-- [ ] **H06 — Add quality-aware rollups and query tuning** · P1 · M2 · Improve · L. Depends: H05, H02.
+- [x] **H06 — Add quality-aware rollups and query tuning** · P1 · M2 · Improve · L. Depends: H05, H02.
   Done: benchmark existing indexes first; implement only justified indexes/partitioning
   and rollups retaining count, extrema and quality coverage. Compare raw/aggregate results
   and preserve state durations and counter semantics instead of averaging every tag.
@@ -375,7 +375,10 @@ below retain their unfulfilled acceptance criteria.
   benchmark and raw/aggregate comparison on a sustained dataset (D04). [PR #69](https://github.com/Sparkz400/performance_dashboard/pull/69): `test-history.mjs`
   shows raw and retained-summary answers identical for 72 hourly buckets; `benchmark-history.mjs`
   records endpoint timings and index use on 5.2 million synthetic rows ([capacity](docs/CAPACITY.md)).
-  Remaining: state-duration and counter-increment rollups so retention never reduces those tags to averages.
+  Completed ([PR #73](https://github.com/Sparkz400/performance_dashboard/pull/73)): retention keeps per-hour seconds per production state and counter
+  increments (gap, reset and rollover rules of the profile) for commissioned production signals;
+  `test-history-rollups.mjs` removes 6,006 readings in two batches and finds the kept values equal to
+  the shift calculation on those readings ([scope](docs/DAILY_OPERATIONS.md)).
 - [x] **H07 — Handle late and corrected measurements predictably** · P1 · M2 · New · L. Depends: H01.
   Done: event-time ordering, duplicate identities and late arrivals have a defined policy;
   affected aggregates are recomputed with provenance and finalized reports keep their

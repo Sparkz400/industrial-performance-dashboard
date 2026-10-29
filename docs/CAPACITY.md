@@ -81,7 +81,8 @@ Decisions from this run:
   `SELECT indexrelname, idx_scan FROM pg_stat_user_indexes WHERE relname='opcua_data'`.
 - Raw and retained-summary history answer identically (`test-history.mjs`), so retention
   can reclaim raw rows without changing hourly counts, extrema, sums or quality coverage.
-  State durations and counter increments are not yet rolled up separately (H06 remains open).
+  State seconds and counter increments of production signals are kept separately at
+  retention and equal the shift calculation on the removed readings (`test-history-rollups.mjs`).
 
 For storage sizing, multiply ~194 bytes by samples per day (100 tags at 1 Hz is
 8.64 million samples, about 1.6 GiB per day before retention) and confirm on the target

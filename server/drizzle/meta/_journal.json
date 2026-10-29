@@ -197,6 +197,13 @@
       "when": 1793289279158,
       "tag": "0027_alarm_email_destinations",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793291145484,
+      "tag": "0028_history_state_counter_rollups",
+      "breakpoints": true
     }
   ]
 }

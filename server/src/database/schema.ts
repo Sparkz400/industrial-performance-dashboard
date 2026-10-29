@@ -78,6 +78,37 @@ export const historySummaries = pgTable(
     primaryKey({ columns: [table.machineId, table.nodeKey, table.bucket] }),
   ],
 );
+// State seconds of removed state readings, per hour and production state (H06).
+export const historyStateSeconds = pgTable(
+  "history_state_seconds",
+  {
+    machineId: integer("machine_id").notNull(),
+    nodeKey: text("node_key").notNull(),
+    bucket: timestamp("bucket", { withTimezone: true }).notNull(),
+    state: varchar("state", { length: 20 }).notNull(),
+    seconds: doublePrecision("seconds").notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.machineId, table.nodeKey, table.bucket, table.state],
+    }),
+  ],
+);
+// Counter increments of removed counter readings, per hour of the later reading (H06).
+export const historyCounterIncrements = pgTable(
+  "history_counter_increments",
+  {
+    machineId: integer("machine_id").notNull(),
+    nodeKey: text("node_key").notNull(),
+    bucket: timestamp("bucket", { withTimezone: true }).notNull(),
+    increment: doublePrecision("increment").notNull(),
+    pairs: integer("pairs").notNull(),
+    unknownPairs: integer("unknown_pairs").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.machineId, table.nodeKey, table.bucket] }),
+  ],
+);
 import type {
   SignalMetadata,
   ScheduledReportConfig,

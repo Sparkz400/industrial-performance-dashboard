@@ -73,6 +73,12 @@ the approved reference period; attribute charts are not offered for live signals
 Alarm email is a destination kind in the durable outbox, and every destination can be
 routed by lowest severity and machine (A05).
 
+## Backlog wave 6
+
+Retention keeps seconds per production state and counter increments of commissioned
+production signals, computed with the shift report's own rules, so removing raw readings no
+longer reduces those signals to averages (H06).
+
 ## Data integrity and reviewed operations
 
 The [six-feature integrity wave](DATA_INTEGRITY.md) replaces generated widget data,
