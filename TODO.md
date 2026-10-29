@@ -534,7 +534,7 @@ below retain their unfulfilled acceptance criteria.
   reduced motion and touch targets against an explicit WCAG 2.2 acceptance checklist.
   Progress: keyboard focus, skip link, 44-pixel coarse-pointer targets and touch flows
   are browser tested ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)).
-  Completed (wave 3): [WCAG 2.2 checklist](docs/ACCESSIBILITY.md); `test-accessibility.mjs`: zero
+  Completed ([PR #70](https://github.com/Sparkz400/performance_dashboard/pull/70)): [WCAG 2.2 checklist](docs/ACCESSIBILITY.md); `test-accessibility.mjs`: zero
   axe A/AA findings on seven screens, keyboard login and widget layout menu (2.5.7), reduced motion,
   320 px reflow and live regions. Open as a separate manual step: a screen-reader walkthrough and
   200 % text zoom on the operator device.
@@ -694,7 +694,7 @@ below retain their unfulfilled acceptance criteria.
   Progress: reviewed SPC reference periods freeze ordered readings with a digest, require
   100 usable readings, positive variation, no rule signals and reviewer attestation, and
   reproduce the NIST reference example ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62),
-  [scope](docs/QUALITY_LINE_OPERATIONS.md#reviewed-spc-reference-periods)). Completed (wave 3):
+  [scope](docs/QUALITY_LINE_OPERATIONS.md#reviewed-spc-reference-periods)). Completed ([PR #70](https://github.com/Sparkz400/performance_dashboard/pull/70)):
   live windows count samples, restart after bad data, ignore re-sent timestamps, judge only
   full windows against a positive baseline and rebuild after a restart; CUSUM h corrected
   from 2.5σ to 5σ; candidates record alarms, stops and products and approval refuses a fault
@@ -721,7 +721,7 @@ below retain their unfulfilled acceptance criteria.
   buttons clearly describe application records rather than PLC control.
   Progress: frozen batch recipes, `[startedAt, completedAt)` windows and unknown-aware
   good-quality summaries ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)).
-  Completed (wave 3): per-machine start lock, conditional complete/abort, visible refusals and
+  Completed ([PR #70](https://github.com/Sparkz400/performance_dashboard/pull/70)): per-machine start lock, conditional complete/abort, visible refusals and
   record-not-control labels; `test-batch-lifecycle.mjs` races starts five times, complete against
   abort, and checks an aborted batch makes no compliance claim. Recipes/batches stay experimental
   until a pilot validates the field meanings.
@@ -743,7 +743,7 @@ below retain their unfulfilled acceptance criteria.
   Done: verify concurrent integrity-chain updates, actor identity, signature purpose,
   correction reasons and exports; document database-admin/tamper boundaries. Keep
   regulatory claims disabled until a separate named validation program establishes them.
-  Completed (wave 3): serialised appends; checksum version 2 over every recorded field in
+  Completed ([PR #70](https://github.com/Sparkz400/performance_dashboard/pull/70)): serialised appends; checksum version 2 over every recorded field in
   key-sorted JSON; link and content breaks reported with the latest checksum to keep elsewhere;
   signatures require the signer's password and a meaning, forged metadata is refused; the
   Part 11 checklist is replaced by an unvalidated feature status (`test-compliance-audit.mjs`,
