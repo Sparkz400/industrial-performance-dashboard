@@ -54,6 +54,7 @@ exports[`REST access matrix > matches the reviewed per-role matrix 1`] = `
     "GET /trending/data",
     "GET /trending/export-csv",
     "GET /widget-evidence/machines/:id",
+    "GET /widget-runtime/registrations",
     "POST /alarms/:id/acknowledge",
     "POST /maintenance/plans/:id/events",
     "POST /maintenance/plans/:id/events/:eventId/attachments",
@@ -127,6 +128,7 @@ exports[`REST access matrix > matches the reviewed per-role matrix 1`] = `
     "GET /trending/data",
     "GET /trending/export-csv",
     "GET /widget-evidence/machines/:id",
+    "GET /widget-runtime/registrations",
     "GET /work-orders/machines/:id/completions",
     "POST /alarms/:id/acknowledge",
     "POST /cmms/machines/:id/handoffs",
@@ -211,6 +213,7 @@ exports[`REST access matrix > matches the reviewed per-role matrix 1`] = `
     "GET /trending/data",
     "GET /trending/export-csv",
     "GET /widget-evidence/machines/:id",
+    "GET /widget-runtime/registrations",
   ],
   "wallboard": [
     "GET /access/me",
@@ -264,6 +267,7 @@ exports[`REST access matrix > matches the reviewed per-role matrix 1`] = `
     "GET /trending/data",
     "GET /trending/export-csv",
     "GET /widget-evidence/machines/:id",
+    "GET /widget-runtime/registrations",
   ],
 }
 `;

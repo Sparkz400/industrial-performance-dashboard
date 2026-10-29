@@ -41,6 +41,7 @@ import {
   type TimeWindow,
 } from "../services/shiftCalculation.js";
 import { NotFoundError, ValidationError } from "../utils/errors.js";
+import { suggestMappings } from "../services/mappingSuggestions.js";
 import opcuaQueueWorker from "../queue/opcuaQueueWorker.js";
 import { machineScope } from "../services/accessScope.js";
 
@@ -542,6 +543,14 @@ router.get(
         .orderBy(desc(machineProfiles.id))
         .limit(100),
     );
+  }),
+);
+router.post(
+  "/machines/:id/suggest",
+  requireRole("admin"),
+  validateParams(idSchema),
+  asyncHandler(async (req, res) => {
+    res.json(await suggestMappings(Number(req.params.id)));
   }),
 );
 router.post(

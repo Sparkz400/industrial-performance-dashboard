@@ -100,6 +100,16 @@ and corrections kept (Q03). Service records link the stop and trend they concern
 type-checked attachments (M01). Improvement actions are compared with normalised periods
 before and after them, with mix, hours and meter coverage shown (M06).
 
+## Backlog wave 9
+
+Commissioning proposes signal mappings from a declared Machinery information model with
+high confidence and from browse names with low confidence, each with its provenance; a
+person still reviews and saves the profile (C08). Custom widgets now render in a sandbox
+with an opaque origin and a minimal message protocol, receive only declared data, keep
+their version and are blocked from the page, storage, session and API; previously only
+registration existed and the CSP blocked widget frames (I07,
+[protocol](CUSTOM_WIDGETS.md)).
+
 ## Data integrity and reviewed operations
 
 The [six-feature integrity wave](DATA_INTEGRITY.md) replaces generated widget data,

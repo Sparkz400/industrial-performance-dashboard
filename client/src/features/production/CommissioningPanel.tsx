@@ -79,6 +79,25 @@ const initial: ProductionProfile = {
   maxGapSeconds: 20,
   counterPolicy: 'reject-decrease',
 };
+interface Suggestions {
+  models: { uri: string; name: string }[];
+  standardModel: boolean;
+  suggestions: {
+    role: (typeof roles)[number];
+    nodeKey: string;
+    namespaceUri: string;
+    identifier: string;
+    dataType: string;
+    browsePath: string;
+    confidence: 'high' | 'low';
+    rule: string;
+    model: string | null;
+    states?: ProductionProfile['states'];
+  }[];
+  notes: string[];
+  truncated: boolean;
+  limitations: string[];
+}
 interface Preview {
   ready: boolean;
   namespaces: string[];
@@ -142,6 +161,29 @@ export default function CommissioningPanel() {
     ) as ProductionProfile['signals'],
   };
   const manualOnly = !Object.keys(mapped.signals).length;
+  const [suggested, setSuggested] = useState<Suggestions>();
+  // A suggestion only fills the form; preview and review still decide what is saved.
+  const applySuggestion = (s: Suggestions['suggestions'][number]) => {
+    changeSignal(s.role, {
+      nodeKey: s.nodeKey,
+      namespaceUri: s.namespaceUri,
+      identifier: s.identifier,
+      dataType: s.dataType,
+      unit: null,
+      scale: 1,
+    });
+    if (s.role === 'state') setManualState(false);
+    else setManualCounts(false);
+    if (s.states) {
+      setProfile((p) => ({ ...p, states: s.states! }));
+      setStateText(
+        Object.fromEntries(
+          Object.entries(s.states).map(([key, values]) => [key, values.join(',')]),
+        ),
+      );
+    }
+    setReviewed(false);
+  };
   const [profiles, setProfiles] = useState<{ id: number; profile: ProductionProfile }[]>([]);
   useEffect(() => {
     void fetchMachines();
@@ -229,7 +271,68 @@ export default function CommissioningPanel() {
         <Button disabled={!machineId || busy} onClick={() => void inspect(false)}>
           {t('Check connection')}{' '}
         </Button>
+        <Button
+          disabled={!machineId || busy}
+          onClick={() => {
+            setBusy(true);
+            setError('');
+            setSuggested(undefined);
+            void productionRequest<Suggestions>(`/machines/${machineId}/suggest`, {})
+              .then(setSuggested)
+              .catch((e) => setError(String(e)))
+              .finally(() => setBusy(false));
+          }}
+        >
+          {t('Suggest mappings from the information model')}
+        </Button>
       </Stack>
+      {suggested && (
+        <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
+          <Stack spacing={1}>
+            <Typography variant="h6">{t('Mapping suggestions')}</Typography>
+            <Alert severity={suggested.standardModel ? 'info' : 'warning'}>
+              {suggested.models.length
+                ? `${t('Declared information models:')} ${suggested.models.map((m) => m.name).join(', ')}`
+                : t(
+                    'No standard information model is declared; the suggestions below match browse names only.',
+                  )}
+            </Alert>
+            {suggested.suggestions.map((s) => (
+              <Stack
+                key={`${s.role}:${s.namespaceUri}:${s.identifier}`}
+                direction="row"
+                alignItems="center"
+                flexWrap="wrap"
+                gap={1}
+              >
+                <Typography sx={{ overflowWrap: 'anywhere' }}>
+                  {s.role} ← {s.browsePath} · {s.dataType} ·{' '}
+                  {s.confidence === 'high' ? t('high confidence') : t('low confidence')} · {s.rule}
+                  {s.states
+                    ? ` · running ${s.states.running.join(',')}, idle ${s.states.idle.join(',')}, planned ${s.states.planned.join(',')}`
+                    : ''}
+                </Typography>
+                <Button
+                  size="small"
+                  aria-label={`Use ${s.browsePath} for ${s.role}`}
+                  onClick={() => applySuggestion(s)}
+                >
+                  {t('Use')}
+                </Button>
+              </Stack>
+            ))}
+            {!suggested.suggestions.length && (
+              <Typography>{t('No candidates found; map the signals manually.')}</Typography>
+            )}
+            {suggested.notes.map((note) => (
+              <Alert key={note} severity="warning">
+                {note}
+              </Alert>
+            ))}
+            <Typography variant="body2">{suggested.limitations.join(' ')}</Typography>
+          </Stack>
+        </Box>
+      )}
       <MachineForm
         open={showMachine}
         onClose={() => setShowMachine(false)}

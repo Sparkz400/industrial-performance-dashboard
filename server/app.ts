@@ -28,6 +28,7 @@ import { existsSync } from "node:fs";
 import config from "./src/config/config.js";
 import dbClient from "./src/database/dbConnection.js";
 import logger from "./src/utils/logger.js";
+import { customWidgetService } from "./src/services/customWidgetService.js";
 import statusManager from "./src/utils/status.js";
 import { requireAssetAccess } from "./src/middleware/assetAccess.js";
 import accessRoutes from "./src/routes/accessRoutes.js";
@@ -75,6 +76,7 @@ import auditLogRoutes from "./src/routes/auditLogRoutes.js";
 import webhookRoutes from "./src/routes/webhookRoutes.js";
 import shareRoutes, { embedFramePolicy } from "./src/routes/shareRoutes.js";
 import customWidgetRoutes from "./src/routes/customWidgetRoutes.js";
+import widgetRuntimeRoutes from "./src/routes/widgetRuntimeRoutes.js";
 import alarmRoutes from "./src/routes/alarmRoutes.js";
 import annotationRoutes from "./src/routes/annotationRoutes.js";
 import nodeDataRoutes from "./src/routes/nodeDataRoutes.js";
@@ -104,6 +106,12 @@ export function createApp() {
 
   const { sessionStore, sessionMiddleware, invalidCsrfTokenError } =
     setupMiddleware(app);
+  // Registered widget origins become frame sources; until loaded, none are allowed.
+  customWidgetService
+    .refreshFrameOrigins()
+    .catch((error) =>
+      logger.warn(`[Widgets] Frame sources not loaded: ${String(error)}`),
+    );
 
   app.get("/healthz", async (_req, res) => {
     try {
@@ -188,6 +196,7 @@ export function createApp() {
     requireRole("admin"),
     customWidgetRoutes,
   );
+  app.use("/api/v1/widget-runtime", requireAuth, widgetRuntimeRoutes);
   app.use("/api/v1/alarms", requireAuth, alarmRoutes);
   app.use("/api/v1/annotations", requireAuth, annotationRoutes);
   app.use("/api/v1/node-data", requireAuth, nodeDataRoutes);

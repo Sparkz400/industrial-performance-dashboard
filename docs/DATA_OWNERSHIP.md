@@ -73,7 +73,7 @@ selection and time window; creating and revoking them is audited, opening them i
 | Webhooks | an administrator creating a destination | alarm events, maintenance escalations, CMMS handoffs; HMAC-signed with the destination's secret; private addresses refused unless `ALLOW_PRIVATE_OUTBOUND_URLS=true` |
 | Email | `SMTP_HOST` plus an email destination or report schedule | report PDFs to schedule recipients; alarm text to email destinations |
 | Tracing | `OTEL_ENABLED=true` (default off) | request and database spans, including SQL parameters, to `OTEL_EXPORTER_OTLP_ENDPOINT` |
-| Custom widgets | an administrator registering a manifest URL | the server fetches that manifest |
+| Custom widgets | an administrator registering a manifest URL and an editor placing the widget | the server fetches the manifest; viewers' browsers load the entry page from the widget's origin, and a widget declaring `readSeries` receives the signals configured for it and can send them to its own servers ([custom widgets](CUSTOM_WIDGETS.md)) |
 | OPC UA | each configured machine endpoint | subscriptions and certificate exchange with that machine |
 
 The application has no update check, usage telemetry or CDN: fonts and scripts are

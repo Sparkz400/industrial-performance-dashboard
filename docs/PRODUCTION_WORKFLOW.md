@@ -28,6 +28,19 @@ channel is suitable only for the owned local demonstration. Certificate/user
 identity qualification remains C01/C02. Profile units and model/version text are
 operator declarations, not automatically verified vendor compatibility.
 
+**Suggest mappings from the information model** browses the server read-only (at most
+2,000 nodes, six levels, the Server object skipped) and names the companion
+specifications it declares by namespace URI (Machinery, Devices, PackML, Machine Tools,
+Weihenstephan). A declared Machinery item state machine yields its
+`CurrentState/Number` with **high confidence** and state values from the Machinery 1.04
+nodeset (Executing 3 → running, NotExecuting 2 → idle, OutOfService 1 → planned);
+NotAvailable (0) stays unmapped because switched off and emergency stop look the same.
+Other numeric variables are proposed from their browse names with **low confidence**.
+Each proposal shows its browse path, data type, rule and model, and a server without a
+standard model is reported as such. **Use** only fills the form: preview, review and save
+still decide what is mapped. PackML and Weihenstephan counters are structured or optional
+and are not proposed (`test-mapping-suggestions.mjs`).
+
 ## Shift and operator workflow
 
 Create a shift with an explicit start/end UTC offset, IANA site timezone, work
