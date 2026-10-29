@@ -983,7 +983,7 @@ below retain their unfulfilled acceptance criteria.
   fencing against two active collectors and test failover on a declared topology.
   Defer implementation if the pilot's recovery targets are met by simpler operation.
   Decision 2026-10-29: DEFER until agreed RPO/RTO are missed by the D06 restore drill. The startup collector lock is built (`test-collector-lock.mjs`); fencing stays with this item. [decision](docs/RESEARCH_DECISIONS.md#d08--design-high-availability-from-measured-needs).
-  Completed (wave 12): database recovery, web redundancy and collector ownership are designed separately with labelled
+  Completed ([PR #79](https://github.com/Sparkz400/performance_dashboard/pull/79)): database recovery, web redundancy and collector ownership are designed separately with labelled
   assumptions ([design](docs/HIGH_AVAILABILITY.md)); collector leases fence a superseded collector's samples into
   quarantine, and two collector processes on one database hand over after `kill -9` without duplicates
   (`test-collector-fencing.mjs`). Replication and automatic failover wait for agreed targets, as the Done text allows.
@@ -1062,7 +1062,7 @@ below retain their unfulfilled acceptance criteria.
   backtest against actual completion and disclose unsupported process changes. Forecasts
   are advisory and do not automatically reschedule or control machines.
   Decision 2026-10-29: DEFER until the pilot records about 20 comparable completed runs to backtest. [decision](docs/RESEARCH_DECISIONS.md#x04--prototype-bounded-capacity-and-completion-forecasts).
-  Completed (wave 12): an advisory estimate with a 10th–90th percentile range from comparable verified runs since the
+  Completed ([PR #79](https://github.com/Sparkz400/performance_dashboard/pull/79)): an advisory estimate with a 10th–90th percentile range from comparable verified runs since the
   latest declared process change, withheld below 10 runs, with a rolling backtest against each run's actual hours and a
   mean-rate benchmark (`test-forecasts-recommendations.mjs`, [scope](docs/DAILY_OPERATIONS.md#completion-forecast)). The
   evidence is synthetic; the backtest on pilot runs remains.
@@ -1071,7 +1071,7 @@ below retain their unfulfilled acceptance criteria.
   human dismissal and link accepted actions to outcomes. Compare usefulness with a
   simple ranked loss list; recommendations use explicit rules and measured evidence.
   Decision 2026-10-29: DEFER until a P06 review shows the ranked loss list is seen but not acted on, and M06 links an action to before/after periods. [decision](docs/RESEARCH_DECISIONS.md#x06--test-improvement-recommendations-with-evidence).
-  Progress (wave 12): three explicit rules cite revisions or actions and assumptions; acceptance links an action and shows
+  Progress ([PR #79](https://github.com/Sparkz400/performance_dashboard/pull/79)): three explicit rules cite revisions or actions and assumptions; acceptance links an action and shows
   its outcome, dismissal needs a reason, and a usefulness log records both lists (`test-forecasts-recommendations.mjs`,
   [scope](docs/DAILY_OPERATIONS.md#recommendations)). Still open: the usefulness comparison with pilot users (P06).
 
