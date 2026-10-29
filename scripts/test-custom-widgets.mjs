@@ -11,7 +11,7 @@ process.env.ALLOW_PRIVATE_OUTBOUND_URLS = "true";
 await dailyFixture(async ({ pool, call, users, actors, api, frontend, expect }) => {
   // A third-party widget host on another origin.
   let base = "";
-  const pages = {
+  const pages = new Map(Object.entries({
     "/benign/manifest.json": () =>
       JSON.stringify({ id: "pd.test.benign", name: "Benign gauge", version: "1.0.0", entryUrl: `${base}/benign/widget.html`, permissions: ["readSeries"], minW: 2, minH: 2, defaultW: 4, defaultH: 6 }),
     "/evil/manifest.json": () =>
@@ -42,9 +42,9 @@ await dailyFixture(async ({ pool, call, users, actors, api, frontend, expect }) 
       parent.postMessage({ type: "pd:request", machineId: 999, nodeKeys: ["Secret"] }, "*");
       parent.postMessage({ type: "pd:ready" }, "*");
     </script></body>`,
-  };
+  }));
   const host = createServer((req, res) => {
-    const page = pages[req.url];
+    const page = pages.get(req.url);
     if (!page) return res.writeHead(404).end();
     res.writeHead(200, { "content-type": req.url.endsWith(".json") ? "application/json" : "text/html" }).end(page());
   }).listen(0, "127.0.0.1");
