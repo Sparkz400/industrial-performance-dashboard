@@ -375,7 +375,7 @@ below retain their unfulfilled acceptance criteria.
   benchmark and raw/aggregate comparison on a sustained dataset (D04). [PR #69](https://github.com/Sparkz400/performance_dashboard/pull/69): `test-history.mjs`
   shows raw and retained-summary answers identical for 72 hourly buckets; `benchmark-history.mjs`
   records endpoint timings and index use on 5.2 million synthetic rows ([capacity](docs/CAPACITY.md)).
-  Completed (wave 6): retention keeps per-hour seconds per production state and counter
+  Completed ([PR #73](https://github.com/Sparkz400/performance_dashboard/pull/73)): retention keeps per-hour seconds per production state and counter
   increments (gap, reset and rollover rules of the profile) for commissioned production signals;
   `test-history-rollups.mjs` removes 6,006 readings in two batches and finds the kept values equal to
   the shift calculation on those readings ([scope](docs/DAILY_OPERATIONS.md)).
