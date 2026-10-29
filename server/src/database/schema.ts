@@ -1008,6 +1008,42 @@ export const productionShifts = pgTable("production_shifts", {
     .defaultNow(),
 });
 
+/** Expected changeover per product transition; append-only, the latest row is in force. */
+export const changeoverStandards = pgTable(
+  "changeover_standards",
+  {
+    id: serial("id").primaryKey(),
+    machineId: integer("machine_id")
+      .notNull()
+      .references(() => machines.id, { onDelete: "restrict" }),
+    fromProduct: varchar("from_product", { length: 160 }).notNull(),
+    toProduct: varchar("to_product", { length: 160 }).notNull(),
+    expectedSeconds: integer("expected_seconds").notNull(),
+    note: text("note"),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("changeover_standard_pair").on(
+      t.machineId,
+      t.fromProduct,
+      t.toProduct,
+    ),
+    check(
+      "changeover_expected_seconds",
+      sql`${t.expectedSeconds} > 0 AND ${t.expectedSeconds} <= 86400`,
+    ),
+    check(
+      "changeover_distinct_products",
+      sql`${t.fromProduct} <> ${t.toProduct}`,
+    ),
+  ],
+);
+
 export const productionCalendars = pgTable("production_calendars", {
   id: serial("id").primaryKey(),
   machineId: integer("machine_id")
@@ -1428,6 +1464,31 @@ export const batchLots = pgTable(
       .where(sql`${t.direction}='output'`),
     check("lot_direction", sql`${t.direction} IN ('input','output')`),
     check("lot_quantity", sql`${t.quantity}>0`),
+  ],
+);
+/** Append-only corrections of a declared lot link; the latest one applies, null quantity voids it. */
+export const batchLotCorrections = pgTable(
+  "batch_lot_corrections",
+  {
+    id: serial("id").primaryKey(),
+    lotLinkId: integer("lot_link_id")
+      .notNull()
+      .references(() => batchLots.id),
+    quantity: doublePrecision("quantity"),
+    reason: text("reason").notNull(),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("lot_correction_link").on(t.lotLinkId, t.id),
+    check(
+      "lot_correction_quantity",
+      sql`${t.quantity} IS NULL OR ${t.quantity}>0`,
+    ),
   ],
 );
 export const spcBaselines = pgTable("spc_baselines", {

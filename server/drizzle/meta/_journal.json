@@ -204,6 +204,13 @@
       "when": 1793291145484,
       "tag": "0028_history_state_counter_rollups",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793294195980,
+      "tag": "0029_changeover_standards_lot_corrections",
+      "breakpoints": true
     }
   ]
 }
