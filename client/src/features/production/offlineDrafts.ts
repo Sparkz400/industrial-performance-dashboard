@@ -15,7 +15,8 @@ export type OperatorDraftForm = Record<
   | 'intervalEnd'
   | 'total'
   | 'good'
-  | 'reject',
+  | 'reject'
+  | 'manualState',
   string
 >;
 export type OfflineEntryBase = Pick<OperatorEntry, 'id' | 'version' | 'status' | 'kind'>;
@@ -53,6 +54,9 @@ export function readOfflineDrafts(userId: number, now = Date.now()): OfflineOper
     const state = JSON.parse(raw);
     if (state.userId !== userId || !Array.isArray(state.drafts) || state.drafts.length > 20)
       throw new Error('Draft owner or format changed');
+    // Drafts kept before manual state declarations have no manualState field yet.
+    for (const draft of state.drafts)
+      if (draft?.form && Object.keys(draft.form).length === 12) draft.form.manualState ??= '';
     const drafts = state.drafts.filter(
       (draft: OfflineOperatorDraft) =>
         draft.userId === userId &&
@@ -66,11 +70,11 @@ export function readOfflineDrafts(userId: number, now = Date.now()): OfflineOper
         Date.parse(draft.expiresAt) > now &&
         ['open', 'resolved'].includes(draft.status) &&
         draft.form &&
-        Object.keys(draft.form).length === 12 &&
+        Object.keys(draft.form).length === 13 &&
         Object.values(draft.form).every(
           (value) => typeof value === 'string' && value.length <= 4000,
         ) &&
-        ['note', 'action', 'quantity'].includes(draft.form.kind) &&
+        ['note', 'action', 'quantity', 'state'].includes(draft.form.kind) &&
         (draft.entry === null ||
           (Number.isSafeInteger(draft.entry.id) &&
             draft.entry.id > 0 &&

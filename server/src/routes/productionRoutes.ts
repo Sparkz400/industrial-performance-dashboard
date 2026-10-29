@@ -212,7 +212,33 @@ export async function report(
         )
         .orderBy(desc(operatorEntries.updatedAt), desc(operatorEntries.id))
         .limit(1);
+  // Reviewed state declarations apply to the shift and to each product-run window.
+  const manualStates = (
+    await database
+      .select()
+      .from(operatorEntries)
+      .where(
+        and(
+          eq(operatorEntries.shiftId, id),
+          eq(operatorEntries.kind, "state"),
+          eq(operatorEntries.status, "resolved"),
+        ),
+      )
+      .orderBy(asc(operatorEntries.id))
+  ).flatMap((entry) =>
+    entry.manualState && entry.intervalStart && entry.intervalEnd
+      ? [
+          {
+            entryId: entry.id,
+            start: entry.intervalStart.toISOString(),
+            end: entry.intervalEnd.toISOString(),
+            state: entry.manualState,
+          },
+        ]
+      : [],
+  );
   const result = calculateShift({
+    manualStates,
     declaration: declared?.quantity
       ? {
           entryId: declared.id,

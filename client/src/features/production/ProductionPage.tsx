@@ -399,6 +399,12 @@ export default function ProductionPage() {
                 {data.quantitySource === 'declaration' && (
                   <Chip color="warning" label={t('Quantities: reviewed manual declaration')} />
                 )}
+                {(data.stateSource === 'manual' || data.stateSource === 'mixed') && (
+                  <Chip
+                    color="warning"
+                    label={`${t('State: reviewed manual declarations')} · ${((data.manualStateSeconds ?? 0) / 60).toFixed(1)} ${t('min')}`}
+                  />
+                )}
               </Stack>
               <Typography>
                 {t('Scheduled production:')} {(data.scheduledSeconds / 60).toFixed(1)}{' '}

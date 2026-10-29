@@ -33,7 +33,7 @@ export function rollupRemoved(readings: RemovedReading[]) {
     const p = r.profile;
     if (!p) continue;
     const gapMs = p.maxGapSeconds * 1000;
-    if (r.nodeKey === p.signals.state.nodeKey) {
+    if (p.signals.state && r.nodeKey === p.signals.state.nodeKey) {
       const value = r.value == null ? null : r.value * p.signals.state.scale;
       const state =
         value != null && r.statusCode?.startsWith("Good")

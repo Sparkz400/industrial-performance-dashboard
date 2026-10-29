@@ -1153,6 +1153,9 @@ export const operatorEntries = pgTable(
       good: number;
       reject: number;
     }>(),
+    manualState: varchar("manual_state", { length: 10 }).$type<
+      "running" | "idle" | "fault" | "planned"
+    >(),
     version: integer("version").notNull().default(1),
     createdBy: integer("created_by")
       .notNull()
@@ -1169,6 +1172,11 @@ export const operatorEntries = pgTable(
       table.machineId,
       table.status,
       table.updatedAt,
+    ),
+    check(
+      "operator_manual_state",
+      sql`(${table.kind}='state' AND ${table.manualState} IN ('running','idle','fault','planned'))
+        OR (${table.kind}<>'state' AND ${table.manualState} IS NULL)`,
     ),
   ],
 );

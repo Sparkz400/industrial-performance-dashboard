@@ -211,6 +211,13 @@
       "when": 1793294195980,
       "tag": "0029_changeover_standards_lot_corrections",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793298640901,
+      "tag": "0030_manual_state_declarations",
+      "breakpoints": true
     }
   ]
 }
