@@ -16,6 +16,7 @@ import { rateLimiter } from "./security.js";
 import logger from "../utils/logger.js";
 import { CSRF_HEADER_NAME } from "../utils/csrf.js";
 import config from "../config/config.js";
+import { customWidgetService } from "../services/customWidgetService.js";
 
 const pgSession = connectPgSimple(session);
 
@@ -40,6 +41,8 @@ export function setupMiddleware(app: express.Application): MiddlewareContext {
           ...helmet.contentSecurityPolicy.getDefaultDirectives(),
           "script-src": ["'self'"],
           "style-src": ["'self'", "'unsafe-inline'"],
+          // Only registered, active custom-widget entry pages may be framed.
+          "frame-src": ["'self'", () => customWidgetService.frameSources()],
           "connect-src": [
             "'self'",
             config.CLIENT_URL,

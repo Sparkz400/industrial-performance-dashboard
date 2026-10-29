@@ -124,6 +124,8 @@ describe("REST access matrix", () => {
       "GET /production/assets",
       "GET /production/operator/owners",
       "GET /production/shifts",
+      // Public metadata of registered widgets; no machine data.
+      "GET /widget-runtime/registrations",
     ];
     const supervisorChecked = [
       "GET /lines",
@@ -173,6 +175,7 @@ describe("REST access matrix", () => {
       "GET /production/assets",
       "GET /production/operator/owners",
       "GET /production/shifts",
+      "GET /widget-runtime/registrations",
       "POST /lines",
     ]);
   });

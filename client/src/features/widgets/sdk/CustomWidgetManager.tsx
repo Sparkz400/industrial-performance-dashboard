@@ -109,8 +109,10 @@ export default function CustomWidgetManager() {
       </Box>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Install custom widgets from external sources. Widgets communicate with the dashboard via a
-        secure postMessage iframe protocol.
+        Register a widget manifest, then add a Custom Widget to a dashboard and choose the machine
+        signals it receives. Widgets run in a sandbox with their own opaque origin: they cannot read
+        this page, your session, storage or the API, and they receive series only when their
+        manifest declares readSeries. A dashboard keeps the version it was configured with.
       </Typography>
 
       {widgets.length === 0 ? (

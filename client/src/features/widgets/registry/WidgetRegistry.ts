@@ -209,6 +209,20 @@ export const widgetRegistry: WidgetRegistryType = {
       machineId: null,
     },
   },
+  customWidget: {
+    component: React.lazy(() => import('../types/custom-widget/CustomWidgetFrame')),
+    settingsComponent: React.lazy(() => import('../types/custom-widget/CustomWidgetSettings')),
+    minW: MIN_W,
+    minH: MIN_H,
+    defaultW: 4,
+    defaultH: 6,
+    title: 'Custom Widget',
+    description:
+      'Sandboxed widget from a registered manifest; receives only the signals you choose',
+    category: WIDGET_CATEGORIES.ANALYTICS,
+    icon: 'Extension',
+    defaultConfig: { registrationId: null, version: '', machineId: null, nodeKeys: [] },
+  },
   digitalTwin: {
     component: React.lazy(() => import('../types/digital-twin/index')),
     settingsComponent: null,

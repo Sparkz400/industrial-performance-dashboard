@@ -323,6 +323,8 @@ export interface CustomWidgetManifest {
   category: string;
   icon: string;
   entryUrl: string;
+  /** Data the dashboard may send; `readSeries` is the configured machine's chosen signals. */
+  permissions?: "readSeries"[];
   settingsSchema?: WidgetSettingsField[];
   defaultConfig: WidgetConfig;
   minW: number;
