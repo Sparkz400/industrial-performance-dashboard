@@ -21,7 +21,9 @@ test equipment; physical-machine and production acceptance remain open.
 
 The first P0 wave fixes trend completeness, SPC isolation and measurement identity.
 Edge transfer is disabled. The AI assistant and provider integration have been removed.
-See [acceptance evidence](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/P0_ACCEPTANCE.md).
+See [acceptance evidence](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/P0_ACCEPTANCE.md),
+the per-screen [acceptance matrix](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/ACCEPTANCE_MATRIX.md)
+and the [security and deployment boundaries](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/SECURITY_BOUNDARIES.md).
 
 - [[Getting Started]]
 - [[Architecture]]
@@ -38,8 +40,8 @@ This wiki is published from `docs/wiki/` on `main`; direct edits are overwritten
 The [production workflow](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/PRODUCTION_WORKFLOW.md)
 covers guided commissioning, immutable shift profiles, operator corrections,
 reconciled reports, durable alarm delivery and the single-company permission policy.
-Public sharing and legacy notification channels are disabled. Physical qualification
-remains open. Protected OPC UA identities and explicit certificate trust are covered by
+Sharing is limited to expiring, revocable links to selected trends; legacy notification
+channels are disabled. Physical qualification remains open. Protected OPC UA identities and explicit certificate trust are covered by
 owned-server tests; see the [S7-1500 pilot guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/S7_1500_PILOT.md).
 
 The full npm audit and migrated Node 24/Wolfi image scan are clear in this wave.

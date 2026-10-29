@@ -158,6 +158,7 @@ const DashboardToolbar: React.FC<DashboardToolbarProps> = ({
             onClose={() => setShareOpen(false)}
             dashboardId={selectedDashboardId}
             dashboardName={selectedDashboard?.name || 'Dashboard'}
+            widgets={widgets}
           />
         </>
       )}

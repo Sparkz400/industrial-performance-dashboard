@@ -97,11 +97,13 @@ export class OpcuaSocketService {
 
     const payload: OpcuaNodeData = { ...data, delta };
 
+    // Key-only rooms could collide with "opcua-<machine>-<key>" names, so they carry only legacy unscoped data.
     if (data.machineId) {
       this.io
         .to(`opcua-${data.machineId}-${data.key}`)
         .emit("opcuaUpdate", payload);
+    } else {
+      this.io.to(`opcua-${data.key}`).emit("opcuaUpdate", payload);
     }
-    this.io.to(`opcua-${data.key}`).emit("opcuaUpdate", payload);
   }
 }

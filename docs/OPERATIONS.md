@@ -21,7 +21,10 @@ flowchart LR
 
 Keep the acquisition interface in the approved OT network. Permit only configured
 OPC UA endpoints and approved outbound receivers; no internet route to a PLC is
-required. PostgreSQL is not published to the host. The app runs as UID 1000; use
+required. PostgreSQL is not published to the host. The app connects as `dashboard`,
+a non-superuser role that owns only its database; a separate `postgres` superuser
+exists for maintenance. Installations created before 2026-10-29 keep their original
+roles until restored into a fresh project. The app runs as UID 1000; use
 separate installations for separate companies. Metrics and support diagnostics
 require an authenticated administrator. TLS termination, firewall rules and the
 PLC user's read-only rights still require verification at the actual installation.

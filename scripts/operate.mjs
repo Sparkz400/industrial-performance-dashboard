@@ -130,12 +130,17 @@ async function unusedProject() {
     );
   }
 }
-function stack(
-  image,
-  environment,
-  databaseImage = "postgres:16-alpine",
-  databaseEnvironment,
-) {
+const secret = () => randomBytes(32).toString("hex");
+// Runs once on an empty volume. "$$" stops Compose interpolation; psql quotes the password.
+const APP_ROLE_INIT = `set -eu
+psql -v ON_ERROR_STOP=1 -v pw="$$APP_DB_PASSWORD" --username "$$POSTGRES_USER" --dbname "$$POSTGRES_DB" <<'SQL'
+CREATE ROLE dashboard LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD :'pw';
+ALTER DATABASE performance_dashboard OWNER TO dashboard;
+REVOKE ALL ON DATABASE performance_dashboard FROM PUBLIC;
+SQL
+`;
+/** The application role owns only its database; the bootstrap superuser is never used by the app. */
+function stack(image, environment, databaseImage = "postgres:16-alpine") {
   const appEnvironment = {
     ...environment,
     NODE_ENV: "production",
@@ -212,11 +217,18 @@ function stack(
       },
       db: {
         image: databaseImage,
-        environment: databaseEnvironment ?? {
-          POSTGRES_USER: "dashboard",
+        environment: {
+          POSTGRES_USER: "postgres",
           POSTGRES_DB: "performance_dashboard",
-          POSTGRES_PASSWORD: environment.DB_PASSWORD,
+          POSTGRES_PASSWORD: secret(),
+          APP_DB_PASSWORD: environment.DB_PASSWORD,
         },
+        configs: [
+          {
+            source: "app-role",
+            target: "/docker-entrypoint-initdb.d/10-app-role.sh",
+          },
+        ],
         volumes: ["postgres_data:/var/lib/postgresql/data"],
         restart: "unless-stopped",
         healthcheck: {
@@ -237,6 +249,7 @@ function stack(
       reports: {},
     },
     networks: { default: { internal: true }, preview: {} },
+    configs: { "app-role": { content: APP_ROLE_INIT } },
   };
 }
 async function hashFile(file) {
@@ -420,11 +433,11 @@ if (command === "verify") {
       manifest = await verifyBackup(backup),
       runtime = await json(join(backup, "runtime.json"));
     await run(["image", "load"], { inputFile: join(backup, "images.tar") });
+    // Older backups ran the app as the database superuser; restores adopt the reduced role.
     config = stack(
       options.image || manifest.appImage,
       runtime.app,
       manifest.databaseImage,
-      runtime.database,
     );
     await save(file, config);
     await compose(file, ["up", "-d", "--wait", "db"]);
@@ -473,7 +486,6 @@ if (command === "verify") {
       options.image,
       "--image is required (build or select a validated image first)",
     );
-    const secret = () => randomBytes(32).toString("hex");
     const initialPassword = secret();
     config = stack(
       options.image,

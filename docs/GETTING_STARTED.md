@@ -46,9 +46,12 @@ backup/restore tooling, use the [operations guide](OPERATIONS.md). The manual
 Compose setup below remains available for development and existing installations.
 
 Create a private `.env` in the repository root containing `DB_PASSWORD`,
-`SESSION_SECRET`, `COOKIE_SECRET`, `SEED_ADMIN_PASSWORD` and
+`DB_ADMIN_PASSWORD`, `SESSION_SECRET`, `COOKIE_SECRET`, `SEED_ADMIN_PASSWORD` and
 `CLIENT_URL=http://localhost:3001`. Generate unique secrets; the seed password
-must be at least 12 characters. Set `OPCUA_IP` and `OPCUA_PORT` for an owned test
+must be at least 12 characters. A new database volume gets a separate `postgres`
+superuser (`DB_ADMIN_PASSWORD`) and an application role `dashboard` that only owns
+its database. Volumes created before this change keep their original roles; restore
+a backup into a fresh installation to adopt the reduced role. Set `OPCUA_IP` and `OPCUA_PORT` for an owned test
 endpoint; `host.docker.internal:4841` addresses the host simulator on Docker Desktop.
 
 ```sh

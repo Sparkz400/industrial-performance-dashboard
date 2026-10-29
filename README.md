@@ -50,9 +50,12 @@ are supported; the style does not change measurement or quality semantics.
 
 Edge synchronization is disabled until canonical central ingestion is implemented.
 The AI assistant and external AI-provider integration have been removed.
-Public links/embeds and legacy alarm email/chat/SMS channels are disabled.
-See the [production workflow](docs/PRODUCTION_WORKFLOW.md) and
-[P0 acceptance evidence](docs/P0_ACCEPTANCE.md) for tested paths and remaining gates.
+Administrators can share selected trend widgets through expiring, revocable read-only
+links; legacy alarm email/chat/SMS channels are disabled.
+See the [production workflow](docs/PRODUCTION_WORKFLOW.md),
+[P0 acceptance evidence](docs/P0_ACCEPTANCE.md), the per-screen
+[acceptance matrix](docs/ACCEPTANCE_MATRIX.md) and the
+[security and deployment boundaries](docs/SECURITY_BOUNDARIES.md).
 The first nominated pilot family is [Siemens SIMATIC S7-1500](docs/S7_1500_PILOT.md);
 software acceptance uses owned simulators, with physical CPU qualification still open.
 For isolated installation, complete backups, restore checks and upgrades, see the

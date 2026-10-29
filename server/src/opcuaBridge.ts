@@ -40,6 +40,7 @@ interface Services {
     broadcastAlarmTriggered: (data: AlarmEvent) => void;
     broadcastAlarmAcknowledged: (data: AlarmEvent) => void;
     broadcastAlarmCleared: (data: AlarmEvent) => void;
+    broadcastAlarmUpdated: (data: AlarmEvent) => void;
   };
   spcService: { broadcastSpcAlert: (data: SpcAlertEvent) => void };
 }
@@ -52,32 +53,18 @@ export function setupOpcuaBridge({
   spcService: spcSocketService,
 }: Services): void {
   // Wire alarm evaluator to socket broadcasts
+  // Alarm events go only to administrators and accounts granted the alarm's machine.
   alarmEvaluator.on("alarmTriggered", (row: AlertHistoryRow) => {
     alarmService.broadcastAlarmTriggered(toAlarmEvent(row));
-    io.emit("alertTriggered", {
-      alertId: row.id,
-      ruleId: row.ruleId,
-      ruleName: row.ruleName,
-      severity: row.severity,
-      message: row.message,
-      machineId: row.machineId,
-      nodeKey: row.nodeKey,
-      value: row.triggerValue,
-      threshold: row.threshold,
-      timestamp: row.createdAt?.toISOString(),
-    });
   });
   alarmEvaluator.on("alarmCleared", (row: AlertHistoryRow) => {
     alarmService.broadcastAlarmCleared(toAlarmEvent(row));
-    io.emit("alertUpdated", row);
   });
   alarmEvaluator.on("alarmAcknowledged", (row: AlertHistoryRow) => {
     alarmService.broadcastAlarmAcknowledged(toAlarmEvent(row));
-    io.emit("alertAcknowledged", row);
   });
   alarmEvaluator.on("alarmUpdated", (row: AlertHistoryRow) => {
-    io.emit("alertUpdated", row);
-    io.emit("alarmUpdated", toAlarmEvent(row));
+    alarmService.broadcastAlarmUpdated(toAlarmEvent(row));
   });
 
   // Wire SPC alert events to socket broadcasts

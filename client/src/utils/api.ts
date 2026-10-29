@@ -2,6 +2,11 @@ import { protectedFetch } from './protectedFetch';
 import { API_ENDPOINTS } from '../config/config';
 import { isCsrfError } from './csrf';
 import type { Dashboard, GetAuditLogsRequest } from '@/types';
+import type {
+  CreateSharedLinkRequest,
+  CreateSharedLinkResponse,
+  SharedLink,
+} from '@performance-dashboard/shared';
 
 /**
  *
@@ -251,14 +256,11 @@ export const api = {
     testWebhook: (id: number) => api.post(API_ENDPOINTS.webhooks.test(id)),
 
     // Dashboard Sharing
-    createShare: (
-      dashboardId: string,
-      data: { expiresInHours?: number | null; allowEmbed?: boolean },
-    ) => api.post(API_ENDPOINTS.share.create(dashboardId), data),
-    getShares: (dashboardId: string) => api.get(API_ENDPOINTS.share.list(dashboardId)),
-    revokeShare: (id: number) => api.delete(API_ENDPOINTS.share.revoke(id)),
-    getPublicDashboard: (token: string) => api.get(API_ENDPOINTS.share.public(token)),
-    getEmbedDashboard: (token: string) => api.get(API_ENDPOINTS.share.embed(token)),
+    createShare: (dashboardId: string, data: CreateSharedLinkRequest) =>
+      api.post(API_ENDPOINTS.share.create(dashboardId), data) as Promise<CreateSharedLinkResponse>,
+    getShares: (dashboardId: string) =>
+      api.get(API_ENDPOINTS.share.list(dashboardId)) as Promise<SharedLink[]>,
+    revokeShare: (id: number) => api.delete(API_ENDPOINTS.share.revoke(id)) as Promise<SharedLink>,
 
     // Custom Widgets
     getCustomWidgets: () => api.get(API_ENDPOINTS.customWidgets.base),

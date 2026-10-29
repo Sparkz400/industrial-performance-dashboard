@@ -29,6 +29,16 @@ functionality.
 
 ## Execution update — 2026-10-26
 
+### Backlog reconciliation — 2026-10-29
+
+The checklist below lagged behind PRs #57, #59, #62, #63 and #64, whose acceptance
+documents did not name backlog IDs. Each item was compared with its Done text and the
+merged evidence: 23 items whose software criteria are covered by named tests were
+checked with links, and stale progress notes now state the concrete remaining gap.
+Items waiting for hardware, customers, supervised users or experimental-module
+qualification stay open. The same day closed the remaining P0 software items F01,
+F07, F08, F09, F10 and D01. Backlog status: 46 checked and 62 open; I06 is withdrawn.
+
 ### Data integrity and reviewed operations — 2026-10-28
 
 The authorized implementation wave covers H03/H07/H10/U09/I04/M05: honest widgets,
@@ -125,9 +135,8 @@ The production-workflow wave completes F03/F06/A01 and the bounded stop-reason,
 explainable-OEE and reconciled-report slice O02/O03/R01. See
 [production acceptance evidence](docs/P0_ACCEPTANCE.md#production-workflow-wave).
 DF01 adds the scoped REST/tRPC/socket/export role matrix to F07; broader release
-review remains tracked separately. F08 is
-contained by disabling sharing. Next gates are C01/C02 endpoint identity/trust,
-F09 release security, and D01-D03 installation/backup/upgrade qualification.
+review remains tracked separately. The remaining P0 software items were closed on
+2026-10-29; see [security and deployment boundaries](docs/SECURITY_BOUNDARIES.md).
 
 All 29 dependency PRs were reviewed. Fifteen obsolete or incompatible proposals
 were closed with reasons; fourteen compatible proposals are consolidated into this
@@ -139,13 +148,13 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
 
 ## Foundation
 
-- [ ] **F01 — Capture the current product contract** · P0 · M0 · Improve · S. Depends: none.
+- [x] **F01 — Capture the current product contract** · P0 · M0 · Improve · S. Depends: none.
   Done: preserve fixtures for trend truncation, same-key machines, unwired alerts/webhooks,
   edge receive; map enabled screens to supported, experimental or
   disabled states and link each reproduced issue to its owning task.
-  Progress: trend/machine-isolation and edge regressions plus the acceptance
-  matrix and actual UI-rule-to-receiver alarm fixtures are present. Complete the
-  screen-by-screen experimental/disabled acceptance inventory before closure.
+  Completed: [PR #66](https://github.com/Sparkz400/performance_dashboard/pull/66); every route and tab is classified with its owning
+  task in the [acceptance matrix](docs/ACCEPTANCE_MATRIX.md); trend, same-key, alarm
+  and edge fixtures are listed in [P0 acceptance](docs/P0_ACCEPTANCE.md).
 - [x] **F02 — Isolate SPC state and baselines** · P0 · M0 · Improve · M. Depends: F01, H01.
   Done: machine/tag/profile identities isolate baselines and rolling windows; two machines
   with identical keys and multiple profiles cannot contaminate or double-count samples.
@@ -173,21 +182,27 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   intervals. Define behavior before storage exhaustion rather than silently dropping data.
   Completed: [PR #51](https://github.com/Sparkz400/performance_dashboard/pull/51); [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
 
-- [ ] **F07 — Audit every data-access boundary** · P0 · M0 · Improve · L. Depends: F01.
+- [x] **F07 — Audit every data-access boundary** · P0 · M0 · Improve · L. Depends: F01.
   Done: negative tests cover admin/viewer, REST, tRPC, sockets, reports, shares and exports;
   machine identifiers cannot bypass authorization. Document one-company deployment
   limits and close any unintended access found before accepting the affected feature.
-  Progress: current-account REST/tRPC guards, admin-only configuration, spoofed
-  socket actor rejection, idle expiry, logout/deactivation and report-export rejection
-  pass real tests. HTTP/socket middleware shares one parser and cookie lifetime.
-  Finish the exhaustive route/role/identifier matrix, including experimental modules.
-- [ ] **F08 — Constrain public shares and embeds** · P0 · M0 · Improve · M. Depends: F07.
+  Completed: [PR #66](https://github.com/Sparkz400/performance_dashboard/pull/66); a generated matrix covers all 244 policy routes and
+  every tRPC procedure for each non-admin role with granted, foreign and absent
+  identifiers (`accessMatrix.test.ts`), plus an anonymous sweep. The audit closed a
+  socket broadcast of every machine's alarms, a live-value room collision and an
+  owner-list disclosure; regressions in `test-access.mjs`.
+  [Matrix, findings and limits](docs/SECURITY_BOUNDARIES.md#access-matrix-f07).
+- [x] **F08 — Constrain public shares and embeds** · P0 · M0 · Improve · M. Depends: F07.
   Done: revocation/expiry work for page, API and live updates; shared views reveal only
   selected data, have explicit lifetime and embedding rules, and exclude administrative
   metadata. Expired sessions/shares stop receiving newly streamed data.
-  Progress: Sharing and embeds now return 410; creation is disabled and old tokens can be revoked. Selected-data sharing remains unimplemented.
+  Completed: [PR #66](https://github.com/Sparkz400/performance_dashboard/pull/66); administrators create expiring (≤30 days), hashed,
+  revocable links to frozen trend selections with a bounded window and per-link
+  embedding origins. Every refresh re-checks the link and its creator; revoked or
+  expired pages clear their data. `shareService.test.ts`, `test-shares.mjs`;
+  [contract](docs/SECURITY_BOUNDARIES.md#selected-data-links-f08).
 
-- [ ] **F09 — Resolve security findings against the actual release** · P0 · M0 · Improve · M. Depends: F01.
+- [x] **F09 — Resolve security findings against the actual release** · P0 · M0 · Improve · M. Depends: F01.
   Done: review dependency, container and code-scanning reports for the exact commit/image;
   fix actionable findings or record scope, mitigation and owner for accepted residual
   risk. Test outbound URLs, uploads, SVG, CSRF and secrets handling at their boundaries.
@@ -201,8 +216,13 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   packages. CI blocks all high/critical findings, including unfixed ones. Actual-image
   collection, crash/outage replay, scheduled PDF/download, email attachment and report
   persistence checks pass. [Migration evidence and limits](docs/REPORTING.md).
-  Maintainers must rescan each release; the broader boundary audit above remains open.
-- [ ] **F10 — Create a feature-level acceptance matrix** · P0 · M0 · Improve · M. Depends: F02, F03, F06, F07.
+  Maintainers must rescan each release.
+  Completed: [PR #66](https://github.com/Sparkz400/performance_dashboard/pull/66); CodeQL, Trivy (image `sha256:8c03215…`), npm audit,
+  Dependabot and secret scanning report zero open findings for `04383cae`; outbound URL,
+  SVG, body-size, CSRF and secrets boundaries have tests; residual risks have an owner
+  and mitigation. [Review record](docs/SECURITY_BOUNDARIES.md#release-security-review-f09).
+  The branch's own PR checks must pass before release.
+- [x] **F10 — Create a feature-level acceptance matrix** · P0 · M0 · Improve · M. Depends: F02, F03, F06, F07.
   Done: enabled pilot features have happy-path and failure-path evidence; distinguish
   unit, database, browser, simulator and physical-machine checks. CI success alone never
   promotes an experimental module or a new machine family to supported status. Resolve
@@ -210,6 +230,8 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   investigate the first-route timeouts observed in the parallel 2026-10-26 test run.
   Progress: top-level mocks and separate app-bootstrap budget resolve the observed
   harness issues; [feature evidence](docs/P0_ACCEPTANCE.md) names remaining negative tests.
+  Completed: [PR #66](https://github.com/Sparkz400/performance_dashboard/pull/66); [acceptance matrix](docs/ACCEPTANCE_MATRIX.md) with
+  per-screen state, happy/failure evidence and U/D/B/S/P levels; no row claims physical evidence.
 
 Implemented and locally validated on `codex/production-shift-workflow`; integration
 and current-head CI are tracked by [PR #51](https://github.com/Sparkz400/performance_dashboard/pull/51). The application is running
@@ -218,35 +240,49 @@ below retain their unfulfilled acceptance criteria.
 
 ## Connectivity
 
-- [ ] **C01 — Support protected OPC UA user identities** · P0 · M0 · Improve · L. Depends: F09.
+- [x] **C01 — Support protected OPC UA user identities** · P0 · M0 · Improve · L. Depends: F09.
   Done: username/password and user-certificate identity paths are explicitly supported
   or scoped per endpoint, secrets are protected/redacted, rotation works, and wrong
   credentials fail clearly. Qualify with read-only permissions on owned test servers.
-  Progress: encrypted credentials, username and X.509 sessions, rotation, retention,
-  redaction and secure browser/collector acceptance pass in scripts/test-secure-machine.mjs.
-  Integration and test evidence: PR #57.
-- [ ] **C02 — Complete certificate and endpoint trust lifecycle** · P0 · M0 · Improve · M. Depends: C01.
+  Completed: [PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57);
+  encrypted credentials, username/X.509 sessions, rotation, redaction and secure
+  browser/collector acceptance in `scripts/test-secure-machine.mjs`;
+  [scope](docs/FACTORY_PILOT_ACCEPTANCE.md). Exact S7-1500 CPU/firmware identity
+  settings remain a physical gate in the [pilot guide](docs/S7_1500_PILOT.md).
+- [x] **C02 — Complete certificate and endpoint trust lifecycle** · P0 · M0 · Improve · M. Depends: C01.
   Done: expiry, rejected peers, identity/hostname mismatch and renewal have actionable
   diagnostics; trust requires an explicit decision. Test an expired certificate and
   a changed endpoint without silently downgrading channel security.
-  Progress: explicit trust, expiry/hostname checks, fingerprint/expiry UI and the
-  S7-1500 renewal guide are implemented; owned-server negative checks pass.
-- [ ] **C03 — Add a commissioning preflight** · P1 · M1 · New · M. Depends: C01, H01.
+  Completed: [PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57);
+  explicit trust, fingerprint/expiry UI, and owned-server negative checks for
+  endpoint-host mismatch, expired and not-yet-valid certificates in
+  `scripts/test-secure-machine.mjs`; renewal in the [S7-1500 guide](docs/S7_1500_PILOT.md).
+- [x] **C03 — Add a commissioning preflight** · P1 · M1 · New · M. Depends: C01, H01.
   Done: a guided check reports connection, identity, trust, browse/read permission,
   source time and sample quality; users can save a redacted diagnostic report without
   scanning arbitrary networks or issuing machine writes.
-  Progress: Guided exact-endpoint check and read/type/quality/source-time preview work with the owned simulator. Protected identities, explicit trust and redacted diagnostic downloads now pass owned-server/browser acceptance; integration and test evidence: PR #57.
+  Completed: [PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57);
+  exact-endpoint check, read/type/quality/source-time preview, protected identities,
+  explicit trust and redacted diagnostic download pass owned-server/browser acceptance.
 
 - [ ] **C04 — Build reusable, versioned machine profiles** · P1 · M1 · New · L. Depends: C03.
   Done: profiles include namespace-aware signals, types, units, scales, state meanings,
   counters and supported endpoint versions; import previews differences and requires
   review. A second simulator instance can be commissioned without source edits.
-  Progress: Immutable namespace-aware profiles support validation, import review, export and reuse. A second endpoint instance and protected/vendor version qualification remain open.
+  Progress: Immutable namespace-aware profiles support validation, import review, export and reuse.
+  The read-only gateway commissions two owned units from one profile
+  ([gateway scope](docs/LEGACY_GATEWAY.md)) and reviewed setup bundles copy mappings
+  to a paused second machine ([PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64)).
+  Remaining: supported endpoint/vendor version declarations qualified against real devices.
 
 - [ ] **C05 — Define a connector contract and gateway recipes** · P1 · M2 · New · L. Depends: C04, H01.
   Done: normalize source identity, quality, timestamps and reconnect behavior; demonstrate
   one actual legacy-device gateway path and document costs/prerequisites. Use an approved
   gateway before adding a native driver unless the pilot establishes a clear need.
+  Progress: the read-only Modbus TCP gateway normalizes identity, quality, timestamps and
+  reconnects against an owned two-unit fixture ([gateway scope](docs/LEGACY_GATEWAY.md),
+  [PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57)). Blocker: an
+  actual legacy device from the pilot inventory (P01).
 - [ ] **C06 — Add MQTT ingestion and evaluate Sparkplug** · P2 · M2 · New · XL. Depends: C05.
   Done: authenticated TLS, topic authorization, mapping validation and duplicate/out-of-order
   fixtures pass. If Sparkplug is selected, qualify birth/death, rebirth, session and metric
@@ -255,6 +291,8 @@ below retain their unfulfilled acceptance criteria.
   Done: rank Modbus TCP/RTU, MTConnect and vendor gateways against the pilot inventory;
   implement at most the selected initial adapter with fixtures for byte order, scaling,
   unavailable values or sequence reset as applicable, and document unsupported devices.
+  Progress: Modbus TCP (read-only 03/04) is the provisional adapter with owned fixtures.
+  Blocker: ranking needs the real pilot device inventory (P01).
 - [ ] **C08 — Suggest mappings from OPC UA information models** · P2 · M3 · New · L. Depends: C04.
   Done: detect declared Machinery/selected companion-model capabilities using namespace
   URIs and type information; show suggestions with provenance and confidence, require
@@ -263,10 +301,19 @@ below retain their unfulfilled acceptance criteria.
   Done: requested/revised sampling, queue sizes, rejected items, reconnects and late/stale
   data are visible; load tests avoid reconnect storms and reveal overflow risk. Limits
   are configurable per endpoint and never assumed identical across machines.
+  Progress: Connection diagnostics show requested/revised sampling, monitored-item
+  status, queue settings, reconnect observations and freshness
+  ([PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64),
+  [scope](docs/FACTORY_OPERATIONS.md#connection-diagnostics-and-alarm-review)); sampling
+  is configurable per signal. Remaining: per-endpoint subscription/queue limits and a
+  reconnect-storm/overflow load test.
 - [ ] **C10 — Publish a connector qualification harness** · P1 · M2 · New · L. Depends: C05.
   Done: each enabled adapter replays disconnect, duplicate, bad-quality, type-change and
   timestamp fixtures; a compatibility entry names vendor/model/firmware/server, mappings,
   software commit and outstanding limits. Simulator success is listed separately.
+  Progress: OPC UA and gateway fixtures cover disconnect, bad quality and timestamps
+  (`test-gateway.mjs`, `test-signal-quality.mjs`); [compatibility](docs/COMPATIBILITY.md)
+  lists simulator evidence separately. Blocker: no real vendor/model/firmware entry yet.
 
 ## Historian
 
@@ -293,18 +340,29 @@ below retain their unfulfilled acceptance criteria.
   retain their separate qualification requirements.
   Completed software: [implementation `019be8e0`](https://github.com/Sparkz400/performance_dashboard/commit/019be8e068e06e3abbb0ab14c472ca58c61d508e);
   [verification and separate qualification boundaries](docs/DATA_INTEGRITY.md#local-checkpoint-validation--2026-10-28).
-- [ ] **H04 — Stream and bound historical exports** · P1 · M2 · Improve · M. Depends: H01.
+- [x] **H04 — Stream and bound historical exports** · P1 · M2 · Improve · M. Depends: H01.
   Done: large exports use bounded memory, cancellation and query limits, retain identity,
   units, timestamps and quality, and clearly label raw versus aggregated output. Protect
   spreadsheet consumers from formula injection and test partial/failing downloads.
+  Completed: [PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59);
+  `scripts/test-history.mjs` (200,000-row stream, disconnected-reader cursor release,
+  explicit aggregation); [contract](docs/DAILY_OPERATIONS.md#history-storage-and-retention).
 - [ ] **H05 — Introduce an explicit retention policy** · P1 · M2 · New · L. Depends: D04, H04.
   Done: preview storage impact and exact deletion scope, preserve required evidence,
   schedule bounded cleanup and verify backup/restore interactions. No historical data
   is deleted by default merely because a new version was installed.
+  Progress: opt-in policy, exact reviewed previews, protected shift/maintenance evidence,
+  bounded 5,000-row deletion and reviewed scheduling are implemented
+  ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59),
+  [PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)). Remaining: an
+  automated restore-after-retention check; today the UI only requires backup confirmation.
 - [ ] **H06 — Add quality-aware rollups and query tuning** · P1 · M2 · Improve · L. Depends: H05, H02.
   Done: benchmark existing indexes first; implement only justified indexes/partitioning
   and rollups retaining count, extrema and quality coverage. Compare raw/aggregate results
   and preserve state durations and counter semantics instead of averaging every tag.
+  Progress: hourly quality summaries retain counts/status for removed rows
+  ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)). Remaining: index
+  benchmark and raw/aggregate comparison on a sustained dataset (D04).
 - [x] **H07 — Handle late and corrected measurements predictably** · P1 · M2 · New · L. Depends: H01.
   Done: event-time ordering, duplicate identities and late arrivals have a defined policy;
   affected aggregates are recomputed with provenance and finalized reports keep their
@@ -319,7 +377,10 @@ below retain their unfulfilled acceptance criteria.
   Done: operators see backlog age/bytes, disk runway, write failures and recovery rate;
   export/quarantine recovery has audit evidence. Define backpressure and alert thresholds
   using measured capacity, while preserving all acknowledged records within that boundary.
-  Progress: One-million-event cap, 64 MiB reserve and visible backlog/failure status stop acquisition before loss. Configurable capacity, forecasting and full retention policy remain open.
+  Progress: One-million-event cap, 64 MiB reserve and visible backlog/failure status stop acquisition before loss.
+  Measured disk runway and storage incidents ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62))
+  and reviewed retention (H05) are implemented. Remaining: configurable capacity and
+  thresholds chosen from a measured envelope (D04).
 
 - [x] **H10 — Add reusable derived signals safely** · P2 · M3 · New · L. Depends: H02, H04.
   Done: a bounded expression model supports units, quality propagation and versioning;
@@ -329,11 +390,14 @@ below retain their unfulfilled acceptance criteria.
   [verification and separate qualification boundaries](docs/DATA_INTEGRITY.md#local-checkpoint-validation--2026-10-28).
 ## Production and OEE
 
-- [ ] **O01 — Make shifts and calendars first-class** · P1 · M1 · New · L. Depends: H01.
+- [x] **O01 — Make shifts and calendars first-class** · P1 · M1 · New · L. Depends: H01.
   Done: site timezone, overnight shifts, breaks, holidays and DST transitions produce
   explicit planned-production windows; no double-counting at boundaries. Explain the
   difference between scheduled time, observed time and missing coverage.
-  Progress: Explicit offset/timezone windows, overnight/DST handling, planned breaks and overlap rejection are implemented. Recurring calendars and holidays remain open.
+  Completed: [PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59);
+  recurring IANA calendars, holidays, DST rejection/disambiguation and repeat-safe
+  publication in `scripts/test-daily-workflows.mjs`;
+  [contract](docs/DAILY_OPERATIONS.md#calendars-product-runs-and-frozen-reports).
 
 - [x] **O02 — Add structured downtime reasons and corrections** · P1 · M1 · New · L. Depends: O01.
   Done: detected stops can be categorized, split or corrected with actor/reason/history;
@@ -347,35 +411,55 @@ below retain their unfulfilled acceptance criteria.
   clamping them. Show missing prerequisites and the calculation revision.
   Completed: [PR #51](https://github.com/Sparkz400/performance_dashboard/pull/51); [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
 
-- [ ] **O04 — Add product and work-order context** · P1 · M1 · New · L. Depends: O01, C04.
+- [x] **O04 — Add product and work-order context** · P1 · M1 · New · L. Depends: O01, C04.
   Done: jobs have stable IDs, product, target quantity, ideal cycle and effective periods;
   selecting a job does not write to the machine. Product changes preserve historical
   context and prevent current standards from silently altering older OEE results.
-  Progress: Each shift freezes work-order reference, product, target and cycle standard. Separate job identities and multiple effective product runs remain open.
+  Completed: [PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59) (up to
+  thirty non-overlapping product runs per shift, each with job/target/ideal cycle, frozen
+  report revisions) and [PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64)
+  (stable external work-order identities); `test-daily-workflows.mjs`, `test-work-orders.mjs`.
 
 - [ ] **O05 — Qualify counters, rejects and manual quantities** · P1 · M1 · Improve · L. Depends: O04.
   Done: support explicit reset/rollover policies, counter width and discontinuities;
   manual entries are timestamped deltas or declared snapshots with correction history.
   Tests prevent duplicated totals, negative production and inferred perfect quality.
-  Progress: Explicit reset-to-zero/reject-decrease and quality/boundary gaps are tested. Rollover, counter-width qualification and manual quantity corrections remain open.
+  Progress: reset-to-zero, reject-decrease and declared rollover with an explicit modulus
+  are implemented and tested ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)).
+  Operators record reviewed, revisioned count declarations
+  ([PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57)), but review does
+  not change measured counts. Remaining: applying reviewed manual quantities to results,
+  and qualifying sampling/rollover behavior on the actual machine.
 
 - [ ] **O06 — Measure setup and changeover loss** · P2 · M3 · New · M. Depends: O04, O02.
   Done: expected/actual changeover periods use product transitions and operator-confirmed
   context; overlapping runs and unobserved transitions remain visible. Compare comparable
   changeovers rather than ranking unrelated jobs or operators.
+  Progress: changeover is an explicit stop category with energy/loss accounting
+  ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)). Remaining:
+  expected-versus-actual changeover from product transitions and comparable grouping.
 - [ ] **O07 — Analyze microstops and cycle distributions** · P2 · M3 · New · L. Depends: O02.
   Done: configurable thresholds distinguish short stops and slow cycles; histograms,
   percentiles and loss Pareto preserve acquisition-resolution limits. A 1 Hz sample
   stream must not claim precise detection of sub-second events.
+  Progress: line investigations report bounded microstops and p50/p90/p95 cycle durations
+  ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62),
+  [scope](docs/QUALITY_LINE_OPERATIONS.md#production-line-investigations)). Remaining:
+  histograms and an explicit acquisition-resolution limit on short-stop detection.
 - [ ] **O08 — Add line topology and bottleneck analysis** · P2 · M3 · New · XL. Depends: O07, O05.
   Done: model buffers, blocked/starved states and selected serial/parallel paths; compare
   against a known line scenario. Report candidate constraints and uncertainty rather
   than equating correlated downtime with proven root cause.
+  Progress: acyclic line definitions with buffers, blocked/starved states and withheld
+  low-coverage candidates are implemented ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)).
+  Remaining: validation against a known physical line scenario.
 - [ ] **O09 — Reconcile a shift against independent evidence** · P1 · M1 · Improve · M. Depends: O01, O04.
   Done: a reconciliation view compares source counters, accepted good/reject quantities,
   operator adjustments and planned/observed time; unresolved differences are explicit
   and prevent a report from being labeled verified.
-  Progress: A recorded independent ledger must match total/good/reject quantities; differences prevent verification. Manual quantity adjustments and physical shift reconciliation remain open.
+  Progress: A recorded independent ledger must match total/good/reject quantities; differences prevent verification.
+  Remaining: operator adjustments in the comparison (see O05) and a supervised physical
+  shift reconciliation (D06).
 
 - [ ] **O10 — Support machines with limited automatic data** · P2 · M2 · New · M. Depends: O02, U06.
   Done: authorized manual counts/state intervals and approved sensor/gateway signals can
@@ -388,12 +472,19 @@ below retain their unfulfilled acceptance criteria.
   Done: endpoint, signal selection, meaning, preview and dashboard creation form one
   recoverable flow; a new user finishes the owned simulator setup without source edits.
   Failed steps explain the relevant permission, certificate or mapping issue.
-  Progress: The browser-tested flow checks, maps, previews, reviews, saves and creates a dashboard for the owned simulator. Protected-endpoint failures and new-user acceptance remain open.
+  Progress: The browser-tested flow checks, maps, previews, reviews, saves and creates a dashboard for the owned simulator.
+  Protected-endpoint identity/trust failures pass browser acceptance (C03). Remaining:
+  supervised first-time-user acceptance.
 
-- [ ] **U02 — Unify freshness, loading and failure states** · P1 · M1 · Improve · M. Depends: H02.
+- [x] **U02 — Unify freshness, loading and failure states** · P1 · M1 · Improve · M. Depends: H02.
   Done: widgets consistently show last measurement, connection state, missing coverage
   and empty/error states; stale data cannot resemble a live healthy machine. Verify
   small-screen and wall-display readability with real rendered examples.
+  Completed: [PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)
+  (consistent freshness, 390-pixel and wallboard browser flows) and
+  [PR #65](https://github.com/Sparkz400/performance_dashboard/pull/65) (generated widget
+  data replaced by evidence-backed unknown/stale/bad-quality states;
+  [verification](docs/DATA_INTEGRITY.md#verification)). Viewing-distance acceptance stays in U05.
 - [ ] **U03 — Create a focused operator workspace** · P1 · M1 · New · L. Depends: O02, O04.
   Done: an operator sees the current job, stops needing reasons, authorized quality input
   and handover actions in a short touch-friendly flow. Acknowledgment and classification
@@ -403,13 +494,14 @@ below retain their unfulfilled acceptance criteria.
   browser acceptance is covered in `scripts/test-operator.mjs`; supervised operator
   and accessibility qualification remain open. See [operator workflow](docs/OPERATOR_WORKFLOW.md).
 
-- [ ] **U04 — Add shift handover notes and action ownership** · P1 · M1 · New · M. Depends: U03.
+- [x] **U04 — Add shift handover notes and action ownership** · P1 · M1 · New · M. Depends: U03.
   Done: notes link to machine/job/interval, have an owner and resolved/open state, and
   appear in the next handover. Edits are attributable; attachments, if enabled, are
   size/type constrained and permission checked.
-  Progress: Durable idempotent entries, immutable revision history, ownership, due
-  dates, interval/shift validation and conflict protection implemented and tested;
-  attachments disabled. Integration and test evidence: PR #57.
+  Completed: [PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57);
+  durable idempotent entries, immutable revisions, ownership, due dates, interval/shift
+  validation and conflict protection in `scripts/test-operator.mjs`; attachments are
+  disabled. [Workflow](docs/OPERATOR_WORKFLOW.md).
 - [ ] **U05 — Deliver a useful supervisor wallboard** · P1 · M1 · Improve · M. Depends: U02.
   Done: a selected line shows state, target progress, prioritized issues and freshness;
   kiosk rotation reconnects cleanly and uses a restricted identity. Screens remain
@@ -421,14 +513,22 @@ below retain their unfulfilled acceptance criteria.
   Done: commissioning, login, dashboards and operator actions support keyboard focus,
   non-drag alternatives, semantic labels and screen-reader status; test contrast, zoom,
   reduced motion and touch targets against an explicit WCAG 2.2 acceptance checklist.
+  Progress: keyboard focus, skip link, 44-pixel coarse-pointer targets and touch flows
+  are browser tested ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)).
+  Remaining: the explicit WCAG 2.2 checklist, screen-reader and reduced-motion checks.
 - [ ] **U07 — Improve navigation, localization and display units** · P1 · M1 · Improve · M. Depends: U02, F07.
   Done: role-appropriate navigation, machine search and saved filters reduce clutter;
   English/German, dates, decimal formats and display units follow a declared locale.
   Stored measurement units remain unchanged by display preferences.
-- [ ] **U08 — Turn the SVG twin into a practical asset view** · P2 · M3 · Improve · L. Depends: U02.
+  Progress: role-focused navigation and English/German core workflows
+  ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)). Remaining:
+  machine search, saved filters and locale-driven display units.
+- [x] **U08 — Turn the SVG twin into a practical asset view** · P2 · M3 · Improve · L. Depends: U02.
   Done: templates bind verified signals, stale/bad quality is visible, and users can
   navigate from a component to history and maintenance context. Sanitized content cannot
   escape its boundary; describe this as visualization, not a physics simulation.
+  Completed: [PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64);
+  `scripts/test-asset-overview.mjs`; [scope](docs/FACTORY_OPERATIONS.md#practical-asset-overview).
 - [x] **U09 — Define a safe offline operator mode** · P2 · M3 · New · L. Depends: U03, I01.
   Done: cached data is explicitly stale, logout clears protected local material, and
   queued application edits have stable identities, conflict review and expiry. A reconnect
@@ -439,6 +539,9 @@ below retain their unfulfilled acceptance criteria.
   Done: measure startup, navigation, memory and live-update behavior on an ordinary
   operator device; reduce large dashboard bundles and unnecessary renders where profiles
   justify it. Preserve accessible loading states and compare results on the same workload.
+  Progress: deferring the widget library reduced the dashboard page chunk from 3.9 MB to
+  about 54 KB ([acceptance](docs/DAILY_OPERATIONS_ACCEPTANCE.md#measured-bounds)).
+  Remaining: startup/navigation/memory/live-update timing on an ordinary operator device.
 
 ## Alerts
 
@@ -448,34 +551,46 @@ below retain their unfulfilled acceptance criteria.
   acknowledged and unknown states have consistent semantics across API and UI.
   Completed: [PR #51](https://github.com/Sparkz400/performance_dashboard/pull/51); [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
 
-- [ ] **A02 — Add debounce, hysteresis and minimum duration** · P1 · M1 · Improve · M. Depends: A01.
+- [x] **A02 — Add debounce, hysteresis and minimum duration** · P1 · M1 · Improve · M. Depends: A01.
   Done: noisy thresholds do not flood history; boundaries and clear conditions are
   documented and replay-tested. Bad/stale input suspends or changes evaluation explicitly
   instead of producing a false recovery.
-  Progress: Persistent trigger/recovery holds, threshold hysteresis, gap/quality/order
-  resets and UI configuration are implemented with unit and owned replay tests.
-  See [unattended operation](docs/UNATTENDED_OPERATION.md); integration and test evidence: PR #57.
-- [ ] **A03 — Alert on data and collector health** · P1 · M1 · New · M. Depends: A01, H03.
+  Completed: [PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57);
+  persistent trigger/recovery holds, hysteresis, gap/quality/order resets and UI
+  configuration with unit and owned replay tests (`scripts/test-unattended-alarms.mjs`);
+  [unattended operation](docs/UNATTENDED_OPERATION.md).
+- [x] **A03 — Alert on data and collector health** · P1 · M1 · New · M. Depends: A01, H03.
   Done: users can distinguish machine-condition alarms from disconnected endpoint,
   stale signal, bad quality and growing backlog; simulate each condition and verify
   recovery behavior without inventing machine state.
-  Progress: Commissioned-state freshness, collector storage/backlog/space incidents
-  reuse durable history and webhooks. Startup grace and bounded polling are documented
-  in [unattended operation](docs/UNATTENDED_OPERATION.md); external outage monitoring remains necessary.
-- [ ] **A04 — Add ownership, acknowledgment and maintenance suppression** · P1 · M1 · Improve · M. Depends: A01.
+  Completed: [PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57);
+  `scripts/test-unattended-alarms.mjs` raises and resolves stale-data, disconnected,
+  bad-quality and collector-backlog incidents. External outage monitoring of the
+  application itself remains a deployment responsibility ([unattended operation](docs/UNATTENDED_OPERATION.md)).
+- [x] **A04 — Add ownership, acknowledgment and maintenance suppression** · P1 · M1 · Improve · M. Depends: A01.
   Done: acknowledgment records actor/time/comment, suppression is scoped and time-bounded,
   and expiration is visible. A dashboard acknowledgment never silently acknowledges
   or clears an alarm in the PLC.
+  Completed: [PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62);
+  alarm owners/escalation owners, suppression with an explicit end within 24 hours and
+  read-only acquisition; `scripts/test-quality-line.mjs`;
+  [scope](docs/QUALITY_LINE_OPERATIONS.md#maintenance-actions-and-notifications).
 - [ ] **A05 — Deliver escalation and notification policies** · P2 · M2 · New · L. Depends: A04, I01.
   Done: email/webhook destinations have testable routing, quiet hours, escalation and
   durable retry state; credentials are protected and delivery failure is visible.
   Test restarts and a receiver outage without uncontrolled notification floods.
-  Progress: Alarm webhooks have durable retries, HMAC signatures, stable receiver deduplication IDs and visible attempt status. Email, escalation and quiet hours remain open.
+  Progress: Alarm webhooks have durable retries, HMAC signatures, stable receiver deduplication IDs and visible attempt status.
+  UTC quiet hours and one-time overdue escalation through webhooks are implemented
+  ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)). Remaining:
+  alarm email destinations and routing beyond webhooks.
 
-- [ ] **A06 — Measure alert usefulness and flood behavior** · P2 · M2 · New · M. Depends: A04.
+- [x] **A06 — Measure alert usefulness and flood behavior** · P2 · M2 · New · M. Depends: A04.
   Done: show repeated/chattering alarms, acknowledgment delays and muted items; distinguish
   operator response time from delivery delay. Tune thresholds against replayed incidents
   and keep actionable history rather than deleting inconvenient events.
+  Completed: [PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64);
+  `scripts/test-operational-diagnostics.mjs`; read-only threshold replay and
+  [scope](docs/FACTORY_OPERATIONS.md#connection-diagnostics-and-alarm-review).
 - [ ] **A07 — Evaluate OPC UA Alarms and Conditions ingestion** · P2 · M3 · Research · L. Depends: A01, C02.
   Done: demonstrate supported event fields, conditions, reconnect refresh and severity
   mapping with an owned server; preserve source event identity. Read-only observation is
@@ -503,29 +618,33 @@ below retain their unfulfilled acceptance criteria.
   tables, unknown-data notices and downloads are verified without a server browser.
   Template editing now saves the actual generator configuration; [evidence](docs/REPORTING.md).
 
-- [ ] **R03 — Make schedules and delivery restart-safe** · P1 · M2 · Improve · L. Depends: R01, I01.
+- [x] **R03 — Make schedules and delivery restart-safe** · P1 · M2 · Improve · L. Depends: R01, I01.
   Done: schedule timezone/DST, missed-run policy and stable run identity are explicit;
   retries do not create uncontrolled duplicate mail, and overlapping executions are
   bounded. Failed generation and failed delivery are separate statuses.
-  Progress: Durable jobs/cursors, saved configuration and periods, database locks,
-  missed-slot catch-up, worker crash recovery and separate SMTP retry/partial-acceptance
-  status are implemented. Owned process/mail/browser acceptance is in
-  `scripts/test-report-jobs.mjs`. SMTP ambiguity and measurement-snapshot limits are
-  explicit in [unattended operation](docs/UNATTENDED_OPERATION.md); integration and test evidence: PR #57.
+  Completed: [PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57);
+  durable jobs/cursors, database locks, missed-slot catch-up, worker crash recovery and
+  separate SMTP retry/partial-acceptance status in `scripts/test-report-jobs.mjs`. SMTP
+  delivery is at least once; see [unattended operation](docs/UNATTENDED_OPERATION.md).
 - [ ] **R04 — Preserve report revisions and reproducibility** · P1 · M2 · New · M. Depends: H04, R01.
   Done: exports record inputs, window, mapping/calculation revisions and generation time;
   a correction creates a new revision with a reason. Published reports can be reproduced
   or clearly identify why underlying retention prevents full regeneration.
-  Progress: JSON includes profile/calculation revision, generation time and original correction records. Reports still read retained measurements; immutable published revisions remain open.
+  Progress: JSON includes profile/calculation revision, generation time and original correction records.
+  Immutable digest-bound shift report revisions exist and retention protects shift raw
+  evidence ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)).
+  Remaining: a required reason on each new revision and an explicit regeneration check.
 
 - [ ] **R05 — Enforce distribution and retention boundaries** · P1 · M2 · Improve · M. Depends: R01, F07.
   Done: recipients/downloads are scoped, expired links fail, deleted schedules stop future
   delivery and stored PDFs follow a declared retention policy. Test unauthorized access
   to another report ID and stale links after permission changes.
-- [ ] **R06 — Add fair period and production comparisons** · P2 · M3 · New · M. Depends: R02, O05.
+- [x] **R06 — Add fair period and production comparisons** · P2 · M3 · New · M. Depends: R02, O05.
   Done: compare shifts/jobs/machines with product mix, scheduled time, quality coverage
   and corrections visible; allow energy/maintenance additions only when their inputs
   exist. Do not rank incomparable periods as if differences proved improvement.
+  Completed: FR03 in [PR #63](https://github.com/Sparkz400/performance_dashboard/pull/63);
+  `scripts/test-period-comparisons.mjs`; [scope](docs/FACTORY_READINESS.md#fair-comparisons).
 
 ## Quality and traceability
 
@@ -533,26 +652,47 @@ below retain their unfulfilled acceptance criteria.
   Done: test evaluator reference datasets, sample spacing, minimum sample counts,
   zero variance, missing/bad values and restart behavior; baseline approval/revision
   records the process/product context and never silently trains on a fault period.
+  Progress: reviewed SPC reference periods freeze ordered readings with a digest, require
+  100 usable readings, positive variation, no rule signals and reviewer attestation, and
+  reproduce the NIST reference example ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62),
+  [scope](docs/QUALITY_LINE_OPERATIONS.md#reviewed-spc-reference-periods)). Remaining:
+  sample-spacing and live-evaluator restart checks against reference datasets.
 - [ ] **Q02 — Add appropriate control charts and capability** · P2 · M3 · New · L. Depends: Q01.
   Done: select I-MR, subgroup or attribute charts only for declared data assumptions;
   distinguish specification from control limits. Cp/Cpk or other capability output
   requires a qualified baseline and shows sample size/assumptions instead of false precision.
+  Progress: Cp/Cpk use separate specification limits and only an approved reference
+  period ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)).
+  Remaining: chart-type selection from declared data assumptions.
 - [ ] **Q03 — Record inspections, rejects and rework** · P2 · M3 · New · L. Depends: O04, U03.
   Done: inspection plans and defect reasons link to product/job/batch; corrections
   retain history and do not double-count a reworked part as both new output and scrap.
   Manual inspection evidence is visibly distinct from automatic sensor evidence.
+  Progress: attributable batch inspections, required defect reasons and owned rework
+  closed only by a newer passing inspection ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62),
+  [scope](docs/QUALITY_LINE_OPERATIONS.md#batch-quality-and-genealogy)). Recipes/batches
+  remain experimental. Remaining: inspection plans linked to product/job outside batches.
 - [ ] **Q04 — Harden batch lifecycle and summaries** · P1 · M3 · Improve · M. Depends: O04.
   Done: concurrent starts, transitions, missing data and partial batches have tested
   behavior; summary windows use actual batch boundaries and product context. Start/stop
   buttons clearly describe application records rather than PLC control.
+  Progress: frozen batch recipes, `[startedAt, completedAt)` windows and unknown-aware
+  good-quality summaries ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)).
+  Remaining: confirm concurrent-start and partial-batch fixtures before leaving experimental.
 - [ ] **Q05 — Add bounded lot and batch genealogy** · P2 · M3 · New · L. Depends: Q04, Q03.
   Done: input/output lots, splits, merges and affected batches can be traced with stable
   IDs and corrections; export a demonstrable trace query. Scope this to observed records,
   without promising a complete supply-chain or regulated recall system.
+  Progress: declared lots, unit/quantity checks, cycle rejection and a bidirectional
+  bounded trace report ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)).
+  Remaining: correction records for declared lot movements.
 - [ ] **Q06 — Compare recipes with observed settings** · P2 · M3 · Improve · L. Depends: Q04, C04.
   Done: approved recipe revisions and tolerances can be compared to read-only measured
   parameters; deviations retain time, quality and context. Recipe edits do not apply
   machine setpoints, and unavailable parameters are not treated as matching.
+  Progress: batch parameters compare good-quality observed means with frozen tolerances;
+  missing parameters are unknown ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)).
+  Remaining: qualification before the experimental recipe module is supported.
 - [ ] **Q07 — Strengthen audit records without compliance overclaims** · P1 · M3 · Improve · L. Depends: F07, Q04.
   Done: verify concurrent integrity-chain updates, actor identity, signature purpose,
   correction reasons and exports; document database-admin/tamper boundaries. Keep
@@ -564,18 +704,35 @@ below retain their unfulfilled acceptance criteria.
   Done: interventions, findings and attachments link to the asset and relevant trend/stop;
   an owner can close/reopen the application record with an audit trail. Existing CMMS
   identifiers can be stored without attempting to replace a complete CMMS.
-- [ ] **M02 — Track usage-based maintenance intervals** · P2 · M3 · New · M. Depends: M01, O05.
+  Progress: attributable append-only service history with incident links
+  ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)), alarm-linked
+  actions ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)) and CMMS
+  handoff identities (I04). Remaining: attachments and direct trend/stop links on records.
+- [x] **M02 — Track usage-based maintenance intervals** · P2 · M3 · New · M. Depends: M01, O05.
   Done: runtime/cycle counters support explicit resets and service baselines; due/overdue
   states show missing-data uncertainty. Replacing a component does not erase the parent
   machine's lifetime measurements.
+  Completed: [PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59);
+  calendar/runtime/cycle plans with snapshotted profiles, partial-observation states and
+  service completion that rebaselines without deleting measurements
+  (`scripts/test-daily-workflows.mjs`; [contract](docs/DAILY_OPERATIONS.md#maintenance)).
+  Components are not modeled separately from machines.
 - [ ] **M03 — Build a condition-to-inspection workflow** · P2 · M3 · New · L. Depends: M01, A02, Q01.
   Done: qualified thresholds/trends create reviewable maintenance suggestions linked to
   evidence and outcomes; measure false positives. No claim of predicting remaining life
   is made from an unvalidated threshold or insufficiently sampled vibration signal.
-- [ ] **M04 — Add trustworthy energy and utility accounting** · P2 · M3 · New · L. Depends: H01, O05.
+  Progress: alarm-linked actions record recovery/recurrence outcomes after service
+  ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)). Remaining:
+  false-positive measurement against qualified thresholds.
+- [x] **M04 — Add trustworthy energy and utility accounting** · P2 · M3 · New · L. Depends: H01, O05.
   Done: distinguish power from energy, integrate only appropriate samples, handle meter
   resets and units, and report kWh or utility consumption per good unit with coverage.
   Reconcile one meter interval against an independent reading.
+  Completed: [PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59);
+  cumulative-meter accounting, declared rollover, energy per good part with coverage and
+  an independent reconciliation fixture in `scripts/test-daily-workflows.mjs`
+  ([contract](docs/DAILY_OPERATIONS.md#energy-and-losses)). Physical meter calibration
+  remains a machine-owner check.
 - [x] **M05 — Add optional cost and emissions estimates** · P2 · M3 · New · M. Depends: M04.
   Done: user-supplied tariff/currency/emission-factor versions and validity periods are
   explicit; missing factors stop the estimate. Label results as estimates with allocation
@@ -586,6 +743,9 @@ below retain their unfulfilled acceptance criteria.
   Done: correlate consumption with production/idle states, show candidate avoidable usage
   and compare normalized periods after an action. Retain changes in product mix, operating
   hours and meter coverage so correlation is not presented as proof of causation.
+  Progress: idle/changeover energy ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59))
+  and verified energy differences in fair comparisons (R06). Remaining: linking an
+  improvement action to before/after normalized periods.
 
 ## Integrations and extension points
 
@@ -597,20 +757,25 @@ below retain their unfulfilled acceptance criteria.
   Done: document supported machine/history/job endpoints, errors, scopes, pagination,
   rate limits and version policy; supply runnable examples and contract tests. Align
   REST/tRPC ownership without rewriting working callers solely for architectural symmetry.
-- [ ] **I03 — Provide one ERP work-order exchange** · P2 · M2 · New · L. Depends: I02, O04.
+- [x] **I03 — Provide one ERP work-order exchange** · P2 · M2 · New · L. Depends: I02, O04.
   Done: import a sanitized order/product contract with preview, external IDs, idempotency
   and rejection reporting; export completion facts without silently editing ERP records.
   A named pilot validates field meanings before a vendor-specific connector is promised.
+  Completed: vendor-neutral file exchange in [PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64);
+  `scripts/test-work-orders.mjs`; [scope](docs/FACTORY_OPERATIONS.md#reviewed-work-order-exchange).
+  No vendor connector is promised until a named pilot validates field meanings.
 - [x] **I04 — Provide a CMMS handoff contract** · P2 · M3 · New · M. Depends: I01, M01.
   Done: a maintenance suggestion can be exported or explicitly submitted to a configured
   destination with asset/event identity and delivery status; duplicate delivery cannot
   create uncontrolled duplicate work orders. Keep review and remote-write permissions explicit.
   Completed software: [implementation `019be8e0`](https://github.com/Sparkz400/performance_dashboard/commit/019be8e068e06e3abbb0ab14c472ca58c61d508e);
   [verification and separate qualification boundaries](docs/DATA_INTEGRITY.md#local-checkpoint-validation--2026-10-28).
-- [ ] **I05 — Support portable configuration bundles** · P1 · M2 · Improve · M. Depends: C04, F07.
+- [x] **I05 — Support portable configuration bundles** · P1 · M2 · Improve · M. Depends: C04, F07.
   Done: bundle dashboards, mappings, rules and relevant revisions with schema version,
   secret exclusion, conflict preview and rollback; imports cannot overwrite unrelated
   configuration silently. Cross-version import and invalid-file cases have fixtures.
+  Completed: [PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64);
+  `scripts/test-configuration-bundles.mjs`; [scope](docs/FACTORY_OPERATIONS.md#reusable-setup).
 - **I06 — Withdrawn:** TIA MCP is a separate product. No integration is planned.
 - [ ] **I07 — Qualify the custom-widget runtime** · P3 · M5 · Improve · L. Depends: F07, U06.
   Done: prove actual rendering, iframe isolation, origin-checked messaging, permissions,
@@ -623,23 +788,33 @@ below retain their unfulfilled acceptance criteria.
 
 ## Deployment and operation
 
-- [ ] **D01 — Document and verify the OT deployment boundary** · P0 · M0 · Improve · M. Depends: F07.
+- [x] **D01 — Document and verify the OT deployment boundary** · P0 · M0 · Improve · M. Depends: F07.
   Done: diagrams name acquisition, database, web and optional outbound paths; least-privilege
   identities, TLS termination, firewall assumptions and metrics exposure are verified in
   an isolated deployment. No open internet access to a PLC is required by the design.
-- [ ] **D02 — Implement a complete backup and restore procedure** · P0 · M0 · New · L. Depends: H01.
+  Completed: [PR #66](https://github.com/Sparkz400/performance_dashboard/pull/66); new installations and restores run the app as a
+  non-superuser database owner with a separate bootstrap superuser; `test-operations.mjs`
+  verifies the role, refuses `COPY … TO PROGRAM`, and still passes install, restore,
+  earlier-image upgrade and rollback. Loopback publishing, internal database network,
+  UID 1000 and admin-only metrics are verified; site TLS/firewall settings remain
+  installation checks. [Boundary and diagram](docs/SECURITY_BOUNDARIES.md#ot-deployment-boundary-d01).
+- [x] **D02 — Implement a complete backup and restore procedure** · P0 · M0 · New · L. Depends: H01.
   Done: cover PostgreSQL, configuration, required spool state, certificates and secret
   recovery with protected storage; restore into an isolated fresh installation and
   reconcile data. Dashboard-only export remains clearly labeled as configuration export.
-  Progress: complete stopped-app backups and isolated fresh restores preserve database,
-  encrypted identities/key, pending spool, PKI and PDFs. Browser recovery/permissions,
-  tamper and overwrite checks pass in scripts/test-operations.mjs; evidence in PR #57.
-- [ ] **D03 — Make upgrades and rollback operationally safe** · P0 · M0 · Improve · L. Depends: D02.
+  Completed: [PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57);
+  complete stopped-app backups and isolated fresh restores preserve database, encrypted
+  identities/key, pending spool, PKI and PDFs; browser recovery, tamper and overwrite
+  checks in `scripts/test-operations.mjs`; [operations](docs/OPERATIONS.md). Customer
+  restore drills remain part of D06.
+- [x] **D03 — Make upgrades and rollback operationally safe** · P0 · M0 · Improve · L. Depends: D02.
   Done: migrations are tested on a copy of the previous schema/data, compatibility is
   declared, and backup/rollback behavior is documented. Failed startup cannot leave a
   silently half-migrated collector writing incompatible measurements.
-  Progress: upgrade takes a verified checkpoint; failed startup leaves the app stopped.
-  Owned-container acceptance restored the checkpoint into a fresh healthy instance.
+  Completed: [PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57);
+  the earlier-image upgrade preserves data, takes a verified checkpoint, stops on failed
+  startup and restores the checkpoint into a fresh instance (`scripts/test-operations.mjs`;
+  [acceptance](docs/FACTORY_PILOT_ACCEPTANCE.md#local-validation)).
 - [ ] **D04 — Measure the supported operating envelope** · P1 · M1 · New · L. Depends: F06, H02.
   Done: benchmark named hardware at declared tag rates, database size, dashboard users
   and export load; publish ingestion lag, p95 queries, memory, CPU and bytes/sample.
@@ -653,6 +828,9 @@ below retain their unfulfilled acceptance criteria.
   Progress: database readiness, receive age/storage reserve and a bounded redacted
   support download are implemented. Browser export checks pass; failed-job diagnostics
   include durable report generation/delivery attempt and retry state.
+  Connection diagnostics show reconnects in the UI (C09). Remaining: Prometheus metrics
+  cover HTTP and received data points only, not reconnects, spool age, failed jobs or
+  database lag.
 - [ ] **D06 — Complete the first pilot acceptance pack** · P1 · M1 · New · L. Depends: D02, D04, D05, O09, R01, C04.
   Done: record exact machines/settings/software, supervised shift reconciliation,
   interruptions, restore evidence, observed defects and unresolved limits; the process
@@ -661,6 +839,11 @@ below retain their unfulfilled acceptance criteria.
   Done: installation/update artifacts, dependencies, image digests and instructions work
   without runtime internet access; disabled external email/report destinations fail
   clearly. License notices and dependency inventory accompany the package.
+  Progress: hashed offline image packages and fresh offline installation
+  ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)); signed release
+  envelopes with SBOM and license inventory ([PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64)).
+  Remaining: an offline update rehearsal and a check that unreachable mail/report
+  destinations fail clearly without internet access.
 - [ ] **D08 — Design high availability from measured needs** · P2 · M4 · Research · XL. Depends: D04, H08, E03.
   Done: distinguish database recovery, web redundancy and collector ownership; demonstrate
   fencing against two active collectors and test failover on a declared topology.
@@ -699,13 +882,14 @@ below retain their unfulfilled acceptance criteria.
   Done: compare against a simple threshold baseline on held-out periods/assets with
   labeled incidents; publish false-positive, missed-event and lead-time behavior plus
   drift monitoring. Reject the feature if labels or operational value are insufficient.
-- [ ] **X03 — Add incident replay and diagnostic correlation** · P2 · M3 · New · L. Depends: H07, A01.
+- [x] **X03 — Add incident replay and diagnostic correlation** · P2 · M3 · New · L. Depends: H07, A01.
   Done: replay a bounded historical window with signal quality, events, changes and
   annotations in time order; separate source/receive clocks and missing intervals.
   Correlated signals are presented as investigation leads, not proven causes.
-  Progress: bounded signal/event replay, keyboard/playback cursor, raw quality and
-  clock details, immutable operator revisions, later stop annotations and JSON
-  export are implemented; see docs/INCIDENT_REPLAY.md and PR #57 for evidence.
+  Completed: [PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57);
+  bounded replay, playback cursor, raw quality/clocks, immutable operator revisions,
+  later stop annotations and export in `incidentReplay.test.ts` and
+  `scripts/test-incident-replay.mjs`; [contract](docs/INCIDENT_REPLAY.md).
 - [ ] **X04 — Prototype bounded capacity and completion forecasts** · P3 · M5 · Research · L. Depends: O05, R06.
   Done: estimate using comparable jobs and recent capacity with uncertainty ranges;
   backtest against actual completion and disclose unsupported process changes. Forecasts
@@ -721,10 +905,13 @@ below retain their unfulfilled acceptance criteria.
   Done: document interviews/observation with an operator, engineer and production lead,
   a nominated line, actual protocols, current reporting effort and the first improvement
   question. Until available, retain these as explicit hypotheses and a simulator-only scope.
-- [ ] **P02 — Build a realistic, repeatable demonstration** · P1 · M1 · Improve · M. Depends: O04, O05, A01.
+- [x] **P02 — Build a realistic, repeatable demonstration** · P1 · M1 · Improve · M. Depends: O04, O05, A01.
   Done: owned simulator scenarios include run/stop, counts/rejects, job changes, bad quality,
   reset and outage/replay; a scripted walkthrough yields known results. Mark all demo
   screenshots/data synthetic and avoid implying real-machine qualification.
+  Completed: [PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64);
+  `node scripts/demo-factory.mjs` produces a hashed synthetic walkthrough with a known
+  43.33% reconciled OEE; [scope](docs/FACTORY_OPERATIONS.md#repeatable-demonstration).
 - [ ] **P03 — Publish useful community examples and wiki navigation** · P1 · M2 · Improve · S. Depends: P02.
   Done: initialize/verify the GitHub wiki publication path if still needed, keep its source
   in docs/wiki, and provide sanitized mapping/dashboard/report examples with expected
@@ -733,6 +920,10 @@ below retain their unfulfilled acceptance criteria.
   Done: a release identifies commit/image digest, changelog, migrations, compatibility,
   SBOM/dependency notices and checks for that exact revision; package signatures/provenance
   are verified. A release label does not erase open physical/security acceptance limits.
+  Progress: signed release envelopes with digests, migrations, SBOM, license inventory
+  and evidence verification ([PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64),
+  [scope](docs/FACTORY_OPERATIONS.md#versioned-offline-release-candidates)). Blockers:
+  a production publisher key held outside the repository and F10 closure.
 - [ ] **P05 — Make focused contributions easier** · P2 · M2 · Improve · S. Depends: F10.
   Done: label small tasks by subsystem and expected evidence, document connector/widget
   boundaries and add fixtures useful to reviewers. Maintain existing public-repo policies

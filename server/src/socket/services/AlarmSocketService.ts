@@ -44,6 +44,16 @@ export class AlarmSocketService {
     logger.info(`[AlarmSocket] Broadcast alarmAcknowledged: id=${alarm.id}`);
   }
 
+  broadcastAlarmUpdated(alarm: AlarmEvent): void {
+    this.io
+      .to(
+        alarm.machineId == null
+          ? ["access:admin"]
+          : ["access:admin", `access:machine:${alarm.machineId}`],
+      )
+      .emit("alarmUpdated", alarm);
+  }
+
   broadcastAlarmCleared(alarm: AlarmEvent): void {
     this.io
       .to(

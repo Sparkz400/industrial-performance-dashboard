@@ -71,7 +71,7 @@ import machineRoutes from "./src/routes/machineRoutes.js";
 import operationModeRoutes from "./src/routes/operationModeRoutes.js";
 import auditLogRoutes from "./src/routes/auditLogRoutes.js";
 import webhookRoutes from "./src/routes/webhookRoutes.js";
-import shareRoutes from "./src/routes/shareRoutes.js";
+import shareRoutes, { embedFramePolicy } from "./src/routes/shareRoutes.js";
 import customWidgetRoutes from "./src/routes/customWidgetRoutes.js";
 import alarmRoutes from "./src/routes/alarmRoutes.js";
 import annotationRoutes from "./src/routes/annotationRoutes.js";
@@ -220,6 +220,7 @@ export function createApp() {
 
   const publicDir = path.resolve("public");
   if (existsSync(path.join(publicDir, "index.html"))) {
+    app.get("/embed/:token", embedFramePolicy);
     app.use(express.static(publicDir));
     app.get("/{*path}", (req, res, next) => {
       if (req.path.startsWith("/api/")) return next();

@@ -81,6 +81,40 @@ try {
   logs.push(
     "Fresh install and database migrations reached healthy recovery preview",
   );
+  // The application's database identity owns only its database.
+  const leastPrivilege = async (project, composeFile) => {
+    const role = await compose(project, composeFile, [
+      "exec",
+      "-T",
+      "db",
+      "psql",
+      "-U",
+      "postgres",
+      "-d",
+      "performance_dashboard",
+      "-tAc",
+      "SELECT rolsuper::text||rolcreatedb::text||rolcreaterole::text||rolreplication::text||(SELECT datdba=r.oid FROM pg_database WHERE datname='performance_dashboard')::text||pg_has_role('dashboard','pg_execute_server_program','MEMBER')::text FROM pg_roles r WHERE rolname='dashboard'",
+    ]);
+    assert.equal(role, "falsefalsefalsefalsetruefalse", project);
+    await assert.rejects(
+      compose(project, composeFile, [
+        "exec",
+        "-T",
+        "db",
+        "psql",
+        "-U",
+        "dashboard",
+        "-d",
+        "performance_dashboard",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-c",
+        "COPY (SELECT 1) TO PROGRAM 'true'",
+      ]),
+    );
+    logs.push(`${project}: application database role is a non-superuser owner`);
+  };
+  await leastPrivilege(source, file);
   const app = await compose(source, file, ["ps", "-q", "app"]);
   const fixture = `
     import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -128,6 +162,7 @@ try {
     "--port",
     String(nextPort),
   ]);
+  await leastPrivilege(restored, nextFile);
   const nextApp = await compose(restored, nextFile, ["ps", "-q", "app"]);
   const verification = `
     import assert from 'node:assert/strict';

@@ -100,15 +100,19 @@ router.get(
       .orderBy(asc(users.username))
       .limit(200);
     const scope = accessScope.getStore();
-    const visible = [];
+    const visible: { id: number; username: string }[] = [];
+    // Accounts without any machine share no machine with anyone, administrators included.
+    if (scope && scope.role !== "admin" && !scope.machineIds.length) {
+      res.json(visible);
+      return;
+    }
     for (const owner of owners) {
+      if (!scope || scope.role === "admin" || owner.role === "admin") {
+        visible.push({ id: owner.id, username: owner.username });
+        continue;
+      }
       const target = await loadAccessScope(owner.id, owner.role);
-      if (
-        !scope ||
-        scope.role === "admin" ||
-        target.role === "admin" ||
-        target.machineIds.some((id) => scope.machineIds.includes(id))
-      )
+      if (target.machineIds.some((id) => scope.machineIds.includes(id)))
         visible.push({ id: owner.id, username: owner.username });
     }
     res.json(visible);
