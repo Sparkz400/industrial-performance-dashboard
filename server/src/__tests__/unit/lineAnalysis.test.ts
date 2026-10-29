@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import {
   analyzeLine,
+  cycleHistogram,
   lineTimeline,
   type LineConfig,
 } from "../../services/lineAnalysis.js";
@@ -80,7 +81,7 @@ it("counts bounded microstops and exposes measured adjacent losses", () => {
     20000,
     10,
   );
-  expect(r.machines[0].microstops).toEqual({ count: 1, seconds: 4 });
+  expect(r.machines[0].microstops).toMatchObject({ count: 1, seconds: 4 });
   expect(r.machines[0].cycles.p95).toBe(200);
   expect(r.candidates[0].downstreamStarvedSeconds).toBe(10);
   expect(r.targetShortfall).toBe(5);
@@ -117,7 +118,7 @@ it("counts a multi-reason stop once without counting unknown time", () => {
     20000,
     10,
   );
-  expect(r.machines[0].microstops).toEqual({ count: 1, seconds: 4 });
+  expect(r.machines[0].microstops).toMatchObject({ count: 1, seconds: 4 });
 });
 it("does not double-count adjacent loss when machines share two buffers", () => {
   const r = analyzeLine(
@@ -137,4 +138,42 @@ it("does not double-count adjacent loss when machines share two buffers", () => 
     10,
   );
   expect(r.candidates[0].downstreamStarvedSeconds).toBe(10);
+});
+it("withholds microstops the state sampling cannot resolve and ranks losses", () => {
+  const data = {
+    "1:state": [sample(0, 1), sample(4, 2), sample(8, 1), sample(15, 1)],
+    "2:state": [sample(0, 0), sample(6, 1)],
+  };
+  // 5 s threshold: resolvable at 1 s sampling, not at 3 s (needs two intervals).
+  const fine = analyzeLine(config, data, 0, 20000, 10, { "1:state": 1000 });
+  expect(fine.machines[0].microstops).toEqual({
+    count: 1,
+    seconds: 4,
+    resolutionSeconds: 1,
+    detectable: true,
+  });
+  const coarse = analyzeLine(config, data, 0, 20000, 10, { "1:state": 3000 });
+  expect(coarse.machines[0].microstops).toMatchObject({
+    count: null,
+    seconds: null,
+    detectable: false,
+  });
+  expect(coarse.uncertainty.join(" ")).toMatch(/not reported/);
+  // Unknown sampling keeps the count but says so.
+  expect(fine.machines[1].microstops.detectable).toBeNull();
+  expect(fine.uncertainty.join(" ")).toMatch(/not configured/);
+  expect(fine.lossPareto).toEqual([
+    { machineId: 2, state: "idle", seconds: 6, cumulativeShare: 0.6 },
+    { machineId: 1, state: "fault", seconds: 4, cumulativeShare: 1 },
+  ]);
+});
+it("builds a cycle histogram only from ten or more cycles", () => {
+  expect(cycleHistogram([1, 2, 3])).toEqual([]);
+  const bins = cycleHistogram([
+    100, 100, 100, 100, 100, 100, 100, 100, 100, 200,
+  ]);
+  expect(bins).toHaveLength(10);
+  expect(bins[0]).toEqual({ fromMs: 100, toMs: 110, count: 9 });
+  expect(bins[9].count).toBe(1);
+  expect(bins.reduce((n, b) => n + b.count, 0)).toBe(10);
 });

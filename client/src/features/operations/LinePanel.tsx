@@ -1,7 +1,7 @@
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/stores/useAuthStore';
 import React, { useState } from 'react';
-import { Alert, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { operationRequest, localInput, toIso } from './api';
 interface Stage {
@@ -38,9 +38,21 @@ interface Report {
     machineId: number;
     seconds: Record<string, number>;
     coverage: number;
-    microstops: { count: number; seconds: number };
-    cycles: { count: number; p50: number | null; p95: number | null; excluded: number };
+    microstops: {
+      count: number | null;
+      seconds: number | null;
+      resolutionSeconds: number | null;
+      detectable: boolean | null;
+    };
+    cycles: {
+      count: number;
+      p50: number | null;
+      p95: number | null;
+      excluded: number;
+      histogram: { fromMs: number; toMs: number; count: number }[];
+    };
   }[];
+  lossPareto: { machineId: number; state: string; seconds: number; cumulativeShare: number }[];
   buffers: {
     from: number;
     to: number;
@@ -236,14 +248,62 @@ export default function LinePanel() {
                   .join(' · ')}
               </Typography>
               <Typography>
-                {t('Microstops', 'Mikrostopps')}: {m.microstops.count} / {m.microstops.seconds}s.{' '}
-                {t('Cycle readings', 'Zyklusmessungen')}: {m.cycles.count},{' '}
+                {t('Microstops', 'Mikrostopps')}:{' '}
+                {m.microstops.detectable === false
+                  ? t(
+                      'not reported; the state is sampled too slowly for this threshold',
+                      'nicht ausgewiesen; der Zustand wird für diese Schwelle zu selten abgetastet',
+                    )
+                  : `${m.microstops.count} / ${m.microstops.seconds}s`}
+                {m.microstops.resolutionSeconds != null &&
+                  ` (± ${m.microstops.resolutionSeconds}s ${t('sampling', 'Abtastung')})`}
+                . {t('Cycle readings', 'Zyklusmessungen')}: {m.cycles.count},{' '}
                 {t('excluded', 'ausgeschlossen')} {m.cycles.excluded}; {t('median', 'Median')}{' '}
                 {m.cycles.p50 ?? t('Unknown', 'Unbekannt')} ms, p95{' '}
                 {m.cycles.p95 ?? t('Unknown', 'Unbekannt')} ms.
               </Typography>
+              {m.cycles.histogram.length > 0 && (
+                <Box
+                  component="table"
+                  aria-label={t('Cycle time distribution', 'Verteilung der Zykluszeiten')}
+                  sx={{ borderCollapse: 'collapse', fontSize: 13 }}
+                >
+                  <tbody>
+                    {m.cycles.histogram.map((bin) => (
+                      <tr key={bin.fromMs}>
+                        <Box component="td" sx={{ pr: 1, whiteSpace: 'nowrap' }}>
+                          {Math.round(bin.fromMs)}–{Math.round(bin.toMs)} ms
+                        </Box>
+                        <td style={{ width: '100%' }}>
+                          <Box
+                            sx={{
+                              height: 10,
+                              bgcolor: 'primary.main',
+                              width: `${(bin.count / m.cycles.count) * 100}%`,
+                            }}
+                          />
+                        </td>
+                        <Box component="td" sx={{ pl: 1, textAlign: 'right' }}>
+                          {bin.count}
+                        </Box>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Box>
+              )}
             </Paper>
           ))}
+          {report.lossPareto.length > 0 && (
+            <>
+              <Typography variant="h6">{t('Loss Pareto', 'Verlust-Pareto')}</Typography>
+              {report.lossPareto.map((loss) => (
+                <Typography key={`${loss.machineId}-${loss.state}`}>
+                  {machineName(loss.machineId)} · {stateName(loss.state)}: {loss.seconds.toFixed(1)}
+                  s · {t('cumulative', 'kumuliert')} {(loss.cumulativeShare * 100).toFixed(0)}%
+                </Typography>
+              ))}
+            </>
+          )}
           {report.buffers.map((b, i) => (
             <Typography key={i}>
               {t('Buffer', 'Puffer')} {machineName(b.from)} → {machineName(b.to)}: {b.samples}{' '}

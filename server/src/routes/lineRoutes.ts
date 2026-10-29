@@ -181,10 +181,26 @@ router.get(
         timestamp: r.timestamp.toISOString(),
       }));
     }
+    const samplingMs: Record<string, number | null> = {};
+    for (const m of config.machines)
+      samplingMs[`${m.machineId}:${m.stateKey}`] =
+        (
+          await manager.pool.query(
+            "SELECT sampling_interval FROM node_mappings WHERE machine_id=$1 AND node_key=$2 LIMIT 1",
+            [m.machineId, m.stateKey],
+          )
+        ).rows[0]?.sampling_interval ?? null;
     res.json({
       lineId: line.id,
       config,
-      ...analyzeLine(config, data, start, end, Number(req.query.target)),
+      ...analyzeLine(
+        config,
+        data,
+        start,
+        end,
+        Number(req.query.target),
+        samplingMs,
+      ),
     });
   }),
 );

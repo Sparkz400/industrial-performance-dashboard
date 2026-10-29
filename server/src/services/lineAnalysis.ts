@@ -66,12 +66,29 @@ export function lineTimeline(
   add(cursor, end, "unknown");
   return intervals;
 }
+/** Ten equal-width bins; fewer than 10 cycles give no histogram rather than a misleading one. */
+export function cycleHistogram(sorted: number[]) {
+  if (sorted.length < 10) return [];
+  const min = sorted[0],
+    width = (sorted.at(-1)! - min) / 10 || 1;
+  const bins = Array.from({ length: 10 }, (_, i) => ({
+    fromMs: min + i * width,
+    toMs: min + (i + 1) * width,
+    count: 0,
+  }));
+  for (const value of sorted)
+    bins[Math.min(9, Math.floor((value - min) / width))].count++;
+  return bins;
+}
+
 export function analyzeLine(
   config: LineConfig,
   data: Record<string, LineSample[]>,
   start: number,
   end: number,
   target: number,
+  /** Requested sampling interval of each machine's state signal, `${machineId}:${stateKey}`. */
+  samplingMs: Record<string, number | null> = {},
 ) {
   const get = (id: number, key: string | null) =>
     key ? (data[`${id}:${key}`] ?? []) : [];
@@ -155,14 +172,27 @@ export function analyzeLine(
       Date.parse(counts.at(-1)!.timestamp) === end &&
       pairs === counts.length - 1 &&
       !resets;
+    // A stop must span two sampling intervals to be observed at all; durations are
+    // only as precise as one interval.
+    const sampling = samplingMs[`${m.machineId}:${m.stateKey}`];
+    const resolutionSeconds = sampling == null ? null : sampling / 1000;
+    const detectable =
+      resolutionSeconds == null
+        ? null
+        : config.microstopSeconds >= 2 * resolutionSeconds;
     return {
       machineId: m.machineId,
       seconds,
       coverage: 1 - seconds.unknown / span,
       timeline,
       microstops: {
-        count: stops.length,
-        seconds: stops.reduce((n, s) => n + (s.end - s.start) / 1000, 0),
+        count: detectable === false ? null : stops.length,
+        seconds:
+          detectable === false
+            ? null
+            : stops.reduce((n, s) => n + (s.end - s.start) / 1000, 0),
+        resolutionSeconds,
+        detectable,
       },
       cycles: {
         count: cycles.length,
@@ -170,6 +200,7 @@ export function analyzeLine(
         p50: percentile(0.5),
         p90: percentile(0.9),
         p95: percentile(0.95),
+        histogram: cycleHistogram(cycles),
         unit: "ms",
       },
       output: { observed: pairs ? observedOutput : null, complete, resets },
@@ -221,6 +252,23 @@ export function analyzeLine(
         b.lossSeconds - a.lossSeconds ||
         (b.cycleP50Ms ?? 0) - (a.cycleP50Ms ?? 0),
     );
+  // Loss Pareto over observed stop states; microstops are part of these, not added again.
+  const losses = machines
+    .flatMap((m) =>
+      (["fault", "idle", "blocked", "starved"] as const).map((state) => ({
+        machineId: m.machineId,
+        state,
+        seconds: m.seconds[state],
+      })),
+    )
+    .filter((loss) => loss.seconds > 0)
+    .sort((a, b) => b.seconds - a.seconds);
+  const lossTotal = losses.reduce((n, loss) => n + loss.seconds, 0);
+  let cumulative = 0;
+  const lossPareto = losses.map((loss) => ({
+    ...loss,
+    cumulativeShare: (cumulative += loss.seconds) / lossTotal,
+  }));
   const terminal = config.machines.filter(
     (m) => !config.buffers.some((b) => b.from === m.machineId),
   );
@@ -239,7 +287,18 @@ export function analyzeLine(
     machines,
     buffers,
     candidates,
+    lossPareto,
     uncertainty: [
+      ...(machines.some((m) => m.microstops.detectable === false)
+        ? [
+            `The ${config.microstopSeconds} s microstop threshold is shorter than two state sampling intervals on some machines; their microstops are not reported.`,
+          ]
+        : []),
+      ...(machines.some((m) => m.microstops.detectable === null)
+        ? [
+            "The state sampling interval of some machines is not configured; their microstop counts are only as precise as the observed sample spacing.",
+          ]
+        : []),
       "Candidates rank observed idle/fault time, then median cycle duration when at least 10 cycles are observed. Adjacent blocked/starved totals support investigation, not causal proof; cycle comparisons require equivalent work per cycle.",
       "Buffer counts are sampled observations, not time occupancy. Cycle tag must emit one duration per completed cycle.",
       ...(!output?.complete

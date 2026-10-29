@@ -31,7 +31,7 @@ where marked *(local)*.
 | Production → commission machine | admin | Supported | `test-secure-machine.mjs` *(local)*, `test-production.mjs` | wrong credentials, untrusted/expired certificate, host mismatch | U D B S |
 | Wallboard (`/wallboard`) | wallboard/viewer accounts | Supported | `test-operator.mjs` *(local)* | stale/failed updates become unknown; viewing-distance acceptance open (U05) | D B |
 | Daily operations → planning, maintenance, energy, history | granted; supervisors configure | Supported | `test-daily-workflows.mjs` (incl. machine search, remembered machine/tab, revision reasons, reproducibility check), `test-history.mjs`, `test-maintenance-costs.mjs` | DST/holiday edge cases, stale plans, retention preview expiry, revision without reason refused, regenerated report differences named: `reportRevisionCheck.test.ts`; locale formatting: `i18n.test.ts` | U D B |
-| Daily operations → production line, alarm actions, comparisons | supervisor/admin | Supported | `test-quality-line.mjs`, `test-supervisor-workflows.mjs`, `test-period-comparisons.mjs` | foreign machines 403, stale revisions, incomparable periods | U D B |
+| Daily operations → production line, alarm actions, comparisons | supervisor/admin | Supported | `test-quality-line.mjs`, `test-supervisor-workflows.mjs`, `test-period-comparisons.mjs`, `test-line-analysis.mjs` (histogram, Pareto, unresolvable microstops withheld in the browser) | foreign machines 403, stale revisions, incomparable periods | U D B |
 | Daily operations → diagnostics, alarm usefulness, work orders | supervisor/admin | Supported | `test-operational-diagnostics.mjs`, `test-work-orders.mjs` | expired reviews, duplicate imports, unknown counters | U D B |
 | Daily operations → asset overview, calculated signals | granted; supervisors define signals | Supported | `test-asset-overview.mjs`, `test-measurement-corrections.mjs` | bad quality, division by zero, unit mismatch: `derivedSignalExpression.test.ts` | U D B |
 | Alerts → history (`/alerts/history`) | granted; operators acknowledge | Supported | `test-production.mjs` (alarm-to-delivery) | foreign acknowledge 403: `test-access.mjs` | U D B S |
@@ -62,7 +62,9 @@ where marked *(local)*.
 | Installation, backup, restore, upgrade, rollback | `test-operations.mjs` (incl. restore after retention cancels pending deletions), `test-container.mjs` | D |
 | Operational metrics | `operationalMetrics.test.ts`; real-database admin scrape and viewer refusal in `test-access.mjs` | U D |
 | Accessibility (WCAG 2.2 A/AA) | `test-accessibility.mjs`: axe on seven screens with zero findings, keyboard login and widget layout, reduced motion, 320 px reflow; see [accessibility](ACCESSIBILITY.md) | B |
-| Release packaging | `test-release-package.mjs`, `offline-package.mjs verify` | D |
+| Release packaging | `test-release-package.mjs` (signature, tampering, generated notes, compatibility required), `offline-package.mjs verify`; `release-evidence.mjs` collects CI and image evidence; see [releasing](RELEASING.md) | D |
+| Offline outbound destinations | `test-offline-destinations.mjs`: unresolvable SMTP and webhook hosts fail visibly; the report still completes | D |
+| Published examples | `test-examples.mjs`: no credentials; dashboard import and report template produce their documented output | D |
 | Endurance | `test-installation-endurance.mjs` short run in CI; the 72-hour gate (FR01) is open | D B S |
 
 ## Harness notes

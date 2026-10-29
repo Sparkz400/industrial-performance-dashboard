@@ -41,7 +41,7 @@ F07, F08, F09, F10 and D01. A following P1 gap wave closed R04, O05, H05, D05 an
 backlog wave 1 closed E01, R05, R02 and A08, and recorded research decisions
 ([decisions](docs/RESEARCH_DECISIONS.md)): I08, E06 and X02 closed as rejected; the rest
 stay open with explicit triggers.
-Backlog status: 65 checked and 43 open; I06 is withdrawn.
+Backlog status: 68 checked and 40 open; I06 is withdrawn.
 
 ### Data integrity and reviewed operations — 2026-10-28
 
@@ -457,7 +457,7 @@ below retain their unfulfilled acceptance criteria.
   Progress: changeover is an explicit stop category with energy/loss accounting
   ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)). Remaining:
   expected-versus-actual changeover from product transitions and comparable grouping.
-- [ ] **O07 — Analyze microstops and cycle distributions** · P2 · M3 · New · L. Depends: O02.
+- [x] **O07 — Analyze microstops and cycle distributions** · P2 · M3 · New · L. Depends: O02.
   Done: configurable thresholds distinguish short stops and slow cycles; histograms,
   percentiles and loss Pareto preserve acquisition-resolution limits. A 1 Hz sample
   stream must not claim precise detection of sub-second events.
@@ -465,6 +465,9 @@ below retain their unfulfilled acceptance criteria.
   ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62),
   [scope](docs/QUALITY_LINE_OPERATIONS.md#production-line-investigations)). Remaining:
   histograms and an explicit acquisition-resolution limit on short-stop detection.
+  Completed (wave 4): ten-bin cycle histograms, a loss Pareto, and microstops withheld when the
+  threshold is under two state sampling intervals (± one interval otherwise)
+  ([scope](docs/QUALITY_LINE_OPERATIONS.md#production-line-investigations), `test-line-analysis.mjs`).
 - [ ] **O08 — Add line topology and bottleneck analysis** · P2 · M3 · New · XL. Depends: O07, O05.
   Done: model buffers, blocked/starved states and selected serial/parallel paths; compare
   against a known line scenario. Report candidate constraints and uncertainty rather
@@ -906,8 +909,9 @@ below retain their unfulfilled acceptance criteria.
   Progress: hashed offline image packages and fresh offline installation
   ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)); signed release
   envelopes with SBOM and license inventory ([PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64)).
-  Remaining: an offline update rehearsal and a check that unreachable mail/report
-  destinations fail clearly without internet access.
+  Wave 4: unresolvable mail and webhook destinations fail within their timeouts with a clear
+  status while the report completes (`test-offline-destinations.mjs`). Remaining: an offline
+  update rehearsal from one offline package to the next.
 - [ ] **D08 — Design high availability from measured needs** · P2 · M4 · Research · XL. Depends: D04, H08, E03.
   Done: distinguish database recovery, web redundancy and collector ownership; demonstrate
   fencing against two active collectors and test failover on a declared topology.
@@ -989,24 +993,33 @@ below retain their unfulfilled acceptance criteria.
   Completed: [PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64);
   `node scripts/demo-factory.mjs` produces a hashed synthetic walkthrough with a known
   43.33% reconciled OEE; [scope](docs/FACTORY_OPERATIONS.md#repeatable-demonstration).
-- [ ] **P03 — Publish useful community examples and wiki navigation** · P1 · M2 · Improve · S. Depends: P02.
+- [x] **P03 — Publish useful community examples and wiki navigation** · P1 · M2 · Improve · S. Depends: P02.
   Done: initialize/verify the GitHub wiki publication path if still needed, keep its source
   in docs/wiki, and provide sanitized mapping/dashboard/report examples with expected
   outputs. Accept contributions without uploading customer data or machine credentials.
-  Blocker 2026-10-29: the wiki sync workflow runs but GitHub reports the wiki uninitialised;
-  a maintainer must create its first page once in GitHub. Examples remain to be added.
+  Completed (wave 4): the wiki was initialised and the sync published `docs/wiki` (`82a1216`);
+  [examples](examples/README.md) add a dashboard and a report template beside the gateway and
+  profile, each with its expected output, and `test-examples.mjs` rejects credentials and checks
+  the outputs. CONTRIBUTING says how to sanitize a contribution.
 - [ ] **P04 — Establish evidence-backed versioned releases** · P1 · M2 · Improve · M. Depends: D03, F10.
   Done: a release identifies commit/image digest, changelog, migrations, compatibility,
   SBOM/dependency notices and checks for that exact revision; package signatures/provenance
   are verified. A release label does not erase open physical/security acceptance limits.
   Progress: signed release envelopes with digests, migrations, SBOM, license inventory
   and evidence verification ([PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64),
-  [scope](docs/FACTORY_OPERATIONS.md#versioned-offline-release-candidates)). Blockers:
-  a production publisher key held outside the repository and F10 closure.
-- [ ] **P05 — Make focused contributions easier** · P2 · M2 · Improve · S. Depends: F10.
+  [scope](docs/FACTORY_OPERATIONS.md#versioned-offline-release-candidates)). Wave 4: generated
+  release notes (changes since the previous tag, new migrations, open P0/P1 items), the
+  compatibility list in the signed package, `release-evidence.mjs` (CI checks of the revision plus
+  container/operations runs on the exact image), a key-custody procedure ([releasing](docs/RELEASING.md))
+  and `*.pem`/`*.key` ignored. F10 is closed. Blocker: the publisher Ed25519 key, created and held
+  by the maintainer outside the repository, and its fingerprint shared with sites.
+- [x] **P05 — Make focused contributions easier** · P2 · M2 · Improve · S. Depends: F10.
   Done: label small tasks by subsystem and expected evidence, document connector/widget
   boundaries and add fixtures useful to reviewers. Maintain existing public-repo policies
   instead of adding redundant workflows or unmaintained template files.
+  Completed (wave 4): CONTRIBUTING maps TODO prefixes and subsystems to code paths and the
+  evidence to quote, states the owned-database rule and the unqualified widget runtime, and
+  points to sanitized examples; existing issue templates and workflows are reused.
 - [ ] **P06 — Review product usefulness after each pilot milestone** · P1 · M1 · Research · M. Depends: D06, P01.
   Done: compare commissioning effort, report preparation time, unresolved stop reasons
   and user-observed usefulness against the agreed baseline; reorder or remove backlog
