@@ -373,14 +373,23 @@ class ReportJobService {
               : null,
           })
           .where(eq(reportHistory.id, id));
-      } catch {
+      } catch (error) {
         const retryAt = reportRetry(attempts);
+        // Name the offline case (no name, route or answer) without exposing server details.
+        const unreachable = [
+          "EDNS",
+          "ECONNECTION",
+          "ETIMEDOUT",
+          "ESOCKET",
+        ].includes(String((error as { code?: unknown }).code));
         await writer
           .update(reportHistory)
           .set({
             emailStatus: retryAt ? "retrying" : "failed",
             emailRetryAt: retryAt,
-            emailError: "SMTP delivery failed; check the mail server and retry",
+            emailError: unreachable
+              ? "Mail server unreachable; check the network and SMTP_HOST, then retry"
+              : "SMTP delivery failed; check the mail server and retry",
           })
           .where(eq(reportHistory.id, id));
       }

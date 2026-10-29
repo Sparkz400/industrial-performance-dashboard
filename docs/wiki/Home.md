@@ -51,6 +51,10 @@ and [security review](https://github.com/Sparkz400/performance_dashboard/blob/ma
 
 The [operations guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/OPERATIONS.md)
 covers isolated installation previews, complete backups and restore/upgrade checks.
+[Releasing](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/RELEASING.md)
+describes signed packages and publisher-key custody, and the
+[examples](https://github.com/Sparkz400/performance_dashboard/blob/main/examples/README.md)
+are sanitized starting points with checked outputs.
 [Capacity evidence](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/CAPACITY.md)
 declares the synthetic workload and its limits; it is not physical PLC qualification.
 

@@ -55,6 +55,17 @@ UI no longer presents a 21 CFR Part 11 checklist (Q07). Seven screens pass an au
 WCAG 2.2 A/AA scan with zero findings, and widgets can be moved and resized without
 dragging ([accessibility](ACCESSIBILITY.md), U06; screen-reader walkthrough open).
 
+## Backlog wave 4
+
+Releases have a written procedure with publisher-key custody, generated notes (changes,
+new migrations, open P0/P1 items), the compatibility list in the signed package and an
+evidence collector for the exact image ([releasing](RELEASING.md); the first signed
+release waits for the publisher key, P04). The GitHub wiki is published from
+`docs/wiki`, and sanitized dashboard and report examples have checked outputs (P03).
+Line reports add cycle histograms and a loss Pareto and withhold microstops the state
+sampling cannot resolve (O07). Offline sites see unreachable mail and webhook
+destinations clearly (D07). CONTRIBUTING maps subsystems to the evidence to run (P05).
+
 ## Data integrity and reviewed operations
 
 The [six-feature integrity wave](DATA_INTEGRITY.md) replaces generated widget data,

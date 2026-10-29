@@ -1,0 +1,19 @@
+{
+  "name": "Press overview (example)",
+  "widgets": [
+    {
+      "id": "count-trend",
+      "type": "trendingExplorer",
+      "config": {
+        "machineId": 1,
+        "defaultTags": ["ProductionCount"],
+        "title": "Production count"
+      }
+    },
+    { "id": "status", "type": "systemStatus", "config": {} }
+  ],
+  "layout": [
+    { "i": "count-trend", "x": 0, "y": 0, "w": 8, "h": 8 },
+    { "i": "status", "x": 8, "y": 0, "w": 4, "h": 8 }
+  ]
+}

@@ -37,3 +37,8 @@ shared/dist/
 server/certificates/
 logs/
 data/
+
+# Release signing keys never belong in the repository; only the published public key may.
+*.pem
+*.key
+!docs/release/*.pub.pem

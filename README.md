@@ -60,7 +60,9 @@ See the [production workflow](docs/PRODUCTION_WORKFLOW.md),
 The first nominated pilot family is [Siemens SIMATIC S7-1500](docs/S7_1500_PILOT.md);
 software acceptance uses owned simulators, with physical CPU qualification still open.
 For isolated installation, complete backups, restore checks and upgrades, see the
-[operations guide](docs/OPERATIONS.md).
+[operations guide](docs/OPERATIONS.md); signed releases follow [releasing](docs/RELEASING.md).
+Sanitized [examples](examples/README.md) cover a gateway, a production profile, a
+dashboard and a report template.
 The [operator workflow](docs/OPERATOR_WORKFLOW.md) covers handover actions, reviewed
 manual counts and the supervisor wallboard with a dedicated read-only account.
 [Unattended operation](docs/UNATTENDED_OPERATION.md) covers durable scheduled reports,

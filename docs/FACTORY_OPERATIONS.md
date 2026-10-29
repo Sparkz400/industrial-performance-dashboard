@@ -106,6 +106,11 @@ publication of a passing manifest. No long-running demo account or database is l
 
 ## Versioned offline release candidates
 
+The step-by-step procedure, including publisher-key custody and evidence collection,
+is in [releasing](RELEASING.md). Release notes are generated per version: merged
+changes since the previous tag, new migrations and every open P0/P1 item, and the
+package carries the compatibility list.
+
 The existing offline image package now has an optional signed release envelope.
 First validate a clean source revision and the image built with that exact revision:
 

@@ -1,0 +1,19 @@
+{
+  "name": "Shift summary (example)",
+  "type": "shift",
+  "description": "Production count trend, alarms and OEE for one machine over the last 8 hours.",
+  "templateConfig": {
+    "title": "Shift summary",
+    "lookbackHours": 8,
+    "sections": [
+      {
+        "type": "trending",
+        "title": "Production count",
+        "machineId": 1,
+        "nodeKeys": ["ProductionCount"]
+      },
+      { "type": "alerts", "title": "Alarms", "machineId": 1 },
+      { "type": "oee", "title": "OEE", "machineId": 1 }
+    ]
+  }
+}

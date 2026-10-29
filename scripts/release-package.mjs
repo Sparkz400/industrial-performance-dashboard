@@ -28,6 +28,79 @@ import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
+
+/** Open P0/P1 backlog items: a release label never hides them. */
+export function openAcceptanceItems(todo) {
+  return [
+    ...todo.matchAll(/^- \[ \] \*\*([A-Z]+\d+) — ([^*]+)\*\* · (P[01])\b/gm),
+  ].map(([, id, title, priority]) => `${id} (${priority}): ${title.trim()}`);
+}
+
+/** Merged pull requests on the first-parent history since `previous`. */
+export function mergedChanges(previous) {
+  return parseChanges(
+    execFileSync(
+      "git",
+      [
+        "log",
+        "--first-parent",
+        "--format=%s%x1f%b%x1e",
+        previous ? `${previous}..HEAD` : "HEAD",
+      ],
+      { encoding: "utf8" },
+    ),
+  );
+}
+
+/** `git log --format=%s%x1f%b%x1e` output: a merged PR becomes "#N <PR title>". */
+export function parseChanges(log) {
+  return log
+    .split("\x1e")
+    .map((entry) => entry.trim().split("\x1f"))
+    .filter(([subject]) => subject)
+    .map(([subject, body = ""]) => {
+      const pr = subject.match(/^Merge pull request (#\d+)/);
+      return pr ? `${pr[1]} ${body.trim().split("\n")[0]}` : subject;
+    });
+}
+
+export function releaseNotes({
+  version,
+  revision,
+  createdAt,
+  previous,
+  changes,
+  newMigrations,
+  openItems,
+}) {
+  const list = (items, empty) =>
+    items.length ? items.map((item) => `- ${item}`).join("\n") : `- ${empty}`;
+  return `# Performance Dashboard ${version}
+
+Source revision \`${revision}\`, packaged ${createdAt}.
+Physical machine qualification: **not established** for this release.
+
+## Changes since ${previous ?? "the start of the history"}
+
+${list(changes, "No merged changes")}
+
+## New database migrations
+
+${list(newMigrations, "None")}
+
+Migrations are additive and run at startup; keep the complete pre-upgrade backup for
+rollback (OPERATIONS.md).
+
+## Open acceptance items
+
+These P0/P1 items were open in TODO.md at this revision. The release label does not
+close them.
+
+${list(openItems, "None")}
+
+Compatibility evidence, including what was only simulated, is in COMPATIBILITY.md.
+`;
+}
 const fileDigest = async (path) => {
   const hash = createHash("sha256");
   for await (const chunk of createReadStream(path)) hash.update(chunk);
@@ -68,6 +141,7 @@ export async function verifyRelease(directory, publicKeyFile) {
     "DEPENDENCY-NOTICES.txt",
     "MIGRATIONS.json",
     "RELEASE-NOTES.md",
+    "COMPATIBILITY.md",
     "OPERATIONS.md",
     "LICENSE",
   ])
@@ -155,6 +229,7 @@ async function main() {
       evidence: { type: "string" },
       "signing-key": { type: "string" },
       "public-key": { type: "string" },
+      previous: { type: "string" },
       "database-image": { type: "string", default: "postgres:16-alpine" },
     },
   });
@@ -251,13 +326,31 @@ async function main() {
   await copyFile(o.evidence, join(directory, "evidence.json"));
   await copyFile("LICENSE", join(directory, "LICENSE"));
   await copyFile("docs/OPERATIONS.md", join(directory, "OPERATIONS.md"));
-  await copyFile(
-    "docs/FACTORY_OPERATIONS.md",
-    join(directory, "RELEASE-NOTES.md"),
-  );
+  await copyFile("docs/COMPATIBILITY.md", join(directory, "COMPATIBILITY.md"));
   const migrationFiles = (await readdir("server/drizzle"))
     .filter((n) => n.endsWith(".sql"))
     .sort();
+  const earlierMigrations = o.previous
+    ? execFileSync(
+        "git",
+        ["ls-tree", "--name-only", `${o.previous}:server/drizzle`],
+        { encoding: "utf8" },
+      ).split("\n")
+    : [];
+  await writeFile(
+    join(directory, "RELEASE-NOTES.md"),
+    releaseNotes({
+      version: o.version,
+      revision,
+      createdAt: new Date().toISOString(),
+      previous: o.previous,
+      changes: mergedChanges(o.previous),
+      newMigrations: migrationFiles.filter(
+        (name) => !earlierMigrations.includes(name),
+      ),
+      openItems: openAcceptanceItems(await readFile("TODO.md", "utf8")),
+    }),
+  );
   const migrationInventory = await Promise.all(
     migrationFiles.map(async (name) => ({
       name,

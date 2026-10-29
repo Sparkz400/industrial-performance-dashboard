@@ -126,7 +126,16 @@ short stopped interval bounded by running observations. Consecutive stop reasons
 form one stop; unknown gaps never join stops. Adjacent loss totals count each
 neighbor once even when it has several connecting buffers. Cycle tags must emit one
 duration in milliseconds per completed cycle; p50/p90/p95 describe those observed
-cycles. Buffer full/empty counts are observations, not occupancy duration.
+cycles, and ten or more cycles also get a ten-bin duration histogram. Buffer full/empty
+counts are observations, not occupancy duration.
+
+Short stops are only as visible as the state signal is sampled. The report reads each
+state signal's configured sampling interval: a microstop threshold shorter than two
+intervals cannot be resolved, so that machine's microstops are **not reported** and the
+report says why; otherwise durations carry ± one interval. Without a configured
+interval the count is kept and flagged. A loss Pareto ranks observed fault, idle,
+blocked and starved time by machine with cumulative shares; microstops are part of
+those states and are not added twice (`test-line-analysis.mjs`).
 
 Candidates rank observed fault/idle time, then median cycle duration (at least 10
 cycles; comparisons require equivalent work per cycle), with adjacent blocked/starved totals
@@ -211,7 +220,14 @@ not rebuild or download dependencies. It creates a fresh isolated recovery previ
 with newly generated credentials. Follow `INSTALL.txt` and the existing operations
 guide for activation. The bundle reproduces the packaged image, not necessarily a
 bit-identical rebuild from moving base-image tags. It is platform-specific and
-does not bundle Docker itself. Hashes detect corruption, not publisher identity.
+does not bundle Docker itself. Hashes detect corruption, not publisher identity; signed
+releases add that ([releasing](RELEASING.md)).
+
+Without internet access, outbound destinations fail visibly and within their timeouts
+(10 s to reach the mail server, 10 s per webhook request): a report still completes and stays
+downloadable, its email shows *Mail server unreachable; check the network and
+SMTP_HOST, then retry*, and a webhook delivery keeps its event with the resolver error
+until it is delivered or dead-lettered (`test-offline-destinations.mjs`).
 
 ## Endurance workloads and evidence
 

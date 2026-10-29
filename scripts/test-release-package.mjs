@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { generateKeyPairSync, createHash, sign } from "node:crypto";
 import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
-import { verifyRelease } from "./release-package.mjs";
+import {
+  verifyRelease,
+  releaseNotes,
+  openAcceptanceItems,
+  parseChanges,
+} from "./release-package.mjs";
 await mkdir(".local", { recursive: true });
 const root = await mkdtemp(resolve(".local", "release-signature-test-")),
   directory = join(root, "package");
@@ -31,6 +36,7 @@ const names = [
   "DEPENDENCY-NOTICES.txt",
   "MIGRATIONS.json",
   "RELEASE-NOTES.md",
+  "COMPATIBILITY.md",
   "OPERATIONS.md",
   "LICENSE",
 ];
@@ -89,6 +95,42 @@ await assert.rejects(
 );
 await save({ ...manifest, physicalQualification: true });
 await assert.rejects(verifyRelease(directory, keyFile));
+// A package without the compatibility list is refused.
+const { "COMPATIBILITY.md": _omitted, ...withoutCompatibility } = files;
+await save({ ...manifest, files: withoutCompatibility });
+await assert.rejects(verifyRelease(directory, keyFile), /COMPATIBILITY\.md/);
+
+// Release notes: merged pull requests, new migrations and open P0/P1 items.
+const open = openAcceptanceItems(
+  "- [x] **F01 — Done item** · P0 · M1\n- [ ] **H06 — Add rollups** · P1 · M2\n- [ ] **O08 — Line topology** · P2 · M3\n",
+);
+assert.deepEqual(open, ["H06 (P1): Add rollups"]);
+const notes = releaseNotes({
+  version: "1.1.0-rc.1",
+  revision,
+  createdAt: "2026-10-29T00:00:00.000Z",
+  previous: "v1.0.0",
+  changes: ["#69 Backlog wave 2"],
+  newMigrations: ["0024_webhook_outbox.sql"],
+  openItems: open,
+});
+for (const expected of [
+  "# Performance Dashboard 1.1.0-rc.1",
+  "**not established**",
+  "## Changes since v1.0.0",
+  "- #69 Backlog wave 2",
+  "- 0024_webhook_outbox.sql",
+  "- H06 (P1): Add rollups",
+])
+  assert(notes.includes(expected), expected);
+// Merged pull requests are listed by number and title; direct commits by subject.
+assert.deepEqual(
+  parseChanges(
+    "Merge pull request #69 from owner/wave2\x1fBacklog wave 2: outbox\n\x1e" +
+      "docs: reference PR #69\x1f\x1e",
+  ),
+  ["#69 Backlog wave 2: outbox", "docs: reference PR #69"],
+);
 await writeFile(
   join(root, "validation.json"),
   JSON.stringify(
