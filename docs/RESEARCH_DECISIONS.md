@@ -15,8 +15,8 @@ They follow the ROADMAP's "Decisions that remain conditional" defaults: OPC UA p
 | X04 | DEFER | Open | No completed-run history to backtest |
 | X06 | DEFER | Open | A ranked loss list exists; the usefulness comparison needs users; M06 is open |
 | C06 | BUILT plain MQTT; Sparkplug not selected (wave 10) | Done | Owner lifted the deferral; Sparkplug host duties still conflict with read-only operation |
-| H08 | DEFER | Open | No multi-site customer; identities are not site-qualified (I01 is done in wave 2) |
-| E02 | DEFER | Open | No selected IdP |
+| H08 | BUILT (owner lifted the deferral, wave 11) | Done | Token-authenticated, site-qualified, acknowledged history; tested with owned installations |
+| E02 | BUILT (owner lifted the deferral, wave 11) | Done | OIDC with openid-client against an owned provider; read-only service tokens; no customer IdP qualified |
 | P01 | Guide and hypotheses drafted | Open | Needs an operator, an engineer and a production lead |
 | P06 | Baseline protocol drafted | Open | Needs P01 and the D06 pilot |
 
@@ -391,6 +391,13 @@ Reopen trigger, all of:
 - The edge advances its cursor only on acknowledgment.
 - Tests: lost response, partial or invalid batch, crash between commit and cursor update, revoked edge, schema mismatch, and colliding machine IDs across two edges.
 
+**Outcome 2026-10-29 (wave 11).** The owner lifted the deferral and chose a hashed bearer token with a pinned central CA over mTLS. Built as scoped above ([edge sites](MULTI_SITE.md)):
+- One-time enrollment codes; the token is SHA-256 centrally and sealed on the edge.
+- The edge sends committed `opcua_data` rows in id order up to a settle horizon (`EDGE_SETTLE_MS`, shortcut documented) and moves its cursor only to the acknowledged position. The central installation accepts schema version 1, maps every edge machine to its own machine at the edge's site, stores rows once under `edge<id>:<event>` in one transaction and refuses invalid batches whole.
+- `test-edge-history.mjs` runs two edge server processes and the central installation: lost acknowledgment, refused batches, replay, rotation, crash and restart, central outage, revocation and colliding machine numbers.
+- E03 (site overview) and E04 (enrollment, rotation, revocation, configuration revisions, staged versions) were built on top in the same wave.
+- Still open: a real multi-site customer and network, and central high availability (D08).
+
 ---
 
 ## E02 — Federated identity (OIDC) and service-account scopes
@@ -428,6 +435,14 @@ Reopen trigger, all of:
 - Service accounts: hashed, expiring, read-only tokens scoped to machines, reusing the share-token code.
 - A documented, audited local recovery admin that is disabled by default.
 - Negative tests: wrong issuer or audience, expired token, a revoked group, and a token outside its scope.
+
+**Outcome 2026-10-29 (wave 11).** The owner lifted the deferral and chose openid-client 6.8.8 (relying party, with jose 6.2.14 for logout tokens) and oidc-provider 9.13.3 as an owned test provider, all MIT; back-channel logout is included where reachable ([identity](IDENTITY.md)).
+- Authorization code with PKCE against `OIDC_ISSUER`, optional pinned CA. Groups map onto non-admin roles and sites at each sign-in; no mapped group means no access; existing accounts are never taken over.
+- Revocation: role change ends other sessions, `OIDC_MAX_SESSION_HOURS`, and back-channel logout with checked logout tokens.
+- Recovery: password sign-in only for accounts named in `LOCAL_RECOVERY_ACCOUNTS`, audited.
+- Service accounts: hashed, expiring tokens for the integration read endpoints with machine grants, GET only, no session.
+- `test-oidc.mjs` covers wrong issuer, foreign CA, a code for another client, invalid and old logout tokens, group loss, session age and service-token scope, expiry and revocation.
+- Still open: a customer's provider (Entra ID group overage, AD FS, Keycloak) and its MFA policy.
 
 ---
 

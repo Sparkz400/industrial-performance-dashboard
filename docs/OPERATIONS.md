@@ -128,6 +128,11 @@ check freshness, queued measurements and reports after a supervised upgrade.
 For a rehearsal, restore a backup with `--image` set to the candidate image. This
 tests its migrations in isolated preview without changing the original installation.
 
+For several edge sites, stage the version centrally, upgrade one edge, confirm its link
+status and the central site overview, then continue. To stop, clear the staged version;
+to roll back an edge, restore its checkpoint with the previous image
+([edge sites](MULTI_SITE.md#lifecycle-e04)).
+
 ## Diagnostics and acceptance
 
 `/healthz` returns readiness and normal/recovery mode without credentials or

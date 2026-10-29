@@ -20,7 +20,8 @@ historical trends and OEE. Development software for owned simulators and isolate
 test equipment; physical-machine and production acceptance remain open.
 
 The first P0 wave fixes trend completeness, SPC isolation and measurement identity.
-Edge transfer is disabled. The AI assistant and provider integration have been removed.
+Edge sites can send committed history to a central installation ([edge sites](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/MULTI_SITE.md)), and
+single sign-on is available ([identity](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/IDENTITY.md)). The AI assistant and provider integration have been removed.
 See [acceptance evidence](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/P0_ACCEPTANCE.md),
 the per-screen [acceptance matrix](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/ACCEPTANCE_MATRIX.md),
 the WCAG 2.2 [accessibility checklist](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/ACCESSIBILITY.md),

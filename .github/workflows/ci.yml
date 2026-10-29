@@ -126,6 +126,8 @@ jobs:
       - run: node scripts/test-custom-widgets.mjs
       - run: node scripts/test-mqtt-ingestion.mjs
       - run: node scripts/test-plc-alarms.mjs
+      - run: node scripts/test-oidc.mjs
+      - run: node scripts/test-edge-history.mjs
       - run: node scripts/test-quality-line.mjs
       - run: node scripts/test-supervisor-workflows.mjs
       - run: node scripts/test-period-comparisons.mjs

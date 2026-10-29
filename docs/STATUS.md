@@ -120,6 +120,19 @@ calls (A07). Serial Modbus RTU devices are read through an RTU-to-TCP gateway wi
 existing adapter, and unsupported devices are listed; ranking against a real inventory
 remains (C07, [compatibility](COMPATIBILITY.md)).
 
+## Backlog wave 11
+
+Single sign-on through OIDC maps provider groups onto roles and sites, never grants
+administrator, ends sessions on role change, age and back-channel logout, and leaves a
+password only to named, audited recovery accounts; integrations read the contract
+endpoints with hashed, expiring, machine-scoped service tokens (E02,
+[identity](IDENTITY.md)). Edge installations send committed history to a central
+installation that stores it once per source event and acknowledges only what it
+committed; sites keep working through a central outage (H08). The central installation
+shows each site's availability, data end and comparable definitions without presenting a
+silent site as current (E03), and edge enrollment, rotation, revocation, configuration
+revisions and staged versions are attributable (E04, [edge sites](MULTI_SITE.md)).
+
 ## Data integrity and reviewed operations
 
 The [six-feature integrity wave](DATA_INTEGRITY.md) replaces generated widget data,
@@ -207,7 +220,7 @@ simulator evidence do not establish physical-machine acceptance or release readi
 ## Known limits
 
 - No physical machine or production-line qualification has been completed here.
-- OPC UA scalar values, anonymous sessions and protected username/password or user-certificate
+- OPC UA scalar values, anonymous OPC UA sessions and protected username/password or user-certificate
   identities are supported in owned-server acceptance. Protected identities require an
   encrypted channel and explicit certificate trust. See the [S7-1500 pilot guide](S7_1500_PILOT.md).
 - Process crashes and unobserved machine events can leave uncertain intervals;
@@ -217,8 +230,10 @@ simulator evidence do not establish physical-machine acceptance or release readi
   explicit DST ambiguity. Unsampled counter/run boundaries prevent verified reports;
   resets near rollover and multiple wraps still require source/sampling qualification.
 - The disk spool needs free space, a persistent volume and a single collector.
-- Edge/cloud transfer and ingest are disabled: previously transferred queue records
-  do not establish queryable central history. Retained records remain visible in settings.
+- Edge-to-central history is tested with owned installations only; real site networks,
+  central high availability and automatic fleet upgrades are not covered. The former
+  edge queue records are retained unread ([edge sites](MULTI_SITE.md)).
+- Single sign-on is tested against an owned OIDC provider only ([identity](IDENTITY.md)).
 - The AI assistant, query endpoint and external-provider configuration have been removed.
 - Compliance, recipes and digital twins remain experimental. Legacy notification
   channels are disabled. Read-only links expose only selected trend signals for a

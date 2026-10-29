@@ -41,7 +41,7 @@ F07, F08, F09, F10 and D01. A following P1 gap wave closed R04, O05, H05, D05 an
 backlog wave 1 closed E01, R05, R02 and A08, and recorded research decisions
 ([decisions](docs/RESEARCH_DECISIONS.md)): I08, E06 and X02 closed as rejected; the rest
 stay open with explicit triggers.
-Backlog status: 82 checked and 26 open; I06 is withdrawn.
+Backlog status: 86 checked and 22 open; I06 is withdrawn.
 
 ### Data integrity and reviewed operations — 2026-10-28
 
@@ -403,11 +403,16 @@ below retain their unfulfilled acceptance criteria.
   original revision. Test out-of-order timestamps and invalid/future clock readings.
   Completed software: [implementation `019be8e0`](https://github.com/Sparkz400/performance_dashboard/commit/019be8e068e06e3abbb0ab14c472ca58c61d508e);
   [verification and separate qualification boundaries](docs/DATA_INTEGRITY.md#local-checkpoint-validation--2026-10-28).
-- [ ] **H08 — Complete authenticated edge-to-central history** · P2 · M4 · Improve · XL. Depends: F04, H01, I01, E01.
+- [x] **H08 — Complete authenticated edge-to-central history** · P2 · M4 · Improve · XL. Depends: F04, H01, I01, E01.
   Done: edge identity and allowed schemas are checked; receiver writes canonical records
   transactionally and acknowledges committed identities. Resume after lost responses,
   partial batches and process crashes without duplicates or silent loss; revoke a node.
   Decision 2026-10-29: DEFER until a sponsor names at least two sites and central viewers; I01 and site-qualified identity come first. [decision](docs/RESEARCH_DECISIONS.md#h08--complete-authenticated-edge-to-central-history).
+  Completed (wave 11, deferral lifted by the owner): enrolled edges with hashed, revocable tokens over pinned TLS
+  send committed rows; the central installation checks schema versions, stores site-qualified rows once per source
+  event in one transaction and acknowledges only committed batches; the edge cursor follows the acknowledgment
+  (`test-edge-history.mjs`: lost responses, refused partial batches, crash and restart, revocation, colliding
+  machine ids, [scope](docs/MULTI_SITE.md)). A real multi-site network remains.
 - [ ] **H09 — Provide spool and storage capacity controls** · P1 · M2 · Improve · M. Depends: D04, H04.
   Done: operators see backlog age/bytes, disk runway, write failures and recovery rate;
   export/quarantine recovery has audit evidence. Define backpressure and alert thresholds
@@ -991,19 +996,31 @@ below retain their unfulfilled acceptance criteria.
   per-site alarm-rule reads on REST and tRPC. Reports are administrator-only; background
   jobs deliver only to administrator-configured destinations
   ([boundary](docs/SECURITY_BOUNDARIES.md#access-matrix-f07)).
-- [ ] **E02 — Add federated identity and service-account scopes** · P2 · M4 · New · L. Depends: E01.
+- [x] **E02 — Add federated identity and service-account scopes** · P2 · M4 · New · L. Depends: E01.
   Done: a selected OIDC provider, session revocation and least-privilege machine accounts
   pass positive/negative tests; delegated MFA follows the identity provider policy.
   Document a controlled recovery path without an unrestricted hidden admin bypass.
   Decision 2026-10-29: DEFER until customer IT names an IdP or an integration needs non-human API access. [decision](docs/RESEARCH_DECISIONS.md#e02--federated-identity-oidc-and-service-account-scopes).
-- [ ] **E03 — Provide an honest multi-site overview** · P2 · M4 · New · L. Depends: H08, E01.
+  Completed (wave 11, deferral lifted by the owner; openid-client with an owned oidc-provider): PKCE sign-in, group
+  mapping without admin, revocation by role change, session age and back-channel logout, audited recovery accounts
+  instead of a bypass, and hashed, expiring, machine-scoped read tokens (`test-oidc.mjs`,
+  [scope](docs/IDENTITY.md)). MFA follows the provider; a customer provider remains to be qualified.
+- [x] **E03 — Provide an honest multi-site overview** · P2 · M4 · New · L. Depends: H08, E01.
   Done: site availability, last successful sync, data coverage and comparable definitions
   are visible; an offline site cannot appear as zero production or current live data.
   Test site-local continuity through a central outage.
-- [ ] **E04 — Manage edge-node lifecycle and configuration** · P2 · M4 · New · L. Depends: E03, I05.
+  Completed (wave 11): Daily operations -> Sites shows each visible site's availability, last contact and confirmed
+  batch, data end, waiting readings and definition digests marked comparable; a silent site is offline and not
+  current, and an edge serves its own data through a central outage and catches up
+  (`test-edge-history.mjs`, [scope](docs/MULTI_SITE.md#site-overview-e03)).
+- [x] **E04 — Manage edge-node lifecycle and configuration** · P2 · M4 · New · L. Depends: E03, I05.
   Done: enrollment, credential rotation/revocation, config revision and staged upgrades
   are attributable; an edge can reject incompatible configuration. Fleet updates have
   a documented stop/rollback path and do not issue machine commands.
+  Completed (wave 11): enrollment codes, rotation by re-enrollment, revocation, append-only configuration
+  revisions that the edge applies or rejects (unsupported schema, unknown settings such as a machine command) and
+  staged target versions beside the reported version, all audited; upgrades use the operations procedure with its
+  stop and rollback path (`test-edge-history.mjs`, [scope](docs/MULTI_SITE.md#lifecycle-e04)).
 - [x] **E05 — Define data ownership, residency and retention policies** · P2 · M4 · New · M. Depends: E01, H05.
   Done: deployment operators can identify stored/exported data and optional external
   flows; export, deletion, retention and access review have explicit scope and audit

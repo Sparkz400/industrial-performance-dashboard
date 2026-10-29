@@ -20,8 +20,9 @@ See [[Roadmap]] for the staged plan and links to acceptance criteria. A planned
 feature does not expand present compatibility or production-readiness claims.
 
 The [first P0 acceptance record](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/P0_ACCEPTANCE.md)
-documents identity, SPC isolation and trend fixes. Edge transfer is disabled until
-central ingestion exists. The AI assistant and external-provider integration have been removed.
+documents identity, SPC isolation and trend fixes. Edge sites can send their history to a
+central installation ([edge sites](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/MULTI_SITE.md)). The AI assistant and external-provider integration
+have been removed.
 
 **Why is OEE unavailable?**
 

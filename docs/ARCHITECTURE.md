@@ -52,8 +52,12 @@ interval, with a 2,000-point bound, sample counts, resolution and unknown/bad ga
 Observations do not establish continuity. SPC windows are keyed by profile,
 machine and tag; baseline/chart queries use the same machine boundary.
 
-The old edge receiver did not populate canonical history. Edge mutations now
-fail with 501 and the queue is preserved for a future explicit migration.
+An edge installation sends committed measurements to a central installation over
+token-authenticated, CA-pinned HTTPS. The central installation stores them as site-qualified
+machines under the identity `edge<id>:<event>` and acknowledges each committed batch
+([edge sites](MULTI_SITE.md)). The former edge queue (`edge_sync_queue`) is retained
+unread. Sign-in is local or OIDC; integrations may use read-only service tokens
+([identity](IDENTITY.md)).
 The AI assistant and its external-provider integration have been removed.
 
 The spool is for one collector process on a durable local filesystem. A PostgreSQL

@@ -20,8 +20,9 @@ against an owned database. Outbound events are covered by
   then `POST /api/v1/auth/login` with the `x-csrf-token` header, then keep the
   returned session cookie. Sessions end on logout, password, role or account
   changes; log in again on `401`.
-- Non-human API tokens are not implemented. They start with the service-account
-  build recorded under E02 in [research decisions](RESEARCH_DECISIONS.md#e02--federated-identity-oidc-and-service-account-scopes).
+- Alternatively, a [service account](IDENTITY.md#service-accounts) sends
+  `Authorization: Bearer pdsa_…` on the read endpoints below: no session, no CSRF
+  token, its own machine grants, GET only. Expired or revoked tokens get `401`.
 
 ## Read endpoints
 

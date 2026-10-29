@@ -32,7 +32,10 @@ keep controls, axes and tooltips consistent while preserving measurement behavio
 
 New measurements preserve namespace-aware identity and receive time. Dense trend
 queries span the selected interval with quality gaps and explicit resolution.
-Edge transfer remains disabled. The AI assistant and provider integration have been removed.
+Edge sites send committed history to a central installation that stores it once per source
+event and acknowledges only what it committed ([edge sites](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/MULTI_SITE.md)). Sign-in is local or
+OIDC, and integrations may use read-only service tokens ([identity](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/IDENTITY.md)).
+The AI assistant and provider integration have been removed.
 
 See the [architecture guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/ARCHITECTURE.md)
 for measurement quality, durable replay, OEE boundaries and deployment limits.

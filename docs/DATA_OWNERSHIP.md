@@ -14,7 +14,8 @@ operator runs it.
 
 | Category | Tables |
 | --- | --- |
-| Accounts and access | `users`, `session`, `machine_grants`, `plants`, `plant_memberships`, `machine_sites`, `dashboard_assets`, `share_tokens` |
+| Accounts and access | `users` (local, OIDC and service accounts), `session`, `machine_grants`, `plants`, `plant_memberships`, `machine_sites`, `dashboard_assets`, `share_tokens`, `oidc_group_mappings`, `service_tokens` |
+| Edge sites | central: `edge_nodes`, `edge_machines`, `edge_config_revisions`; edge: `edge_link` (cursor, settings, sealed token); retained unread: `edge_sync_queue` |
 | Machine configuration | `machines`, `node_mappings`, `machine_credentials`, `machine_profiles`, `mqtt_sources` (broker password sealed like machine credentials), `plc_alarm_subscriptions`, `derived_signal_definitions`, `config_bundle_imports`, `oee_config`, digital-twin, dashboard and widget tables, `annotations` |
 | Measurements and history | `opcua_data`, `opcua_data_dlq`, `history_summaries`, `history_state_seconds`, `history_counter_increments`, `measurement_corrections`, retention policy/preview/schedule tables, `storage_observations` |
 | Production and reports | shifts, calendars, report revisions, `changeover_standards`, `improvement_actions`, downtime reasons, operator entries (including manual state and quantity declarations), lines, work-order imports, report templates/schedules/history |
@@ -29,8 +30,10 @@ Personal data and secrets in the database:
   broker passwords (`mqtt_sources.encrypted_password`), AES-256-GCM. The key is a file,
   `MACHINE_SECRETS_KEY_FILE` (default `data/machine-secrets.key`, mode 0600). Credential
   user names and broker CA certificates are plain text.
-- **Hashed:** account passwords (bcrypt) and new share links. Legacy plaintext share
-  tokens are refused.
+- **Hashed:** account passwords (bcrypt), new share links, service tokens, edge tokens and
+  enrollment codes (SHA-256). Legacy plaintext share tokens are refused.
+- **Sealed:** an edge's token to its central installation (`edge_link.sealed_token`) with
+  the same key as machine secrets.
 - **Plain text:** user names and email addresses; webhook URLs, signing secrets and email
   recipients; report schedule recipients; the user name and IP address in audit records;
   session data (user id, name, role).
@@ -76,6 +79,8 @@ selection and time window; creating and revoking them is audited, opening them i
 | Tracing | `OTEL_ENABLED=true` (default off) | request and database spans, including SQL parameters, to `OTEL_EXPORTER_OTLP_ENDPOINT` |
 | Custom widgets | an administrator registering a manifest URL and an editor placing the widget | the server fetches the manifest; viewers' browsers load the entry page from the widget's origin, and a widget declaring `readSeries` receives the signals configured for it and can send them to its own servers ([custom widgets](CUSTOM_WIDGETS.md)) |
 | OPC UA | each configured machine endpoint | subscriptions and certificate exchange with that machine; with PLC alarm observation switched on, an event subscription and ConditionRefresh calls ([PLC alarms](DAILY_OPERATIONS.md#plc-alarms)) |
+| Edge history | an edge administrator enrolling with a central installation | the edge's committed measurements with machine names and production definition digests, over HTTPS to the pinned central CA ([edge sites](MULTI_SITE.md)) |
+| Identity provider | `OIDC_ISSUER` | discovery, key and token requests; the browser is redirected there to sign in ([identity](IDENTITY.md)) |
 | MQTT | an administrator adding an MQTT source | a TLS connection to that broker with the source's username and password and subscriptions to its mapped topics; nothing is published ([MQTT sources](PRODUCTION_WORKFLOW.md#mqtt-sources)) |
 
 The application has no update check, usage telemetry or CDN: fonts and scripts are

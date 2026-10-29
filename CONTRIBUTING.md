@@ -45,7 +45,9 @@ architecture or status changes; direct wiki edits are overwritten by publishing.
 
 There is no plugin loader. A new data source joins as a **read-only OPC UA server**,
 like the built-in [Modbus gateway](docs/LEGACY_GATEWAY.md), and the existing collector
-reads it. The server must:
+reads it. The one native exception is the read-only MQTT subscriber
+([MQTT sources](docs/PRODUCTION_WORKFLOW.md#mqtt-sources)), which writes through the same
+durable spool. The server must:
 
 - use a stable namespace URI, so signal identity survives restarts;
 - report Good/Bad StatusCodes and never invent values for missing data;
