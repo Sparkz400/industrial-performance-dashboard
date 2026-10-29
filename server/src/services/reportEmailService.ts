@@ -104,6 +104,33 @@ class ReportEmailService {
       throw err;
     }
   }
+
+  /** Plain-text alarm mail; returns the recipients the server did not accept. */
+  async sendText(
+    recipients: string[],
+    subject: string,
+    text: string,
+    messageId: string,
+  ): Promise<string[]> {
+    const transport = this.getTransporter();
+    if (!transport) throw new Error("SMTP is not configured");
+    const info = await transport.sendMail({
+      from:
+        config.SMTP_FROM ??
+        config.SMTP_USER ??
+        "noreply@performancedashboard.local",
+      to: recipients.join(", "),
+      subject,
+      text,
+      messageId,
+    });
+    const accepted = new Set(
+      (info.accepted ?? []).map((entry: string | { address: string }) =>
+        (typeof entry === "string" ? entry : entry.address).toLowerCase(),
+      ),
+    );
+    return recipients.filter((r) => !accepted.has(r.toLowerCase()));
+  }
 }
 
 export const reportEmailService = new ReportEmailService();

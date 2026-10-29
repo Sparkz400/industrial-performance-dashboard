@@ -41,7 +41,7 @@ F07, F08, F09, F10 and D01. A following P1 gap wave closed R04, O05, H05, D05 an
 backlog wave 1 closed E01, R05, R02 and A08, and recorded research decisions
 ([decisions](docs/RESEARCH_DECISIONS.md)): I08, E06 and X02 closed as rejected; the rest
 stay open with explicit triggers.
-Backlog status: 68 checked and 40 open; I06 is withdrawn.
+Backlog status: 70 checked and 38 open; I06 is withdrawn.
 
 ### Data integrity and reviewed operations — 2026-10-28
 
@@ -603,7 +603,7 @@ below retain their unfulfilled acceptance criteria.
   alarm owners/escalation owners, suppression with an explicit end within 24 hours and
   read-only acquisition; `scripts/test-quality-line.mjs`;
   [scope](docs/QUALITY_LINE_OPERATIONS.md#maintenance-actions-and-notifications).
-- [ ] **A05 — Deliver escalation and notification policies** · P2 · M2 · New · L. Depends: A04, I01.
+- [x] **A05 — Deliver escalation and notification policies** · P2 · M2 · New · L. Depends: A04, I01.
   Done: email/webhook destinations have testable routing, quiet hours, escalation and
   durable retry state; credentials are protected and delivery failure is visible.
   Test restarts and a receiver outage without uncontrolled notification floods.
@@ -611,6 +611,10 @@ below retain their unfulfilled acceptance criteria.
   UTC quiet hours and one-time overdue escalation through webhooks are implemented
   ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)). Remaining:
   alarm email destinations and routing beyond webhooks.
+  Completed ([PR #72](https://github.com/Sparkz400/performance_dashboard/pull/72)): email destinations in the same durable outbox (quiet hours, retries, dead
+  letters, requeue; Message-ID = delivery ID), SMTP credentials only in the environment, and routing
+  of every destination by lowest severity and machine. `test-alarm-email.mjs` routes three alarms,
+  rides out a mail-server outage as one message and sets a destination up in the browser.
 
 - [x] **A06 — Measure alert usefulness and flood behavior** · P2 · M2 · New · M. Depends: A04.
   Done: show repeated/chattering alarms, acknowledgment delays and muted items; distinguish
@@ -703,13 +707,17 @@ below retain their unfulfilled acceptance criteria.
   from 2.5σ to 5σ; candidates record alarms, stops and products and approval refuses a fault
   window ([live SPC](docs/QUALITY_LINE_OPERATIONS.md#live-spc-evaluation), `spcLive.test.ts`,
   `test-spc-live.mjs`).
-- [ ] **Q02 — Add appropriate control charts and capability** · P2 · M3 · New · L. Depends: Q01.
+- [x] **Q02 — Add appropriate control charts and capability** · P2 · M3 · New · L. Depends: Q01.
   Done: select I-MR, subgroup or attribute charts only for declared data assumptions;
   distinguish specification from control limits. Cp/Cpk or other capability output
   requires a qualified baseline and shows sample size/assumptions instead of false precision.
   Progress: Cp/Cpk use separate specification limits and only an approved reference
   period ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)).
-  Remaining: chart-type selection from declared data assumptions.
+  Completed ([PR #72](https://github.com/Sparkz400/performance_dashboard/pull/72)): profiles declare individual measurements (I-MR) or rational subgroups
+  (X̄-R, n 2–10); limits come from the approved reference with the standard constants and
+  reproduce Montgomery's piston-ring case; attribute charts are refused because live signals carry
+  no inspected-unit counts ([scope](docs/QUALITY_LINE_OPERATIONS.md#declared-control-charts),
+  `test-control-charts.mjs`). Reopen attribute charts when an inspection-count source exists.
 - [ ] **Q03 — Record inspections, rejects and rework** · P2 · M3 · New · L. Depends: O04, U03.
   Done: inspection plans and defect reasons link to product/job/batch; corrections
   retain history and do not double-count a reworked part as both new output and scrap.

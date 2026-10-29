@@ -19,6 +19,8 @@ export interface SpcProfileInput {
   mean?: number | null;
   stddev?: number | null;
   sensitivity?: number;
+  chartType?: "individuals" | "xbar-r" | null;
+  subgroupSize?: number | null;
   isActive?: boolean;
   createdBy?: number | null;
 }

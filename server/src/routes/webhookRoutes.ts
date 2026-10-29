@@ -9,25 +9,53 @@ const router = express.Router();
 
 const idParamSchema = Joi.object({ id: Joi.number().integer().required() });
 
+const routing = {
+  minSeverity: Joi.string()
+    .valid("info", "low", "medium", "high", "critical")
+    .allow(null),
+  machineIds: Joi.array().items(Joi.number().integer().positive()).max(100),
+};
+const recipients = Joi.array().items(Joi.string().email()).min(1).max(20);
+
 const createWebhookSchema = Joi.object({
   name: Joi.string().required().trim().min(1).max(255),
-  url: Joi.string().required().uri().max(2048),
-  events: Joi.array()
-    .items(
-      Joi.string().valid(
-        "*",
-        "alarm.triggered",
-        "alarm.cleared",
-        "cmms.handoff",
-      ),
-    )
-    .min(1)
-    .required(),
+  kind: Joi.string().valid("webhook", "email").default("webhook"),
+  // Email destinations carry alarm events only; handoffs need a signed receiver.
+  url: Joi.when("kind", {
+    is: "email",
+    then: Joi.forbidden(),
+    otherwise: Joi.string().required().uri().max(2048),
+  }),
+  recipients: Joi.when("kind", {
+    is: "email",
+    then: recipients.required(),
+    otherwise: Joi.forbidden(),
+  }),
+  events: Joi.when("kind", {
+    is: "email",
+    then: Joi.array()
+      .items(Joi.string().valid("alarm.triggered", "alarm.cleared"))
+      .min(1)
+      .required(),
+    otherwise: Joi.array()
+      .items(
+        Joi.string().valid(
+          "*",
+          "alarm.triggered",
+          "alarm.cleared",
+          "cmms.handoff",
+        ),
+      )
+      .min(1)
+      .required(),
+  }),
+  ...routing,
 });
 
 const updateWebhookSchema = Joi.object({
   name: Joi.string().trim().min(1).max(255),
   url: Joi.string().uri().max(2048),
+  recipients,
   events: Joi.array()
     .items(
       Joi.string().valid(
@@ -38,6 +66,7 @@ const updateWebhookSchema = Joi.object({
       ),
     )
     .min(1),
+  ...routing,
   isActive: Joi.boolean(),
 }).min(1);
 

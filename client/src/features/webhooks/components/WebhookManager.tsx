@@ -44,6 +44,16 @@ const AVAILABLE_EVENTS = [
   { value: 'cmms.handoff', label: 'Reviewed maintenance handoff' },
 ];
 
+const emptyForm = {
+  name: '',
+  kind: 'webhook' as 'webhook' | 'email',
+  url: '',
+  recipients: '',
+  events: [] as string[],
+  minSeverity: '',
+  machineIds: '',
+};
+
 /**
  *
  */
@@ -79,7 +89,7 @@ export default function WebhookManager() {
     message: string;
     success: boolean;
   } | null>(null);
-  const [form, setForm] = useState({ name: '', url: '', events: [] as string[] });
+  const [form, setForm] = useState(emptyForm);
   const [creating, setCreating] = useState(false);
   const { enqueueSnackbar } = useSnackbar();
 
@@ -99,16 +109,32 @@ export default function WebhookManager() {
   }, [loadWebhooks]);
 
   const handleCreate = useCallback(async () => {
-    if (!form.name || !form.url || form.events.length === 0) {
+    const email = form.kind === 'email';
+    const recipients = form.recipients
+      .split(/[,\s]+/)
+      .map((r) => r.trim())
+      .filter(Boolean);
+    if (!form.name || (email ? recipients.length === 0 : !form.url) || form.events.length === 0) {
       enqueueSnackbar('Fill in all fields', { variant: 'warning' });
       return;
     }
     setCreating(true);
     try {
-      const created = (await api.endpoints.createWebhook(form)) as Webhook;
-      setCreatedSecret(created.secret);
+      const machineIds = form.machineIds
+        .split(/[,\s]+/)
+        .map(Number)
+        .filter((n) => Number.isInteger(n) && n > 0);
+      const created = (await api.endpoints.createWebhook({
+        name: form.name,
+        kind: form.kind,
+        ...(email ? { recipients } : { url: form.url }),
+        events: form.events,
+        minSeverity: form.minSeverity || null,
+        machineIds,
+      })) as Webhook;
+      if (!email) setCreatedSecret(created.secret);
       setDialogOpen(false);
-      setForm({ name: '', url: '', events: [] });
+      setForm(emptyForm);
       loadWebhooks();
       enqueueSnackbar('Webhook created', { variant: 'success' });
     } catch {
@@ -166,7 +192,7 @@ export default function WebhookManager() {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <WebhookIcon color="primary" />
-          <Typography variant="h6">Webhooks & Integrations</Typography>
+          <Typography variant="h6">Webhooks, email and integrations</Typography>
         </Box>
         <Button
           variant="contained"
@@ -174,7 +200,7 @@ export default function WebhookManager() {
           onClick={() => setDialogOpen(true)}
           size="small"
         >
-          Add Webhook
+          Add destination
         </Button>
       </Box>
 
@@ -290,7 +316,13 @@ export default function WebhookManager() {
                         color="text.secondary"
                         sx={{ display: 'block' }}
                       >
-                        {webhook.url}
+                        {webhook.kind === 'email'
+                          ? `Email to ${(webhook.recipients ?? []).join(', ')}`
+                          : webhook.url}
+                        {webhook.minSeverity ? ` · ${webhook.minSeverity} and above` : ''}
+                        {webhook.machineIds?.length
+                          ? ` · machines ${webhook.machineIds.join(', ')}`
+                          : ''}
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
                         {(Array.isArray(webhook.events) ? webhook.events : []).map(
@@ -343,7 +375,7 @@ export default function WebhookManager() {
 
       {/* Create Webhook Dialog */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Add Webhook</DialogTitle>
+        <DialogTitle>Add notification destination</DialogTitle>
         <DialogContent
           sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '16px !important' }}
         >
@@ -356,16 +388,71 @@ export default function WebhookManager() {
             placeholder="e.g., SAP Integration"
           />
           <TextField
-            label="Endpoint URL"
+            select
+            label="Destination type"
             fullWidth
             size="small"
-            value={form.url}
-            onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
-            placeholder="https://your-service.com/webhook"
+            value={form.kind}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                kind: e.target.value as 'webhook' | 'email',
+                events: f.events.filter(
+                  (ev) => e.target.value !== 'email' || ev.startsWith('alarm.'),
+                ),
+              }))
+            }
+          >
+            <MenuItem value="webhook">Webhook (signed JSON)</MenuItem>
+            <MenuItem value="email">Email (alarm events, via the configured mail server)</MenuItem>
+          </TextField>
+          {form.kind === 'email' ? (
+            <TextField
+              label="Recipients"
+              fullWidth
+              size="small"
+              value={form.recipients}
+              onChange={(e) => setForm((f) => ({ ...f, recipients: e.target.value }))}
+              placeholder="shift-lead@example.com, maintenance@example.com"
+              helperText="Comma-separated; at most 20."
+            />
+          ) : (
+            <TextField
+              label="Endpoint URL"
+              fullWidth
+              size="small"
+              value={form.url}
+              onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
+              placeholder="https://your-service.com/webhook"
+            />
+          )}
+          <TextField
+            select
+            label="Lowest alarm severity delivered"
+            fullWidth
+            size="small"
+            value={form.minSeverity}
+            onChange={(e) => setForm((f) => ({ ...f, minSeverity: e.target.value }))}
+          >
+            <MenuItem value="">All severities</MenuItem>
+            {['low', 'medium', 'high', 'critical'].map((s) => (
+              <MenuItem key={s} value={s}>
+                {s}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            label="Only these machine IDs (optional)"
+            fullWidth
+            size="small"
+            value={form.machineIds}
+            onChange={(e) => setForm((f) => ({ ...f, machineIds: e.target.value }))}
+            helperText="Comma-separated machine IDs; empty delivers alarms from every machine."
           />
           <FormControl fullWidth size="small">
-            <InputLabel>Events</InputLabel>
+            <InputLabel id="destination-events">Events</InputLabel>
             <Select
+              labelId="destination-events"
               multiple
               value={form.events}
               onChange={(e) => setForm((f) => ({ ...f, events: e.target.value as string[] }))}
@@ -378,7 +465,9 @@ export default function WebhookManager() {
                 </Box>
               )}
             >
-              {AVAILABLE_EVENTS.map((event) => (
+              {AVAILABLE_EVENTS.filter(
+                (event) => form.kind !== 'email' || event.value.startsWith('alarm.'),
+              ).map((event) => (
                 <MenuItem key={event.value} value={event.value}>
                   {event.value === 'cmms.handoff'
                     ? t(event.label, 'Geprüfte Instandhaltungsübergabe')

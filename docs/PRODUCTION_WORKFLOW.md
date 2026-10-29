@@ -95,8 +95,16 @@ opens and an administrator can inspect and requeue it under **Settings → Webho
 Attempts, last status and error are available at the administrator-only
 `/api/v1/webhooks/deliveries` endpoint; see the
 [integration contract](INTEGRATION_API.md#outbound-events-webhooks). The test button
-is separate from actual alarm wiring. Email, Slack, Teams and SMS channel delivery
-is disabled; old records remain, with secrets excluded from responses. Other
+is separate from actual alarm wiring.
+
+An **Email** destination (same screen) sends alarm mail through the server's
+`SMTP_*` settings; credentials stay in the environment, never in the database. It takes
+recipients and `alarm.triggered`/`alarm.cleared` only. Any destination can be limited to a
+lowest severity and to listed machines. Email uses the same outbox: retries,
+dead letters, requeue and maintenance quiet hours apply, and the delivery ID is the
+Message-ID, so every retry is the same message. An unreachable or refused mail server
+shows as the delivery's last error (`test-alarm-email.mjs`). The legacy Slack, Teams
+and SMS channel records remain disabled, with secrets excluded from responses. Other
 previously advertised webhook event families are not implemented. Existing
 `alarm.resolved` subscriptions must be changed to `alarm.cleared`.
 

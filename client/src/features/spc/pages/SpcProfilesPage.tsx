@@ -93,6 +93,8 @@ const SpcProfilesPage: React.FC = () => {
       method: profile.method,
       sensitivity: profile.sensitivity,
       windowSize: profile.windowSize,
+      chartType: profile.chartType ?? null,
+      subgroupSize: profile.subgroupSize ?? null,
     });
     setDialogOpen(true);
   };
@@ -327,6 +329,38 @@ const SpcProfilesPage: React.FC = () => {
               fullWidth
               slotProps={{ htmlInput: { min: 10, max: 10000 } }}
             />
+            <TextField
+              select
+              label="Data assumption (control chart)"
+              value={form.chartType ?? ''}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  chartType: (e.target.value || null) as CreateSpcProfileRequest['chartType'],
+                  subgroupSize: e.target.value === 'xbar-r' ? (f.subgroupSize ?? 5) : null,
+                }))
+              }
+              helperText="Attribute charts need counts of inspected units and are not offered for live signals."
+              fullWidth
+            >
+              <MenuItem value="">Not declared</MenuItem>
+              <MenuItem value="individuals">Individual measurements (I-MR chart)</MenuItem>
+              <MenuItem value="xbar-r">
+                Rational subgroups of consecutive readings (X̄-R chart)
+              </MenuItem>
+            </TextField>
+            {form.chartType === 'xbar-r' && (
+              <TextField
+                label="Subgroup size"
+                type="number"
+                value={form.subgroupSize ?? 5}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, subgroupSize: parseInt(e.target.value, 10) || 5 }))
+                }
+                fullWidth
+                slotProps={{ htmlInput: { min: 2, max: 10 } }}
+              />
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>

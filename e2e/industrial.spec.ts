@@ -95,6 +95,15 @@ async function fixtures(page: Page) {
         lcl: 40,
       };
     else if (path === "/spc/profiles/1") json = profile;
+    else if (path.endsWith("/control-chart")) {
+      // The fixture profile declares no data assumption, as the server reports.
+      status = 400;
+      json = {
+        status: "error",
+        error: "Declare the data assumption before using a control chart",
+        code: "VALIDATION_ERROR",
+      };
+    }
     else if (path === "/production/assets")
       json = [{ id: 1, name: "Fixture machine" }];
     else if (path === "/production/operator/live")

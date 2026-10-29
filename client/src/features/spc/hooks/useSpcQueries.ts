@@ -15,6 +15,41 @@ export interface CreateSpcProfileRequest {
   method: 'zscore' | 'moving_avg' | 'std_bands' | 'cusum';
   sensitivity: number;
   windowSize?: number;
+  chartType?: 'individuals' | 'xbar-r' | null;
+  subgroupSize?: number | null;
+}
+
+export interface ControlChart {
+  chartType: 'individuals' | 'xbar-r';
+  subgroupSize: number | null;
+  baseline: { id: number; referencePoints: number };
+  primary: { label: string; center: number; ucl: number; lcl: number };
+  secondary: { label: string; center: number; ucl: number; lcl: number };
+  points: { at: string; value: number; range: number | null; outOfControl: boolean }[];
+  truncated: boolean;
+  assumptions: string;
+  specificationLimits: string;
+}
+
+/**
+ * The declared control chart; errors explain a missing declaration or reference period.
+ * @param profileId
+ * @param startDate
+ * @param endDate
+ */
+export function useSpcControlChart(profileId: number, startDate?: string, endDate?: string) {
+  return useQuery({
+    queryKey: ['spc', 'control-chart', profileId, startDate, endDate],
+    queryFn: () =>
+      api.get(
+        `${API_ENDPOINTS.spc.controlChart(profileId)}?${new URLSearchParams({
+          startDate: startDate ?? '',
+          endDate: endDate ?? '',
+        })}`,
+      ) as Promise<ControlChart>,
+    enabled: profileId > 0 && !!startDate && !!endDate,
+    retry: false,
+  });
 }
 
 export interface SpcAlertFilters {

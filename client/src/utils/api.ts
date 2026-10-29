@@ -248,8 +248,15 @@ export const api = {
 
     // Webhooks
     getWebhooks: () => api.get(API_ENDPOINTS.webhooks.base),
-    createWebhook: (data: { name: string; url: string; events: string[] }) =>
-      api.post(API_ENDPOINTS.webhooks.base, data),
+    createWebhook: (data: {
+      name: string;
+      kind?: 'webhook' | 'email';
+      url?: string;
+      recipients?: string[];
+      events: string[];
+      minSeverity?: string | null;
+      machineIds?: number[];
+    }) => api.post(API_ENDPOINTS.webhooks.base, data),
     updateWebhook: (id: number, data: Record<string, unknown>) =>
       api.put(API_ENDPOINTS.webhooks.byId(id), data),
     deleteWebhook: (id: number) => api.delete(API_ENDPOINTS.webhooks.byId(id)),

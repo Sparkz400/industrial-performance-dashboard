@@ -19,7 +19,7 @@ const digest = (value: unknown) =>
 export const cmmsDestinationDigest = (destination: {
   id: number;
   name: string;
-  url: string;
+  url: string | null;
   events: unknown;
   isActive?: boolean;
   is_active?: boolean;

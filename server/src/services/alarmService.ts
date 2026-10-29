@@ -15,6 +15,7 @@ import { alarmRepository } from "../repositories/alarmRepository.js";
 import type { SpoolEntry } from "../queue/measurementSpool.js";
 import type { AlarmEvent } from "@performance-dashboard/shared";
 import logger from "../utils/logger.js";
+import { routesAlarm } from "./alarmRouting.js";
 
 export interface RuleVersion {
   effectiveAt: number;
@@ -236,13 +237,11 @@ async function queueTransition(
     .select()
     .from(webhooks)
     .where(eq(webhooks.isActive, true));
-  for (const destination of destinations) {
-    const events = destination.events as string[];
-    if (events.includes(event.type) || events.includes("*"))
+  for (const destination of destinations)
+    if (routesAlarm(destination, event.type, row.severity, row.machineId))
       await tx
         .insert(webhookDeliveries)
         .values({ webhookId: destination.id, event });
-  }
 }
 
 export class AlarmEvaluator extends EventEmitter {

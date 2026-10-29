@@ -97,6 +97,13 @@ const createProfileSchema = Joi.object({
   mean: Joi.number().allow(null).default(null),
   stddev: Joi.number().allow(null).default(null),
   sensitivity: Joi.number().min(0.1).max(10).default(3.0),
+  // Declared data assumption for the control chart; attribute charts need inspected-unit counts.
+  chartType: Joi.string().valid("individuals", "xbar-r").allow(null),
+  subgroupSize: Joi.when("chartType", {
+    is: "xbar-r",
+    then: Joi.number().integer().min(2).max(10).required(),
+    otherwise: Joi.valid(null),
+  }),
   isActive: Joi.boolean().default(true),
 });
 
@@ -111,6 +118,13 @@ const updateProfileSchema = Joi.object({
   mean: Joi.number().allow(null),
   stddev: Joi.number().allow(null),
   sensitivity: Joi.number().min(0.1).max(10),
+  // Declared data assumption for the control chart; attribute charts need inspected-unit counts.
+  chartType: Joi.string().valid("individuals", "xbar-r").allow(null),
+  subgroupSize: Joi.when("chartType", {
+    is: "xbar-r",
+    then: Joi.number().integer().min(2).max(10).required(),
+    otherwise: Joi.valid(null),
+  }),
   isActive: Joi.boolean(),
 }).min(1);
 
@@ -233,6 +247,21 @@ router.get(
       endDate,
     );
     res.json(data);
+  }),
+);
+
+router.get(
+  "/profiles/:id/control-chart",
+  validateParams(idParamSchema),
+  validateQuery(chartDataQuerySchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    res.json(
+      await spcService.getControlChart(
+        Number(req.params.id),
+        new Date(req.query.startDate as string),
+        new Date(req.query.endDate as string),
+      ),
+    );
   }),
 );
 

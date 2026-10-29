@@ -66,6 +66,13 @@ Line reports add cycle histograms and a loss Pareto and withhold microstops the 
 sampling cannot resolve (O07). Offline sites see unreachable mail and webhook
 destinations clearly (D07). CONTRIBUTING maps subsystems to the evidence to run (P05).
 
+## Backlog wave 5
+
+SPC profiles declare their data assumption and get an I-MR or X̄-R chart with limits from
+the approved reference period; attribute charts are not offered for live signals (Q02).
+Alarm email is a destination kind in the durable outbox, and every destination can be
+routed by lowest severity and machine (A05).
+
 ## Data integrity and reviewed operations
 
 The [six-feature integrity wave](DATA_INTEGRITY.md) replaces generated widget data,
