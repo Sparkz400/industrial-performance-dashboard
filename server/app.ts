@@ -61,6 +61,7 @@ import { healthIncidentService } from "./src/services/healthIncidentService.js";
 // --- Route modules ---
 import productionRoutes from "./src/routes/productionRoutes.js";
 import operatorRoutes from "./src/routes/operatorRoutes.js";
+import inspectionRoutes from "./src/routes/inspectionRoutes.js";
 import authRoutes from "./src/routes/authRoutes.js";
 import systemRoutes from "./src/routes/systemRoutes.js";
 import dashboardRoutes from "./src/routes/dashboardRoutes.js";
@@ -165,6 +166,7 @@ export function createApp() {
   app.use("/api/v1/energy", energyRoutes);
   app.use("/api/v1/production", productionRoutes);
   app.use("/api/v1/production", operatorRoutes);
+  app.use("/api/v1/production", inspectionRoutes);
   app.use("/api/v1/system", requireAuth, systemRoutes);
   app.use("/api/v1/dashboards", requireAuth, dashboardRoutes);
   app.use("/api/v1/opcua", requireAuth, opcuaRoutes);

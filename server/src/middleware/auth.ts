@@ -70,7 +70,7 @@ export const requireMutationAccess = (
     (req.method === "PUT" &&
       /^\/alerts\/history\/\d+\/acknowledge\/?$/.test(req.path)) ||
     (req.method === "POST" &&
-      /^\/production\/shifts\/\d+\/reasons\/?$/.test(req.path)) ||
+      /^\/production\/shifts\/\d+\/(reasons|inspections)\/?$/.test(req.path)) ||
     (req.method === "POST" &&
       /^\/production\/operator\/entries(?:\/\d+)?\/?$/.test(req.path))
   ) {

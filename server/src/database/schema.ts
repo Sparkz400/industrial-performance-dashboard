@@ -16,7 +16,12 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { bigint, check, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  check,
+  uniqueIndex,
+  type AnyPgColumn,
+} from "drizzle-orm/pg-core";
 
 export const retentionPolicies = pgTable("retention_policies", {
   machineId: integer("machine_id").primaryKey(),
@@ -1472,6 +1477,75 @@ export const batchLots = pgTable(
       .where(sql`${t.direction}='output'`),
     check("lot_direction", sql`${t.direction} IN ('input','output')`),
     check("lot_quantity", sql`${t.quantity}>0`),
+  ],
+);
+/** Checks required for a product on a machine; append-only, the latest plan applies. */
+export const inspectionPlans = pgTable(
+  "inspection_plans",
+  {
+    id: serial("id").primaryKey(),
+    machineId: integer("machine_id")
+      .notNull()
+      .references(() => machines.id, { onDelete: "restrict" }),
+    product: varchar("product", { length: 160 }).notNull(),
+    checks: jsonb("checks").$type<string[]>().notNull(),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("inspection_plan_product").on(t.machineId, t.product, t.id)],
+);
+/**
+ * Manual inspections of a shift's product or job outside batches. A correction supersedes
+ * one record; a reinspection after rework points at the failed inspection it re-checks.
+ */
+export const jobInspections = pgTable(
+  "job_inspections",
+  {
+    id: serial("id").primaryKey(),
+    requestId: varchar("request_id", { length: 36 }).notNull().unique(),
+    shiftId: integer("shift_id")
+      .notNull()
+      .references(() => productionShifts.id, { onDelete: "restrict" }),
+    product: varchar("product", { length: 160 }).notNull(),
+    planId: integer("plan_id").references(() => inspectionPlans.id),
+    checkName: varchar("check_name", { length: 200 }).notNull(),
+    result: varchar("result", { length: 10 }).notNull(),
+    quantity: integer("quantity").notNull(),
+    defectReason: text("defect_reason"),
+    note: text("note").notNull().default(""),
+    reinspectsId: integer("reinspects_id").references(
+      (): AnyPgColumn => jobInspections.id,
+    ),
+    supersedesId: integer("supersedes_id")
+      .unique()
+      .references((): AnyPgColumn => jobInspections.id),
+    correctionReason: text("correction_reason"),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("job_inspection_shift").on(t.shiftId, t.id),
+    check(
+      "job_inspection_result",
+      sql`${t.result} IN ('pass','fail','unknown')`,
+    ),
+    check("job_inspection_quantity", sql`${t.quantity}>0`),
+    check(
+      "job_inspection_defect",
+      sql`(${t.result}='fail') = (${t.defectReason} IS NOT NULL)`,
+    ),
+    check(
+      "job_inspection_correction",
+      sql`(${t.supersedesId} IS NULL) = (${t.correctionReason} IS NULL)`,
+    ),
   ],
 );
 /** Append-only corrections of a declared lot link; the latest one applies, null quantity voids it. */

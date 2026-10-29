@@ -218,6 +218,13 @@
       "when": 1793298640901,
       "tag": "0030_manual_state_declarations",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793298979006,
+      "tag": "0031_job_inspections",
+      "breakpoints": true
     }
   ]
 }

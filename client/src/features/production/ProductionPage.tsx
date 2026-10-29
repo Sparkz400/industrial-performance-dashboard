@@ -24,6 +24,7 @@ import type { ShiftReport, DowntimeReason } from '@performance-dashboard/shared'
 import { useAuthStore } from '@/stores/useAuthStore';
 import CommissioningPanel, { productionRequest, downloadJson } from './CommissioningPanel';
 import OperatorWorkspace from './OperatorWorkspace';
+import ShiftInspectionsPanel from './ShiftInspectionsPanel';
 import IncidentReplayPanel from './IncidentReplayPanel';
 import { Link } from 'react-router-dom';
 
@@ -580,6 +581,15 @@ export default function ProductionPage() {
                 </Button>
               </Stack>
             </Paper>
+          )}
+          {selected && data && (
+            <ShiftInspectionsPanel
+              key={selected}
+              shiftId={selected}
+              machineId={data.machineId}
+              canRecord={operator}
+              canPlan={supervisor}
+            />
           )}
           {supervisor && data && !data.evidence && (
             <Paper sx={{ p: 2 }} data-print-hide>
