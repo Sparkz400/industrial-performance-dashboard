@@ -408,7 +408,7 @@ below retain their unfulfilled acceptance criteria.
   transactionally and acknowledges committed identities. Resume after lost responses,
   partial batches and process crashes without duplicates or silent loss; revoke a node.
   Decision 2026-10-29: DEFER until a sponsor names at least two sites and central viewers; I01 and site-qualified identity come first. [decision](docs/RESEARCH_DECISIONS.md#h08--complete-authenticated-edge-to-central-history).
-  Completed (wave 11, deferral lifted by the owner): enrolled edges with hashed, revocable tokens over pinned TLS
+  Completed ([PR #78](https://github.com/Sparkz400/performance_dashboard/pull/78); deferral lifted by the owner): enrolled edges with hashed, revocable tokens over pinned TLS
   send committed rows; the central installation checks schema versions, stores site-qualified rows once per source
   event in one transaction and acknowledges only committed batches; the edge cursor follows the acknowledgment
   (`test-edge-history.mjs`: lost responses, refused partial batches, crash and restart, revocation, colliding
@@ -1001,7 +1001,7 @@ below retain their unfulfilled acceptance criteria.
   pass positive/negative tests; delegated MFA follows the identity provider policy.
   Document a controlled recovery path without an unrestricted hidden admin bypass.
   Decision 2026-10-29: DEFER until customer IT names an IdP or an integration needs non-human API access. [decision](docs/RESEARCH_DECISIONS.md#e02--federated-identity-oidc-and-service-account-scopes).
-  Completed (wave 11, deferral lifted by the owner; openid-client with an owned oidc-provider): PKCE sign-in, group
+  Completed ([PR #78](https://github.com/Sparkz400/performance_dashboard/pull/78); deferral lifted by the owner; openid-client with an owned oidc-provider): PKCE sign-in, group
   mapping without admin, revocation by role change, session age and back-channel logout, audited recovery accounts
   instead of a bypass, and hashed, expiring, machine-scoped read tokens (`test-oidc.mjs`,
   [scope](docs/IDENTITY.md)). MFA follows the provider; a customer provider remains to be qualified.
@@ -1009,7 +1009,7 @@ below retain their unfulfilled acceptance criteria.
   Done: site availability, last successful sync, data coverage and comparable definitions
   are visible; an offline site cannot appear as zero production or current live data.
   Test site-local continuity through a central outage.
-  Completed (wave 11): Daily operations -> Sites shows each visible site's availability, last contact and confirmed
+  Completed ([PR #78](https://github.com/Sparkz400/performance_dashboard/pull/78)): Daily operations -> Sites shows each visible site's availability, last contact and confirmed
   batch, data end, waiting readings and definition digests marked comparable; a silent site is offline and not
   current, and an edge serves its own data through a central outage and catches up
   (`test-edge-history.mjs`, [scope](docs/MULTI_SITE.md#site-overview-e03)).
@@ -1017,7 +1017,7 @@ below retain their unfulfilled acceptance criteria.
   Done: enrollment, credential rotation/revocation, config revision and staged upgrades
   are attributable; an edge can reject incompatible configuration. Fleet updates have
   a documented stop/rollback path and do not issue machine commands.
-  Completed (wave 11): enrollment codes, rotation by re-enrollment, revocation, append-only configuration
+  Completed ([PR #78](https://github.com/Sparkz400/performance_dashboard/pull/78)): enrollment codes, rotation by re-enrollment, revocation, append-only configuration
   revisions that the edge applies or rejects (unsupported schema, unknown settings such as a machine command) and
   staged target versions beside the reported version, all audited; upgrades use the operations procedure with its
   stop and rollback path (`test-edge-history.mjs`, [scope](docs/MULTI_SITE.md#lifecycle-e04)).
