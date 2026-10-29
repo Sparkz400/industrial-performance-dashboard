@@ -170,7 +170,7 @@ try {
         null,
       );
       await pool.query(
-        "UPDATE webhook_deliveries SET next_attempt_at=now() WHERE id=$1",
+        "UPDATE webhook_deliveries SET next_attempt_at=now()-interval '1 second' WHERE id=$1",
         [handoff.delivery_id],
       );
       await webhookService.processDeliveries();
@@ -231,7 +231,7 @@ try {
         webhook,
       ]);
       await pool.query(
-        "UPDATE webhook_deliveries SET next_attempt_at=now() WHERE id=$1",
+        "UPDATE webhook_deliveries SET next_attempt_at=now()-interval '1 second' WHERE id=$1",
         [blocked.delivery_id],
       );
       await webhookService.processDeliveries();
