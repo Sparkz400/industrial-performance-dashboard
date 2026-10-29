@@ -161,7 +161,9 @@ router.post(
         .pattern(/(?:Z|[+-]\d{2}:\d{2})$/),
       machineId: id,
       shiftId: Joi.number().integer().positive().allow(null).required(),
-      kind: Joi.string().valid("note", "action", "quantity").required(),
+      kind: Joi.string()
+        .valid("note", "action", "quantity", "state")
+        .required(),
       intervalStart: instant.required(),
       intervalEnd: instant.required(),
       quantity: Joi.object({
@@ -171,6 +173,13 @@ router.post(
       })
         .allow(null)
         .required(),
+      manualState: Joi.when("kind", {
+        is: "state",
+        then: Joi.string()
+          .valid("running", "idle", "fault", "planned")
+          .required(),
+        otherwise: Joi.valid(null).default(null),
+      }),
     }),
   ),
   asyncHandler(async (req, res) => {
@@ -182,6 +191,10 @@ router.post(
     if ((body.kind === "quantity") !== Boolean(body.quantity))
       throw new ValidationError(
         "Quantity declarations need counts; notes and actions do not accept counts",
+      );
+    if (body.kind === "state" && !(body.intervalStart && body.intervalEnd))
+      throw new ValidationError(
+        "A manual state declaration needs the interval it describes",
       );
     if (
       body.quantity &&
@@ -205,8 +218,10 @@ router.post(
       throw new ValidationError(
         "The shift must belong to the selected machine",
       );
-    if (body.kind === "quantity" && !shift)
-      throw new ValidationError("Link quantity declarations to a shift");
+    if ((body.kind === "quantity" || body.kind === "state") && !shift)
+      throw new ValidationError(
+        "Link quantity and state declarations to a shift",
+      );
     const intervalStart = body.intervalStart
       ? new Date(body.intervalStart)
       : null;
@@ -373,11 +388,11 @@ router.post(
           "This entry changed. Refresh and review the latest version before saving",
         );
       if (
-        entry.kind === "quantity" &&
+        (entry.kind === "quantity" || entry.kind === "state") &&
         !canSupervise(req.session.userRole ?? "")
       )
         throw new ForbiddenError(
-          "An administrator must review quantity declarations",
+          "A supervisor or administrator must review quantity and state declarations",
         );
       if (entry.kind === "action" && !body.ownerId)
         throw new ValidationError("An action needs an owner");

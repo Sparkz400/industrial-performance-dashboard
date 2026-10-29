@@ -47,7 +47,9 @@ export function stateTimeline(
     if (from > end.getTime()) break;
     add(cursor, Math.min(from, end.getTime()), "unknown");
     const value =
-      sample.value == null ? null : sample.value * profile.signals.state.scale;
+      sample.value == null
+        ? null
+        : sample.value * (profile.signals.state?.scale ?? 1);
     const state =
       value != null && sample.statusCode?.startsWith("Good")
         ? ((Object.entries(profile.states).find(([, values]) =>
@@ -112,6 +114,84 @@ export function counterDeltas(
   return { count: usable ? count : null, complete };
 }
 
+export interface ManualStateDeclaration {
+  entryId: number;
+  start: string;
+  end: string;
+  state: Exclude<ProductionState, "unknown">;
+}
+
+/**
+ * Reviewed manual declarations fill only unknown machine time. An observed state is kept
+ * where a declaration contradicts it, and declarations that disagree leave their overlap
+ * unknown. Returns the merged timeline and the seconds each rule applied to.
+ */
+export function applyManualStates(
+  intervals: ProductionInterval[],
+  manual: ManualStateDeclaration[],
+  start: Date,
+  end: Date,
+) {
+  const result = {
+    intervals: [] as ProductionInterval[],
+    manualSeconds: 0,
+    conflictSeconds: 0,
+    contradictedSeconds: 0,
+  };
+  if (!manual.length) return { ...result, intervals };
+  const clip = (t: number) =>
+    Math.min(end.getTime(), Math.max(start.getTime(), t));
+  const points = [
+    ...new Set([
+      start.getTime(),
+      end.getTime(),
+      ...intervals.flatMap((i) => [Date.parse(i.start), Date.parse(i.end)]),
+      ...manual.flatMap((m) => [
+        clip(Date.parse(m.start)),
+        clip(Date.parse(m.end)),
+      ]),
+    ]),
+  ].sort((a, b) => a - b);
+  for (let k = 0; k < points.length - 1; k++) {
+    const from = points[k],
+      to = points[k + 1],
+      seconds = (to - from) / 1000;
+    // shortcut: scans every interval per boundary (quadratic); fine for one shift's
+    // timeline, index the intervals if a report ever spans far more state changes.
+    const covers = (i: { start: string; end: string }) =>
+      Date.parse(i.start) <= from && Date.parse(i.end) >= to;
+    const observed = intervals.find(covers)?.state ?? "unknown";
+    const declared = new Set(manual.filter(covers).map((m) => m.state));
+    let state: ProductionState = observed,
+      source: "manual" | undefined;
+    if (observed !== "unknown") {
+      if ([...declared].some((s) => s !== observed))
+        result.contradictedSeconds += seconds;
+    } else if (declared.size === 1) {
+      state = [...declared][0];
+      source = "manual";
+      result.manualSeconds += seconds;
+    } else if (declared.size > 1) result.conflictSeconds += seconds;
+    const previous = result.intervals.at(-1);
+    if (
+      previous?.state === state &&
+      previous.source === source &&
+      Date.parse(previous.end) === from
+    )
+      previous.end = new Date(to).toISOString();
+    else
+      result.intervals.push({
+        start: new Date(from).toISOString(),
+        end: new Date(to).toISOString(),
+        state,
+        ...(source ? { source } : {}),
+      });
+  }
+  return result;
+}
+
+const minutes = (seconds: number) => `${(seconds / 60).toFixed(1)} min`;
+
 export function calculateShift(input: {
   id: number;
   machineId: number;
@@ -126,14 +206,22 @@ export function calculateShift(input: {
   samples: Record<string, ShiftSample[]>;
   evidence: ShiftReport["evidence"];
   declaration?: ShiftReport["declaration"];
+  manualStates?: ManualStateDeclaration[];
 }): ShiftReport {
   const { profile, start, end } = input;
-  const intervals = stateTimeline(
-    input.samples[profile.signals.state.nodeKey] ?? [],
-    profile,
+  const state = profile.signals.state;
+  const manual = applyManualStates(
+    stateTimeline(
+      state ? (input.samples[state.nodeKey] ?? []) : [],
+      profile,
+      start,
+      end,
+    ),
+    input.manualStates ?? [],
     start,
     end,
   );
+  const intervals = manual.intervals;
   const seconds = { running: 0, idle: 0, fault: 0, planned: 0, unknown: 0 };
   const replaced = new Set(input.reasons.map((reason) => reason.supersedesId));
   const reasons = input.reasons.filter((reason) => !replaced.has(reason.id));
@@ -191,6 +279,18 @@ export function calculateShift(input: {
   if (seconds.unknown > 0)
     issues.push(
       "State coverage has unknown intervals; these are not counted as downtime.",
+    );
+  if (manual.manualSeconds > 0)
+    issues.push(
+      `Reviewed manual state declarations fill ${minutes(manual.manualSeconds)} of unknown machine state; they are declarations, not measurements.`,
+    );
+  if (manual.conflictSeconds > 0)
+    issues.push(
+      `Reviewed manual state declarations disagree for ${minutes(manual.conflictSeconds)}; that time stays unknown.`,
+    );
+  if (manual.contradictedSeconds > 0)
+    issues.push(
+      `Manual state declarations differ from the observed state for ${minutes(manual.contradictedSeconds)}; the observed state is kept.`,
     );
   if (losses.has("Unclassified stop"))
     issues.push("Some stops still need an operator reason.");
@@ -315,6 +415,13 @@ export function calculateShift(input: {
     quantities,
     quantitySource,
     declaration,
+    stateSource: !manual.manualSeconds
+      ? "measured"
+      : manual.manualSeconds >=
+          (end.getTime() - start.getTime()) / 1000 - seconds.unknown
+        ? "manual"
+        : "mixed",
+    manualStateSeconds: manual.manualSeconds,
     oee: {
       availability,
       performance,

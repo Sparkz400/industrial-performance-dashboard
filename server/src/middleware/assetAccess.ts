@@ -122,9 +122,11 @@ export async function authorizeAssetRequest(
     return;
   }
   if (
-    read &&
     canSupervise(scope.role) &&
-    (found = match(/^\/comparisons\/machines\/(\d+)$/))
+    (found = match(
+      /^\/comparisons\/machines\/(\d+)(\/revisions|\/actions)?$/,
+    )) &&
+    (read || (method === "POST" && found[2] === "/actions"))
   ) {
     assertMachine(found[1]);
     return;
@@ -145,6 +147,20 @@ export async function authorizeAssetRequest(
     (found = match(/^\/planning\/shifts\/(\d+)\/revisions\/\d+(?:\/verify)?$/))
   ) {
     await assertResource("shift", found[1]);
+    return;
+  }
+  if (read && (found = match(/^\/maintenance\/machines\/(\d+)\/stops$/))) {
+    assertMachine(found[1]);
+    return;
+  }
+  if (
+    (found = match(
+      /^\/maintenance\/plans\/(\d+)\/events\/\d+\/attachments(\/\d+)?$/,
+    ))
+  ) {
+    if (!read && (method !== "POST" || found[2] || !canOperate(scope.role)))
+      denied();
+    await assertResource("maintenance", found[1]);
     return;
   }
   if ((found = match(/^\/(maintenance|energy)\/machines\/(\d+)$/))) {
@@ -216,6 +232,16 @@ export async function authorizeAssetRequest(
     if (!read && (method !== "POST" || !canOperate(scope.role))) denied();
     if (body.status === "reviewed" && !canSupervise(scope.role)) denied();
     await assertResource("entry", found[1]);
+    return;
+  }
+  if ((found = match(/^\/production\/shifts\/(\d+)\/inspections$/))) {
+    if (!read && (method !== "POST" || !canOperate(scope.role))) denied();
+    await assertResource("shift", found[1]);
+    return;
+  }
+  if ((found = match(/^\/production\/machines\/(\d+)\/inspection-plans$/))) {
+    if (!read && (method !== "POST" || !canSupervise(scope.role))) denied();
+    assertMachine(found[1]);
     return;
   }
   if (read && (found = match(/^\/production\/replay\/(\d+)$/))) {

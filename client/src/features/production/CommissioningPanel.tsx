@@ -129,7 +129,19 @@ export default function CommissioningPanel() {
   const [reviewed, setReviewed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [saved, setSaved] = useState<{ dashboardId: string; connection: string }>();
+  const [saved, setSaved] = useState<{ dashboardId: string | null; connection: string }>();
+  // Declared manually: the signal is left out and reviewed operator declarations describe it.
+  const [manualState, setManualState] = useState(false),
+    [manualCounts, setManualCounts] = useState(false);
+  const mapped = {
+    ...profile,
+    signals: Object.fromEntries(
+      Object.entries(profile.signals).filter(([role]) =>
+        role === 'state' ? !manualState : !manualCounts,
+      ),
+    ) as ProductionProfile['signals'],
+  };
+  const manualOnly = !Object.keys(mapped.signals).length;
   const [profiles, setProfiles] = useState<{ id: number; profile: ProductionProfile }[]>([]);
   useEffect(() => {
     void fetchMachines();
@@ -137,7 +149,7 @@ export default function CommissioningPanel() {
       .then(setProfiles)
       .catch((e) => setError(String(e)));
   }, [fetchMachines]);
-  const key = JSON.stringify([machineId, profile]);
+  const key = JSON.stringify([machineId, mapped]);
   const changeSignal = (role: (typeof roles)[number], patch: Partial<ProductionSignal>) =>
     setProfile((p) => ({
       ...p,
@@ -155,7 +167,7 @@ export default function CommissioningPanel() {
     try {
       const result = await productionRequest<Preview>(
         `/machines/${machineId}/inspect`,
-        withProfile ? { profile } : {},
+        withProfile ? { profile: mapped } : {},
       );
       setPreview(result);
       setPreviewKey(withProfile ? key : '');
@@ -173,7 +185,12 @@ export default function CommissioningPanel() {
     setBusy(true);
     setError('');
     try {
-      setSaved(await productionRequest(`/machines/${machineId}/commission`, { profile, reviewed }));
+      setSaved(
+        await productionRequest(`/machines/${machineId}/commission`, {
+          profile: mapped,
+          reviewed,
+        }),
+      );
     } catch (e) {
       setError(String(e));
     } finally {
@@ -314,55 +331,93 @@ export default function CommissioningPanel() {
         {preview?.namespaces.join(' · ') ?? 'Check the connection first'}
         {t('. Importing a profile previews fields here; it does not change the machine.')}{' '}
       </Typography>
-      {roles.map((role) => (
-        <Box key={role} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
-          <Typography fontWeight="bold" sx={{ mb: 1 }}>
-            {role === 'state' ? t('Machine state') : `${role} counter`}
-          </Typography>
-          <Stack direction="row" flexWrap="wrap" gap={1}>
-            <TextField
-              size="small"
-              label={`${role} key`}
-              value={profile.signals[role]?.nodeKey ?? ''}
-              onChange={(e) => changeSignal(role, { nodeKey: e.target.value })}
-            />
-            <TextField
-              size="small"
-              label={`${role} namespace URI`}
-              value={profile.signals[role]?.namespaceUri ?? ''}
-              onChange={(e) => changeSignal(role, { namespaceUri: e.target.value })}
-              sx={{ minWidth: 250 }}
-            />
-            <TextField
-              size="small"
-              label={`${role} identifier`}
-              value={profile.signals[role]?.identifier ?? ''}
-              onChange={(e) => changeSignal(role, { identifier: e.target.value })}
-            />
-            <TextField
-              size="small"
-              label={`${role} type`}
-              value={profile.signals[role]?.dataType ?? ''}
-              onChange={(e) => changeSignal(role, { dataType: e.target.value })}
-            />
-            <TextField
-              size="small"
-              label={`${role} unit`}
-              value={profile.signals[role]?.unit ?? ''}
-              onChange={(e) => changeSignal(role, { unit: e.target.value || null })}
-            />
-            <TextField
-              size="small"
-              type="number"
-              label={`${role} scale`}
-              value={profile.signals[role]?.scale ?? 1}
-              onChange={(e) => changeSignal(role, { scale: Number(e.target.value) })}
-            />
-          </Stack>
-        </Box>
-      ))}
       <Stack direction="row" flexWrap="wrap" gap={2}>
-        {(['running', 'idle', 'fault', 'planned'] as const).map((state) => (
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={manualState}
+              onChange={(e) => {
+                setManualState(e.target.checked);
+                setReviewed(false);
+              }}
+            />
+          }
+          label={t('Machine state declared manually (no state signal)')}
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={manualCounts}
+              onChange={(e) => {
+                setManualCounts(e.target.checked);
+                setReviewed(false);
+              }}
+            />
+          }
+          label={t('Counts declared manually (no counter signals)')}
+        />
+      </Stack>
+      {(manualState || manualCounts) && (
+        <Alert severity="info">
+          {t(
+            'Operators declare what has no signal and a supervisor reviews it. Reviewed declarations fill only unknown time or incomplete counts, are labelled as manual and never verify a shift report. Without any signal the machine is not connected and gets no signal dashboard.',
+          )}
+        </Alert>
+      )}
+      {roles
+        .filter((role) => (role === 'state' ? !manualState : !manualCounts))
+        .map((role) => (
+          <Box
+            key={role}
+            sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}
+          >
+            <Typography fontWeight="bold" sx={{ mb: 1 }}>
+              {role === 'state' ? t('Machine state') : `${role} counter`}
+            </Typography>
+            <Stack direction="row" flexWrap="wrap" gap={1}>
+              <TextField
+                size="small"
+                label={`${role} key`}
+                value={profile.signals[role]?.nodeKey ?? ''}
+                onChange={(e) => changeSignal(role, { nodeKey: e.target.value })}
+              />
+              <TextField
+                size="small"
+                label={`${role} namespace URI`}
+                value={profile.signals[role]?.namespaceUri ?? ''}
+                onChange={(e) => changeSignal(role, { namespaceUri: e.target.value })}
+                sx={{ minWidth: 250 }}
+              />
+              <TextField
+                size="small"
+                label={`${role} identifier`}
+                value={profile.signals[role]?.identifier ?? ''}
+                onChange={(e) => changeSignal(role, { identifier: e.target.value })}
+              />
+              <TextField
+                size="small"
+                label={`${role} type`}
+                value={profile.signals[role]?.dataType ?? ''}
+                onChange={(e) => changeSignal(role, { dataType: e.target.value })}
+              />
+              <TextField
+                size="small"
+                label={`${role} unit`}
+                value={profile.signals[role]?.unit ?? ''}
+                onChange={(e) => changeSignal(role, { unit: e.target.value || null })}
+              />
+              <TextField
+                size="small"
+                type="number"
+                label={`${role} scale`}
+                value={profile.signals[role]?.scale ?? 1}
+                onChange={(e) => changeSignal(role, { scale: Number(e.target.value) })}
+              />
+            </Stack>
+          </Box>
+        ))}
+      <Stack direction="row" flexWrap="wrap" gap={2}>
+        {(manualState ? [] : (['running', 'idle', 'fault', 'planned'] as const)).map((state) => (
           <TextField
             key={state}
             label={`${state} values (comma separated)`}
@@ -430,7 +485,7 @@ export default function CommissioningPanel() {
               try {
                 if (file.size > 65536) throw new Error('Profile exceeds 64 KB');
                 const value = JSON.parse(await file.text());
-                if (value.version !== 1 || !value.signals?.state || !value.states)
+                if (value.version !== 1 || !value.signals)
                   throw new Error('Invalid profile format');
                 replaceProfile(
                   await productionRequest<ProductionProfile>('/profiles/validate', {
@@ -470,17 +525,28 @@ export default function CommissioningPanel() {
       />
       <Button
         variant="contained"
-        disabled={busy || !reviewed || !preview?.ready || previewKey !== key}
+        disabled={
+          busy ||
+          !machineId ||
+          !reviewed ||
+          (!manualOnly && (!preview?.ready || previewKey !== key))
+        }
         onClick={() => void save()}
       >
-        {t('Save profile and create dashboard')}{' '}
+        {manualOnly ? t('Save manual profile') : t('Save profile and create dashboard')}{' '}
       </Button>
       {saved && (
         <Alert severity="success">
-          {t('Profile saved. Connection:')} {saved.connection}.{' '}
-          <Button component={Link} to={`/dashboard/${saved.dashboardId}`}>
-            {t('Open machine dashboard')}{' '}
-          </Button>
+          {saved.dashboardId ? (
+            <>
+              {t('Profile saved. Connection:')} {saved.connection}.{' '}
+              <Button component={Link} to={`/dashboard/${saved.dashboardId}`}>
+                {t('Open machine dashboard')}{' '}
+              </Button>
+            </>
+          ) : (
+            t('Manual profile saved. Plan shifts and record reviewed declarations in Production.')
+          )}
         </Alert>
       )}
     </Stack>

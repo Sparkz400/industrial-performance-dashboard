@@ -47,8 +47,9 @@ export const profileSchema = Joi.object({
   version: Joi.number().valid(1).required(),
   name: Joi.string().trim().min(1).max(160).required(),
   endpointModel: Joi.string().trim().min(1).max(200).required(),
+  // Without a state signal, state comes only from reviewed manual declarations.
   signals: Joi.object({
-    state: signalSchema.required(),
+    state: signalSchema,
     total: signalSchema,
     good: signalSchema,
     reject: signalSchema,
@@ -58,7 +59,16 @@ export const profileSchema = Joi.object({
     idle: values,
     fault: values,
     planned: values,
-  }).required(),
+  }).when("signals.state", {
+    is: Joi.exist(),
+    then: Joi.required(),
+    otherwise: Joi.optional().default({
+      running: [],
+      idle: [],
+      fault: [],
+      planned: [],
+    }),
+  }),
   idealCycleMs: Joi.number().positive().max(86400000).required(),
   maxGapSeconds: Joi.number().min(1).max(300).required(),
   counterPolicy: Joi.string()
@@ -83,7 +93,7 @@ export function validateProfile(input: unknown): ProductionProfile {
   const signals = Object.values(profile.signals);
   if (states.length !== new Set(states).size)
     throw new ValidationError("State meanings must not overlap");
-  if (!profile.states.running.length)
+  if (profile.signals.state && !profile.states.running.length)
     throw new ValidationError("At least one running state is required");
   if (
     signals.length !== new Set(signals.map((s) => s.nodeKey)).size ||
@@ -198,7 +208,11 @@ export const commissioningService = {
   },
 
   async save(machineId: number, profile: ProductionProfile, userId: number) {
-    const preview = await this.inspect(machineId, profile);
+    // A machine without signals is never connected; reviewed declarations describe it.
+    const manualOnly = !Object.keys(profile.signals).length;
+    const preview = manualOnly
+      ? { ready: true, signals: [] }
+      : await this.inspect(machineId, profile);
     if (!preview.ready)
       throw new ValidationError(
         "All mapped signals must pass the read and data-type checks before commissioning",
@@ -244,6 +258,7 @@ export const commissioningService = {
         .insert(machineProfiles)
         .values({ machineId, profile, createdBy: userId })
         .returning();
+      if (manualOnly) return { ...row, dashboardId: null };
       await tx
         .update(machines)
         .set({ isActive: true })

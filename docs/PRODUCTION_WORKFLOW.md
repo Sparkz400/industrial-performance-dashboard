@@ -65,6 +65,38 @@ reason history and profile; **Print shift report** provides a printable overview
 Reports are recalculated from the current retained measurements; immutable report
 archives and late-arrival revision handling remain R04.
 
+## Machines with limited automatic data
+
+A profile may leave out the state signal, the counter signals or both (**Commission
+machine** → *Machine state declared manually*, *Counts declared manually*). Mapped
+signals are still read and checked; a profile without any signal is saved without
+connecting, the machine stays inactive and gets no signal dashboard.
+
+Operators record a **Manual state interval** in Operator handover: a declared state
+(running, idle, fault or planned) over an interval inside a linked shift. Only a
+supervisor or administrator can mark it reviewed, as for quantity declarations. Reviewed
+declarations fill only time without a usable machine state. Where a declaration
+contradicts an observed state the observed state is kept, and where reviewed
+declarations disagree their overlap stays unknown; the report names each case. The report
+shows the state source (measured, manual or mixed) and the manual minutes, and manual
+evidence never lets a report verify. Time no declaration covers stays unknown, so
+availability and OEE stay unknown rather than being computed from missing inputs. Live
+state, uptime widgets and retention rollups treat a missing state signal as unknown
+(`test-limited-data.mjs`).
+
+## Inspections of a shift's products
+
+Supervisors keep an inspection plan per product and machine (append-only; the latest
+applies). Under a selected shift report, operators record manual inspections of the
+shift's job or product runs: product, check, pass/fail/unknown, parts inspected and, for
+a failure, a defect reason. A **reinspection after rework** of a failed inspection moves
+passing parts from failed to reworked, so a reworked part never counts as both scrap and
+output; at most the still-failed parts can be reinspected. A **correction** supersedes one
+current record with a reason and keeps the original; a failed inspection is corrected only
+after its reinspections. The summary per product and check lists planned checks without
+any inspection. All of it is labelled manual inspection evidence and kept apart from
+machine counts (`test-job-inspections.mjs`).
+
 ## Alarm and delivery contract
 
 One evaluator serves both alarm APIs and tRPC. It consumes the durable measurement

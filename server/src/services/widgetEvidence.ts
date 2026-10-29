@@ -14,6 +14,10 @@ export async function widgetEvidence(machine: number, now = new Date()) {
     );
   const profile = saved.profile as ProductionProfile,
     signal = profile.signals.state;
+  if (!signal)
+    throw new ValidationError(
+      "This machine's state is declared manually; uptime and state distribution need a state signal",
+    );
   const start = new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 6),
   );

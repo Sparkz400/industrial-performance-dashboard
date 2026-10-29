@@ -41,7 +41,9 @@ const empty = () => ({
   total: '',
   good: '',
   reject: '',
+  manualState: '',
 });
+const reviewedKinds = ['quantity', 'state'];
 const instant = (value: string) => (value ? new Date(value).toISOString() : null);
 
 /**
@@ -241,6 +243,7 @@ export default function OperatorWorkspace() {
                       reject: Number(draft.reject),
                     }
                   : null,
+              ...(draft.kind === 'state' ? { manualState: draft.manualState } : {}),
             },
       );
       if (identityGeneration.current !== generation) return;
@@ -317,8 +320,10 @@ export default function OperatorWorkspace() {
     }
   };
   const quantityReady =
-    draft.kind !== 'quantity' ||
-    [draft.total, draft.good, draft.reject, draft.shiftId].every(Boolean);
+    (draft.kind !== 'quantity' ||
+      [draft.total, draft.good, draft.reject, draft.shiftId].every(Boolean)) &&
+    (draft.kind !== 'state' ||
+      [draft.manualState, draft.shiftId, draft.intervalStart, draft.intervalEnd].every(Boolean));
   return (
     <Stack spacing={2}>
       <Typography variant="h5">{t('Operator handover')} </Typography>
@@ -489,12 +494,22 @@ export default function OperatorWorkspace() {
                     : t('Awaiting review; not used in the shift report.')}{' '}
                 </Alert>
               )}
+              {entry.manualState && (
+                <Alert severity="info">
+                  {t('Manual state declaration:')} {entry.manualState}.{' '}
+                  {entry.status === 'resolved'
+                    ? t(
+                        'Reviewed; the shift report uses it only where the machine state is unknown and stays unverified.',
+                      )
+                    : t('Awaiting review; not used in the shift report.')}
+                </Alert>
+              )}
               <Button onClick={() => setHistory(history === entry.id ? null : entry.id)}>
                 {t('History #')}
                 {entry.id}
               </Button>
               {editable &&
-                (entry.kind !== 'quantity' ||
+                (!reviewedKinds.includes(entry.kind) ||
                   ['admin', 'supervisor'].includes(user?.role ?? '')) && (
                   <Button onClick={() => edit(entry)}>
                     {t('Review / edit #')}
@@ -584,6 +599,7 @@ export default function OperatorWorkspace() {
                   <MenuItem value="note">{t('Handover note')} </MenuItem>
                   <MenuItem value="action">{t('Assigned action')} </MenuItem>
                   <MenuItem value="quantity">{t('Manual quantity declaration')} </MenuItem>
+                  <MenuItem value="state">{t('Manual state interval')} </MenuItem>
                 </TextField>
                 <TextField
                   required
@@ -633,7 +649,7 @@ export default function OperatorWorkspace() {
                       select
                       label={t('Linked shift')}
                       value={draft.shiftId}
-                      required={draft.kind === 'quantity'}
+                      required={reviewedKinds.includes(draft.kind)}
                       onChange={(e) => setDraft({ ...draft, shiftId: e.target.value })}
                     >
                       <MenuItem value="">{t('No shift')} </MenuItem>
@@ -655,6 +671,28 @@ export default function OperatorWorkspace() {
                       value={draft.intervalEnd}
                       onChange={(e) => setDraft({ ...draft, intervalEnd: e.target.value })}
                     />
+                    {draft.kind === 'state' && (
+                      <>
+                        <Alert severity="info">
+                          {t(
+                            'Declare what the machine did over the observation interval for review. It fills only time without a usable machine state and never verifies the shift report.',
+                          )}
+                        </Alert>
+                        <TextField
+                          select
+                          required
+                          label={t('Declared state')}
+                          value={draft.manualState}
+                          onChange={(e) => setDraft({ ...draft, manualState: e.target.value })}
+                        >
+                          {['running', 'idle', 'fault', 'planned'].map((state) => (
+                            <MenuItem key={state} value={state}>
+                              {state}
+                            </MenuItem>
+                          ))}
+                        </TextField>
+                      </>
+                    )}
                     {draft.kind === 'quantity' && (
                       <>
                         <Alert severity="info">

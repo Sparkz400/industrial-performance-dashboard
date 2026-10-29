@@ -24,8 +24,9 @@ import type { ShiftReport, DowntimeReason } from '@performance-dashboard/shared'
 import { useAuthStore } from '@/stores/useAuthStore';
 import CommissioningPanel, { productionRequest, downloadJson } from './CommissioningPanel';
 import OperatorWorkspace from './OperatorWorkspace';
+import ShiftInspectionsPanel from './ShiftInspectionsPanel';
 import IncidentReplayPanel from './IncidentReplayPanel';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 interface Shift {
   id: number;
@@ -47,8 +48,10 @@ export default function ProductionPage() {
   const admin = role === 'admin';
   const supervisor = admin || role === 'supervisor';
   const operator = supervisor || role === 'operator';
-  const [tab, setTab] = useState(0);
-  const [selected, setSelected] = useState('');
+  // Links from service records open a shift (?shift=) or a prefilled replay (?replay=1).
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState(params.get('replay') ? 3 : 0);
+  const [selected, setSelected] = useState(params.get('shift') ?? '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState({
@@ -399,6 +402,12 @@ export default function ProductionPage() {
                 {data.quantitySource === 'declaration' && (
                   <Chip color="warning" label={t('Quantities: reviewed manual declaration')} />
                 )}
+                {(data.stateSource === 'manual' || data.stateSource === 'mixed') && (
+                  <Chip
+                    color="warning"
+                    label={`${t('State: reviewed manual declarations')} · ${((data.manualStateSeconds ?? 0) / 60).toFixed(1)} ${t('min')}`}
+                  />
+                )}
               </Stack>
               <Typography>
                 {t('Scheduled production:')} {(data.scheduledSeconds / 60).toFixed(1)}{' '}
@@ -574,6 +583,15 @@ export default function ProductionPage() {
                 </Button>
               </Stack>
             </Paper>
+          )}
+          {selected && data && (
+            <ShiftInspectionsPanel
+              key={selected}
+              shiftId={selected}
+              machineId={data.machineId}
+              canRecord={operator}
+              canPlan={supervisor}
+            />
           )}
           {supervisor && data && !data.evidence && (
             <Paper sx={{ p: 2 }} data-print-hide>

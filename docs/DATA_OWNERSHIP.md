@@ -17,9 +17,9 @@ operator runs it.
 | Accounts and access | `users`, `session`, `machine_grants`, `plants`, `plant_memberships`, `machine_sites`, `dashboard_assets`, `share_tokens` |
 | Machine configuration | `machines`, `node_mappings`, `machine_credentials`, `machine_profiles`, `derived_signal_definitions`, `config_bundle_imports`, `oee_config`, digital-twin, dashboard and widget tables, `annotations` |
 | Measurements and history | `opcua_data`, `opcua_data_dlq`, `history_summaries`, `history_state_seconds`, `history_counter_increments`, `measurement_corrections`, retention policy/preview/schedule tables, `storage_observations` |
-| Production and reports | shifts, calendars, report revisions, `changeover_standards`, downtime reasons, operator entries, lines, work-order imports, report templates/schedules/history |
-| Quality, batches and SPC | recipes, batches, inspections, rework, `batch_lots`, `batch_lot_corrections`, SPC profiles/alerts/baselines |
-| Maintenance and energy | maintenance plans/events/actions, CMMS handoffs, energy meters/reconciliations/tariffs |
+| Production and reports | shifts, calendars, report revisions, `changeover_standards`, `improvement_actions`, downtime reasons, operator entries (including manual state and quantity declarations), lines, work-order imports, report templates/schedules/history |
+| Quality, batches and SPC | recipes, batches, inspections, rework, `batch_lots`, `batch_lot_corrections`, `inspection_plans`, `job_inspections`, SPC profiles/alerts/baselines |
+| Maintenance and energy | maintenance plans/events/actions, `maintenance_attachments` (uploaded files up to 5 MB each, stored in the database), CMMS handoffs, energy meters/reconciliations/tariffs |
 | Alarms and outbound delivery | alert rules and versions, alert history, notification channels, alarm evaluation state, `webhooks`, `webhook_deliveries` |
 | Audit | `audit_logs`, `compliance_audit_logs` |
 
@@ -90,7 +90,7 @@ sends nothing.
 | Report PDFs | Kept unless `REPORT_RETENTION_DAYS` is set; then older files are removed and the history row keeps `fileRemovedAt` | `retention.report_files.removed` with the report IDs |
 | Sessions | Expire after two hours; pruned every 15 minutes | no |
 | Storage observations, retention preview rows | Removed after two days and one hour respectively | no |
-| Lot links, downtime reasons, measurement corrections, report revisions, maintenance history | Never edited or deleted; corrections are appended | the correction record itself |
+| Lot links, downtime reasons, measurement corrections, report revisions, maintenance history and attachments, job inspections, improvement actions | Never edited or deleted; corrections are appended | the correction record itself |
 | Configuration (annotations, alarm and alert rules, notification channels, custom widgets, digital twins, SPC profiles, report templates and schedules, outbound destinations) | Deleted on request | `*.deleted` / `*.created` / `*.updated` with the actor |
 | Users | No delete; deactivation through the account form | `user.updated` with previous and new values |
 | Machines | Deletion is refused while production, maintenance, energy, correction, import or CMMS records exist; otherwise grants, credentials, rules and operator entries go with it and measurements keep a null machine | `machine.deleted` |

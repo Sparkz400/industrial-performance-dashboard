@@ -32,6 +32,7 @@ const draft = (userId = 1): OfflineOperatorDraft => {
       total: '',
       good: '',
       reject: '',
+      manualState: '',
     },
   };
 };
@@ -68,6 +69,17 @@ describe('offline operator drafts', () => {
       localStorage.setItem(OFFLINE_DRAFT_KEY, JSON.stringify({ userId: 1, drafts: [changed] }));
       expect(readOfflineDrafts(1)).toEqual([]);
     }
+  });
+  it('keeps drafts saved before manual state declarations existed', () => {
+    const item = draft();
+    const { manualState: _added, ...form } = item.form;
+    localStorage.setItem(
+      OFFLINE_DRAFT_KEY,
+      JSON.stringify({ userId: 1, drafts: [{ ...item, form }] }),
+    );
+    expect(readOfflineDrafts(1).map((kept) => [kept.id, kept.form.manualState])).toEqual([
+      [item.id, ''],
+    ]);
   });
   it('bounds stored drafts and discards corrupt state', () => {
     for (let i = 0; i < 20; i++) retainOfflineDraft(draft());

@@ -19,6 +19,7 @@ const WorkOrderPanel = React.lazy(() => import('./WorkOrderPanel'));
 const AssetOverviewPanel = React.lazy(() => import('./AssetOverviewPanel'));
 const DerivedSignalsPanel = React.lazy(() => import('./DerivedSignalsPanel'));
 const ChangeoverPanel = React.lazy(() => import('./ChangeoverPanel'));
+const ImprovementActionsPanel = React.lazy(() => import('./ImprovementActionsPanel'));
 /**
  *
  */
@@ -70,6 +71,11 @@ export default function OperationsPage() {
             name: 'Changeovers',
             de: 'Umrüstungen',
             content: <ChangeoverPanel machineId={Number(machine)} />,
+          },
+          {
+            name: 'Improvement actions',
+            de: 'Verbesserungsmaßnahmen',
+            content: <ImprovementActionsPanel machineId={Number(machine)} />,
           },
         ]
       : []),

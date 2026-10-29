@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  applyManualStates,
   calculateShift,
   stateTimeline,
   counterDeltas,
@@ -298,5 +299,94 @@ describe("reviewed manual quantity declarations", () => {
     expect(report.quantitySource).toBe("measured");
     expect(report.declaration).toBeNull();
     expect(report.issues.join(" ")).not.toContain("declaration");
+  });
+});
+
+describe("reviewed manual state declarations (O10)", () => {
+  const at = (second: number) =>
+    new Date(start.getTime() + second * 1000).toISOString();
+  const declared = (
+    entryId: number,
+    from: number,
+    to: number,
+    state: "running" | "idle" | "fault" | "planned",
+  ) => ({ entryId, start: at(from), end: at(to), state });
+
+  it("fills only unknown time, keeps observed states and leaves disagreement unknown", () => {
+    const observed = [
+      { start: at(0), end: at(20), state: "running" as const },
+      { start: at(20), end: at(60), state: "unknown" as const },
+    ];
+    const result = applyManualStates(
+      observed,
+      [
+        declared(1, 10, 30, "idle"), // 10 s contradict observed running, 10 s fill unknown
+        declared(2, 30, 50, "running"),
+        declared(3, 45, 55, "fault"), // disagrees with #2 for 5 s
+      ],
+      start,
+      end,
+    );
+    expect(result.intervals).toEqual([
+      { start: at(0), end: at(20), state: "running" },
+      { start: at(20), end: at(30), state: "idle", source: "manual" },
+      { start: at(30), end: at(45), state: "running", source: "manual" },
+      { start: at(45), end: at(50), state: "unknown" },
+      { start: at(50), end: at(55), state: "fault", source: "manual" },
+      { start: at(55), end: at(60), state: "unknown" },
+    ]);
+    expect(result).toMatchObject({
+      manualSeconds: 30,
+      conflictSeconds: 5,
+      contradictedSeconds: 10,
+    });
+  });
+
+  it("supports a machine without a state signal but never verifies or completes it from gaps", () => {
+    const manualProfile = validateProfile({
+      ...profile,
+      signals: {},
+      states: undefined,
+    });
+    expect(manualProfile.signals.state).toBeUndefined();
+    const report = (manualStates: ReturnType<typeof declared>[]) =>
+      calculateShift({
+        id: 1,
+        machineId: 2,
+        name: "Manual",
+        timezone: "UTC",
+        start,
+        end,
+        profile: manualProfile,
+        job: { reference: "J1", product: "P1", target: null },
+        breaks: [],
+        evidence: null,
+        reasons: [],
+        samples: {},
+        manualStates,
+        declaration: {
+          entryId: 9,
+          total: 30,
+          good: 29,
+          reject: 1,
+          reviewedAt: end.toISOString(),
+        },
+      });
+    const partial = report([declared(1, 0, 30, "running")]);
+    expect(partial.seconds).toMatchObject({ running: 30, unknown: 30 });
+    expect(partial.oee.availability).toBeNull();
+    expect(partial.oee.overall).toBeNull();
+    const full = report([
+      declared(1, 0, 45, "running"),
+      declared(2, 45, 60, "idle"),
+    ]);
+    expect(full.stateSource).toBe("manual");
+    expect(full.manualStateSeconds).toBe(60);
+    expect(full.oee.availability).toBeCloseTo(0.75);
+    expect(full.quantitySource).toBe("declaration");
+    expect(full.verified).toBe(false);
+    expect(full.issues).toContain(
+      "Reviewed manual state declarations fill 1.0 min of unknown machine state; they are declarations, not measurements.",
+    );
   });
 });

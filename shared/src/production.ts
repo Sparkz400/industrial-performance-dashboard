@@ -6,7 +6,7 @@ export interface OperatorEntry {
   requestId: string;
   machineId: number;
   shiftId: number | null;
-  kind: "note" | "action" | "quantity";
+  kind: "note" | "action" | "quantity" | "state";
   text: string;
   priority: "normal" | "high";
   status: "open" | "resolved";
@@ -15,6 +15,8 @@ export interface OperatorEntry {
   intervalStart: string | null;
   intervalEnd: string | null;
   quantity: { total: number; good: number; reject: number } | null;
+  /** Declared machine state for a `state` entry over its interval. */
+  manualState: Exclude<ProductionState, "unknown"> | null;
   version: number;
   createdBy: number;
   createdAt: string;
@@ -69,7 +71,8 @@ export interface ProductionProfile {
   name: string;
   endpointModel: string;
   signals: {
-    state: ProductionSignal;
+    /** Absent when the machine's state comes only from reviewed manual declarations. */
+    state?: ProductionSignal;
     total?: ProductionSignal;
     good?: ProductionSignal;
     reject?: ProductionSignal;
@@ -98,6 +101,8 @@ export interface ProductionInterval {
   start: string;
   end: string;
   state: ProductionState;
+  /** Set when a reviewed manual declaration fills otherwise unknown time. */
+  source?: "manual";
 }
 export interface DowntimeReason {
   id: number;
@@ -192,6 +197,9 @@ export interface ShiftReport {
   };
   /** Absent in revisions saved before reviewed declarations were applied. */
   quantitySource?: "measured" | "declaration";
+  /** Where known state time came from; absent in revisions saved before manual states. */
+  stateSource?: "measured" | "manual" | "mixed";
+  manualStateSeconds?: number;
   /** Open handover notes and actions linked to the shift, highest priority first. */
   handover?: {
     id: number;

@@ -44,7 +44,7 @@ export function liveState(
   if (receiveAge < -2000 || sourceAge < -2000) return unknown("clock-skew");
   if (Math.max(receiveAge, sourceAge) > profile.maxGapSeconds * 1000)
     return unknown("stale");
-  const value = sample.value * profile.signals.state.scale;
+  const value = sample.value * (profile.signals.state?.scale ?? 1);
   const state = Object.entries(profile.states).find(([, values]) =>
     values.includes(value),
   )?.[0] as MachineLiveSummary["state"] | undefined;
@@ -85,23 +85,25 @@ export async function liveProduction(
             .limit(1);
       const profile = (shift?.profile ?? latest?.profile) as
         ProductionProfile | undefined;
-      const [last] = profile
+      // A manually declared state has no live value; it stays unknown here.
+      const stateSignal = profile?.signals.state;
+      const [last] = stateSignal
         ? await db
             .select()
             .from(opcuaData)
             .where(
               and(
                 eq(opcuaData.machineId, machine.id),
-                eq(opcuaData.nodeKey, profile.signals.state.nodeKey),
+                eq(opcuaData.nodeKey, stateSignal.nodeKey),
               ),
             )
             .orderBy(desc(opcuaData.timestamp), desc(opcuaData.id))
             .limit(1)
         : [];
       const matches =
-        last?.signalMetadata?.namespaceUri ===
-          profile?.signals.state.namespaceUri &&
-        last?.signalMetadata?.identifier === profile?.signals.state.identifier;
+        !!stateSignal &&
+        last?.signalMetadata?.namespaceUri === stateSignal.namespaceUri &&
+        last?.signalMetadata?.identifier === stateSignal.identifier;
       const state = liveState(
         machine.status ?? "unknown",
         matches ? last : undefined,

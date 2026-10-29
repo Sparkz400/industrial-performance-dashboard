@@ -63,14 +63,16 @@ export const requireMutationAccess = (
     req.session.userRole === "supervisor" ||
     (req.session.userRole === "operator" &&
       req.method === "POST" &&
-      /^\/maintenance\/plans\/\d+\/events\/?$/.test(req.path)) ||
+      /^\/maintenance\/plans\/\d+\/events(?:\/\d+\/attachments)?\/?$/.test(
+        req.path,
+      )) ||
     ["GET", "HEAD", "OPTIONS"].includes(req.method) ||
     (req.method === "POST" &&
       /^\/alarms\/\d+\/acknowledge\/?$/.test(req.path)) ||
     (req.method === "PUT" &&
       /^\/alerts\/history\/\d+\/acknowledge\/?$/.test(req.path)) ||
     (req.method === "POST" &&
-      /^\/production\/shifts\/\d+\/reasons\/?$/.test(req.path)) ||
+      /^\/production\/shifts\/\d+\/(reasons|inspections)\/?$/.test(req.path)) ||
     (req.method === "POST" &&
       /^\/production\/operator\/entries(?:\/\d+)?\/?$/.test(req.path))
   ) {

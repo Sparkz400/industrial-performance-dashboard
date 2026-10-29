@@ -13,6 +13,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import {
   replayObservation,
   replayPoints,
@@ -24,10 +25,16 @@ import TrendingExplorerWidgetView from '@/features/widgets/types/trending-explor
 /** Review a bounded historical snapshot without changing operational data. */
 export default function IncidentReplayPanel() {
   useLanguage((s) => s.language);
-  const [machine, setMachine] = useState('');
-  const [keys, setKeys] = useState('ProductionState, ProductionCount');
-  const [start, setStart] = useState(new Date(Date.now() - 3600000).toISOString());
-  const [end, setEnd] = useState(new Date().toISOString());
+  // A service record's trend link prefills the window; nothing loads until Replay is chosen.
+  const [params] = useSearchParams();
+  const [machine, setMachine] = useState(params.get('machine') ?? '');
+  const [keys, setKeys] = useState(
+    params.get('keys')?.split(',').join(', ') ?? 'ProductionState, ProductionCount',
+  );
+  const [start, setStart] = useState(
+    params.get('start') ?? new Date(Date.now() - 3600000).toISOString(),
+  );
+  const [end, setEnd] = useState(params.get('end') ?? new Date().toISOString());
   const [gap, setGap] = useState('60');
   const [data, setData] = useState<IncidentReplay | null>(null);
   const [cursor, setCursor] = useState(0);
