@@ -1,4 +1,4 @@
-import type { Request } from "express";
+import type { Request, RequestHandler } from "express";
 
 import {
   auditLogRepository,
@@ -113,3 +113,46 @@ export const auditLogService = {
     return auditLogRepository.list(normalizeQuery(query));
   },
 };
+
+/**
+ * Audits an export, deletion or configuration change when its response closes, including
+ * an export the client abandoned part-way (`completed: false`). Refused requests are not
+ * recorded. The entity is the `:id` route parameter, else the `machineId` query.
+ */
+export function auditRequest(
+  action: string,
+  entityType: string,
+  message: string,
+): RequestHandler {
+  return (req, res, next) => {
+    const id = req.params.id,
+      machineId = req.query.machineId;
+    // Validation may already have converted the query value to a number.
+    const entityId =
+      typeof id === "string"
+        ? id
+        : typeof machineId === "string" || typeof machineId === "number"
+          ? String(machineId)
+          : null;
+    const actor = getAuditActor(req),
+      path = req.originalUrl.split("?")[0];
+    res.once("close", () => {
+      if (res.statusCode >= 400) return;
+      void auditLogService.recordEvent(
+        {
+          action,
+          entityType,
+          entityId,
+          message,
+          metadata: {
+            path,
+            status: res.statusCode,
+            completed: res.writableFinished,
+          },
+        },
+        actor,
+      );
+    });
+    next();
+  };
+}

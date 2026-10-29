@@ -3,6 +3,7 @@ import type { ProductionProfile } from "@performance-dashboard/shared";
 import manager from "../database/dbConnection.js";
 import { ValidationError } from "../utils/errors.js";
 import { rollupRemoved } from "./historyRollup.js";
+import { auditLogService } from "./auditLogService.js";
 // Shift source evidence is retained regardless of age. Deletion never activates itself.
 export const eligible = `d.machine_id=$1 AND d.timestamp < $2 AND d.id <= $3
   AND d.correction_revision=0
@@ -180,6 +181,20 @@ export async function runRetentionSchedules() {
         job.confirm_rows,
         job.created_by,
       );
+      // The scheduler acts for the administrator who scheduled the reviewed preview.
+      await auditLogService.recordEvent({
+        action: "retention.applied",
+        entityType: "machine",
+        entityId: job.machine_id,
+        message: `Scheduled removal ${job.id} removed ${result.deleted} of ${result.rows} reviewed measurements`,
+        metadata: {
+          scheduleId: job.id,
+          previewId: job.preview_id,
+          scheduledBy: job.created_by,
+          deleted: result.deleted,
+          completed: result.completed,
+        },
+      });
       if (result.completed)
         await manager.pool.query(
           "UPDATE retention_schedules SET status='completed' WHERE id=$1",

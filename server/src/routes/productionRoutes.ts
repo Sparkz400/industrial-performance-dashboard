@@ -25,7 +25,11 @@ import {
   validateQuery,
 } from "../middleware/validation.js";
 import { incidentReplay } from "../services/incidentReplay.js";
-import { auditLogService, getAuditActor } from "../services/auditLogService.js";
+import {
+  auditLogService,
+  auditRequest,
+  getAuditActor,
+} from "../services/auditLogService.js";
 import { requireRole } from "../middleware/auth.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import {
@@ -414,6 +418,11 @@ router.post(
 router.get(
   "/diagnostics",
   requireRole("admin"),
+  auditRequest(
+    "export.diagnostics",
+    "system",
+    "Exported a support diagnostics snapshot",
+  ),
   asyncHandler(async (_req, res) => {
     const snapshot = await db.transaction(async (tx) => {
       await tx.execute(sql`SET LOCAL statement_timeout = '3000'`);

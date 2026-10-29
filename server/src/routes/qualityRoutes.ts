@@ -1,3 +1,4 @@
+import { auditRequest } from "../services/auditLogService.js";
 import { Router } from "express";
 import Joi from "joi";
 import type { PoolClient } from "pg";
@@ -367,6 +368,7 @@ router.post(
 router.get(
   "/batches/:id/trace",
   validateParams(id),
+  auditRequest("export.lot_trace", "batch", "Exported a lot and batch trace"),
   asyncHandler(async (req, res) => {
     // Batches connect through active links only; voided links of those batches stay listed.
     const result = await manager.pool.query(

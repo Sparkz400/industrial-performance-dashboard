@@ -73,13 +73,30 @@ router.post(
       .from(users)
       .where(eq(users.username, username));
 
+    // Unknown names are not stored: a password typed into the name field must not be kept.
+    const failed = (
+      reason: string,
+      account?: { id: number; username: string },
+    ) =>
+      auditLogService.recordEvent(
+        {
+          action: "auth.login.failed",
+          entityType: "auth",
+          entityId: account?.id ?? null,
+          entityName: account?.username ?? null,
+          message: `Failed sign-in: ${reason}`,
+        },
+        getAuditActor(req),
+      );
     if (result.length === 0) {
+      await failed("unknown account");
       throw new UnauthorizedError("Invalid username or password.");
     }
 
     const user = result[0];
 
     if (!user.isActive) {
+      await failed("deactivated account", user);
       throw new ForbiddenError(
         "Account is deactivated. Contact an administrator.",
       );
@@ -87,6 +104,7 @@ router.post(
 
     const passwordValid = await bcrypt.compare(password, user.passwordHash);
     if (!passwordValid) {
+      await failed("wrong password", user);
       throw new UnauthorizedError("Invalid username or password.");
     }
 
@@ -345,6 +363,14 @@ router.put(
     }
 
     try {
+      const [before] = await db
+        .select({
+          email: users.email,
+          role: users.role,
+          isActive: users.isActive,
+        })
+        .from(users)
+        .where(eq(users.id, id));
       const result = await db
         .update(users)
         .set(updates)
@@ -376,6 +402,15 @@ router.put(
           metadata: {
             role: result[0].role,
             isActive: result[0].isActive,
+            // Previous and new value of each submitted field, for access review.
+            changes: Object.fromEntries(
+              (["email", "role", "isActive"] as const)
+                .filter((field) => req.body[field] !== undefined)
+                .map((field) => [
+                  field,
+                  { from: before?.[field], to: result[0][field] },
+                ]),
+            ),
           },
         },
         getAuditActor(req),

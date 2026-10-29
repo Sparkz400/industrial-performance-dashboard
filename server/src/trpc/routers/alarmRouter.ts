@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { router, authedProcedure, adminProcedure } from "../trpc.js";
 import { alarmRepository } from "../../repositories/alarmRepository.js";
+import {
+  auditLogService,
+  type AuditActor,
+} from "../../services/auditLogService.js";
 import alarmEvaluator, {
   alarmConditions,
 } from "../../services/alarmService.js";
@@ -113,9 +117,18 @@ export const alarmRouter = router({
 
   deleteRule: adminProcedure
     .input(z.object({ id: z.number().int() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const deleted = await alarmRepository.deleteRule(input.id);
       if (!deleted) throw new Error("Rule not found");
+      await auditLogService.recordEvent(
+        {
+          action: "alarm_rule.deleted",
+          entityType: "alarm_rule",
+          entityId: input.id,
+          message: "Deleted an alarm rule",
+        },
+        ctx.session as AuditActor,
+      );
       await alarmEvaluator.reloadRules();
       return { message: "Rule deleted successfully" };
     }),

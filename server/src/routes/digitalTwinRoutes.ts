@@ -9,7 +9,11 @@ import {
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { requireRole } from "../middleware/auth.js";
 import { digitalTwinService } from "../services/digitalTwinService.js";
-import { auditLogService, getAuditActor } from "../services/auditLogService.js";
+import {
+  auditLogService,
+  auditRequest,
+  getAuditActor,
+} from "../services/auditLogService.js";
 
 const router = express.Router();
 
@@ -134,6 +138,11 @@ router.delete(
   "/templates/:id",
   requireRole("admin"),
   validateParams(idParamSchema),
+  auditRequest(
+    "digital_twin_template.deleted",
+    "digital_twin_template",
+    "Deleted a digital twin template",
+  ),
   asyncHandler(async (req: Request<{ id: string }>, res: Response) => {
     await digitalTwinService.deleteTemplate(Number(req.params.id));
     res.json({ message: "Template deleted successfully" });
@@ -204,6 +213,11 @@ router.delete(
   "/instances/:id",
   requireRole("admin"),
   validateParams(instanceIdParamSchema),
+  auditRequest(
+    "digital_twin_instance.deleted",
+    "digital_twin_instance",
+    "Deleted a digital twin instance",
+  ),
   asyncHandler(async (req: Request<{ id: string }>, res: Response) => {
     await digitalTwinService.deleteInstance(Number(req.params.id));
     res.json({ message: "Instance deleted successfully" });

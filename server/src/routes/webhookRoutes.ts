@@ -3,7 +3,11 @@ import Joi from "joi";
 import { validateBody, validateParams } from "../middleware/validation.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { webhookService } from "../services/webhookService.js";
-import { auditLogService, getAuditActor } from "../services/auditLogService.js";
+import {
+  auditLogService,
+  auditRequest,
+  getAuditActor,
+} from "../services/auditLogService.js";
 
 const router = express.Router();
 
@@ -124,6 +128,7 @@ router.post(
 router.post(
   "/",
   validateBody(createWebhookSchema),
+  auditRequest("webhook.created", "webhook", "Created an outbound destination"),
   asyncHandler(async (req: Request, res: Response) => {
     const webhook = await webhookService.createWebhook({
       ...req.body,
@@ -138,12 +143,14 @@ router.put(
   "/:id",
   validateParams(idParamSchema),
   validateBody(updateWebhookSchema),
+  auditRequest("webhook.updated", "webhook", "Changed an outbound destination"),
   asyncHandler(async (req: Request<{ id: string }>, res: Response) => {
     const webhook = await webhookService.updateWebhook(
       Number(req.params.id),
       req.body,
     );
-    res.json(webhook);
+    // The secret is shown once at creation; later responses carry only its prefix.
+    res.json({ ...webhook, secret: webhook.secret.substring(0, 10) + "..." });
   }),
 );
 
@@ -151,6 +158,7 @@ router.put(
 router.delete(
   "/:id",
   validateParams(idParamSchema),
+  auditRequest("webhook.deleted", "webhook", "Deleted an outbound destination"),
   asyncHandler(async (req: Request<{ id: string }>, res: Response) => {
     await webhookService.deleteWebhook(Number(req.params.id));
     res.json({ message: "Webhook deleted successfully" });

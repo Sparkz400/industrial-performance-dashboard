@@ -1,3 +1,4 @@
+import { auditRequest } from "../services/auditLogService.js";
 import { Router } from "express";
 import Joi from "joi";
 import { asyncHandler } from "../middleware/errorHandler.js";
@@ -45,6 +46,11 @@ for (const action of ["preview", "apply"] as const)
 router.get(
   "/machines/:id/completions",
   validateParams(id),
+  auditRequest(
+    "export.work_order_completions",
+    "machine",
+    "Exported work-order completion facts",
+  ),
   asyncHandler(async (req, res) => {
     assertMachine(req.params.id);
     res.set("Cache-Control", "no-store");

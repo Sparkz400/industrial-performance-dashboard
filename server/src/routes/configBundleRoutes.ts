@@ -1,3 +1,4 @@
+import { auditRequest } from "../services/auditLogService.js";
 import { Router } from "express";
 import Joi from "joi";
 import { requireRole } from "../middleware/auth.js";
@@ -20,6 +21,11 @@ router.get(
 router.post(
   "/machines/:id/export",
   validateParams(params),
+  auditRequest(
+    "export.configuration",
+    "machine",
+    "Exported a configuration bundle",
+  ),
   validateBody(
     Joi.object({
       dashboardIds: Joi.array()

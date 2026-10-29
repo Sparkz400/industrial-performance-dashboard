@@ -1,3 +1,4 @@
+import { auditRequest } from "../services/auditLogService.js";
 import express, { type Request, type Response } from "express";
 import Joi from "joi";
 import { validateBody, validateParams } from "../middleware/validation.js";
@@ -56,6 +57,11 @@ router.patch(
 router.delete(
   "/:id",
   validateParams(idParamSchema),
+  auditRequest(
+    "custom_widget.deleted",
+    "custom_widget",
+    "Unregistered a custom widget",
+  ),
   asyncHandler(async (req: Request<{ id: string }>, res: Response) => {
     await customWidgetService.unregisterWidget(Number(req.params.id));
     res.json({ message: "Custom widget unregistered" });
