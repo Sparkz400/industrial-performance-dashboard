@@ -366,4 +366,40 @@ export const german: Record<string, string> = {
   'Unreceived intervals remain unknown.': 'Nicht empfangene Intervalle bleiben unbekannt.',
   '· full window trends': '· Trends des gesamten Fensters',
   'No active work order': 'Kein aktiver Auftrag',
+  Share: 'Teilen',
+  'Only administrators can create read-only links.':
+    'Nur Administratoren können schreibgeschützte Links erstellen.',
+  'Anyone with the link can view the selected signals, without signing in, until it expires or is revoked. Other widgets, machines and settings are not included.':
+    'Jede Person mit dem Link sieht die ausgewählten Signale ohne Anmeldung, bis er abläuft oder widerrufen wird. Andere Widgets, Maschinen und Einstellungen sind nicht enthalten.',
+  'Copy the link now. It is shown only once.':
+    'Kopieren Sie den Link jetzt. Er wird nur einmal angezeigt.',
+  'Read-only link': 'Schreibgeschützter Link',
+  'Embed address': 'Einbettungsadresse',
+  'Save a trend widget with a machine and signals to share it.':
+    'Speichern Sie ein Trend-Widget mit Maschine und Signalen, um es zu teilen.',
+  'Widgets to share': 'Zu teilende Widgets',
+  'Label (optional)': 'Bezeichnung (optional)',
+  'Link expires after': 'Link läuft ab nach',
+  '1 day': '1 Tag',
+  '7 days': '7 Tagen',
+  '30 days': '30 Tagen',
+  'Visible history': 'Sichtbarer Verlauf',
+  Last: 'Letzte',
+  'Allow embedding on listed sites': 'Einbettung auf aufgeführten Websites erlauben',
+  'Allowed embedding origins': 'Erlaubte Einbettungs-Origins',
+  'Exact origins, for example https://intranet.example. Up to five.':
+    'Exakte Origins, zum Beispiel https://intranet.example. Höchstens fünf.',
+  'Existing links': 'Vorhandene Links',
+  'No links for this dashboard.': 'Keine Links für dieses Dashboard.',
+  Revoke: 'Widerrufen',
+  active: 'aktiv',
+  expired: 'abgelaufen',
+  revoked: 'widerrufen',
+  legacy: 'veraltet',
+  'Retired link from the earlier design; it cannot show data.':
+    'Stillgelegter Link aus dem früheren Entwurf; er kann keine Daten anzeigen.',
+  Expires: 'Läuft ab',
+  Embeds: 'Einbettungen',
+  Close: 'Schließen',
+  'Create link': 'Link erstellen',
 };

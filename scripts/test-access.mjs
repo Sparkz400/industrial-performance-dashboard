@@ -184,6 +184,22 @@ await dailyFixture(
         ).status(),
         200,
       );
+      assert.equal(
+        (await call(role, "GET", `/api/v1/oee/${a}/manual-entries`)).status(),
+        200,
+        `${role} granted manual entries`,
+      );
+      assert.equal(
+        (await call(role, "GET", `/api/v1/oee/${b}/manual-entries`)).status(),
+        403,
+      );
+      assert(
+        (
+          await (
+            await call(role, "GET", "/api/v1/production/operator/owners")
+          ).json()
+        ).some((owner) => owner.username === "admin"),
+      );
       for (const path of [
         "/system",
         "/db",
@@ -263,8 +279,28 @@ await dailyFixture(
         timestamp: new Date().toISOString(),
         statusCode: "Good",
       });
+      // A key on machine B shaped like "<A>-Count" must not reach machine A's room.
+      sockets.opcuaService.broadcastNodeChange({
+        machineId: b,
+        key: `${a}-Count`,
+        value: 555,
+        timestamp: new Date().toISOString(),
+        statusCode: "Good",
+      });
       await expect.poll(() => received.length).toBe(1);
       assert.equal(received[0].machineId, a);
+      const alarmEvents = [];
+      for (const event of ["alarmTriggered", "alarmUpdated", "alarmCleared"])
+        live.on(event, (data) => alarmEvents.push([event, data.machineId]));
+      for (const machineId of [b, a]) {
+        const alarm = { id: machineId, machineId, message: "Owned alarm" };
+        sockets.alarmService.broadcastAlarmTriggered(alarm);
+        sockets.alarmService.broadcastAlarmUpdated(alarm);
+        sockets.alarmService.broadcastAlarmCleared(alarm);
+      }
+      await expect.poll(() => alarmEvents.length).toBe(3);
+      assert(alarmEvents.every(([, machineId]) => machineId === a));
+      assert.equal(received.length, 1);
       const disconnected = once(live, "disconnect");
       assert.equal(
         (
@@ -286,6 +322,13 @@ await dailyFixture(
       assert.deepEqual(
         await (
           await call("operator", "GET", "/api/v1/production/assets")
+        ).json(),
+        [],
+      );
+      // Without machines an account shares none with anyone, administrators included.
+      assert.deepEqual(
+        await (
+          await call("operator", "GET", "/api/v1/production/operator/owners")
         ).json(),
         [],
       );

@@ -338,7 +338,20 @@ export const shareTokens = pgTable(
     dashboardId: text("dashboard_id")
       .notNull()
       .references(() => dashboards.id, { onDelete: "cascade" }),
-    token: varchar("token", { length: 64 }).notNull().unique(),
+    // Legacy plaintext tokens stay unusable; current links store only token_hash.
+    token: varchar("token", { length: 64 }).unique(),
+    tokenHash: varchar("token_hash", { length: 64 }).unique(),
+    label: text("label"),
+    // Frozen at creation: later dashboard edits never widen what a link exposes.
+    selection:
+      jsonb("selection").$type<
+        import("@performance-dashboard/shared").SharedWidgetSelection[]
+      >(),
+    windowHours: integer("window_hours"),
+    allowedOrigins: jsonb("allowed_origins")
+      .$type<string[]>()
+      .default([])
+      .notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     isActive: boolean("is_active").default(true).notNull(),
     allowEmbed: boolean("allow_embed").default(false).notNull(),
@@ -346,6 +359,10 @@ export const shareTokens = pgTable(
       onDelete: "set null",
     }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    revokedBy: integer("revoked_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
   },
   (table) => [
     index("idx_share_tokens_token").on(table.token),

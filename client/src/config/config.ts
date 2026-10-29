@@ -63,8 +63,9 @@ export const API_ENDPOINTS = {
     create: (dashboardId: string) => `${API_BASE_URL}/share/dashboards/${dashboardId}`,
     list: (dashboardId: string) => `${API_BASE_URL}/share/dashboards/${dashboardId}`,
     revoke: (id: number) => `${API_BASE_URL}/share/${id}`,
-    public: (token: string) => `${API_BASE_URL}/share/public/${token}`,
-    embed: (token: string) => `${API_BASE_URL}/share/embed/${token}`,
+    public: (token: string) => `${API_BASE_URL}/share/public/${encodeURIComponent(token)}`,
+    publicData: (token: string, widgetId: string) =>
+      `${API_BASE_URL}/share/public/${encodeURIComponent(token)}/widgets/${encodeURIComponent(widgetId)}/data`,
   },
   customWidgets: {
     base: `${API_BASE_URL}/custom-widgets`,

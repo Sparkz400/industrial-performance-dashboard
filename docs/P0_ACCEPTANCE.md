@@ -108,9 +108,9 @@ Unicode, every row, long-message continuation, unknown-data notices and page num
 Generation-failure and email-failure behavior are checked. See
 [the compatibility matrix and remaining limits](REPORTING.md).
 
-## Still open
+## Closure — 2026-10-29
 
-Broader feature acceptance remains F10. Public sharing is contained by disabling it;
-F08 still requires a selected-data sharing design and full lifetime tests before re-enabling. C01/C02 and D01-D03
-retain endpoint identity/trust, deployment, backup and upgrade acceptance work.
-Passing this wave does not close those tasks or qualify experimental screens.
+F01/F10 are closed by the [acceptance matrix](ACCEPTANCE_MATRIX.md). F07, F08, F09 and
+D01 are closed by the [security and deployment boundaries](SECURITY_BOUNDARIES.md);
+C01-C03 and D02/D03 were closed by PR #57 evidence during the backlog reconciliation.
+None of this qualifies experimental screens or physical machines.

@@ -3,6 +3,16 @@
 Performance Dashboard is development software. Its intended starting point is an
 owned simulator or an isolated test installation using OPC UA scalar signals.
 
+## P0 software closure
+
+The remaining P0 software items are closed: a per-screen
+[acceptance matrix](ACCEPTANCE_MATRIX.md) (F01/F10), a generated route × role ×
+identifier access matrix with three socket/owner disclosures fixed (F07), expiring
+selected-data links (F08), an exact-revision security review (F09) and a verified
+deployment boundary with a non-superuser database role (D01). See
+[security and deployment boundaries](SECURITY_BOUNDARIES.md). The 72-hour endurance
+gate and physical/customer acceptance remain open.
+
 ## Data integrity and reviewed operations
 
 The [six-feature integrity wave](DATA_INTEGRITY.md) replaces generated widget data,
@@ -103,8 +113,9 @@ simulator evidence do not establish physical-machine acceptance or release readi
 - Edge/cloud transfer and ingest are disabled: previously transferred queue records
   do not establish queryable central history. Retained records remain visible in settings.
 - The AI assistant, query endpoint and external-provider configuration have been removed.
-- Compliance, recipes and digital twins remain experimental. Public shares/embeds
-  and legacy notification channels are disabled. Site/asset scope is enforced within
+- Compliance, recipes and digital twins remain experimental. Legacy notification
+  channels are disabled. Read-only links expose only selected trend signals for a
+  bounded window, expire within 30 days and act as bearer capabilities. Site/asset scope is enforced within
   one installation; this does not establish tenant isolation. See the
   [production workflow and evidence](PRODUCTION_WORKFLOW.md) and [TODO](../TODO.md).
 - Separate companies must use separate installations. Tenant isolation is unqualified.
@@ -117,7 +128,8 @@ simulator evidence do not establish physical-machine acceptance or release readi
   recovery, reporting and persisted-volume checks pass. CI preserves complete scan
   evidence and blocks all high/critical findings, including unfixed ones. See the
   [reporting migration](REPORTING.md) and [image review](DEPENDENCY_REVIEW.md).
-  Broader F09 boundary review and physical/deployment qualification remain open.
+  The F09 boundary review is recorded in [security boundaries](SECURITY_BOUNDARIES.md);
+  physical and site deployment qualification remain open.
 
 ## Next acceptance milestone
 

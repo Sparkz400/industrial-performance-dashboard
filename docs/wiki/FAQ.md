@@ -46,8 +46,11 @@ for current evidence and the release gate.
 
 ## Can I use public links or notification channels?
 
-Public links and embeds are disabled until scoped data sharing is qualified.
-Signed-in viewers can see this company's data and classify observed stops.
+Administrators can share selected trend widgets through read-only links that expire
+within 30 days, can be revoked at any time and may be embedded only on listed sites.
+Links reveal only the chosen signals for a bounded recent window; see the
+[sharing contract](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/SECURITY_BOUNDARIES.md#selected-data-links-f08).
+Signed-in accounts see only the machines granted to them; operators classify observed stops.
 Signed alarm webhooks are tested; email/chat/SMS channel delivery is disabled.
 Scheduled report PDF email is a separate SMTP service; see the
 [reporting guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/REPORTING.md).

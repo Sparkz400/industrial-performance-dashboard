@@ -282,7 +282,9 @@ export async function authorizeAssetRequest(
   }
   if (
     read &&
-    (found = match(/^\/oee\/(?:config\/)?(\d+)(?:\/history|\/manual)?$/))
+    (found = match(
+      /^\/oee\/(?:config\/)?(\d+)(?:\/history|\/manual-entries)?$/,
+    ))
   ) {
     assertMachine(found[1]);
     return;

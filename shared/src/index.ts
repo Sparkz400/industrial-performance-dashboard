@@ -373,3 +373,4 @@ export type {
   AlarmReplayReview,
 } from "./operationalDiagnostics.js";
 export * from "./derivedSignals.js";
+export type * from "./sharing.js";
