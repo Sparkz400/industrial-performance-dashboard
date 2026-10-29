@@ -112,9 +112,11 @@ write paths, including tRPC, sockets and exports. Dashboards require all their l
 assets. See [daily operations](DAILY_OPERATIONS.md) for the role matrix and migration
 behavior. Use separate installations for companies; tenant isolation is unqualified.
 
-Public shares and embeds return 410 and new sharing is disabled. Existing tokens
-are retained for administrator revocation. Selected-data sharing remains F08;
-do not enable it by bypassing authentication on measurement routes.
+Public access is limited to administrator-created links to selected trend widgets.
+They expire within 30 days, store only a token digest, re-check revocation and the
+creator on every request and never bypass authentication on measurement routes.
+Tokens from the retired unscoped design stay unusable. See the
+[sharing contract](SECURITY_BOUNDARIES.md#selected-data-links-f08).
 
 The spool reserves 64 MiB of free storage and caps its backlog at one million
 measurements. Reserve/capacity/write failure stops acquisition before broadcast;

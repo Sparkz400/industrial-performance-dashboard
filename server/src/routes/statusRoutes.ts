@@ -1,4 +1,5 @@
 import { performance } from "node:perf_hooks";
+import { timingSafeEqual } from "node:crypto";
 
 import express, { type Request, type Response } from "express";
 import IORedis from "ioredis";
@@ -117,10 +118,16 @@ router.get("/health", async (req: Request, res: Response) => {
   });
 });
 
-router.get("/debug", (req: Request, res: Response) => {
-  const isAdmin = req.headers["x-api-key"] === config.ADMIN_API_KEY;
+/** An unset key never matches; otherwise compare in constant time. */
+export function debugKeyAccepted(presented: unknown, configured?: string) {
+  if (!configured || typeof presented !== "string") return false;
+  const a = Buffer.from(presented),
+    b = Buffer.from(configured);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
-  if (!isAdmin) {
+router.get("/debug", (req: Request, res: Response) => {
+  if (!debugKeyAccepted(req.headers["x-api-key"], config.ADMIN_API_KEY)) {
     res.status(403).json({
       error: "Unauthorized access to debug information",
     });

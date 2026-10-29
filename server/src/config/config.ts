@@ -176,6 +176,13 @@ const envVarsSchema = Joi.object({
     .description(
       "Allow outbound HTTP(S) requests to localhost/private network hosts",
     ),
+  REPORT_RETENTION_DAYS: Joi.number()
+    .integer()
+    .min(1)
+    .optional()
+    .description(
+      "Delete stored report PDFs older than this many days; unset keeps them",
+    ),
 
   // Compliance
   COMPLIANCE_MODE_ENABLED: Joi.boolean()
@@ -318,6 +325,7 @@ export interface AppConfig {
   OTEL_SERVICE_NAME: string;
   WEBHOOK_SIGNING_SECRET: string;
   ALLOW_PRIVATE_OUTBOUND_URLS: boolean;
+  REPORT_RETENTION_DAYS?: number;
   SMTP_HOST?: string;
   SMTP_PORT?: number | string;
   SMTP_USER?: string;

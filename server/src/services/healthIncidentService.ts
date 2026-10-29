@@ -8,6 +8,7 @@ import logger from "../utils/logger.js";
 import { escalateMaintenanceActions } from "./maintenanceActions.js";
 import { storageRunway } from "./storageRunway.js";
 import { runRetentionSchedules } from "./historyRetention.js";
+import { reportJobService } from "./reportJobService.js";
 
 class HealthIncidentService {
   private timer?: ReturnType<typeof setInterval>;
@@ -48,6 +49,7 @@ class HealthIncidentService {
   private async inspect(): Promise<void> {
     await escalateMaintenanceActions();
     await runRetentionSchedules();
+    await reportJobService.pruneFiles();
     for (const disk of await storageRunway())
       await alarmEvaluator.observeHealth(
         `disk-runway-${disk.kind}`,

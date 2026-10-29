@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { createHash } from "node:crypto";
 import Joi from "joi";
-import { and, eq, desc, asc, gte, lte, sql } from "drizzle-orm";
+import { and, eq, desc, asc, gte, inArray, lte, sql } from "drizzle-orm";
 import type {
   ProductionProfile,
   DowntimeReason,
@@ -16,6 +16,7 @@ import {
   opcuaData,
   operatorEntries,
   reportHistory,
+  users,
   webhookDeliveries,
 } from "../database/schema.js";
 import {
@@ -229,6 +230,37 @@ export async function report(
     samples,
   });
   result.planVersion = shift.planVersion;
+  if (!range) {
+    const open = await database
+      .select({ entry: operatorEntries, ownerName: users.username })
+      .from(operatorEntries)
+      .leftJoin(users, eq(users.id, operatorEntries.ownerId))
+      .where(
+        and(
+          eq(operatorEntries.shiftId, id),
+          eq(operatorEntries.status, "open"),
+          inArray(operatorEntries.kind, ["note", "action"]),
+        ),
+      )
+      .orderBy(
+        desc(eq(operatorEntries.priority, "high")),
+        asc(operatorEntries.dueAt),
+        asc(operatorEntries.id),
+      )
+      .limit(50);
+    const iso = (value: Date | null) => value?.toISOString() ?? null;
+    result.handover = open.map(({ entry, ownerName }) => ({
+      id: entry.id,
+      kind: entry.kind as "note" | "action",
+      text: entry.text,
+      priority: entry.priority as "normal" | "high",
+      ownerId: entry.ownerId,
+      ownerName: ownerName ?? null,
+      dueAt: iso(entry.dueAt),
+      intervalStart: iso(entry.intervalStart),
+      intervalEnd: iso(entry.intervalEnd),
+    }));
+  }
   const evidenceRows = [...measurementEvidence.values()].sort(
     (a, b) => a.timestamp.getTime() - b.timestamp.getTime() || a.id - b.id,
   );

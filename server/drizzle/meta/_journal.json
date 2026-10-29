@@ -155,6 +155,13 @@
       "when": 1793279867405,
       "tag": "0021_report_revision_reasons",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793282782309,
+      "tag": "0022_alert_rule_versions",
+      "breakpoints": true
     }
   ]
 }

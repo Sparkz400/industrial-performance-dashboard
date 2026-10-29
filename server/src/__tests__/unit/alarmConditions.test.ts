@@ -1,6 +1,8 @@
-import { it, expect } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   evaluateCondition,
+  ruleAt,
+  ruleFromSnapshot,
   stabilizedCondition,
 } from "../../services/alarmService.js";
 import { validateAlarmRule } from "../../services/alarmRuleValidation.js";
@@ -148,4 +150,57 @@ it("rejects threshold omissions, reversed ranges and undelivered legacy channels
       isActive: false,
     }),
   ).not.toThrow();
+});
+
+describe("rule versions during replay", () => {
+  const snapshot = (threshold: number, updatedAt: string, isActive = true) =>
+    ruleFromSnapshot({
+      id: 7,
+      name: "Pressure",
+      node_key: "Pressure",
+      machine_id: 3,
+      condition: "gt",
+      threshold,
+      severity: "high",
+      is_active: isActive,
+      debounce_seconds: 0,
+      clear_debounce_seconds: 0,
+      hysteresis: 0,
+      created_at: "2026-10-29T08:00:00.000000+00:00",
+      updated_at: updatedAt,
+    });
+  const v1 = snapshot(10, "2026-10-29T08:00:00.000000+00:00");
+  const v2 = snapshot(100, "2026-10-29T10:00:00.000000+00:00");
+  const versions = [v1, v2].map((rule) => ({
+    effectiveAt: rule.updatedAt!.getTime(),
+    rule,
+  }));
+  const at = (iso: string) => Date.parse(iso);
+
+  it("maps trigger snapshots back to rule fields", () => {
+    expect(v1).toMatchObject({
+      nodeKey: "Pressure",
+      machineId: 3,
+      threshold: 10,
+      isActive: true,
+    });
+    expect(v2.updatedAt?.toISOString()).toBe("2026-10-29T10:00:00.000Z");
+  });
+
+  it("judges samples by the version in force when they were received", () => {
+    expect(ruleAt(v2, versions, at("2026-10-29T09:00:00Z"))?.threshold).toBe(
+      10,
+    );
+    expect(ruleAt(v2, versions, at("2026-10-29T10:00:00Z"))?.threshold).toBe(
+      100,
+    );
+    expect(ruleAt(v2, versions, at("2026-10-29T11:00:00Z"))?.threshold).toBe(
+      100,
+    );
+  });
+
+  it("returns no rule when no recorded version covers the receipt time", () => {
+    expect(ruleAt(v2, versions, at("2026-10-29T07:00:00Z"))).toBeNull();
+    expect(ruleAt(v2, [], at("2026-10-29T09:00:00Z"))).toBeNull();
+  });
 });

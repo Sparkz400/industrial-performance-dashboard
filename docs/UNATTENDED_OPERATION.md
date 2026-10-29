@@ -52,6 +52,14 @@ the pending hold. No new sample means no inferred recovery. Pending state and
 event receipts persist across worker recreation; replay does not create duplicate
 incidents. Acknowledgment changes neither the measured condition nor PLC state.
 
+A database trigger records every rule version on insert and update, whatever the
+write path. A sample received before a rule edit (for example, replayed from the spool
+after an outage) is judged by the version in force when it was received; incidents
+record that version as `ruleVersion`. A sample no recorded version covers is not
+evaluated and is logged rather than judged by thresholds it never met
+(`scripts/test-alarm-replay.mjs`). A rule moved to another signal does not replay
+samples of its former signal.
+
 Hysteresis applies to greater/less-than thresholds only. For a greater-than rule at
 10 with margin 2, a new incident still requires a value above 10; an active incident
 does not clear until the value is at or below 8, followed by any recovery hold.

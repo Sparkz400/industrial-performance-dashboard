@@ -118,6 +118,7 @@ export interface ReportRevisionCheck {
     laterCorrections: number;
     lateArrivals: number;
     laterDeclarations: number;
+    laterHandoverChanges: number;
     planChanged: boolean;
     removedSamplesInOverlappingHours: number;
   };
@@ -156,6 +157,18 @@ export interface ShiftReport {
   };
   /** Absent in revisions saved before reviewed declarations were applied. */
   quantitySource?: "measured" | "declaration";
+  /** Open handover notes and actions linked to the shift, highest priority first. */
+  handover?: {
+    id: number;
+    kind: "note" | "action";
+    text: string;
+    priority: "normal" | "high";
+    ownerId: number | null;
+    ownerName: string | null;
+    dueAt: string | null;
+    intervalStart: string | null;
+    intervalEnd: string | null;
+  }[];
   /** Latest reviewed operator quantity declaration for the shift, if any. */
   declaration?: {
     entryId: number;

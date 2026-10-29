@@ -37,8 +37,11 @@ merged evidence: 23 items whose software criteria are covered by named tests wer
 checked with links, and stale progress notes now state the concrete remaining gap.
 Items waiting for hardware, customers, supervised users or experimental-module
 qualification stay open. The same day closed the remaining P0 software items F01,
-F07, F08, F09, F10 and D01. A following P1 gap wave closed R04, O05, H05, D05 and U07.
-Backlog status: 51 checked and 57 open; I06 is withdrawn.
+F07, F08, F09, F10 and D01. A following P1 gap wave closed R04, O05, H05, D05 and U07;
+backlog wave 1 closed E01, R05, R02 and A08, and recorded research decisions
+([decisions](docs/RESEARCH_DECISIONS.md)): I08, E06 and X02 closed as rejected; the rest
+stay open with explicit triggers.
+Backlog status: 58 checked and 50 open; I06 is withdrawn.
 
 ### Data integrity and reviewed operations — 2026-10-28
 
@@ -288,12 +291,14 @@ below retain their unfulfilled acceptance criteria.
   Done: authenticated TLS, topic authorization, mapping validation and duplicate/out-of-order
   fixtures pass. If Sparkplug is selected, qualify birth/death, rebirth, session and metric
   identity; broker delivery guarantees are not advertised as end-to-end exactly-once history.
+  Decision 2026-10-29: DEFER until P01 names an MQTT-only source; Sparkplug rebirth commands would need an explicit exception to read-only operation. [decision](docs/RESEARCH_DECISIONS.md#c06--add-mqtt-ingestion-and-evaluate-sparkplug).
 - [ ] **C07 — Select one brownfield protocol extension** · P2 · M2 · Research · L. Depends: C05.
   Done: rank Modbus TCP/RTU, MTConnect and vendor gateways against the pilot inventory;
   implement at most the selected initial adapter with fixtures for byte order, scaling,
   unavailable values or sequence reset as applicable, and document unsupported devices.
   Progress: Modbus TCP (read-only 03/04) is the provisional adapter with owned fixtures.
   Blocker: ranking needs the real pilot device inventory (P01).
+  Decision 2026-10-29: DEFER. Modbus TCP 03/04 stays the only provisional adapter; rank options by the documented rule once the P01 inventory exists. [decision](docs/RESEARCH_DECISIONS.md#c07--select-one-brownfield-protocol-extension).
 - [ ] **C08 — Suggest mappings from OPC UA information models** · P2 · M3 · New · L. Depends: C04.
   Done: detect declared Machinery/selected companion-model capabilities using namespace
   URIs and type information; show suggestions with provenance and confidence, require
@@ -375,6 +380,7 @@ below retain their unfulfilled acceptance criteria.
   Done: edge identity and allowed schemas are checked; receiver writes canonical records
   transactionally and acknowledges committed identities. Resume after lost responses,
   partial batches and process crashes without duplicates or silent loss; revoke a node.
+  Decision 2026-10-29: DEFER until a sponsor names at least two sites and central viewers; I01 and site-qualified identity come first. [decision](docs/RESEARCH_DECISIONS.md#h08--complete-authenticated-edge-to-central-history).
 - [ ] **H09 — Provide spool and storage capacity controls** · P1 · M2 · Improve · M. Depends: D04, H04.
   Done: operators see backlog age/bytes, disk runway, write failures and recovery rate;
   export/quarantine recovery has audit evidence. Define backpressure and alert thresholds
@@ -602,11 +608,16 @@ below retain their unfulfilled acceptance criteria.
   Done: demonstrate supported event fields, conditions, reconnect refresh and severity
   mapping with an owned server; preserve source event identity. Read-only observation is
   the default; PLC-side acknowledgment remains outside this task.
-- [ ] **A08 — Preserve alert evaluation across restarts** · P1 · M2 · Improve · M. Depends: A01, H01.
+  Decision 2026-10-29: DEFER. S7-1500 A&C needs FW V2.9+ and a runtime licence; build once P01 confirms configured, wanted PLC alarms and approves ConditionRefresh as the only method call. [decision](docs/RESEARCH_DECISIONS.md#a07--evaluate-opc-ua-alarms-and-conditions-ingestion).
+- [x] **A08 — Preserve alert evaluation across restarts** · P1 · M2 · Improve · M. Depends: A01, H01.
   Done: cooldown/window state has a documented rebuild/persistence policy; restart and
   historical replay cannot silently suppress a new incident or resend every old one.
   Event time and evaluation time remain distinguishable.
-  Progress: Rule/machine state and unique receipts survive evaluator restart and identical-timestamp replay; failed transactions consume no receipt/cooldown. Historical rule-version replay remains unqualified.
+  Progress: Rule/machine state and unique receipts survive evaluator restart and identical-timestamp replay; failed transactions consume no receipt/cooldown.
+  Completed: [PR #68](https://github.com/Sparkz400/performance_dashboard/pull/68) records every rule version with a database trigger and judges
+  replayed samples by the version in force at receipt; uncovered samples are logged,
+  not judged (`alarmConditions.test.ts`, `test-alarm-replay.mjs`;
+  [policy](docs/UNATTENDED_OPERATION.md#reduce-noisy-alarms)).
 
 ## Reporting
 
@@ -616,11 +627,14 @@ below retain their unfulfilled acceptance criteria.
   and unresolved reconciliation prevent an unqualified verified label.
   Completed: [PR #51](https://github.com/Sparkz400/performance_dashboard/pull/51); [tests and limits](docs/P0_ACCEPTANCE.md#production-workflow-wave).
 
-- [ ] **R02 — Make reports useful for daily decisions** · P1 · M1 · Improve · M. Depends: R01, U02.
+- [x] **R02 — Make reports useful for daily decisions** · P1 · M1 · Improve · M. Depends: R01, U02.
   Done: include the largest losses, unresolved actions, data freshness and drill-through
   references with readable PDF/print layouts. Review a real rendered report; formatting
   must not hide incomplete data or change numeric precision silently.
-  Progress: Largest losses, gaps, inputs and readable print/JSON output are implemented and rendered. Action ownership and handover references remain open.
+  Completed: [PR #68](https://github.com/Sparkz400/performance_dashboard/pull/68) adds open handover notes/actions linked to the shift (owner,
+  priority, due time, `#id` reference) to the report JSON, page and printed PDF;
+  `test-production.mjs` renders and prints it, `test-daily-workflows.mjs` checks ownership.
+  Progress: Largest losses, gaps, inputs and readable print/JSON output are implemented and rendered.
   Scheduled PDF migration: existing trend/alarm/OEE sections, Unicode fonts, multipage
   tables, unknown-data notices and downloads are verified without a server browser.
   Template editing now saves the actual generator configuration; [evidence](docs/REPORTING.md).
@@ -643,10 +657,15 @@ below retain their unfulfilled acceptance criteria.
   corrections, late data, declarations, plan changes, retention in overlapping hours);
   `reportRevisionCheck.test.ts`, `test-daily-workflows.mjs` with browser.
 
-- [ ] **R05 — Enforce distribution and retention boundaries** · P1 · M2 · Improve · M. Depends: R01, F07.
+- [x] **R05 — Enforce distribution and retention boundaries** · P1 · M2 · Improve · M. Depends: R01, F07.
   Done: recipients/downloads are scoped, expired links fail, deleted schedules stop future
   delivery and stored PDFs follow a declared retention policy. Test unauthorized access
   to another report ID and stale links after permission changes.
+  Completed: [PR #68](https://github.com/Sparkz400/performance_dashboard/pull/68). Downloads stay administrator-only (no emailed links exist);
+  deleting a schedule cancels queued runs and undelivered email; opt-in
+  `REPORT_RETENTION_DAYS` removes old PDFs only inside the reports directory and answers
+  410 afterwards; a demoted session loses access (`test-report-boundaries.mjs`;
+  [reporting](docs/REPORTING.md)).
 - [x] **R06 — Add fair period and production comparisons** · P2 · M3 · New · M. Depends: R02, O05.
   Done: compare shifts/jobs/machines with product mix, scheduled time, quality coverage
   and corrections visible; allow energy/maintenance additions only when their inputs
@@ -789,10 +808,11 @@ below retain their unfulfilled acceptance criteria.
   Done: prove actual rendering, iframe isolation, origin-checked messaging, permissions,
   versioning and removal; a malicious test widget cannot access unrelated data or parent
   credentials. Do not call manifest registration alone a working widget SDK.
-- [ ] **I08 — Evaluate connector packaging for contributors** · P3 · M5 · Research · M. Depends: C10, I02.
+- [x] **I08 — Evaluate connector packaging for contributors** · P3 · M5 · Research · M. Depends: C10, I02.
   Done: use lessons from two real adapters to choose a minimal extension interface,
   fixture contract and compatibility policy. Prefer existing module patterns; do not
   introduce dynamic server-code loading or a marketplace without a concrete need.
+  Closed 2026-10-29: REJECTED packaging: connectors join as read-only OPC UA servers ([contributing](CONTRIBUTING.md#adding-a-connector)). Reopen if a source cannot be carried faithfully by OPC UA, such as Sparkplug session state. [decision](docs/RESEARCH_DECISIONS.md#i08--evaluate-connector-packaging-for-contributors).
 
 ## Deployment and operation
 
@@ -858,17 +878,25 @@ below retain their unfulfilled acceptance criteria.
   Done: distinguish database recovery, web redundancy and collector ownership; demonstrate
   fencing against two active collectors and test failover on a declared topology.
   Defer implementation if the pilot's recovery targets are met by simpler operation.
+  Decision 2026-10-29: DEFER until agreed RPO/RTO are missed by the D06 restore drill. A startup collector lock is tracked separately as a cheap guard. [decision](docs/RESEARCH_DECISIONS.md#d08--design-high-availability-from-measured-needs).
 
 ## Enterprise and multi-site
 
-- [ ] **E01 — Enforce site and asset permissions consistently** · P1 · M2 · Improve · L. Depends: F07.
+- [x] **E01 — Enforce site and asset permissions consistently** · P1 · M2 · Improve · L. Depends: F07.
   Done: server-side checks cover history, live subscriptions, reports, exports, rules and
   background jobs for at least two sites; changing permissions invalidates stale access.
   UI filtering alone never qualifies the boundary.
+  Completed: two-site REST/tRPC/CSV/live-room checks and revocation
+  ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)), the F07 matrix
+  ([PR #66](https://github.com/Sparkz400/performance_dashboard/pull/66)) and [PR #68](https://github.com/Sparkz400/performance_dashboard/pull/68)
+  per-site alarm-rule reads on REST and tRPC. Reports are administrator-only; background
+  jobs deliver only to administrator-configured destinations
+  ([boundary](docs/SECURITY_BOUNDARIES.md#access-matrix-f07)).
 - [ ] **E02 — Add federated identity and service-account scopes** · P2 · M4 · New · L. Depends: E01.
   Done: a selected OIDC provider, session revocation and least-privilege machine accounts
   pass positive/negative tests; delegated MFA follows the identity provider policy.
   Document a controlled recovery path without an unrestricted hidden admin bypass.
+  Decision 2026-10-29: DEFER until customer IT names an IdP or an integration needs non-human API access. [decision](docs/RESEARCH_DECISIONS.md#e02--federated-identity-oidc-and-service-account-scopes).
 - [ ] **E03 — Provide an honest multi-site overview** · P2 · M4 · New · L. Depends: H08, E01.
   Done: site availability, last successful sync, data coverage and comparable definitions
   are visible; an offline site cannot appear as zero production or current live data.
@@ -881,17 +909,19 @@ below retain their unfulfilled acceptance criteria.
   Done: deployment operators can identify stored/exported data and optional external
   flows; export, deletion, retention and access review have explicit scope and audit
   records. Do not claim jurisdictional compliance from settings alone.
-- [ ] **E06 — Decide whether separate-company tenancy is justified** · P3 · M5 · Research · XL. Depends: E02, E03, E05.
+- [x] **E06 — Decide whether separate-company tenancy is justified** · P3 · M5 · Research · XL. Depends: E02, E03, E05.
   Done: compare separate installations with a hosted tenancy design using real demand,
   costs and threat boundaries; require independent isolation testing before implementation
   is accepted. Continue separate-company deployments unless the gate is explicitly passed.
+  Closed 2026-10-29: REJECTED hosted tenancy: separate installations continue. Reopen when a named organization needs hosted multi-company service, separate-install cost exceeds hosting, E02/E05 are done and isolation testing is budgeted. [decision](docs/RESEARCH_DECISIONS.md#e06--decide-whether-separate-company-tenancy-is-justified).
 
 ## Analytics and experiments
 
-- [ ] **X02 — Evaluate anomaly and predictive-maintenance models** · P3 · M5 · Research · XL. Depends: Q01, M03, H07.
+- [x] **X02 — Evaluate anomaly and predictive-maintenance models** · P3 · M5 · Research · XL. Depends: Q01, M03, H07.
   Done: compare against a simple threshold baseline on held-out periods/assets with
   labeled incidents; publish false-positive, missed-event and lead-time behavior plus
   drift monitoring. Reject the feature if labels or operational value are insufficient.
+  Closed 2026-10-29: REJECTED: no labeled incidents exist, as the Done text requires. Reopen with labeled failure modes across assets, a held-out period and a threshold baseline in production. [decision](docs/RESEARCH_DECISIONS.md#x02--evaluate-anomaly-and-predictive-maintenance-models).
 - [x] **X03 — Add incident replay and diagnostic correlation** · P2 · M3 · New · L. Depends: H07, A01.
   Done: replay a bounded historical window with signal quality, events, changes and
   annotations in time order; separate source/receive clocks and missing intervals.
@@ -904,10 +934,12 @@ below retain their unfulfilled acceptance criteria.
   Done: estimate using comparable jobs and recent capacity with uncertainty ranges;
   backtest against actual completion and disclose unsupported process changes. Forecasts
   are advisory and do not automatically reschedule or control machines.
+  Decision 2026-10-29: DEFER until the pilot records about 20 comparable completed runs to backtest. [decision](docs/RESEARCH_DECISIONS.md#x04--prototype-bounded-capacity-and-completion-forecasts).
 - [ ] **X06 — Test improvement recommendations with evidence** · P3 · M5 · Research · M. Depends: X03, R06, M06.
   Done: recommendations cite loss/energy/maintenance evidence and assumptions, allow
   human dismissal and link accepted actions to outcomes. Compare usefulness with a
   simple ranked loss list; recommendations use explicit rules and measured evidence.
+  Decision 2026-10-29: DEFER until a P06 review shows the ranked loss list is seen but not acted on, and M06 links an action to before/after periods. [decision](docs/RESEARCH_DECISIONS.md#x06--test-improvement-recommendations-with-evidence).
 
 ## Public project and pilot learning
 
@@ -915,6 +947,7 @@ below retain their unfulfilled acceptance criteria.
   Done: document interviews/observation with an operator, engineer and production lead,
   a nominated line, actual protocols, current reporting effort and the first improvement
   question. Until available, retain these as explicit hypotheses and a simulator-only scope.
+  Decision 2026-10-29: Interview guide and hypotheses H1–H6 are ready; needs an operator, an engineer and a production lead. [decision](docs/RESEARCH_DECISIONS.md#p01--validate-the-first-customer-and-machine-use-case).
 - [x] **P02 — Build a realistic, repeatable demonstration** · P1 · M1 · Improve · M. Depends: O04, O05, A01.
   Done: owned simulator scenarios include run/stop, counts/rejects, job changes, bad quality,
   reset and outage/replay; a scripted walkthrough yields known results. Mark all demo
@@ -942,6 +975,7 @@ below retain their unfulfilled acceptance criteria.
   Done: compare commissioning effort, report preparation time, unresolved stop reasons
   and user-observed usefulness against the agreed baseline; reorder or remove backlog
   items accordingly. Record qualitative evidence when reliable quantitative data is absent.
+  Decision 2026-10-29: Baseline measures and review protocol are ready; needs P01 and the D06 pilot. [decision](docs/RESEARCH_DECISIONS.md#p06--review-product-usefulness-after-each-pilot-milestone).
 
 ## Completion policy
 

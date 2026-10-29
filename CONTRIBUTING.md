@@ -41,5 +41,21 @@ universal compatibility, compliance certification or production readiness.
 `docs/wiki/` is the source for the GitHub wiki. Update it alongside setup,
 architecture or status changes; direct wiki edits are overwritten by publishing.
 
+## Adding a connector
+
+There is no plugin loader. A new data source joins as a **read-only OPC UA server**,
+like the built-in [Modbus gateway](docs/LEGACY_GATEWAY.md), and the existing collector
+reads it. The server must:
+
+- use a stable namespace URI, so signal identity survives restarts;
+- report Good/Bad StatusCodes and never invent values for missing data;
+- provide a SourceTimestamp, or document that it is the observation time;
+- offer SignAndEncrypt with explicit certificate trust, and refuse writes.
+
+Add fixtures for disconnect, duplicate, bad quality, type change and timestamp cases,
+and a [compatibility](docs/COMPATIBILITY.md) entry that keeps simulator evidence
+separate from named vendor/model/firmware results. The reasoning, and what would
+reopen this decision, are in [research decisions](docs/RESEARCH_DECISIONS.md#i08--evaluate-connector-packaging-for-contributors).
+
 Contributions are under Apache-2.0. Submit only code and data you have permission
 to share. Follow the [code of conduct](CODE_OF_CONDUCT.md).

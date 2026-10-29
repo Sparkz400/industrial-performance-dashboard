@@ -39,6 +39,13 @@ and closed:
 - The OEE manual-entry read was unreachable for granted users (`/manual` vs
   `/manual-entries`); the allowlist now matches the route.
 
+Background work (alarm evaluation, report jobs, webhook delivery, retention, health
+incidents) runs without an account scope. It delivers only to administrator-configured
+destinations (webhooks, SMTP recipients) and never to an account directly; anything
+pushed to signed-in browsers goes through machine rooms. Two-site evidence covers
+history, live rooms, exports, alarm history and alarm rules on REST and tRPC, and
+immediate revocation (`scripts/test-access.mjs`).
+
 Single-company limits: site/asset grants isolate machines inside one installation.
 They are not tenant isolation; separate companies need separate installations.
 Dashboard visibility follows each dashboard's declared asset list; keep it in step with

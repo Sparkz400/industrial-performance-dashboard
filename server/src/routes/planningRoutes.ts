@@ -402,13 +402,15 @@ router.get(
           gt(opcuaData.receivedAt, revision.createdAt),
         ),
       );
-    const [declarations] = await db
-      .select({ n: count })
+    const [entries] = await db
+      .select({
+        declarations: sql<number>`count(*) FILTER (WHERE ${operatorEntries.kind} = 'quantity')::int`,
+        handover: sql<number>`count(*) FILTER (WHERE ${operatorEntries.kind} <> 'quantity')::int`,
+      })
       .from(operatorEntries)
       .where(
         and(
           eq(operatorEntries.shiftId, revision.shiftId),
-          eq(operatorEntries.kind, "quantity"),
           gt(operatorEntries.updatedAt, revision.createdAt),
         ),
       );
@@ -435,7 +437,8 @@ router.get(
       causes: {
         laterCorrections: corrections.n,
         lateArrivals: late.n,
-        laterDeclarations: declarations.n,
+        laterDeclarations: entries.declarations,
+        laterHandoverChanges: entries.handover,
         planChanged: saved.planVersion !== current.planVersion,
         removedSamplesInOverlappingHours: summarised.n,
       },

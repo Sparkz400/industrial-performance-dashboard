@@ -40,6 +40,14 @@ app service. A completed history entry means the PDF was written; it does not
 prove email delivery. Email failures have separate persisted status and do not delete
 the PDF. See [retry semantics and limits](UNATTENDED_OPERATION.md).
 
+Deleting a schedule cancels its queued runs and any email not yet delivered; a run
+already generating may still finish. Stored PDFs are kept until `REPORT_RETENTION_DAYS`
+is set (whole days). The health worker then removes completed PDFs older than that
+from the reports directory, never files elsewhere or PDFs still awaiting email, and
+their history entries answer downloads with 410 and record when and why. Unset keeps
+every PDF. Report management and downloads remain administrator-only; a demoted
+account loses access on its next request (`scripts/test-report-boundaries.mjs`).
+
 The template API retains `templateConfig.sections` with `trending`, `alerts` and
 `oee` types. Optional `title`, `lookbackHours`, section `machineId` and `nodeKeys`
 are validated. Older custom fields remain stored. Unsupported legacy section

@@ -200,6 +200,9 @@ software SHA, sampling settings, endpoint limits, retention and workload with re
 | Digital twin | Useful 2D asset context | A simulation use case with a validated model and calibration evidence. |
 | Regulated records | Auditability with explicit limits | A named regulated workflow and a separate validation program; no automatic certification claim. |
 
+The 2026-10-29 [research decisions](RESEARCH_DECISIONS.md) apply these defaults item by
+item. They record the measurable trigger that reopens each deferred or rejected item.
+
 ## Definition of done and maintenance
 
 A task is complete when its acceptance check is demonstrated, relevant regression

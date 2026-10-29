@@ -22,6 +22,14 @@ with labelled, never-verified results (O05). Restores cancel pending retention d
 states (D05). Daily operations has machine search, remembered filters and
 language-aware number/date formatting (U07).
 
+## Backlog wave 1
+
+Alarm rules keep a trigger-recorded version history and replayed samples are judged by
+the version in force at receipt (A08). Shift reports list open handover actions with
+owner, priority, due time and reference (R02). Deleting a report schedule cancels its
+pending runs and email, and opt-in `REPORT_RETENTION_DAYS` removes old PDFs (R05).
+Alarm rules are scoped per site on every read path (E01).
+
 ## Data integrity and reviewed operations
 
 The [six-feature integrity wave](DATA_INTEGRITY.md) replaces generated widget data,
