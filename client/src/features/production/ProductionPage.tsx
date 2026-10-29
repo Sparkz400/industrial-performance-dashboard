@@ -25,6 +25,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import CommissioningPanel, { productionRequest, downloadJson } from './CommissioningPanel';
 import OperatorWorkspace from './OperatorWorkspace';
 import ShiftInspectionsPanel from './ShiftInspectionsPanel';
+import MqttSourcesPanel from './MqttSourcesPanel';
 import IncidentReplayPanel from './IncidentReplayPanel';
 import { Link, useSearchParams } from 'react-router-dom';
 
@@ -173,9 +174,10 @@ export default function ProductionPage() {
           <OperatorWorkspace />
         </Box>
       ) : tab === 1 && admin ? (
-        <Box sx={{ pt: 3 }}>
+        <Stack spacing={3} sx={{ pt: 3 }}>
           <CommissioningPanel />
-        </Box>
+          <MqttSourcesPanel machines={assets.data ?? []} />
+        </Stack>
       ) : (
         <Stack spacing={2} sx={{ pt: 2 }}>
           {(error || report.error || shifts.error || assets.error) && (

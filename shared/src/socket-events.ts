@@ -39,6 +39,10 @@ export interface OpcuaNodeData {
   statusCode: string;
   machineId?: number;
   delta?: number | null;
+  /** Deterministic identity from a redelivering source such as MQTT. */
+  eventId?: string;
+  /** Already in the durable spool before acknowledgment; not queued again. */
+  alreadySpooled?: boolean;
 }
 
 // ===== Alarm Socket Types =====

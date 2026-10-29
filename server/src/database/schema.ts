@@ -1528,6 +1528,31 @@ export const batchLots = pgTable(
     check("lot_quantity", sql`${t.quantity}>0`),
   ],
 );
+/** A read-only MQTT subscription for a machine: TLS broker, pinned CA and topic mappings. */
+export const mqttSources = pgTable("mqtt_sources", {
+  id: serial("id").primaryKey(),
+  machineId: integer("machine_id")
+    .notNull()
+    .references(() => machines.id, { onDelete: "restrict" }),
+  name: varchar("name", { length: 160 }).notNull(),
+  brokerUrl: text("broker_url").notNull(),
+  caCertificate: text("ca_certificate").notNull(),
+  username: varchar("username", { length: 200 }),
+  // Sealed like machine credentials: AES-256-GCM bound to the machine.
+  encryptedPassword: text("encrypted_password"),
+  clientId: varchar("client_id", { length: 23 }).notNull().unique(),
+  mappings: jsonb("mappings").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: integer("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
 /** An improvement action and the frozen shift revisions it is judged against; immutable. */
 export const improvementActions = pgTable(
   "improvement_actions",

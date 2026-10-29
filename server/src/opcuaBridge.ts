@@ -26,6 +26,7 @@ import { spcService, spcEvents } from "./services/spcService.js";
 import { edgeSyncService } from "./services/edgeSyncService.js";
 import { healthIncidentService } from "./services/healthIncidentService.js";
 import { stopConfiguredGateway } from "./gateway/configuredGateway.js";
+import { mqttIngestion } from "./services/mqttIngestion.js";
 import {
   acquireCollectorLock,
   releaseCollectorLock,
@@ -84,7 +85,8 @@ export function setupOpcuaBridge({
     if (acquisitionStopped) return;
     if (data && data.key && data.timestamp && data.value !== undefined) {
       try {
-        opcuaQueueWorker.enqueue({ ...data, machineId: data.machineId });
+        if (!data.alreadySpooled)
+          opcuaQueueWorker.enqueue({ ...data, machineId: data.machineId });
       } catch (error) {
         acquisitionStopped = true;
         logger.error(
@@ -190,6 +192,9 @@ export async function startOpcuaServices({
       )
       .catch((error) => logger.warn("Collector lock incident failed", error));
   const stopCollecting = () => {
+    void mqttIngestion
+      .stopAll()
+      .catch((error) => logger.error("MQTT disconnect failed", error));
     void multiMachineManager
       .disconnectAll()
       .catch((error) => logger.error("Collector disconnect failed", error));
@@ -230,6 +235,12 @@ export async function startOpcuaServices({
       err,
     );
   }
+  // MQTT subscribers belong to the collector holding the lock, like OPC UA sessions.
+  await mqttIngestion
+    .startAll()
+    .catch((err) =>
+      logger.error("MQTT sources not started; they remain disconnected:", err),
+    );
 }
 
 /** Gracefully shut down all services. */
@@ -275,6 +286,7 @@ export function createShutdown(
       });
 
       logger.info("[Shutdown] Disconnecting OPC UA connections...");
+      await mqttIngestion.stopAll();
       await multiMachineManager.disconnectAll();
       await opcuaConnectionManager.disconnectConnection();
       await stopConfiguredGateway();

@@ -15,6 +15,8 @@ export interface OpcuaDataItem {
   statusCode?: string;
   dataType?: string;
   machineId?: number;
+  /** Deterministic identity from a redelivering source; a repeat is stored once. */
+  eventId?: string;
 }
 
 export interface SpoolEntry {
@@ -130,13 +132,20 @@ export class MeasurementSpool {
         throw new Error("Invalid measurement source or receive timestamp");
       }
     }
+    if (
+      data.eventId !== undefined &&
+      !/^[A-Za-z0-9:_-]{1,100}$/.test(data.eventId)
+    )
+      throw new Error("Invalid measurement event identity");
+    const { eventId, ...payload } = data;
+    // A redelivered event that is still pending is already durable; keep the first copy.
     this.database
-      .prepare("INSERT INTO measurements(id, payload) VALUES (?, ?)")
+      .prepare("INSERT OR IGNORE INTO measurements(id, payload) VALUES (?, ?)")
       .run(
-        randomUUID(),
+        eventId ?? randomUUID(),
         JSON.stringify({
-          ...data,
-          receivedAt: data.receivedAt ?? new Date().toISOString(),
+          ...payload,
+          receivedAt: payload.receivedAt ?? new Date().toISOString(),
         }),
       );
   }
