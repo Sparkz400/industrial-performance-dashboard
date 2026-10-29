@@ -140,7 +140,10 @@ export async function authorizeAssetRequest(
         method === "POST"))
   )
     return;
-  if (read && (found = match(/^\/planning\/shifts\/(\d+)\/revisions\/\d+$/))) {
+  if (
+    read &&
+    (found = match(/^\/planning\/shifts\/(\d+)\/revisions\/\d+(?:\/verify)?$/))
+  ) {
     await assertResource("shift", found[1]);
     return;
   }

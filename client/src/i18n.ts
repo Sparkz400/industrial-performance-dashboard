@@ -31,3 +31,31 @@ export function useT() {
   useLanguage((s) => s.language);
   return translate;
 }
+// Display formatting follows the selected language; stored values and units never change.
+/**
+ * @param value
+ * @param maximumFractionDigits
+ */
+export function formatNumber(value: number | null | undefined, maximumFractionDigits = 3) {
+  return value == null || Number.isNaN(value)
+    ? translate('Unknown', 'Unbekannt')
+    : value.toLocaleString(useLanguage.getState().language, { maximumFractionDigits });
+}
+/**
+ * @param ratio
+ */
+export function formatPercent(ratio: number | null | undefined) {
+  return ratio == null || Number.isNaN(ratio)
+    ? translate('Unavailable', 'Nicht verfügbar')
+    : ratio.toLocaleString(useLanguage.getState().language, {
+        style: 'percent',
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      });
+}
+/**
+ * @param value
+ */
+export function formatDateTime(value: string | number | Date) {
+  return new Date(value).toLocaleString(useLanguage.getState().language);
+}

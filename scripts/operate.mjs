@@ -458,6 +458,28 @@ if (command === "verify") {
       ],
       { inputFile: join(backup, "database.dump") },
     );
+    // A restore recovers data; deletions reviewed before the backup must not resume afterwards.
+    await compose(file, [
+      "exec",
+      "-T",
+      "db",
+      "psql",
+      "-U",
+      "dashboard",
+      "-d",
+      "performance_dashboard",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-c",
+      `DO $$ BEGIN
+        IF to_regclass('public.retention_schedules') IS NOT NULL THEN
+          UPDATE retention_schedules SET status='cancelled', error='Cancelled by restore; review a new preview' WHERE status='scheduled';
+        END IF;
+        IF to_regclass('public.retention_preview_rows') IS NOT NULL THEN
+          DELETE FROM retention_preview_rows;
+        END IF;
+      END $$;`,
+    ]);
     await compose(file, ["create", "app"]);
     const app = await compose(file, ["ps", "-a", "-q", "app"]);
     for (const folder of ["data", "certificates", "reports"])

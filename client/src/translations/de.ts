@@ -223,9 +223,11 @@ export const german: Record<string, string> = {
   'total,': 'Gesamt,',
   'good,': 'Gut,',
   'reject.': 'Ausschuss.',
-  'Reviewed; ': 'Geprüft; ',
-  'Awaiting administrator review; ': 'Prüfung durch Schichtleitung ausstehend; ',
-  'measured KPIs are unchanged.': 'gemessene Kennzahlen bleiben unverändert.',
+  'Reviewed; the shift report uses it only where machine counters are incomplete and stays unverified.':
+    'Geprüft; der Schichtbericht nutzt sie nur bei unvollständigen Maschinenzählern und bleibt unverifiziert.',
+  'Awaiting review; not used in the shift report.':
+    'Prüfung ausstehend; wird im Schichtbericht nicht verwendet.',
+  'Quantities: reviewed manual declaration': 'Mengen: geprüfte manuelle Meldung',
   'History #': 'Historie #',
   'Review / edit #': 'Prüfen / bearbeiten #',
   'Latest 100 revisions shown.': 'Die letzten 100 Versionen werden angezeigt.',

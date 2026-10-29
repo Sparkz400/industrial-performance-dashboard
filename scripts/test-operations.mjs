@@ -133,7 +133,16 @@ try {
     writeFileSync('/app/server/data/gateway/config.json', JSON.stringify({name:'Owned backup fixture',enabled:false}));
     writeFileSync('/app/server/data/gateway/pki/owned-backup-fixture.txt', 'gateway identity fixture');
     await writeReportPdf(process.env.REPORTS_DIR+'/fixture.pdf', { title:'Restore fixture', generatedAt:new Date('2026-01-01'), period:'Owned fixture', sections:[{title:'Evidence', paragraphs:['Unknown remains unknown.']}] });
-    console.log(JSON.stringify({machineId:machine.id, pdf:createHash('sha256').update(readFileSync(process.env.REPORTS_DIR+'/fixture.pdf')).digest('hex'), key:createHash('sha256').update(readFileSync(process.env.MACHINE_SECRETS_KEY_FILE)).digest('hex')}));
+    // Reviewed retention scheduled before the backup: three old raw samples and a pending job.
+    const admin = (await manager.pool.query("SELECT id FROM users WHERE role='admin' ORDER BY id LIMIT 1")).rows[0].id;
+    const old = (await manager.pool.query("INSERT INTO opcua_data(machine_id,node_key,timestamp,received_at,value,status_code) SELECT $1,'RetainedCount',t,t,n,'Good' FROM (SELECT n, now()-interval '30 days'+n*interval '1 minute' AS t FROM generate_series(1,3) n) s RETURNING id", [machine.id])).rows;
+    await manager.pool.query("INSERT INTO retention_policies(machine_id,days) VALUES ($1,7)", [machine.id]);
+    const previewId = crypto.randomUUID();
+    await manager.pool.query("INSERT INTO retention_previews(id,machine_id,policy_version,cutoff,max_id,rows,created_by) VALUES ($1,$2,1,now()-interval '7 days',$3,3,$4)", [previewId, machine.id, Math.max(...old.map((r) => r.id)), admin]);
+    // Copy timestamps in SQL: JavaScript dates would drop PostgreSQL's microseconds.
+    await manager.pool.query("INSERT INTO retention_preview_rows(preview_id,measurement_id,timestamp) SELECT $1,id,timestamp FROM opcua_data WHERE machine_id=$2 AND node_key='RetainedCount'", [previewId, machine.id]);
+    await manager.pool.query("INSERT INTO retention_schedules(machine_id,preview_id,confirm_rows,created_by,run_at) VALUES ($1,$2,3,$3,now()+interval '30 minutes')", [machine.id, previewId, admin]);
+    console.log(JSON.stringify({machineId:machine.id, previewId, admin, pdf:createHash('sha256').update(readFileSync(process.env.REPORTS_DIR+'/fixture.pdf')).digest('hex'), key:createHash('sha256').update(readFileSync(process.env.MACHINE_SECRETS_KEY_FILE)).digest('hex')}));
     await manager.end();
   `;
   const receipt = JSON.parse(
@@ -150,6 +159,18 @@ try {
   const backup = join(directory, "backup");
   await operate("backup", source, ["--file", file, "--output", backup]);
   await operate("verify", source, ["--backup", backup]);
+  // The reviewed deletion runs on the source after the backup was taken.
+  const retained = `
+    import assert from 'node:assert/strict';
+    import manager from './dist/src/database/dbConnection.js';
+    import { applyRetention } from './dist/src/services/historyRetention.js';
+    const result = await applyRetention(${receipt.machineId}, ${JSON.stringify(receipt.previewId)}, 3, ${receipt.admin});
+    assert.equal(result.deleted, 3);
+    assert.equal((await manager.pool.query("SELECT count(*)::int AS n FROM opcua_data WHERE node_key='RetainedCount'")).rows[0].n, 0);
+    await manager.end();
+  `;
+  await run(docker, ["exec", "-i", app, "node", "--input-type=module"], retained);
+  logs.push("Reviewed retention removed three raw samples after the backup");
   const next = join(directory, "restored"),
     nextFile = join(next, "compose.json"),
     nextPort = await freePort();
@@ -190,6 +211,32 @@ try {
       docker,
       ["exec", "-i", nextApp, "node", "--input-type=module"],
       verification,
+    ),
+  );
+  // Restoring the pre-retention backup recovers the raw rows and cannot resume the deletion.
+  const recovered = `
+    import assert from 'node:assert/strict';
+    import manager from './dist/src/database/dbConnection.js';
+    import { applyRetention, runRetentionSchedules } from './dist/src/services/historyRetention.js';
+    const q = async (sql, args = []) => (await manager.pool.query(sql, args)).rows;
+    const raw = async () => (await q("SELECT count(*)::int AS n FROM opcua_data WHERE node_key='RetainedCount'"))[0].n;
+    assert.equal(await raw(), 3);
+    assert.equal((await q("SELECT count(*)::int AS n FROM history_summaries WHERE node_key='RetainedCount'"))[0].n, 0, 'No summary may double-count restored raw rows');
+    const [job] = await q("SELECT status,error FROM retention_schedules WHERE preview_id=$1", [${JSON.stringify(receipt.previewId)}]);
+    assert.deepEqual(job, { status: 'cancelled', error: 'Cancelled by restore; review a new preview' });
+    assert.equal((await q("SELECT count(*)::int AS n FROM retention_preview_rows"))[0].n, 0);
+    await runRetentionSchedules();
+    const replay = await applyRetention(${receipt.machineId}, ${JSON.stringify(receipt.previewId)}, 3, ${receipt.admin});
+    assert.equal(replay.deleted, 0);
+    assert.equal(await raw(), 3);
+    console.log('PASS: pre-retention backup restores raw rows; pending and replayed deletions remove nothing');
+    await manager.end();
+  `;
+  logs.push(
+    await run(
+      docker,
+      ["exec", "-i", nextApp, "node", "--input-type=module"],
+      recovered,
     ),
   );
   assert.equal(

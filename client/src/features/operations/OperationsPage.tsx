@@ -1,9 +1,11 @@
-import React, { useState, Suspense } from 'react';
-import { Alert, Box, MenuItem, Stack, Tab, Tabs, TextField, Typography } from '@mui/material';
+import React, { Suspense } from 'react';
+import { Alert, Box, Stack, Tab, Tabs, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useT } from '@/i18n';
 import { operationRequest } from './api';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useSavedFilter } from '@/hooks/useSavedFilter';
+import MachinePicker from '@/shared/components/MachinePicker';
 const LinePanel = React.lazy(() => import('./LinePanel'));
 const MaintenanceActionsPanel = React.lazy(() => import('./MaintenanceActionsPanel'));
 const PlanningPanel = React.lazy(() => import('./PlanningPanel'));
@@ -22,12 +24,14 @@ const DerivedSignalsPanel = React.lazy(() => import('./DerivedSignalsPanel'));
 export default function OperationsPage() {
   const canSupervise = useAuthStore((s) => ['admin', 'supervisor'].includes(s.user?.role ?? ''));
   const t = useT(),
-    [machine, setMachine] = useState(''),
-    [tab, setTab] = useState(0);
+    [savedMachine, setMachine] = useSavedFilter<string>('operations:machine', ''),
+    [savedTab, setTab] = useSavedFilter<number>('operations:tab', 0);
   const assets = useQuery({
     queryKey: ['production-assets'],
     queryFn: () => operationRequest<{ id: number; name: string }[]>('/production/assets'),
   });
+  // A remembered machine applies only while it is still granted.
+  const machine = assets.data?.some((a) => String(a.id) === savedMachine) ? savedMachine : '';
   const panels = [
     { name: 'Planning', content: <PlanningPanel machineId={Number(machine)} /> },
     { name: 'Maintenance', content: <MaintenancePanel machineId={Number(machine)} /> },
@@ -74,6 +78,8 @@ export default function OperationsPage() {
       content: <DerivedSignalsPanel key={machine} machineId={Number(machine)} />,
     },
   ];
+  // Role changes can shorten the tab list since the tab was remembered.
+  const tab = savedTab < panels.length ? savedTab : 0;
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1250, width: '100%', mx: 'auto' }}>
       <Stack spacing={3}>
@@ -81,18 +87,7 @@ export default function OperationsPage() {
           {t('Daily operations')}
         </Typography>
         {assets.error && <Alert severity="error">{String(assets.error)}</Alert>}
-        <TextField
-          select
-          label={t('Machine')}
-          value={machine}
-          onChange={(e) => setMachine(e.target.value)}
-        >
-          {assets.data?.map((a) => (
-            <MenuItem key={a.id} value={a.id}>
-              {a.name}
-            </MenuItem>
-          ))}
-        </TextField>
+        <MachinePicker machines={assets.data} value={machine} onChange={setMachine} />
         {!assets.isLoading && !assets.data?.length && (
           <Alert severity="info">
             {t(

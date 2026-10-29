@@ -93,6 +93,10 @@ alone: qualify the sampling interval and source behavior on the actual machine.
 plan, calculations and energy evidence, actor/time and canonical SHA-256 digest.
 Later plan edits do not change the saved revision. Download a revision for review;
 a digest detects changes to that snapshot, not whether the machine data was correct.
+Every revision after the first needs a reason. **Check reproducibility** regenerates
+the report read-only and either confirms it matches or names the changed sections with
+recorded causes: later measurement corrections, late arrivals, changed quantity
+declarations, plan changes or retention in overlapping hours. The saved revision never changes.
 
 ## Maintenance
 
@@ -126,6 +130,10 @@ Saved report revisions include the energy configuration, result and reconciliati
 English/German selection persists locally and keeps in-progress form values. Core
 navigation, login, dashboard, alerts, production and daily workflows are translated;
 specialist/experimental modules and server diagnostic messages can still use English.
+Numbers, percentages and dates follow the selected language (for example `1.234,5` and
+`43,3 %` in German). Units are shown exactly as stored; nothing is converted. Daily
+operations has a searchable machine picker and remembers each account's last machine
+and tab in this browser; a machine whose grant was removed is not restored.
 Stale, bad-quality, disconnected or overdue live state displays as unknown. Focused
 navigation keeps advanced modules separate; read-only dashboards hide editing controls.
 The widget gallery and image-export code load when requested. Coarse-pointer targets

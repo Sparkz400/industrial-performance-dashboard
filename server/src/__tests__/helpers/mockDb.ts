@@ -85,6 +85,7 @@ vi.mock("../../observability/metrics.js", () => ({
   },
   opcuaDataPointsReceived: { inc: () => {} },
 }));
+vi.mock("../../observability/operationalMetrics.js", () => ({}));
 
 vi.mock("../../socket/socketServer.js", () => ({
   createSocketServer: () => ({

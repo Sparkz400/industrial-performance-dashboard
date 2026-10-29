@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import type { AlarmReview, AlarmReplayReview } from '@performance-dashboard/shared';
-import { useT } from '@/i18n';
+import { formatNumber, useT } from '@/i18n';
 import { operationRequest, localInput, toIso } from './api';
 /**
  * Review recorded alarm burden and preview settings without changing live rules.
@@ -20,10 +20,7 @@ export default function AlarmReviewPanel({ machineId }: { machineId: number }) {
     [hysteresis, setHysteresis] = useState('0'),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
-  const number = (v: number | null | undefined) =>
-    v == null
-      ? t('Unknown', 'Unbekannt')
-      : v.toLocaleString(undefined, { maximumFractionDigits: 1 });
+  const number = (v: number | null | undefined) => formatNumber(v, 1);
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
     setError('');

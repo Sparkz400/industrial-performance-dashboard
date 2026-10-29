@@ -2,7 +2,7 @@ import React from 'react';
 import { Alert, Button, Paper, Stack, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import type { ConnectionDiagnostics } from '@performance-dashboard/shared';
-import { useT } from '@/i18n';
+import { formatNumber, useT } from '@/i18n';
 import { operationRequest } from './api';
 /**
  * Inspect current collector evidence without changing machine settings.
@@ -15,10 +15,7 @@ export default function ConnectionDiagnosticsPanel({ machineId }: { machineId: n
     queryKey: ['connection-diagnostics', machineId],
     queryFn: () => operationRequest<ConnectionDiagnostics>(`/diagnostics/machines/${machineId}`),
   });
-  const number = (n: number | null | undefined) =>
-    n == null
-      ? t('Unknown', 'Unbekannt')
-      : n.toLocaleString(undefined, { maximumFractionDigits: 1 });
+  const number = (n: number | null | undefined) => formatNumber(n, 1);
   const date = (value: string | null | undefined) =>
     value ? new Date(value).toLocaleString() : t('Unknown', 'Unbekannt');
   const state = (value: string) =>

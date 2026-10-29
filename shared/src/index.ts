@@ -352,6 +352,7 @@ export type {
   ProductionInterval,
   DowntimeReason,
   ShiftReport,
+  ReportRevisionCheck,
 } from "./production.js";
 export type {
   ScheduledReportConfig,

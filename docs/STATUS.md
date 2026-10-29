@@ -13,6 +13,15 @@ deployment boundary with a non-superuser database role (D01). See
 [security and deployment boundaries](SECURITY_BOUNDARIES.md). The 72-hour endurance
 gate and physical/customer acceptance remain open.
 
+## P1 gap closure
+
+Report revisions after the first need a reason and can be regenerated to check
+reproducibility (R04). Reviewed operator quantity declarations fill incomplete counters
+with labelled, never-verified results (O05). Restores cancel pending retention deletions
+(H05). `/metrics` covers reconnects, spool age, commit age, database round trip and job
+states (D05). Daily operations has machine search, remembered filters and
+language-aware number/date formatting (U07).
+
 ## Data integrity and reviewed operations
 
 The [six-feature integrity wave](DATA_INTEGRITY.md) replaces generated widget data,

@@ -958,6 +958,8 @@ export const shiftReportRevisions = pgTable("shift_report_revisions", {
     .references(() => productionShifts.id, { onDelete: "restrict" }),
   snapshot: jsonb("snapshot").notNull(),
   digest: text("digest").notNull(),
+  // Required for every revision after the first; legacy rows stay null.
+  reason: text("reason"),
   createdBy: integer("created_by")
     .notNull()
     .references(() => users.id),

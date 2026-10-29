@@ -236,3 +236,67 @@ describe("shift calculation", () => {
     ).toThrow("distinct");
   });
 });
+
+describe("reviewed manual quantity declarations", () => {
+  // Samples every 15 s stay within the profile's 20 s maximum gap.
+  const series = (values: (number | null)[]) =>
+    values.map((value, i) => point(i * 15, value));
+  const counters = (total: (number | null)[]) => ({
+    state: series([1, 1, 1, 1, 1]),
+    total: series(total),
+    good: series([0, 2, 4, 7, 9]),
+    reject: series([0, 0, 1, 1, 1]),
+  });
+  const shift = (samples: ReturnType<typeof counters>, declared: boolean) =>
+    calculateShift({
+      id: 1,
+      machineId: 2,
+      name: "Declared",
+      timezone: "UTC",
+      start,
+      end,
+      profile,
+      job: { reference: "J1", product: "P1", target: null },
+      breaks: [],
+      evidence: null,
+      reasons: [],
+      samples,
+      declaration: declared
+        ? {
+            entryId: 7,
+            total: 12,
+            good: 11,
+            reject: 1,
+            reviewedAt: end.toISOString(),
+          }
+        : null,
+    });
+
+  it("fills incomplete counters, records the source and never verifies", () => {
+    const report = shift(counters([0, 2, null, 8, 10]), true);
+    expect(report.quantitySource).toBe("declaration");
+    expect(report.quantities).toEqual({ total: 12, good: 11, reject: 1 });
+    expect(report.oee.quality).toBeCloseTo(11 / 12);
+    expect(report.issues).toContain(
+      "Quantities come from reviewed manual declaration #7 because machine counters are incomplete.",
+    );
+    expect(report.verified).toBe(false);
+  });
+
+  it("keeps complete machine counts and reports a differing declaration", () => {
+    const report = shift(counters([0, 2, 5, 8, 10]), true);
+    expect(report.quantitySource).toBe("measured");
+    expect(report.quantities).toEqual({ total: 10, good: 9, reject: 1 });
+    expect(report.declaration?.entryId).toBe(7);
+    expect(report.issues).toContain(
+      "Reviewed manual declaration #7 differs from measured counts.",
+    );
+  });
+
+  it("leaves incomplete counters unknown without a reviewed declaration", () => {
+    const report = shift(counters([0, 2, null, 8, 10]), false);
+    expect(report.quantitySource).toBe("measured");
+    expect(report.declaration).toBeNull();
+    expect(report.issues.join(" ")).not.toContain("declaration");
+  });
+});

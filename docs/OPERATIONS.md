@@ -99,6 +99,11 @@ Existing projects are refused, even if stopped. Review machine identities, pendi
 measurements, report downloads and login before activation. A backup verification
 alone does not prove a working restore.
 
+Restores cancel retention deletions that were scheduled or part-way through when the
+backup was taken, so restoring to recover history cannot silently delete it again.
+Raw samples removed after the backup return with the restore, and no hourly summary
+double-counts them. Review a new retention preview after activation if still wanted.
+
 Use the same restore command for rollback after a failed upgrade. The saved image
 and pre-upgrade database travel together; do not run old code against a migrated
 database or attempt an automatic down-migration. Preserve the failed installation
@@ -134,6 +139,18 @@ report and delivery status rows, with a three-second limit per database statemen
 It excludes names, endpoints, values, private paths, logs, recipients and credentials.
 Collector details include pending count, oldest receive time and storage reserve;
 missing receive times remain unknown. It is a support snapshot, not a full audit.
+
+`/metrics` (administrators only) adds operational gauges, read at each scrape:
+
+| Gauge | Meaning |
+| --- | --- |
+| `opcua_connection_reconnects`, `opcua_connection_losses` (`machine_id`) | Observed since this process started; restarts reset them |
+| `measurement_spool_pending`, `measurement_spool_oldest_age_seconds` | Accepted samples waiting for PostgreSQL; age is `NaN` when a receive time is unknown |
+| `measurement_last_commit_age_seconds` (`machine_id`) | Time since the last database commit of that machine's samples by this process |
+| `database_up`, `database_roundtrip_seconds` | `SELECT 1` within three seconds; round trip is `NaN` when unreachable |
+| `background_jobs` (`job`, `state`) | Report generation, report email, undelivered webhooks and retention schedules by state; absent when the database cannot be read |
+
+Alert on growth or age, not single values: a quiet machine also has an old last commit.
 
 `node scripts/test-operations.mjs IMAGE` uses fresh, uniquely named container
 projects. It verifies installation, file/database restore, credential decryption,

@@ -39,6 +39,7 @@ import {
   metricsMiddleware,
   metricsRegistry,
 } from "./src/observability/metrics.js";
+import "./src/observability/operationalMetrics.js";
 import {
   requireAuth,
   requireRole,

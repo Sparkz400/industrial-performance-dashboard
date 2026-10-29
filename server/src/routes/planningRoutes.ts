@@ -2,9 +2,13 @@ import { Router } from "express";
 import Joi from "joi";
 import { createHash } from "node:crypto";
 import { canonicalJson } from "../utils/canonicalJson.js";
-import { and, eq, desc, sql } from "drizzle-orm";
+import { and, eq, desc, gt, gte, lte, sql } from "drizzle-orm";
 import db from "../database/db.js";
 import {
+  historySummaries,
+  measurementCorrections,
+  opcuaData,
+  operatorEntries,
   productionCalendars,
   productionShifts,
   shiftReportRevisions,
@@ -24,7 +28,12 @@ import {
 } from "../services/productionCalendar.js";
 import { report } from "./productionRoutes.js";
 import { energyAnalysis } from "../services/energyAnalysis.js";
-import type { ProductRun } from "@performance-dashboard/shared";
+import { changedSections } from "../services/reportRevisionCheck.js";
+import type {
+  ProductRun,
+  ReportRevisionCheck,
+  ShiftReport,
+} from "@performance-dashboard/shared";
 
 const router = Router(),
   id = Joi.object({ id: Joi.number().integer().positive().required() });
@@ -312,6 +321,7 @@ router.get(
         .select({
           id: shiftReportRevisions.id,
           digest: shiftReportRevisions.digest,
+          reason: shiftReportRevisions.reason,
           createdAt: shiftReportRevisions.createdAt,
           createdBy: shiftReportRevisions.createdBy,
         })
@@ -341,13 +351,118 @@ router.get(
     res.json(revision);
   }),
 );
+const revisionParams = validateParams(
+  id.keys({ revision: Joi.number().integer().positive().required() }),
+);
+/** Regenerates the report read-only and names what changed since the revision was saved. */
+router.get(
+  "/shifts/:id/revisions/:revision/verify",
+  revisionParams,
+  asyncHandler(async (req, res) => {
+    const [revision] = await db
+      .select()
+      .from(shiftReportRevisions)
+      .where(
+        and(
+          eq(shiftReportRevisions.id, Number(req.params.revision)),
+          eq(shiftReportRevisions.shiftId, Number(req.params.id)),
+        ),
+      );
+    if (!revision) throw new NotFoundError("Report revision");
+    const current = await db.transaction(
+      async (tx) => {
+        const production = await report(revision.shiftId, undefined, tx);
+        return { ...production, energy: await energyAnalysis(production, tx) };
+      },
+      { isolationLevel: "repeatable read", accessMode: "read only" },
+    );
+    const saved = revision.snapshot as ShiftReport;
+    const start = new Date(saved.start),
+      end = new Date(saved.end);
+    const count = sql<number>`count(*)::int`;
+    const [corrections] = await db
+      .select({ n: count })
+      .from(measurementCorrections)
+      .where(
+        and(
+          eq(measurementCorrections.machineId, saved.machineId),
+          gte(measurementCorrections.measuredAt, start),
+          lte(measurementCorrections.measuredAt, end),
+          gt(measurementCorrections.createdAt, revision.createdAt),
+        ),
+      );
+    const [late] = await db
+      .select({ n: count })
+      .from(opcuaData)
+      .where(
+        and(
+          eq(opcuaData.machineId, saved.machineId),
+          gte(opcuaData.timestamp, start),
+          lte(opcuaData.timestamp, end),
+          gt(opcuaData.receivedAt, revision.createdAt),
+        ),
+      );
+    const [declarations] = await db
+      .select({ n: count })
+      .from(operatorEntries)
+      .where(
+        and(
+          eq(operatorEntries.shiftId, revision.shiftId),
+          eq(operatorEntries.kind, "quantity"),
+          gt(operatorEntries.updatedAt, revision.createdAt),
+        ),
+      );
+    const [summarised] = await db
+      .select({
+        n: sql<number>`coalesce(sum(${historySummaries.samples}),0)::int`,
+      })
+      .from(historySummaries)
+      .where(
+        and(
+          eq(historySummaries.machineId, saved.machineId),
+          gte(
+            historySummaries.bucket,
+            sql`date_trunc('hour', ${start}::timestamptz)`,
+          ),
+          lte(historySummaries.bucket, end),
+        ),
+      );
+    const changed = changedSections(saved, current);
+    const check: ReportRevisionCheck = {
+      revisionId: revision.id,
+      reproducible: changed.length === 0,
+      changedSections: changed,
+      causes: {
+        laterCorrections: corrections.n,
+        lateArrivals: late.n,
+        laterDeclarations: declarations.n,
+        planChanged: saved.planVersion !== current.planVersion,
+        removedSamplesInOverlappingHours: summarised.n,
+      },
+      checkedAt: new Date().toISOString(),
+    };
+    res.json(check);
+  }),
+);
 router.post(
   "/shifts/:id/revisions",
   requireRole("admin", "supervisor"),
   validateParams(id),
+  validateBody(
+    Joi.object({ reason: Joi.string().trim().max(500).allow("").default("") }),
+  ),
   asyncHandler(async (req, res) => {
+    const reason = String(req.body.reason).trim() || null;
     const saved = await db.transaction(
       async (tx) => {
+        const [{ n: earlier }] = await tx
+          .select({ n: sql<number>`count(*)::int` })
+          .from(shiftReportRevisions)
+          .where(eq(shiftReportRevisions.shiftId, Number(req.params.id)));
+        if (earlier && !reason)
+          throw new ValidationError(
+            "A new revision needs a reason, such as the correction it records",
+          );
         const production = await report(Number(req.params.id), undefined, tx);
         const snapshot = {
           ...production,
@@ -359,6 +474,7 @@ router.post(
             shiftId: snapshot.id,
             snapshot,
             digest: digest(snapshot),
+            reason,
             createdBy: req.session.userId!,
           })
           .returning();

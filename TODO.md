@@ -37,7 +37,8 @@ merged evidence: 23 items whose software criteria are covered by named tests wer
 checked with links, and stale progress notes now state the concrete remaining gap.
 Items waiting for hardware, customers, supervised users or experimental-module
 qualification stay open. The same day closed the remaining P0 software items F01,
-F07, F08, F09, F10 and D01. Backlog status: 46 checked and 62 open; I06 is withdrawn.
+F07, F08, F09, F10 and D01. A following P1 gap wave closed R04, O05, H05, D05 and U07.
+Backlog status: 51 checked and 57 open; I06 is withdrawn.
 
 ### Data integrity and reviewed operations — 2026-10-28
 
@@ -347,15 +348,16 @@ below retain their unfulfilled acceptance criteria.
   Completed: [PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59);
   `scripts/test-history.mjs` (200,000-row stream, disconnected-reader cursor release,
   explicit aggregation); [contract](docs/DAILY_OPERATIONS.md#history-storage-and-retention).
-- [ ] **H05 — Introduce an explicit retention policy** · P1 · M2 · New · L. Depends: D04, H04.
+- [x] **H05 — Introduce an explicit retention policy** · P1 · M2 · New · L. Depends: D04, H04.
   Done: preview storage impact and exact deletion scope, preserve required evidence,
   schedule bounded cleanup and verify backup/restore interactions. No historical data
   is deleted by default merely because a new version was installed.
-  Progress: opt-in policy, exact reviewed previews, protected shift/maintenance evidence,
-  bounded 5,000-row deletion and reviewed scheduling are implemented
-  ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59),
-  [PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)). Remaining: an
-  automated restore-after-retention check; today the UI only requires backup confirmation.
+  Completed: opt-in policy, exact reviewed previews, protected evidence and bounded
+  deletion ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59),
+  [PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)). The P1 gap wave
+  makes restores cancel pending deletions; `test-operations.mjs` backs up while a deletion
+  is scheduled, runs it on the source, restores, and proves the raw rows return, no summary
+  double-counts them and neither the schedule nor a replay deletes anything.
 - [ ] **H06 — Add quality-aware rollups and query tuning** · P1 · M2 · Improve · L. Depends: H05, H02.
   Done: benchmark existing indexes first; implement only justified indexes/partitioning
   and rollups retaining count, extrema and quality coverage. Compare raw/aggregate results
@@ -420,16 +422,17 @@ below retain their unfulfilled acceptance criteria.
   report revisions) and [PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64)
   (stable external work-order identities); `test-daily-workflows.mjs`, `test-work-orders.mjs`.
 
-- [ ] **O05 — Qualify counters, rejects and manual quantities** · P1 · M1 · Improve · L. Depends: O04.
+- [x] **O05 — Qualify counters, rejects and manual quantities** · P1 · M1 · Improve · L. Depends: O04.
   Done: support explicit reset/rollover policies, counter width and discontinuities;
   manual entries are timestamped deltas or declared snapshots with correction history.
   Tests prevent duplicated totals, negative production and inferred perfect quality.
-  Progress: reset-to-zero, reject-decrease and declared rollover with an explicit modulus
-  are implemented and tested ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)).
-  Operators record reviewed, revisioned count declarations
-  ([PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57)), but review does
-  not change measured counts. Remaining: applying reviewed manual quantities to results,
-  and qualifying sampling/rollover behavior on the actual machine.
+  Completed: reset-to-zero, reject-decrease and declared rollover with an explicit modulus
+  ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)); revisioned operator
+  declarations ([PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57)). The
+  P1 gap wave applies the latest reviewed declaration as a declared shift snapshot: it
+  replaces only incomplete counters, is labelled, never verifies the shift, and is flagged
+  when complete counters differ (`shiftCalculation.test.ts`, `test-daily-workflows.mjs`).
+  Sampling and rollover behaviour on the physical machine stay with the S7-1500 pilot (D06).
 
 - [ ] **O06 — Measure setup and changeover loss** · P2 · M3 · New · M. Depends: O04, O02.
   Done: expected/actual changeover periods use product transitions and operator-confirmed
@@ -458,8 +461,8 @@ below retain their unfulfilled acceptance criteria.
   operator adjustments and planned/observed time; unresolved differences are explicit
   and prevent a report from being labeled verified.
   Progress: A recorded independent ledger must match total/good/reject quantities; differences prevent verification.
-  Remaining: operator adjustments in the comparison (see O05) and a supervised physical
-  shift reconciliation (D06).
+  Reviewed operator declarations now appear in the report beside measured counts (O05).
+  Remaining: a supervised physical shift reconciliation (D06).
 
 - [ ] **O10 — Support machines with limited automatic data** · P2 · M2 · New · M. Depends: O02, U06.
   Done: authorized manual counts/state intervals and approved sensor/gateway signals can
@@ -516,13 +519,16 @@ below retain their unfulfilled acceptance criteria.
   Progress: keyboard focus, skip link, 44-pixel coarse-pointer targets and touch flows
   are browser tested ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)).
   Remaining: the explicit WCAG 2.2 checklist, screen-reader and reduced-motion checks.
-- [ ] **U07 — Improve navigation, localization and display units** · P1 · M1 · Improve · M. Depends: U02, F07.
+- [x] **U07 — Improve navigation, localization and display units** · P1 · M1 · Improve · M. Depends: U02, F07.
   Done: role-appropriate navigation, machine search and saved filters reduce clutter;
   English/German, dates, decimal formats and display units follow a declared locale.
   Stored measurement units remain unchanged by display preferences.
-  Progress: role-focused navigation and English/German core workflows
-  ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)). Remaining:
-  machine search, saved filters and locale-driven display units.
+  Completed: role-focused navigation and English/German core workflows
+  ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)); the P1 gap wave
+  adds a searchable machine picker and a per-account remembered machine/tab on Daily
+  operations, and shared language-aware number, percent and date formatting
+  (`i18n.test.ts`, `test-daily-workflows.mjs`). Scope: units are shown exactly as stored
+  and never converted; the operator workspace keeps its existing machine selector.
 - [x] **U08 — Turn the SVG twin into a practical asset view** · P2 · M3 · Improve · L. Depends: U02.
   Done: templates bind verified signals, stale/bad quality is visible, and users can
   navigate from a component to history and maintenance context. Sanitized content cannot
@@ -626,14 +632,15 @@ below retain their unfulfilled acceptance criteria.
   durable jobs/cursors, database locks, missed-slot catch-up, worker crash recovery and
   separate SMTP retry/partial-acceptance status in `scripts/test-report-jobs.mjs`. SMTP
   delivery is at least once; see [unattended operation](docs/UNATTENDED_OPERATION.md).
-- [ ] **R04 — Preserve report revisions and reproducibility** · P1 · M2 · New · M. Depends: H04, R01.
+- [x] **R04 — Preserve report revisions and reproducibility** · P1 · M2 · New · M. Depends: H04, R01.
   Done: exports record inputs, window, mapping/calculation revisions and generation time;
   a correction creates a new revision with a reason. Published reports can be reproduced
   or clearly identify why underlying retention prevents full regeneration.
-  Progress: JSON includes profile/calculation revision, generation time and original correction records.
-  Immutable digest-bound shift report revisions exist and retention protects shift raw
-  evidence ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)).
-  Remaining: a required reason on each new revision and an explicit regeneration check.
+  Completed: immutable digest-bound revisions ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)).
+  The P1 gap wave requires a reason for every revision after the first and adds a
+  read-only regeneration check that names changed sections and recorded causes (later
+  corrections, late data, declarations, plan changes, retention in overlapping hours);
+  `reportRevisionCheck.test.ts`, `test-daily-workflows.mjs` with browser.
 
 - [ ] **R05 — Enforce distribution and retention boundaries** · P1 · M2 · Improve · M. Depends: R01, F07.
   Done: recipients/downloads are scoped, expired links fail, deleted schedules stop future
@@ -821,16 +828,18 @@ below retain their unfulfilled acceptance criteria.
   Include replay competing with live acquisition, then choose limits from evidence.
   Progress: docs/CAPACITY.md records a 6,200-row synthetic replay/live/query/export
   workload on named hardware. A sustained customer/PLC operating envelope remains open.
-- [ ] **D05 — Make health and diagnostics actionable** · P1 · M1 · Improve · M. Depends: D01, H03.
+- [x] **D05 — Make health and diagnostics actionable** · P1 · M1 · Improve · M. Depends: D01, H03.
   Done: readiness distinguishes accepting requests from collecting/persisting data;
   metrics cover reconnects, spool age, failed jobs and database lag. A redacted support
   bundle excludes secrets and has explicit size/time bounds.
   Progress: database readiness, receive age/storage reserve and a bounded redacted
   support download are implemented. Browser export checks pass; failed-job diagnostics
   include durable report generation/delivery attempt and retry state.
-  Connection diagnostics show reconnects in the UI (C09). Remaining: Prometheus metrics
-  cover HTTP and received data points only, not reconnects, spool age, failed jobs or
-  database lag.
+  Connection diagnostics show reconnects in the UI (C09).
+  Completed: the P1 gap wave adds admin-only Prometheus gauges for reconnects and losses,
+  spool backlog and age, per-machine last commit age, database round trip and background
+  job states; unknown values are NaN or absent, never zero (`operationalMetrics.test.ts`,
+  real-database scrape in `test-access.mjs`). Metrics are listed in [operations](docs/OPERATIONS.md).
 - [ ] **D06 — Complete the first pilot acceptance pack** · P1 · M1 · New · L. Depends: D02, D04, D05, O09, R01, C04.
   Done: record exact machines/settings/software, supervised shift reconciliation,
   interruptions, restore evidence, observed defects and unresolved limits; the process

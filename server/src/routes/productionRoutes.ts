@@ -14,6 +14,7 @@ import {
   productionShifts,
   downtimeReasons,
   opcuaData,
+  operatorEntries,
   reportHistory,
   webhookDeliveries,
 } from "../database/schema.js";
@@ -190,7 +191,29 @@ export async function report(
     .from(downtimeReasons)
     .where(eq(downtimeReasons.shiftId, id))
     .orderBy(asc(downtimeReasons.id));
+  // Declarations describe the whole shift, so product-run windows keep their measured counts.
+  const [declared] = range
+    ? []
+    : await database
+        .select()
+        .from(operatorEntries)
+        .where(
+          and(
+            eq(operatorEntries.shiftId, id),
+            eq(operatorEntries.kind, "quantity"),
+            eq(operatorEntries.status, "resolved"),
+          ),
+        )
+        .orderBy(desc(operatorEntries.updatedAt), desc(operatorEntries.id))
+        .limit(1);
   const result = calculateShift({
+    declaration: declared?.quantity
+      ? {
+          entryId: declared.id,
+          ...declared.quantity,
+          reviewedAt: declared.updatedAt.toISOString(),
+        }
+      : null,
     ...shift,
     profile,
     job: shift.job as ShiftReport["job"],

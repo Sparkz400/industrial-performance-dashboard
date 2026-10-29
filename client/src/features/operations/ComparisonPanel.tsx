@@ -6,7 +6,7 @@ import type {
   ComparisonReason,
   PeriodComparison,
 } from '@performance-dashboard/shared';
-import { useLanguage, useT } from '@/i18n';
+import { formatNumber, useLanguage, useT } from '@/i18n';
 import { operationRequest } from './api';
 import { downloadJson } from '../production/CommissioningPanel';
 
@@ -60,8 +60,7 @@ export default function ComparisonPanel({ machineId }: { machineId: number }) {
   });
   const available =
     shifts.data?.filter((s) => s.machineId === machineId && Date.parse(s.end) <= Date.now()) ?? [];
-  const number = (value: number | null) =>
-    value == null ? t('Unknown') : value.toLocaleString(language, { maximumFractionDigits: 3 });
+  const number = (value: number | null) => formatNumber(value, 3);
   const date = (value: string) => new Date(value).toLocaleString(language);
   const reasons = new Map(
     Object.entries({
