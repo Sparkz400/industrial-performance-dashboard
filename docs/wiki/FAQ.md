@@ -2,8 +2,8 @@
 
 **Does it work with every industrial machine?**
 
-No. The implemented collector uses OPC UA scalar values and anonymous sessions.
-See [compatibility](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/COMPATIBILITY.md)
+No. The collector reads OPC UA scalar values and, read-only, JSON over MQTT with TLS.
+Modbus TCP and serial RTU devices need the built-in or an approved gateway. See [compatibility](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/COMPATIBILITY.md)
 for the actual scope and gateway requirements.
 
 **Is it production-ready or compliance-certified?**

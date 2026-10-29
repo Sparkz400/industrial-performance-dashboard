@@ -15,19 +15,20 @@ operator runs it.
 | Category | Tables |
 | --- | --- |
 | Accounts and access | `users`, `session`, `machine_grants`, `plants`, `plant_memberships`, `machine_sites`, `dashboard_assets`, `share_tokens` |
-| Machine configuration | `machines`, `node_mappings`, `machine_credentials`, `machine_profiles`, `derived_signal_definitions`, `config_bundle_imports`, `oee_config`, digital-twin, dashboard and widget tables, `annotations` |
+| Machine configuration | `machines`, `node_mappings`, `machine_credentials`, `machine_profiles`, `mqtt_sources` (broker password sealed like machine credentials), `plc_alarm_subscriptions`, `derived_signal_definitions`, `config_bundle_imports`, `oee_config`, digital-twin, dashboard and widget tables, `annotations` |
 | Measurements and history | `opcua_data`, `opcua_data_dlq`, `history_summaries`, `history_state_seconds`, `history_counter_increments`, `measurement_corrections`, retention policy/preview/schedule tables, `storage_observations` |
 | Production and reports | shifts, calendars, report revisions, `changeover_standards`, `improvement_actions`, downtime reasons, operator entries (including manual state and quantity declarations), lines, work-order imports, report templates/schedules/history |
 | Quality, batches and SPC | recipes, batches, inspections, rework, `batch_lots`, `batch_lot_corrections`, `inspection_plans`, `job_inspections`, SPC profiles/alerts/baselines |
 | Maintenance and energy | maintenance plans/events/actions, `maintenance_attachments` (uploaded files up to 5 MB each, stored in the database), CMMS handoffs, energy meters/reconciliations/tariffs |
-| Alarms and outbound delivery | alert rules and versions, alert history, notification channels, alarm evaluation state, `webhooks`, `webhook_deliveries` |
+| Alarms and outbound delivery | alert rules and versions, alert history, `plc_alarm_events` (observed PLC alarms, append-only), notification channels, alarm evaluation state, `webhooks`, `webhook_deliveries` |
 | Audit | `audit_logs`, `compliance_audit_logs` |
 
 Personal data and secrets in the database:
 
-- **Encrypted:** OPC UA machine secrets (`machine_credentials.encrypted_secret`,
-  AES-256-GCM). The key is a file, `MACHINE_SECRETS_KEY_FILE`
-  (default `data/machine-secrets.key`, mode 0600). The credential user name is plain text.
+- **Encrypted:** OPC UA machine secrets (`machine_credentials.encrypted_secret`) and MQTT
+  broker passwords (`mqtt_sources.encrypted_password`), AES-256-GCM. The key is a file,
+  `MACHINE_SECRETS_KEY_FILE` (default `data/machine-secrets.key`, mode 0600). Credential
+  user names and broker CA certificates are plain text.
 - **Hashed:** account passwords (bcrypt) and new share links. Legacy plaintext share
   tokens are refused.
 - **Plain text:** user names and email addresses; webhook URLs, signing secrets and email
@@ -74,7 +75,8 @@ selection and time window; creating and revoking them is audited, opening them i
 | Email | `SMTP_HOST` plus an email destination or report schedule | report PDFs to schedule recipients; alarm text to email destinations |
 | Tracing | `OTEL_ENABLED=true` (default off) | request and database spans, including SQL parameters, to `OTEL_EXPORTER_OTLP_ENDPOINT` |
 | Custom widgets | an administrator registering a manifest URL and an editor placing the widget | the server fetches the manifest; viewers' browsers load the entry page from the widget's origin, and a widget declaring `readSeries` receives the signals configured for it and can send them to its own servers ([custom widgets](CUSTOM_WIDGETS.md)) |
-| OPC UA | each configured machine endpoint | subscriptions and certificate exchange with that machine |
+| OPC UA | each configured machine endpoint | subscriptions and certificate exchange with that machine; with PLC alarm observation switched on, an event subscription and ConditionRefresh calls ([PLC alarms](DAILY_OPERATIONS.md#plc-alarms)) |
+| MQTT | an administrator adding an MQTT source | a TLS connection to that broker with the source's username and password and subscriptions to its mapped topics; nothing is published ([MQTT sources](PRODUCTION_WORKFLOW.md#mqtt-sources)) |
 
 The application has no update check, usage telemetry or CDN: fonts and scripts are
 served from the installation. The integration API is inbound and uses normal sign-in.

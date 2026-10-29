@@ -164,6 +164,22 @@ difference is an association with the action, not proof that it caused it. Actio
 immutable and revisions are checked against their digests; an action whose revision no
 longer verifies is marked on its own (`test-improvement-actions.mjs`).
 
+## PLC alarms
+
+An administrator switches on **PLC alarms** observation per machine in Daily
+operations. The collector then keeps a separate OPC UA session with one event item on
+the Server object and no filter, so information-only events are kept as well as alarm
+conditions. It calls ConditionRefresh on connect, after a reconnection and when the
+server sends RefreshRequired; that is the only method it calls, by approved exception
+to read-only operation. It never acknowledges, confirms or comments. Events are stored
+append-only with the source EventId, condition, source, times, PLC severity (also shown
+on the application scale), message and active/acknowledged state; a re-sent EventId is
+stored once. Events replayed by a refresh are marked as resent, since they are current
+state, not new transitions. Granted accounts see the latest 200. An event that fails to
+store is counted, not retried: current conditions return with the next refresh, but
+transitions during a database outage are lost (`test-plc-alarms.mjs`). These PLC alarms
+are separate from the dashboard's own threshold alarms.
+
 ## Energy and losses
 
 Configure a cumulative Wh/kWh meter with identity, scale, maximum sampling gap and

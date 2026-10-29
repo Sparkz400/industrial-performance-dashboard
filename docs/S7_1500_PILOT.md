@@ -1,7 +1,10 @@
 # Siemens SIMATIC S7-1500 pilot
 
 Target: a read-only connection to the CPU's **OPC UA server**. The dashboard does
-not download PLC programs, enable PUT/GET, call methods or write process tags.
+not download PLC programs, enable PUT/GET or write process tags. It calls no methods,
+with one approved exception: when PLC alarm observation is switched on for a machine,
+it calls ConditionRefresh to receive current alarm conditions; it never acknowledges,
+confirms or comments alarms ([daily operations](DAILY_OPERATIONS.md#plc-alarms)).
 The nominated family is S7-1500; no physical CPU has been qualified yet.
 
 ## Confirm the actual installation

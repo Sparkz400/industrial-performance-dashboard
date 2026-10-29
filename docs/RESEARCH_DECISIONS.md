@@ -6,15 +6,15 @@ They follow the ROADMAP's "Decisions that remain conditional" defaults: OPC UA p
 
 | Item | Decision | TODO | One-line reason |
 | --- | --- | --- | --- |
-| C07 | DEFER (keep Modbus TCP 03/04 as the only provisional adapter) | Open | Ranking needs the P01 device inventory |
-| A07 | DEFER (feasible, trigger defined) | Open | Owned-server demonstration not done; the pilot's alarm configuration and value are unknown |
+| C07 | DEFER; option 2 documented and tested (wave 10) | Open | Ranking needs the P01 device inventory; RTU through a TCP gateway needs no new adapter |
+| A07 | BUILT (owner lifted the deferral, wave 10) | Done | Read-only observation with ConditionRefresh as the only method call; pilot alarm configuration still unknown |
 | D08 | DEFER | Open | No recovery targets yet; the spool already rides through database outages |
 | I08 | REJECT packaging; the extension boundary is a read-only OPC UA server | Close as rejected | Both adapters already meet at OPC UA; no need for a loader or marketplace |
 | E06 | REJECT hosted tenancy | Close as rejected | Zero demand; the authorization model is single-company by design |
 | X02 | REJECT | Close as rejected | No labeled incidents; the Done text prescribes rejection |
 | X04 | DEFER | Open | No completed-run history to backtest |
 | X06 | DEFER | Open | A ranked loss list exists; the usefulness comparison needs users; M06 is open |
-| C06 | DEFER | Open | No MQTT source; C05 is open; Sparkplug host duties conflict with read-only operation |
+| C06 | BUILT plain MQTT; Sparkplug not selected (wave 10) | Done | Owner lifted the deferral; Sparkplug host duties still conflict with read-only operation |
 | H08 | DEFER | Open | No multi-site customer; identities are not site-qualified (I01 is done in wave 2) |
 | E02 | DEFER | Open | No selected IdP |
 | P01 | Guide and hypotheses drafted | Open | Needs an operator, an engineer and a production lead |
@@ -56,6 +56,12 @@ They follow the ROADMAP's "Decisions that remain conditional" defaults: OPC UA p
 **Smallest build if triggered.**
 - Option 2: no code. Add a gateway recipe to `docs/LEGACY_GATEWAY.md`, a unit-ID fixture in `modbusRead.test.ts` and a COMPATIBILITY entry.
 - MTConnect: one adapter in `server/src/gateway/`, following the OPC UA exposure pattern. Fixtures cover instance change, sequence gap, UNAVAILABLE becoming bad quality, and unit scaling.
+
+**Outcome 2026-10-29 (wave 10).** The owner asked for the deferred items to be built. Without an inventory, only option 2 was taken, because it needs no new code:
+- `modbusRead.test.ts` routes reads to units 1 and 2 behind one owned gateway fixture and rejects the absent unit's 0x0B exception.
+- `docs/LEGACY_GATEWAY.md` has the RTU-to-TCP gateway recipe (one configuration per slave address, poll and timeout limits of a shared serial line, unit 0 not used).
+- `docs/COMPATIBILITY.md` lists the unsupported devices: native serial RTU, MTConnect, direct S7/EtherNet/IP/PROFINET, Modbus writes and Modbus Security.
+- The item stays open: ranking against the P01 inventory and any physical gateway remain.
 
 ---
 
@@ -100,6 +106,13 @@ The owned-server half needs no hardware, but has no value until conditions 2 and
 - An append-only `plc_alarm_events` table keyed by `(machine, EventId)`, storing ConditionId, `3:ID`, both times, Severity, states and Message.
 - ConditionRefresh on connect, reconnect and RefreshRequired, with RefreshStart/End suspect handling. Never call Acknowledge or AddComment.
 - Fixture (node-opcua server, `instantiateAlarmCondition`): reconnect refresh, duplicate EventId, severity table, information-only events.
+
+**Outcome 2026-10-29 (wave 10).** The owner lifted the deferral and approved ConditionRefresh as the only method call. Built:
+- An administrator switches observation on per machine. The collector keeps a separate session with one event item on Server and **no where clause**, so information-only events are kept and the S7 where-depth limit does not apply.
+- `plc_alarm_events` is append-only and unique per `(machine, EventId)`. It stores ConditionId, ConditionName, SourceName, source and receive times, Severity (also mapped to the application scale), Message, ActiveState, AckedState, Retain and a refresh marker.
+- ConditionRefresh runs on connect, after reconnection and on RefreshRequired; events between RefreshStart and RefreshEnd are marked as resent. Acknowledge, Confirm and AddComment are never called.
+- Fixture `test-plc-alarms.mjs` (owned node-opcua server): refresh replay, critical and information-only events, RefreshRequired, server restart with a re-sent EventId stored once, the acknowledged state never set, wallboard refusal and the browser view.
+- Still open for the pilot: trigger conditions 1–4, the vendor alarm number (`3:ID`, namespace-dependent, not selected), and whether reading needs Call permission. An event that fails to store is not retried; transitions during a database outage are lost.
 
 ---
 
@@ -339,6 +352,14 @@ Reopen trigger, all of:
 - A deterministic `eventId = hash(signalId, sourceTimestamp, value)`. This requires an optional caller-supplied ID in `MeasurementSpool.enqueue`.
 - Out-of-order samples go through the existing H07 policy.
 - Fixtures against an owned Mosquitto: duplicate redelivery, reordering, malformed payload, broker restart and TLS failure.
+
+**Outcome 2026-10-29 (wave 10).** The owner lifted the deferral, chose plain MQTT (option 1) and did not select Sparkplug, so no rebirth command exists. Built as scoped above, with these choices:
+- Dependencies: `mqtt` 5.16.1 (server) and `aedes` 1.2.0 (test broker, dev only), both MIT. Fixtures use an owned aedes TLS broker instead of Mosquitto, so no external binary is needed.
+- `mqtts://` only, pinned CA, MQTT 3.1.1, QoS 1 with a persistent session; the client never publishes. A message is acknowledged only after its readings are in the spool.
+- `eventId = sha256(source, signal, source time, raw value)`, accepted by `MeasurementSpool.enqueue` (`INSERT OR IGNORE`) and unique in PostgreSQL with the timestamp. Redeliveries are stored once; late readings keep their source time.
+- Refused and counted: no source timestamp, non-JSON, over 16 KiB, unmapped topic. A missing or wrong-type value is stored as a bad sample.
+- `test-mqtt-ingestion.mjs`: broker ACL (publish and unmapped topic refused), duplicates, late reading, bad value, redelivery after a committed write, broker restart, wrong CA, wrong password and disabling a source in the browser.
+- Still open: a real broker and source (P01), and Sparkplug if a source ever requires it.
 
 ---
 

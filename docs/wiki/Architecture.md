@@ -53,6 +53,12 @@ remains open. Protected OPC UA identities are tested against owned servers.
 The optional [legacy gateway](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/LEGACY_GATEWAY.md)
 polls a bounded read-only Modbus register block and exposes encrypted local OPC UA.
 Its configuration and identity are included in managed backups; recovery stops polling.
+Serial RTU devices are reached through an RTU-to-TCP gateway by unit identifier.
+
+[MQTT sources](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/PRODUCTION_WORKFLOW.md#mqtt-sources)
+subscribe read-only over TLS and acknowledge a message only after it is in the durable
+spool. [PLC alarm observation](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DAILY_OPERATIONS.md#plc-alarms)
+stores OPC UA alarm events and calls only ConditionRefresh; it never acknowledges.
 
 [Incident replay](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/INCIDENT_REPLAY.md)
 reads a consistent, bounded snapshot of one machine's signals, alarm transitions,

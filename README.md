@@ -72,7 +72,10 @@ capacity and quarantine, and the single-collector lock.
 Integrations use the bounded [integration API contract](docs/INTEGRATION_API.md):
 four read endpoints, a durable webhook outbox and a version policy.
 The [legacy gateway recipe](docs/LEGACY_GATEWAY.md) includes a read-only Modbus TCP
-adapter, owned simulator and reusable production profile.
+adapter, owned simulator and reusable production profile; serial RTU devices are read
+through an RTU-to-TCP gateway. Machines that publish JSON can be read through an MQTT
+broker over TLS ([MQTT sources](docs/PRODUCTION_WORKFLOW.md#mqtt-sources)), and PLC alarms
+can be observed read-only ([PLC alarms](docs/DAILY_OPERATIONS.md#plc-alarms)).
 [Incident replay](docs/INCIDENT_REPLAY.md) joins bounded historical signals, alarm
 transitions, operator revisions and stop classifications with explicit clock and gap information.
 See [factory-pilot acceptance](docs/FACTORY_PILOT_ACCEPTANCE.md) for tested software
