@@ -614,7 +614,7 @@ below retain their unfulfilled acceptance criteria.
   historical replay cannot silently suppress a new incident or resend every old one.
   Event time and evaluation time remain distinguishable.
   Progress: Rule/machine state and unique receipts survive evaluator restart and identical-timestamp replay; failed transactions consume no receipt/cooldown.
-  Completed: WAVE1_PR records every rule version with a database trigger and judges
+  Completed: [PR #68](https://github.com/Sparkz400/performance_dashboard/pull/68) records every rule version with a database trigger and judges
   replayed samples by the version in force at receipt; uncovered samples are logged,
   not judged (`alarmConditions.test.ts`, `test-alarm-replay.mjs`;
   [policy](docs/UNATTENDED_OPERATION.md#reduce-noisy-alarms)).
@@ -631,7 +631,7 @@ below retain their unfulfilled acceptance criteria.
   Done: include the largest losses, unresolved actions, data freshness and drill-through
   references with readable PDF/print layouts. Review a real rendered report; formatting
   must not hide incomplete data or change numeric precision silently.
-  Completed: WAVE1_PR adds open handover notes/actions linked to the shift (owner,
+  Completed: [PR #68](https://github.com/Sparkz400/performance_dashboard/pull/68) adds open handover notes/actions linked to the shift (owner,
   priority, due time, `#id` reference) to the report JSON, page and printed PDF;
   `test-production.mjs` renders and prints it, `test-daily-workflows.mjs` checks ownership.
   Progress: Largest losses, gaps, inputs and readable print/JSON output are implemented and rendered.
@@ -661,7 +661,7 @@ below retain their unfulfilled acceptance criteria.
   Done: recipients/downloads are scoped, expired links fail, deleted schedules stop future
   delivery and stored PDFs follow a declared retention policy. Test unauthorized access
   to another report ID and stale links after permission changes.
-  Completed: WAVE1_PR. Downloads stay administrator-only (no emailed links exist);
+  Completed: [PR #68](https://github.com/Sparkz400/performance_dashboard/pull/68). Downloads stay administrator-only (no emailed links exist);
   deleting a schedule cancels queued runs and undelivered email; opt-in
   `REPORT_RETENTION_DAYS` removes old PDFs only inside the reports directory and answers
   410 afterwards; a demoted session loses access (`test-report-boundaries.mjs`;
@@ -888,7 +888,7 @@ below retain their unfulfilled acceptance criteria.
   UI filtering alone never qualifies the boundary.
   Completed: two-site REST/tRPC/CSV/live-room checks and revocation
   ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)), the F07 matrix
-  ([PR #66](https://github.com/Sparkz400/performance_dashboard/pull/66)) and WAVE1_PR
+  ([PR #66](https://github.com/Sparkz400/performance_dashboard/pull/66)) and [PR #68](https://github.com/Sparkz400/performance_dashboard/pull/68)
   per-site alarm-rule reads on REST and tRPC. Reports are administrator-only; background
   jobs deliver only to administrator-configured destinations
   ([boundary](docs/SECURITY_BOUNDARIES.md#access-matrix-f07)).
