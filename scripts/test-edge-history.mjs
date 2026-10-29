@@ -37,10 +37,14 @@ await dailyFixture(async ({ pool, call, actors, users, frontend, api, expect }) 
   const strangerCa = (await certificate("central-stranger")).cert;
   // `down` makes the central installation unreachable for edges without stopping it.
   let down = false;
+  const upstreamPort = Number(new URL(api).port);
   const front = createHttps({ cert: centralTls.cert, key: centralTls.key }, (req, res) => {
     if (down) return req.socket.destroy();
-    const target = new URL(req.url, api);
-    const upstream = forward(target, { method: req.method, headers: { ...req.headers, host: target.host } }, (answer) => {
+    // Forward only the edge-sync API, and only to this fixture's own API.
+    if (!req.url.startsWith("/api/v1/edge-sync/")) return res.writeHead(404).end();
+    const host = `127.0.0.1:${upstreamPort}`;
+    const options = { hostname: "127.0.0.1", port: upstreamPort, path: req.url, method: req.method, headers: { ...req.headers, host } };
+    const upstream = forward(options, (answer) => {
       res.writeHead(answer.statusCode, answer.headers);
       answer.pipe(res);
     });
