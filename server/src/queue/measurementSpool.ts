@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { mkdirSync, statfsSync } from "node:fs";
+import { mkdirSync, statSync, statfsSync } from "node:fs";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { SignalMetadata } from "@performance-dashboard/shared";
@@ -39,7 +39,66 @@ export class MeasurementSpool {
         sequence INTEGER PRIMARY KEY, id TEXT NOT NULL UNIQUE, payload TEXT NOT NULL
       );
       CREATE INDEX IF NOT EXISTS measurements_machine ON measurements(json_extract(payload, '$.machineId'));
+      CREATE TABLE IF NOT EXISTS quarantine (
+        sequence INTEGER PRIMARY KEY, id TEXT NOT NULL UNIQUE, payload TEXT NOT NULL,
+        reason TEXT NOT NULL, quarantined_at TEXT NOT NULL
+      );
     `);
+  }
+
+  private transaction(work: () => void): void {
+    this.database.exec("BEGIN");
+    try {
+      work();
+      this.database.exec("COMMIT");
+    } catch (error) {
+      this.database.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  /** Move a record PostgreSQL refuses out of the write path; it stays on disk. */
+  quarantine(entry: SpoolEntry, reason: string): void {
+    this.transaction(() => {
+      this.database
+        .prepare(
+          "INSERT OR IGNORE INTO quarantine(id, payload, reason, quarantined_at) SELECT id, payload, ?, ? FROM measurements WHERE id = ?",
+        )
+        .run(reason, new Date().toISOString(), entry.id);
+      this.database
+        .prepare("DELETE FROM measurements WHERE id = ?")
+        .run(entry.id);
+    });
+  }
+
+  quarantined(limit: number) {
+    return this.database
+      .prepare(
+        "SELECT id, payload, reason, quarantined_at FROM quarantine ORDER BY sequence LIMIT ?",
+      )
+      .all(limit)
+      .map((row) => ({
+        id: String(row.id),
+        data: JSON.parse(String(row.payload)) as OpcuaDataItem,
+        reason: String(row.reason),
+        quarantinedAt: String(row.quarantined_at),
+      }));
+  }
+
+  /** Return quarantined records to the queue under their original IDs (late arrivals). */
+  requeueQuarantined(): number {
+    let moved = 0;
+    this.transaction(() => {
+      moved = Number(
+        this.database
+          .prepare(
+            "INSERT OR IGNORE INTO measurements(id, payload) SELECT id, payload FROM quarantine ORDER BY sequence",
+          )
+          .run().changes,
+      );
+      this.database.exec("DELETE FROM quarantine");
+    });
+    return moved;
   }
 
   enqueue(data: OpcuaDataItem): void {
@@ -121,8 +180,22 @@ export class MeasurementSpool {
     const oldestReceivedAt = typeof row.oldest === "string" ? row.oldest : null;
     const space =
       this.filename === ":memory:" ? null : statfsSync(dirname(this.filename));
+    const spoolBytes =
+      this.filename === ":memory:"
+        ? null
+        : [this.filename, `${this.filename}-wal`].reduce(
+            (sum, file) =>
+              sum + (statSync(file, { throwIfNoEntry: false })?.size ?? 0),
+            0,
+          );
     return {
       pendingMeasurements: this.count(),
+      capacityMeasurements: this.limits.maxEntries,
+      quarantinedMeasurements: Number(
+        this.database.prepare("SELECT count(*) AS count FROM quarantine").get()!
+          .count,
+      ),
+      spoolBytes,
       oldestReceivedAt,
       oldestReceivedAgeSeconds: oldestReceivedAt
         ? Math.max(0, (Date.now() - Date.parse(oldestReceivedAt)) / 1000)
@@ -137,14 +210,9 @@ export class MeasurementSpool {
     const remove = this.database.prepare(
       "DELETE FROM measurements WHERE id = ?",
     );
-    this.database.exec("BEGIN");
-    try {
+    this.transaction(() => {
       for (const entry of entries) remove.run(entry.id);
-      this.database.exec("COMMIT");
-    } catch (error) {
-      this.database.exec("ROLLBACK");
-      throw error;
-    }
+    });
   }
 
   close(): void {

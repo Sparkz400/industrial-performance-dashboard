@@ -84,6 +84,12 @@ export async function testUnattendedAlarms({ page, frontend, call, pool, machine
     await healthIncidentService.check();
     assert.ok((await healthRows("collector-storage"))[0].resolved_at);
     assert.ok((await healthRows("collector-backlog"))[0].resolved_at);
+    // H09: a young backlog near the capacity stop still alerts while samples are accepted.
+    worker.getHealth = () => ({ ...healthy, storageFailure: null, pendingMeasurements: 800, capacityMeasurements: 1000, oldestReceivedAgeSeconds: 1, unknownReceiveTimes: 0 });
+    await healthIncidentService.check();
+    const nearCapacity = (await healthRows("collector-backlog")).at(-1);
+    assert.equal(nearCapacity.resolved_at, null);
+    assert.match(nearCapacity.message, /800 of 1000/);
   } finally { worker.getHealth = originalHealth; await healthIncidentService.stop(); }
   console.log("PASS: browser alarm holds/hysteresis, durable pending state, bad-quality recovery reset, machine freshness and collector incidents");
 }

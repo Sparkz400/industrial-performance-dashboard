@@ -24,6 +24,13 @@ interface MachineFormProps {
   machine?: Machine | null;
 }
 
+// The collector's defaults; servers may revise them, which diagnostics show.
+const DEFAULT_LIMITS = {
+  publishingIntervalMs: 500,
+  queueSize: 10,
+  maxNotificationsPerPublish: 100,
+};
+
 const defaultFormData: MachineFormData = {
   name: '',
   ip: '',
@@ -51,6 +58,7 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
         securityPolicy: machine.securityPolicy,
         isActive: machine.isActive,
         authentication: machine.authentication ?? { mode: 'anonymous' },
+        subscription: machine.subscription ?? null,
       });
     } else {
       setFormData(defaultFormData);
@@ -285,6 +293,52 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
               Unsecured connection: use only with an isolated simulator. Use Sign and Encrypt for a
               machine pilot.
             </Alert>
+          )}
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={!!formData.subscription}
+                onChange={(e) =>
+                  setFormData((previous) => ({
+                    ...previous,
+                    subscription: e.target.checked ? { ...DEFAULT_LIMITS } : null,
+                  }))
+                }
+              />
+            }
+            label="Custom subscription limits for this endpoint"
+          />
+          {formData.subscription && (
+            <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { sm: '1fr 1fr 1fr' } }}>
+              {(
+                [
+                  ['publishingIntervalMs', 'Publishing interval (ms)', 50, 60000],
+                  ['queueSize', 'Queue size per signal', 1, 1000],
+                  [
+                    'maxNotificationsPerPublish',
+                    'Max notifications per publish (0 = server limit)',
+                    0,
+                    10000,
+                  ],
+                ] as const
+              ).map(([key, label, min, max]) => (
+                <TextField
+                  key={key}
+                  type="number"
+                  label={label}
+                  // eslint-disable-next-line security/detect-object-injection -- key comes from the fixed list above
+                  value={formData.subscription![key]}
+                  slotProps={{ htmlInput: { min, max } }}
+                  onChange={(e) =>
+                    setFormData((previous) => ({
+                      ...previous,
+                      subscription: { ...previous.subscription!, [key]: Number(e.target.value) },
+                    }))
+                  }
+                />
+              ))}
+            </Box>
           )}
 
           <FormControlLabel

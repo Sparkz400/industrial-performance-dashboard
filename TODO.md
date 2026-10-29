@@ -41,7 +41,7 @@ F07, F08, F09, F10 and D01. A following P1 gap wave closed R04, O05, H05, D05 an
 backlog wave 1 closed E01, R05, R02 and A08, and recorded research decisions
 ([decisions](docs/RESEARCH_DECISIONS.md)): I08, E06 and X02 closed as rejected; the rest
 stay open with explicit triggers.
-Backlog status: 58 checked and 50 open; I06 is withdrawn.
+Backlog status: 61 checked and 47 open; I06 is withdrawn.
 
 ### Data integrity and reviewed operations — 2026-10-28
 
@@ -303,7 +303,7 @@ below retain their unfulfilled acceptance criteria.
   Done: detect declared Machinery/selected companion-model capabilities using namespace
   URIs and type information; show suggestions with provenance and confidence, require
   approval, and fall back cleanly when a server only exposes proprietary tags.
-- [ ] **C09 — Expose subscription limits and diagnostics** · P1 · M2 · Improve · M. Depends: C01, H01.
+- [x] **C09 — Expose subscription limits and diagnostics** · P1 · M2 · Improve · M. Depends: C01, H01.
   Done: requested/revised sampling, queue sizes, rejected items, reconnects and late/stale
   data are visible; load tests avoid reconnect storms and reveal overflow risk. Limits
   are configurable per endpoint and never assumed identical across machines.
@@ -311,8 +311,11 @@ below retain their unfulfilled acceptance criteria.
   status, queue settings, reconnect observations and freshness
   ([PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64),
   [scope](docs/FACTORY_OPERATIONS.md#connection-diagnostics-and-alarm-review)); sampling
-  is configurable per signal. Remaining: per-endpoint subscription/queue limits and a
-  reconnect-storm/overflow load test.
+  is configurable per signal. Completed (wave 2): per-endpoint publishing interval, queue size and
+  notifications per publish in the machine form; `test-subscription-limits.mjs` shows requested/revised
+  values and server overflow indications with a queue of 2, then refuses and restores seven clients
+  on one owned server and records spread first reconnect delays (node-opcua drops the randomisation
+  factor on reconnection, so each client gets its own initial delay).
 - [ ] **C10 — Publish a connector qualification harness** · P1 · M2 · New · L. Depends: C05.
   Done: each enabled adapter replays disconnect, duplicate, bad-quality, type-change and
   timestamp fixtures; a compatibility entry names vendor/model/firmware/server, mappings,
@@ -369,7 +372,10 @@ below retain their unfulfilled acceptance criteria.
   and preserve state durations and counter semantics instead of averaging every tag.
   Progress: hourly quality summaries retain counts/status for removed rows
   ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)). Remaining: index
-  benchmark and raw/aggregate comparison on a sustained dataset (D04).
+  benchmark and raw/aggregate comparison on a sustained dataset (D04). Wave 2: `test-history.mjs`
+  shows raw and retained-summary answers identical for 72 hourly buckets; `benchmark-history.mjs`
+  records endpoint timings and index use on 5.2 million synthetic rows ([capacity](docs/CAPACITY.md)).
+  Remaining: state-duration and counter-increment rollups so retention never reduces those tags to averages.
 - [x] **H07 — Handle late and corrected measurements predictably** · P1 · M2 · New · L. Depends: H01.
   Done: event-time ordering, duplicate identities and late arrivals have a defined policy;
   affected aggregates are recomputed with provenance and finalized reports keep their
@@ -387,8 +393,11 @@ below retain their unfulfilled acceptance criteria.
   using measured capacity, while preserving all acknowledged records within that boundary.
   Progress: One-million-event cap, 64 MiB reserve and visible backlog/failure status stop acquisition before loss.
   Measured disk runway and storage incidents ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62))
-  and reviewed retention (H05) are implemented. Remaining: configurable capacity and
-  thresholds chosen from a measured envelope (D04).
+  and reviewed retention (H05) are implemented. Wave 2: capacity, reserve, backlog-age and runway
+  thresholds are configurable (80% capacity warns before the stop); operators see spool bytes, age,
+  rows written per minute and the last write failure; records PostgreSQL refuses are quarantined on
+  the collector with audited export/retry (`test-spool-quarantine.mjs`). Remaining: choose production
+  values from the D04 measured envelope.
 
 - [x] **H10 — Add reusable derived signals safely** · P2 · M3 · New · L. Depends: H02, H04.
   Done: a bounded expression model supports units, quality propagation and versioning;
@@ -776,14 +785,24 @@ below retain their unfulfilled acceptance criteria.
 
 ## Integrations and extension points
 
-- [ ] **I01 — Introduce a durable integration outbox** · P1 · M2 · Improve · L. Depends: F03, H01.
+- [x] **I01 — Introduce a durable integration outbox** · P1 · M2 · Improve · L. Depends: F03, H01.
   Done: actual application events enter a durable queue with stable IDs, schema versions,
   scoped payloads, retries/backoff and dead-letter inspection; receivers can deduplicate.
   Test process failure around send/ack and keep outbound-request protections intact.
-- [ ] **I02 — Publish a bounded integration API contract** · P1 · M2 · Improve · L. Depends: H01, F07.
+  Completed (wave 2): alarm, health and CMMS events are written to `webhook_deliveries` in the
+  producing transaction; bodies carry the stable delivery `id` and `schemaVersion`; 100 failed
+  attempts dead-letter with an incident, inspection and audited browser requeue under the same ID.
+  `test-integration-outbox.mjs` kills a sender after the receiver got the event and before the
+  acknowledgment commits, and proves the identical signed body is resent. Outbound URL checks are unchanged.
+- [x] **I02 — Publish a bounded integration API contract** · P1 · M2 · Improve · L. Depends: H01, F07.
   Done: document supported machine/history/job endpoints, errors, scopes, pagination,
   rate limits and version policy; supply runnable examples and contract tests. Align
   REST/tRPC ownership without rewriting working callers solely for architectural symmetry.
+  Completed (wave 2): [integration contract](docs/INTEGRATION_API.md) for assets, hourly summaries,
+  raw replay and work-order completions, with one error shape, grants, time-window paging, rate-limit
+  headers and an additive-only v1 policy; tRPC stays browser-internal. `test-api-contract.mjs` runs the
+  published `scripts/examples/integration-client.mjs`. The unmounted, stale Swagger draft was removed.
+  Non-human tokens remain E02.
 - [x] **I03 — Provide one ERP work-order exchange** · P2 · M2 · New · L. Depends: I02, O04.
   Done: import a sanitized order/product contract with preview, external IDs, idempotency
   and rejection reporting; export completion facts without silently editing ERP records.
@@ -878,7 +897,7 @@ below retain their unfulfilled acceptance criteria.
   Done: distinguish database recovery, web redundancy and collector ownership; demonstrate
   fencing against two active collectors and test failover on a declared topology.
   Defer implementation if the pilot's recovery targets are met by simpler operation.
-  Decision 2026-10-29: DEFER until agreed RPO/RTO are missed by the D06 restore drill. A startup collector lock is tracked separately as a cheap guard. [decision](docs/RESEARCH_DECISIONS.md#d08--design-high-availability-from-measured-needs).
+  Decision 2026-10-29: DEFER until agreed RPO/RTO are missed by the D06 restore drill. The startup collector lock is built (wave 2, `test-collector-lock.mjs`); fencing stays with this item. [decision](docs/RESEARCH_DECISIONS.md#d08--design-high-availability-from-measured-needs).
 
 ## Enterprise and multi-site
 

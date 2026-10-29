@@ -36,7 +36,9 @@ queue before broadcasting it. PostgreSQL receives a stable event ID, server and
 source timestamps, raw scalar value, quality and numeric projection. Good Boolean
 values project to 0/1; text and bad-quality values remain available as raw values
 but do not become chart numbers. The event/timestamp constraint prevents duplicate
-replay after an ambiguous commit. Failed writes stay in the local spool.
+replay after an ambiguous commit. Failed writes stay in the local spool. A record
+PostgreSQL refuses with a data or integrity error moves to a quarantine table in the
+same spool file so later samples are not blocked; administrators export or requeue it.
 
 New samples also retain receive time and signal metadata: endpoint, machine,
 namespace URI, identifier, mapping revision and optional engineering unit.
@@ -54,8 +56,9 @@ The old edge receiver did not populate canonical history. Edge mutations now
 fail with 501 and the queue is preserved for a future explicit migration.
 The AI assistant and its external-provider integration have been removed.
 
-The spool is for one collector process on a durable local filesystem. Preserve
-`server/data/` or the container volume. Disk exhaustion and abrupt hardware loss
+The spool is for one collector process on a durable local filesystem. A PostgreSQL
+session advisory lock held on a dedicated connection keeps a second collector against
+the same database from acquiring. Preserve `server/data/` or the container volume. Disk exhaustion and abrupt hardware loss
 are operational limits; monitor storage. This is not a replicated historian.
 
 OEE reads the last sample at or before the window start, then subsequent changes.
@@ -72,7 +75,9 @@ and plant tables do not provide verified isolation between independent tenants.
 
 The durable worker now evaluates alarms after history insertion and before spool
 acknowledgment. Incident transitions, event receipts and pending webhook delivery
-rows commit together; receivers deduplicate delivery IDs. Profiles and shift inputs
+rows commit together; receivers deduplicate delivery IDs. That outbox table carries a
+schema version, retries with backoff and stops at a dead letter that administrators
+requeue ([integration contract](INTEGRATION_API.md)). Profiles and shift inputs
 are immutable snapshots; operator corrections append history. Authorization checks
 the current account at REST/tRPC boundaries and socket actions, with logout/expiry
 disconnection. Unauthenticated access is limited to expiring, revocable links to

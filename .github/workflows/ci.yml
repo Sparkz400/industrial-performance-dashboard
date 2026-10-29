@@ -99,6 +99,11 @@ jobs:
       - run: node scripts/test-shares.mjs
       - run: node scripts/test-alarm-replay.mjs
       - run: node scripts/test-report-boundaries.mjs
+      - run: node scripts/test-collector-lock.mjs
+      - run: node scripts/test-subscription-limits.mjs
+      - run: node scripts/test-integration-outbox.mjs
+      - run: node scripts/test-api-contract.mjs
+      - run: node scripts/test-spool-quarantine.mjs
       - run: node scripts/test-history.mjs
       - run: node scripts/test-quality-line.mjs
       - run: node scripts/test-supervisor-workflows.mjs

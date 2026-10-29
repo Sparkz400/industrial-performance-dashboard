@@ -25,7 +25,7 @@ where marked *(local)*.
 | Dashboards (`/`, `/dashboard/:id`) | granted users; editing admin | Supported for trend, system status, alarm, alert-summary, OEE, operation-mode and uptime widgets | `e2e/dashboard.spec.ts`, `e2e/p0.spec.ts` | foreign dashboards 403, unknown/stale/bad readings stay unknown: `test-access.mjs`, `test-signal-quality.mjs`, [integrity](DATA_INTEGRITY.md#dashboard-readings) | U D B |
 | Dashboard widgets: batch monitor, SPC chart, digital twin, custom widgets | admin | Experimental | `batchQuality.test.ts`, `spcReference.test.ts`, `sanitizeSvg.test.ts` | custom-widget runtime unqualified (I07) | U |
 | Selected-data links (`/shared/:token`, `/embed/:token`) | anyone with a live link; created by admin | Supported (new in F08) | `test-shares.mjs` | revoked, expired, demoted creator, legacy and guessed links 410; foreign widgets 404; frame-ancestors: `shareService.test.ts` | U D B |
-| Production → shift workspace (`/production`) | granted; operators classify | Supported | `test-production.mjs` (incl. rendered and printed open handover actions) | stop overlap, DST, counter gaps, independent reconciliation mismatch: `shiftCalculation.test.ts`, `test-production.mjs` | U D B S |
+| Production → shift workspace (`/production`) | granted; operators classify | Supported | `test-production.mjs` (incl. rendered and printed open handover actions); admin collector panel with quarantine export/retry: `test-spool-quarantine.mjs` | stop overlap, DST, counter gaps, independent reconciliation mismatch: `shiftCalculation.test.ts`, `test-production.mjs` | U D B S |
 | Production → operator handover | granted; operators write | Supported | `test-operator.mjs` *(local)*, `test-offline-operator.mjs`; reviewed declarations in the report: `test-daily-workflows.mjs` | stale edits, duplicate retries, offline expiry; unreviewed declarations ignored, declared counts never verify: `shiftCalculation.test.ts` | U D B |
 | Production → incident replay | granted | Supported | `test-incident-replay.mjs` *(local)* | gaps, quality, clock skew: `incidentReplay.test.ts` | U D B |
 | Production → commission machine | admin | Supported | `test-secure-machine.mjs` *(local)*, `test-production.mjs` | wrong credentials, untrusted/expired certificate, host mismatch | U D B S |
@@ -37,10 +37,11 @@ where marked *(local)*.
 | Alerts → history (`/alerts/history`) | granted; operators acknowledge | Supported | `test-production.mjs` (alarm-to-delivery) | foreign acknowledge 403: `test-access.mjs` | U D B S |
 | Alerts → rules (`/alerts/rules`) | admin | Supported (machine rules) | `test-unattended-alarms.mjs` *(local)*, `test-alarm-replay.mjs` (versioned replay) | plant rules and channels flagged unsupported; replay before a rule edit uses the old version: `alarmConditions.test.ts`; per-site rule reads: `test-access.mjs` | U D |
 | Alerts → notification channels (`/alerts/channels`) | admin | Disabled (legacy channels); signed webhooks are the delivery path | — | UI explains; signed receiver failure/retry: `test-production.mjs`; outbound address checks: `outboundUrlSafety.test.ts` | U D |
-| Machines (`/machines`) | admin | Supported | `e2e/machines.spec.ts` | non-admin 403: `accessMatrix.test.ts` | U B |
+| Machines (`/machines`) | admin | Supported | `e2e/machines.spec.ts`; per-endpoint subscription limits: `test-subscription-limits.mjs` | non-admin 403: `accessMatrix.test.ts`; out-of-range limits 400 | U D B |
 | Settings → connections, appearance, system info | admin | Supported | `e2e/industrial.spec.ts` | non-admin 403 | U B |
 | Settings → backup & restore, setup bundles | admin | Supported | `test-operations.mjs`, `test-configuration-bundles.mjs` | tamper, overwrite, conflicting preview, unknown version | D B |
 | Settings → people & access | admin | Supported | `test-access.mjs` | immediate revocation of sessions and sockets | U D B |
+| Settings → webhooks | admin | Supported (alarm and CMMS events) | `test-integration-outbox.mjs` (browser requeue) | crash between send and acknowledgment, dead letter, viewer 403, requeue of a live delivery 409 | U D B |
 | Settings → certificates, audit trail | admin | Supported | `test-secure-machine.mjs` *(local)*, `auditLogService.test.ts` | rejected/expired certificates | U D |
 | Settings → edge status | admin | Disabled transfer/ingest (501); read-only status | `experimentalBoundaries.test.ts` | transfers cannot be presented as central history | U B |
 | Advanced → plants, OEE config, reports | admin | Supported | `test-access.mjs`, `oeeCalculationService.test.ts`, `test-report-pdf.mjs` | report generation vs delivery failure: `reportScheduler.test.ts`; deleted schedules, PDF retention and non-admin downloads: `test-report-boundaries.mjs` | U D B |
@@ -55,7 +56,9 @@ where marked *(local)*.
 | --- | --- | --- |
 | Route × role × identifier matrix (REST and tRPC) | `accessMatrix.test.ts` (snapshot), `anonymous.test.ts`, `test-access.mjs`, `test-supervisor-workflows.mjs`; see [security boundaries](SECURITY_BOUNDARIES.md#access-matrix-f07) | U D B |
 | Live sockets | `test-access.mjs` (rooms, alarm events, revocation), `socketSessions.test.ts`, `accessMatrix.test.ts` (no global broadcasts) | U D |
-| Durable acquisition and replay | `test-recovery.mjs`, `measurementSpool.test.ts`, `test-database-client-errors.mjs` | U D S |
+| Durable acquisition and replay | `test-recovery.mjs`, `measurementSpool.test.ts`, `opcuaQueueWorker.test.ts` (capacity, quarantine), `test-database-client-errors.mjs`, `test-spool-quarantine.mjs`, `test-collector-lock.mjs` | U D S |
+| Integration API v1 and webhook contract | `test-api-contract.mjs` runs `scripts/examples/integration-client.mjs`; `test-integration-outbox.mjs`; see [integration contract](INTEGRATION_API.md) | D B |
+| History rollups and indexes | `test-history.mjs` (raw and retained summaries identical); `scripts/benchmark-history.mjs` *(local evidence)*, see [capacity](CAPACITY.md) | D |
 | Installation, backup, restore, upgrade, rollback | `test-operations.mjs` (incl. restore after retention cancels pending deletions), `test-container.mjs` | D |
 | Operational metrics | `operationalMetrics.test.ts`; real-database admin scrape and viewer refusal in `test-access.mjs` | U D |
 | Release packaging | `test-release-package.mjs`, `offline-package.mjs verify` | D |

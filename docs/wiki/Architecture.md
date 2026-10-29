@@ -36,6 +36,10 @@ Edge transfer remains disabled. The AI assistant and provider integration have b
 
 See the [architecture guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/ARCHITECTURE.md)
 for measurement quality, durable replay, OEE boundaries and deployment limits.
+One collector per database holds a PostgreSQL advisory lock; records PostgreSQL refuses
+are quarantined on the collector instead of blocking the spool. Outbound webhooks are a
+durable outbox described in the
+[integration API contract](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/INTEGRATION_API.md).
 
 See [[Roadmap]] for proposed contracts, connector expansion and multi-site work.
 Those proposals do not describe functionality already supported by this architecture.

@@ -151,6 +151,12 @@ export const german: Record<string, string> = {
   'Download support diagnostics': 'Supportdiagnose herunterladen',
   'Download redacted diagnostics': 'Bereinigte Diagnose herunterladen',
   'Collector backlog:': 'Erfassungsrückstand:',
+  'Oldest:': 'Ältester:',
+  'Written last minute:': 'In der letzten Minute geschrieben:',
+  'Last database write failed:': 'Letzter Datenbankschreibvorgang fehlgeschlagen:',
+  'Quarantined (refused by the database):': 'In Quarantäne (von der Datenbank abgelehnt):',
+  'Export quarantined': 'Quarantäne exportieren',
+  'Retry quarantined': 'Quarantäne erneut verarbeiten',
   'Incomplete — review the issues below. This report is not verified.':
     'Unvollständig – die folgenden Hinweise prüfen. Dieser Bericht ist nicht verifiziert.',
   'Reconciled against recorded independent counts':

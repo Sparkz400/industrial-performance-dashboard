@@ -59,9 +59,13 @@ export default function WebhookManager() {
         {
           id: number;
           webhookId: number;
+          eventType: string;
+          schemaVersion: number;
           attempts: number;
           deliveredAt: string | null;
+          deadLetteredAt: string | null;
           lastStatus: number | null;
+          lastError: string | null;
         }[]
       >;
     },
@@ -176,7 +180,8 @@ export default function WebhookManager() {
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
         Deliver persisted alarm events with a signed payload. Receivers must deduplicate the
-        X-Webhook-Delivery-Id header. Failed deliveries retry after a delay; the test button is a
+        delivery ID (body id and X-Webhook-Delivery-Id header). Failed deliveries retry with
+        increasing delay for about a day, then stop and can be requeued here; the test button is a
         separate test event.
       </Typography>
 
@@ -196,10 +201,39 @@ export default function WebhookManager() {
         <Box sx={{ mb: 2 }}>
           <Typography fontWeight="bold">Delivery attempts (up to 100, pending first)</Typography>
           {deliveries.data.map((delivery) => (
-            <Typography variant="body2" key={delivery.id}>
-              Delivery {delivery.id} → webhook {delivery.webhookId}:{' '}
-              {delivery.deliveredAt ? 'delivered' : 'pending retry'} · attempts {delivery.attempts}{' '}
-              · last HTTP status {delivery.lastStatus ?? 'not sent'}
+            <Typography
+              variant="body2"
+              key={delivery.id}
+              color={delivery.deadLetteredAt ? 'error' : undefined}
+            >
+              Delivery {delivery.id} ({delivery.eventType} v{delivery.schemaVersion}) → webhook{' '}
+              {delivery.webhookId}:{' '}
+              {delivery.deliveredAt
+                ? 'delivered'
+                : delivery.deadLetteredAt
+                  ? 'stopped retrying'
+                  : 'pending retry'}{' '}
+              · attempts {delivery.attempts} · last HTTP status {delivery.lastStatus ?? 'not sent'}
+              {delivery.lastError && ` · ${delivery.lastError}`}
+              {delivery.deadLetteredAt && (
+                <Button
+                  size="small"
+                  sx={{ ml: 1 }}
+                  onClick={async () => {
+                    const response = await protectedFetch(
+                      `${API_BASE_URL}/webhooks/deliveries/${delivery.id}/requeue`,
+                      { method: 'POST' },
+                    );
+                    enqueueSnackbar(
+                      response.ok ? `Delivery ${delivery.id} requeued` : 'Requeue failed',
+                      { variant: response.ok ? 'success' : 'error' },
+                    );
+                    void deliveries.refetch();
+                  }}
+                >
+                  Requeue delivery {delivery.id}
+                </Button>
+              )}
             </Typography>
           ))}
         </Box>

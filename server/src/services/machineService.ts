@@ -22,6 +22,7 @@ export interface MachineDraftInput {
   securityMode: string;
   securityPolicy: string;
   isActive: boolean;
+  subscription?: MachineRecordInput["subscription"];
   authentication?: MachineAuthenticationInput;
 }
 
@@ -55,6 +56,7 @@ function buildMachineRecord(input: MachineDraftInput): MachineRecordInput {
     securityMode: input.securityMode,
     securityPolicy: input.securityPolicy,
     isActive: input.isActive,
+    subscription: input.subscription ?? null,
     resourcePath: normalizedPath,
     endpointUrl: `opc.tcp://${input.ip}:${input.port}${normalizedPath}`,
   };

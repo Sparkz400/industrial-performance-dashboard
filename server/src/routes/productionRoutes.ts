@@ -25,6 +25,7 @@ import {
   validateQuery,
 } from "../middleware/validation.js";
 import { incidentReplay } from "../services/incidentReplay.js";
+import { auditLogService, getAuditActor } from "../services/auditLogService.js";
 import { requireRole } from "../middleware/auth.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import {
@@ -371,6 +372,45 @@ router.get(
     res.json(opcuaQueueWorker.getHealth());
   }),
 );
+// Records PostgreSQL refused stay in the local spool until exported or requeued.
+router.get(
+  "/quarantine",
+  requireRole("admin"),
+  asyncHandler(async (req, res) => {
+    const entries = opcuaQueueWorker.getQuarantine(1001);
+    await auditLogService.recordEvent(
+      {
+        action: "collector.quarantine.exported",
+        entityType: "measurement_quarantine",
+        message: `Exported ${Math.min(entries.length, 1000)} quarantined measurements`,
+      },
+      getAuditActor(req),
+    );
+    res.set("Cache-Control", "no-store");
+    res.json({
+      format: "measurement-quarantine-v1",
+      exportedAt: new Date().toISOString(),
+      entries: entries.slice(0, 1000),
+      truncated: entries.length > 1000,
+    });
+  }),
+);
+router.post(
+  "/quarantine/requeue",
+  requireRole("admin"),
+  asyncHandler(async (req, res) => {
+    const requeued = opcuaQueueWorker.requeueQuarantine();
+    await auditLogService.recordEvent(
+      {
+        action: "collector.quarantine.requeued",
+        entityType: "measurement_quarantine",
+        message: `Requeued ${requeued} quarantined measurements`,
+      },
+      getAuditActor(req),
+    );
+    res.json({ requeued });
+  }),
+);
 router.get(
   "/diagnostics",
   requireRole("admin"),
@@ -429,6 +469,9 @@ router.get(
               at: health.storageFailure.at,
               reason: "Local storage unavailable",
             }
+          : null,
+        writeFailure: health.writeFailure
+          ? { at: health.writeFailure.at, reason: "Database write failed" }
           : null,
       },
       redacted: [

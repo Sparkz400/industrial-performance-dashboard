@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { notificationResume } from "./maintenanceActions.js";
 import { cmmsDestinationDigest } from "./cmmsHandoff.js";
-import { eq, and, isNull, lte, asc, sql } from "drizzle-orm";
+import { eq, and, isNull, isNotNull, lte, asc, sql } from "drizzle-orm";
 import db from "../database/db.js";
 import {
   webhooks,
@@ -24,6 +24,9 @@ function generateSecret(): string {
 function signPayload(payload: string, secret: string): string {
   return crypto.createHmac("sha256", secret).update(payload).digest("hex");
 }
+
+// With the 15-minute backoff cap this is about one day of failed attempts.
+export const MAX_DELIVERY_ATTEMPTS = 100;
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 let pending: Promise<void> | undefined;
@@ -64,6 +67,7 @@ export const webhookService = {
         .where(
           and(
             isNull(webhookDeliveries.deliveredAt),
+            isNull(webhookDeliveries.deadLetteredAt),
             lte(webhookDeliveries.nextAttemptAt, new Date()),
           ),
         )
@@ -126,17 +130,32 @@ export const webhookService = {
         destination?.isActive && reviewedDestination
           ? await deliverWebhook(
               destination,
-              delivery.event as WebhookEvent,
+              {
+                id: delivery.id,
+                schemaVersion: delivery.schemaVersion,
+                ...(delivery.event as WebhookEvent),
+              },
               delivery.id,
             )
-          : { success: false, statusCode: 0 };
+          : {
+              success: false,
+              statusCode: 0,
+              message: destination?.isActive
+                ? "Destination changed after the handoff was reviewed"
+                : "Destination is inactive or deleted",
+            };
       const attempts = delivery.attempts + 1;
       await tx
         .update(webhookDeliveries)
         .set({
           attempts,
           lastStatus: result.statusCode,
+          lastError: result.success ? null : result.message.slice(0, 500),
           deliveredAt: result.success ? new Date() : null,
+          deadLetteredAt:
+            !result.success && attempts >= MAX_DELIVERY_ATTEMPTS
+              ? new Date()
+              : null,
           nextAttemptAt: new Date(
             Date.now() + Math.min(900000, 1000 * 2 ** Math.min(attempts, 10)),
           ),
@@ -150,18 +169,55 @@ export const webhookService = {
       .select({
         id: webhookDeliveries.id,
         webhookId: webhookDeliveries.webhookId,
+        eventType: sql<string>`${webhookDeliveries.event}->>'type'`,
+        schemaVersion: webhookDeliveries.schemaVersion,
         attempts: webhookDeliveries.attempts,
         nextAttemptAt: webhookDeliveries.nextAttemptAt,
         deliveredAt: webhookDeliveries.deliveredAt,
+        deadLetteredAt: webhookDeliveries.deadLetteredAt,
         lastStatus: webhookDeliveries.lastStatus,
+        lastError: webhookDeliveries.lastError,
         createdAt: webhookDeliveries.createdAt,
       })
       .from(webhookDeliveries)
       .orderBy(
+        sql`${webhookDeliveries.deadLetteredAt} IS NULL`,
         sql`${webhookDeliveries.deliveredAt} ASC NULLS FIRST`,
         asc(webhookDeliveries.id),
       )
       .limit(100);
+  },
+
+  async getDelivery(id: number) {
+    const [delivery] = await db
+      .select()
+      .from(webhookDeliveries)
+      .where(eq(webhookDeliveries.id, id));
+    if (!delivery) throw new NotFoundError("Delivery");
+    return delivery;
+  },
+
+  /** Retry a dead-lettered delivery under its original ID so receivers still deduplicate. */
+  async requeueDelivery(id: number) {
+    const [requeued] = await db
+      .update(webhookDeliveries)
+      .set({
+        deadLetteredAt: null,
+        attempts: 0,
+        nextAttemptAt: new Date(),
+      })
+      .where(
+        and(
+          eq(webhookDeliveries.id, id),
+          isNotNull(webhookDeliveries.deadLetteredAt),
+        ),
+      )
+      .returning({ id: webhookDeliveries.id });
+    if (!requeued) {
+      await this.getDelivery(id);
+      throw new ConflictError("Only dead-lettered deliveries can be requeued");
+    }
+    return requeued;
   },
   async listWebhooks(): Promise<WebhookRow[]> {
     return db.select().from(webhooks).orderBy(webhooks.createdAt);
@@ -297,6 +353,7 @@ async function deliverWebhook(
         "X-Webhook-Signature": signature,
         "X-Webhook-Event": event.type,
         "X-Webhook-Id": String(webhook.id),
+        "X-Webhook-Schema-Version": String(event.schemaVersion ?? 1),
         ...(deliveryId ? { "X-Webhook-Delivery-Id": String(deliveryId) } : {}),
       },
       body,

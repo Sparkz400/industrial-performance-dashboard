@@ -19,6 +19,11 @@ export interface MachineRecordInput {
   securityMode: string;
   securityPolicy: string;
   isActive: boolean;
+  subscription?: {
+    publishingIntervalMs: number;
+    queueSize: number;
+    maxNotificationsPerPublish: number;
+  } | null;
 }
 
 export interface NodeMappingUpsertInput {

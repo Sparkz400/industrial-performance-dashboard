@@ -12,8 +12,9 @@ The schedule cursor advances in the same database transaction as job creation.
 Startup and the one-second scheduler poll catch up retained missed slots, up to
 20 per pass, without dropping the remaining backlog. A newly created/re-enabled
 schedule starts at its next future slot. Changing cron/timezone resets that cursor;
-already queued runs retain their saved configuration. Deleting a schedule or
-template does not cancel its already queued jobs.
+already queued runs retain their saved configuration. Deleting a schedule cancels
+its queued or retrying runs and emails; deleting a template does not cancel jobs
+already queued from it.
 
 Jobs snapshot the template, machines, recipients, timezone and period end. The
 renderer always uses that saved period, including after a crash. Database advisory
@@ -70,8 +71,11 @@ inclusive boundary. Other condition types reject nonzero hysteresis.
 
 After a two-minute startup grace, the monitor checks every ten seconds. It records
 collector storage failures, low disk space (below twice the configured reserve),
-and queue entries older than 60 seconds or with unknown receive times. It also
-checks the state signal of commissioned machine profiles. Disconnected, stale,
+a backlog older than `COLLECTOR_BACKLOG_ALERT_SECONDS` (default 60), with unknown
+receive times or above 80% of `OPCUA_SPOOL_MAX_ENTRIES`, quarantined measurements,
+webhook deliveries that stopped retrying, and a projected disk runway below
+`STORAGE_RUNWAY_ALERT_DAYS` (default 2). It also checks the state signal of
+commissioned machine profiles. Disconnected, stale,
 missing, bad-quality and future-dated signals raise a distinct **Machine data
 unavailable** incident. Fresh, identity-matched observations clear that incident.
 
@@ -80,6 +84,33 @@ installations; detection latency increases with machine count. These incidents u
 the existing history, signed-in acknowledgment and durable `alarm.triggered` /
 `alarm.cleared` webhook path. Repeated checks update an open incident instead of
 creating duplicates. They diagnose observation availability, not a physical fault.
+
+## Collector capacity, quarantine and a second collector
+
+The Production page shows administrators the backlog against its capacity, spool
+bytes, oldest pending age, rows written in the last minute and the last database
+write failure. Acquisition stops (and never acknowledges a sample it cannot keep)
+when the backlog reaches `OPCUA_SPOOL_MAX_ENTRIES` (default 1,000,000) or free
+space beside the spool falls to `OPCUA_SPOOL_RESERVE_MB` (default 64). Size them
+for the outage you must ride through: spool bytes ÷ pending measurements gives
+bytes per sample; multiply by your sample rate and the outage window, and keep
+the reserve for the operating system. Measure on the installation itself;
+[capacity](CAPACITY.md) lists what has been measured so far.
+
+PostgreSQL can refuse a single record permanently, for example a text value with a
+NUL character from a fixed-length PLC string. Such data and integrity errors no longer
+block the queue: the worker writes the rest of the batch and moves the refused record
+to a quarantine table in the same local spool file. It is never deleted. An incident
+opens; administrators can **Export quarantined** (JSON, audited) and **Retry
+quarantined** after fixing the cause (audited; records keep their IDs and return as
+late arrivals). Connection and server errors still keep the whole batch for retry.
+
+Only one collector may acquire per database. It holds a PostgreSQL session advisory
+lock on a dedicated connection before connecting to any machine. A second instance
+waits and raises a **Second collector** incident until the lock is free. If the
+lock connection drops, the collector retries; if another collector took the lock,
+it disconnects its machines. A collector against a different database is not
+detected; that stays procedural.
 
 An application cannot reliably report its own complete outage or unavailable
 database through that same database. Monitor `/healthz` and host disk/service status
@@ -93,5 +124,9 @@ the collector recovers.
 the same job, checks catch-up/concurrent cursor use, fixed periods, email failure,
 partial acceptance, absent SMTP and manual retry. `test-unattended-alarms.mjs`
 tests UI-configured holds/hysteresis, persisted pending state, bad-quality recovery,
-stale-to-fresh machine data and injected collector failures against an isolated DB.
+stale-to-fresh machine data, injected collector failures and a near-capacity backlog
+against an isolated DB. `test-spool-quarantine.mjs` stores a NUL-character string
+in PostgreSQL, quarantines it while later samples commit, and exports and retries it
+in the browser with audit rows. `test-collector-lock.mjs` covers lock contention,
+a terminated lock connection and takeover by another collector.
 Physical alarms, customer SMTP and a sustained unattended deployment remain unqualified.

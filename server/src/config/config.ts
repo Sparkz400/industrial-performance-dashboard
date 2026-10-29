@@ -130,6 +130,25 @@ const envVarsSchema = Joi.object({
 
   // Application Configuration
   OPCUA_SPOOL_PATH: Joi.string().default("data/measurements.sqlite"),
+  OPCUA_SPOOL_MAX_ENTRIES: Joi.number()
+    .integer()
+    .min(1000)
+    .default(1_000_000)
+    .description("Pending measurements at which acquisition stops"),
+  OPCUA_SPOOL_RESERVE_MB: Joi.number()
+    .integer()
+    .min(16)
+    .default(64)
+    .description("Free disk space (MiB) kept beside the spool"),
+  COLLECTOR_BACKLOG_ALERT_SECONDS: Joi.number()
+    .integer()
+    .min(10)
+    .default(60)
+    .description("Oldest pending measurement age that raises a backlog alert"),
+  STORAGE_RUNWAY_ALERT_DAYS: Joi.number()
+    .min(0.5)
+    .default(2)
+    .description("Projected days to the disk reserve that raise an alert"),
   LOG_LEVEL: Joi.string()
     .valid("error", "warn", "info", "http", "verbose", "debug", "silly")
     .default("info"),
@@ -307,6 +326,10 @@ export interface AppConfig {
   ADMIN_API_KEY?: string;
   OPCUA_BATCH_SIZE: number;
   OPCUA_SPOOL_PATH: string;
+  OPCUA_SPOOL_MAX_ENTRIES: number;
+  OPCUA_SPOOL_RESERVE_MB: number;
+  COLLECTOR_BACKLOG_ALERT_SECONDS: number;
+  STORAGE_RUNWAY_ALERT_DAYS: number;
   OPCUA_QUEUE_DELAY: number;
   OPCUA_QUEUE_WARN_THRESHOLD: number;
   MAX_QUEUE_SIZE: number;
