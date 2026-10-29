@@ -354,7 +354,7 @@ below retain their unfulfilled acceptance criteria.
   is deleted by default merely because a new version was installed.
   Completed: opt-in policy, exact reviewed previews, protected evidence and bounded
   deletion ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59),
-  [PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)). The P1 gap wave
+  [PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)). [PR #67](https://github.com/Sparkz400/performance_dashboard/pull/67)
   makes restores cancel pending deletions; `test-operations.mjs` backs up while a deletion
   is scheduled, runs it on the source, restores, and proves the raw rows return, no summary
   double-counts them and neither the schedule nor a replay deletes anything.
@@ -428,8 +428,9 @@ below retain their unfulfilled acceptance criteria.
   Tests prevent duplicated totals, negative production and inferred perfect quality.
   Completed: reset-to-zero, reject-decrease and declared rollover with an explicit modulus
   ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)); revisioned operator
-  declarations ([PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57)). The
-  P1 gap wave applies the latest reviewed declaration as a declared shift snapshot: it
+  declarations ([PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57)).
+  [PR #67](https://github.com/Sparkz400/performance_dashboard/pull/67) applies the latest
+  reviewed declaration as a declared shift snapshot: it
   replaces only incomplete counters, is labelled, never verifies the shift, and is flagged
   when complete counters differ (`shiftCalculation.test.ts`, `test-daily-workflows.mjs`).
   Sampling and rollover behaviour on the physical machine stay with the S7-1500 pilot (D06).
@@ -524,7 +525,7 @@ below retain their unfulfilled acceptance criteria.
   English/German, dates, decimal formats and display units follow a declared locale.
   Stored measurement units remain unchanged by display preferences.
   Completed: role-focused navigation and English/German core workflows
-  ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)); the P1 gap wave
+  ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)); [PR #67](https://github.com/Sparkz400/performance_dashboard/pull/67)
   adds a searchable machine picker and a per-account remembered machine/tab on Daily
   operations, and shared language-aware number, percent and date formatting
   (`i18n.test.ts`, `test-daily-workflows.mjs`). Scope: units are shown exactly as stored
@@ -637,7 +638,7 @@ below retain their unfulfilled acceptance criteria.
   a correction creates a new revision with a reason. Published reports can be reproduced
   or clearly identify why underlying retention prevents full regeneration.
   Completed: immutable digest-bound revisions ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)).
-  The P1 gap wave requires a reason for every revision after the first and adds a
+  [PR #67](https://github.com/Sparkz400/performance_dashboard/pull/67) requires a reason for every revision after the first and adds a
   read-only regeneration check that names changed sections and recorded causes (later
   corrections, late data, declarations, plan changes, retention in overlapping hours);
   `reportRevisionCheck.test.ts`, `test-daily-workflows.mjs` with browser.
@@ -836,7 +837,7 @@ below retain their unfulfilled acceptance criteria.
   support download are implemented. Browser export checks pass; failed-job diagnostics
   include durable report generation/delivery attempt and retry state.
   Connection diagnostics show reconnects in the UI (C09).
-  Completed: the P1 gap wave adds admin-only Prometheus gauges for reconnects and losses,
+  Completed: [PR #67](https://github.com/Sparkz400/performance_dashboard/pull/67) adds admin-only Prometheus gauges for reconnects and losses,
   spool backlog and age, per-machine last commit age, database round trip and background
   job states; unknown values are NaN or absent, never zero (`operationalMetrics.test.ts`,
   real-database scrape in `test-access.mjs`). Metrics are listed in [operations](docs/OPERATIONS.md).
