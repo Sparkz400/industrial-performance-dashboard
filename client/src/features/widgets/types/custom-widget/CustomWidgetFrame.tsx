@@ -4,24 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/utils/api';
 import { API_BASE_URL } from '@/config/config';
 import type { WidgetComponentProps } from '@/types';
+import { registrationsQuery } from './registrations';
 
-export interface RuntimeRegistration {
-  id: number;
-  isActive: boolean;
-  manifest: {
-    id: string;
-    name: string;
-    version: string;
-    entryUrl: string;
-    permissions: string[];
-    description?: string;
-  };
-}
-export const registrationsQuery = {
-  queryKey: ['widget-runtime'],
-  queryFn: () =>
-    api.get(`${API_BASE_URL}/widget-runtime/registrations`) as Promise<RuntimeRegistration[]>,
-};
 /** Message format version sent to widgets with every message. */
 const PROTOCOL = 1;
 interface Series {

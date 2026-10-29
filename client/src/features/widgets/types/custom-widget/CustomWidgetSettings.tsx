@@ -3,7 +3,7 @@ import { Alert, Box, MenuItem, Stack, TextField } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useMachineStore } from '@/stores/useMachineStore';
 import type { WidgetSettingsProps } from '@/types';
-import { registrationsQuery } from './CustomWidgetFrame';
+import { registrationsQuery } from './registrations';
 
 /**
  * Chooses a registered widget (pinning its version), the machine and the signals it receives.
