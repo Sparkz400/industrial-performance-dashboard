@@ -6,7 +6,7 @@ import {
   verifyRelease,
   releaseNotes,
   openAcceptanceItems,
-  mergedChanges,
+  parseChanges,
 } from "./release-package.mjs";
 await mkdir(".local", { recursive: true });
 const root = await mkdtemp(resolve(".local", "release-signature-test-")),
@@ -123,8 +123,14 @@ for (const expected of [
   "- H06 (P1): Add rollups",
 ])
   assert(notes.includes(expected), expected);
-// Real history: merged pull requests are listed by number and title.
-assert(mergedChanges().some((change) => /^#\d+ \S/.test(change)));
+// Merged pull requests are listed by number and title; direct commits by subject.
+assert.deepEqual(
+  parseChanges(
+    "Merge pull request #69 from owner/wave2\x1fBacklog wave 2: outbox\n\x1e" +
+      "docs: reference PR #69\x1f\x1e",
+  ),
+  ["#69 Backlog wave 2: outbox", "docs: reference PR #69"],
+);
 await writeFile(
   join(root, "validation.json"),
   JSON.stringify(

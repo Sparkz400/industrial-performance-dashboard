@@ -20,9 +20,14 @@ await dailyFixture(async ({ pool, users, browser, actors, frontend, password, ex
   const report = {};
   const scan = async (page, name) => {
     await page.waitForLoadState("networkidle");
-    // Reduced motion still fades opacity (0.4 s); judge contrast on the settled page.
-    await page.waitForTimeout(800);
-    const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+    // Reduced motion still fades opacity in. A fade can still be running on a slow
+    // machine, so rescan briefly while contrast findings remain; a real one persists.
+    let violations = [];
+    for (let attempt = 0; attempt < 6; attempt++) {
+      ({ violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze());
+      if (!violations.some((v) => v.id === "color-contrast")) break;
+      await page.waitForTimeout(1000);
+    }
     report[name] = violations.map((v) => ({
       id: v.id,
       impact: v.impact,

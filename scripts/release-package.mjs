@@ -38,16 +38,22 @@ export function openAcceptanceItems(todo) {
 
 /** Merged pull requests on the first-parent history since `previous`. */
 export function mergedChanges(previous) {
-  const log = execFileSync(
-    "git",
-    [
-      "log",
-      "--first-parent",
-      "--format=%s%x1f%b%x1e",
-      previous ? `${previous}..HEAD` : "HEAD",
-    ],
-    { encoding: "utf8" },
+  return parseChanges(
+    execFileSync(
+      "git",
+      [
+        "log",
+        "--first-parent",
+        "--format=%s%x1f%b%x1e",
+        previous ? `${previous}..HEAD` : "HEAD",
+      ],
+      { encoding: "utf8" },
+    ),
   );
+}
+
+/** `git log --format=%s%x1f%b%x1e` output: a merged PR becomes "#N <PR title>". */
+export function parseChanges(log) {
   return log
     .split("\x1e")
     .map((entry) => entry.trim().split("\x1f"))
