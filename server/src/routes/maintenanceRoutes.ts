@@ -35,20 +35,27 @@ const router = Router(),
   positive = Joi.number().integer().positive().required(),
   id = Joi.object({ id: positive });
 // Content must match the declared type; anything else is refused rather than stored.
-const attachmentTypes: Record<string, (file: Buffer) => boolean> = {
-  "image/png": (f) =>
-    f.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])),
-  "image/jpeg": (f) => f[0] === 0xff && f[1] === 0xd8 && f[2] === 0xff,
-  "application/pdf": (f) => f.subarray(0, 5).toString("latin1") === "%PDF-",
-  "text/plain": (f) => {
-    try {
-      new TextDecoder("utf-8", { fatal: true }).decode(f);
-      return !f.includes(0);
-    } catch {
-      return false;
-    }
-  },
-};
+// A Map, so a type such as "constructor" cannot reach an Object.prototype method.
+const attachmentTypes = new Map<string, (file: Buffer) => boolean>([
+  [
+    "image/png",
+    (f) =>
+      f.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])),
+  ],
+  ["image/jpeg", (f) => f[0] === 0xff && f[1] === 0xd8 && f[2] === 0xff],
+  ["application/pdf", (f) => f.subarray(0, 5).toString("latin1") === "%PDF-"],
+  [
+    "text/plain",
+    (f) => {
+      try {
+        new TextDecoder("utf-8", { fatal: true }).decode(f);
+        return !f.includes(0);
+      } catch {
+        return false;
+      }
+    },
+  ],
+]);
 const attachmentColumns = {
   id: maintenanceAttachments.id,
   eventId: maintenanceAttachments.eventId,
@@ -430,14 +437,16 @@ router.post(
   attachmentParams,
   express.raw({ type: () => true, limit: "5mb" }),
   asyncHandler(async (req, res) => {
-    const file = req.body as Buffer,
+    // A copy of the raw body, so nothing below can see a parsed array or object.
+    const file = Buffer.isBuffer(req.body)
+        ? Buffer.from(req.body)
+        : Buffer.alloc(0),
       type = String(req.headers["content-type"] ?? "")
         .split(";")[0]
         .trim()
         .toLowerCase();
-    if (!Buffer.isBuffer(file) || !file.length)
-      throw new ValidationError("Attach a non-empty file");
-    if (!attachmentTypes[type]?.(file))
+    if (!file.length) throw new ValidationError("Attach a non-empty file");
+    if (!attachmentTypes.get(type)?.(file))
       throw new ValidationError(
         "Attach a PNG, JPEG, PDF or UTF-8 text file whose content matches its type",
       );
