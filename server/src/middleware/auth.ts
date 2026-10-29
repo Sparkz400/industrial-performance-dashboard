@@ -17,7 +17,7 @@ declare module "express-session" {
     oidcSid?: string;
     oidcAuthTime?: number;
     oidcPending?: import("../services/oidc.js").PendingSignIn;
-    oidcError?: string;
+    oidcError?: { message: string; at: number };
   }
 }
 

@@ -19,6 +19,7 @@ import logger from "../utils/logger.js";
 // E02: single sign-on. Mounted before requireAuth; the back-channel endpoint has no session.
 const router = express.Router();
 const SIGN_IN_WINDOW_MS = 10 * 60_000;
+const ERROR_SHOWN_MS = 60_000;
 
 const saveSession = (req: Request) =>
   new Promise<void>((resolve, reject) =>
@@ -26,16 +27,15 @@ const saveSession = (req: Request) =>
   );
 
 router.get("/config", (req: Request, res: Response) => {
-  // A failed sign-in's reason is shown once on the login page, never put in the URL.
-  const error = req.session.oidcError;
-  if (error) {
-    delete req.session.oidcError;
-    req.session.save(() => {});
-  }
+  // A failed sign-in's reason is shown on the login page for a minute, never put in the URL.
+  const failure = req.session.oidcError;
   res.json({
     enabled: oidcEnabled(),
     displayName: config.OIDC_DISPLAY_NAME,
-    error: error ?? null,
+    error:
+      failure && Date.now() - failure.at < ERROR_SHOWN_MS
+        ? failure.message
+        : null,
   });
 });
 
@@ -52,6 +52,7 @@ router.get(
       );
     });
     req.session.oidcPending = pending;
+    delete req.session.oidcError;
     await saveSession(req);
     res.redirect(url.href);
   }),
@@ -71,7 +72,7 @@ router.get(
         },
         getAuditActor(req),
       );
-      req.session.oidcError = message;
+      req.session.oidcError = { message, at: Date.now() };
       await saveSession(req);
       res.redirect(`${config.CLIENT_URL}/login`);
     };
