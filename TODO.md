@@ -465,7 +465,7 @@ below retain their unfulfilled acceptance criteria.
   ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62),
   [scope](docs/QUALITY_LINE_OPERATIONS.md#production-line-investigations)). Remaining:
   histograms and an explicit acquisition-resolution limit on short-stop detection.
-  Completed (wave 4): ten-bin cycle histograms, a loss Pareto, and microstops withheld when the
+  Completed ([PR #71](https://github.com/Sparkz400/performance_dashboard/pull/71)): ten-bin cycle histograms, a loss Pareto, and microstops withheld when the
   threshold is under two state sampling intervals (± one interval otherwise)
   ([scope](docs/QUALITY_LINE_OPERATIONS.md#production-line-investigations), `test-line-analysis.mjs`).
 - [ ] **O08 — Add line topology and bottleneck analysis** · P2 · M3 · New · XL. Depends: O07, O05.
@@ -909,7 +909,7 @@ below retain their unfulfilled acceptance criteria.
   Progress: hashed offline image packages and fresh offline installation
   ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)); signed release
   envelopes with SBOM and license inventory ([PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64)).
-  Wave 4: unresolvable mail and webhook destinations fail within their timeouts with a clear
+  [PR #71](https://github.com/Sparkz400/performance_dashboard/pull/71): unresolvable mail and webhook destinations fail within their timeouts with a clear
   status while the report completes (`test-offline-destinations.mjs`). Remaining: an offline
   update rehearsal from one offline package to the next.
 - [ ] **D08 — Design high availability from measured needs** · P2 · M4 · Research · XL. Depends: D04, H08, E03.
@@ -997,7 +997,7 @@ below retain their unfulfilled acceptance criteria.
   Done: initialize/verify the GitHub wiki publication path if still needed, keep its source
   in docs/wiki, and provide sanitized mapping/dashboard/report examples with expected
   outputs. Accept contributions without uploading customer data or machine credentials.
-  Completed (wave 4): the wiki was initialised and the sync published `docs/wiki` (`82a1216`);
+  Completed ([PR #71](https://github.com/Sparkz400/performance_dashboard/pull/71)): the wiki was initialised and the sync published `docs/wiki` (`82a1216`);
   [examples](examples/README.md) add a dashboard and a report template beside the gateway and
   profile, each with its expected output, and `test-examples.mjs` rejects credentials and checks
   the outputs. CONTRIBUTING says how to sanitize a contribution.
@@ -1007,7 +1007,7 @@ below retain their unfulfilled acceptance criteria.
   are verified. A release label does not erase open physical/security acceptance limits.
   Progress: signed release envelopes with digests, migrations, SBOM, license inventory
   and evidence verification ([PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64),
-  [scope](docs/FACTORY_OPERATIONS.md#versioned-offline-release-candidates)). Wave 4: generated
+  [scope](docs/FACTORY_OPERATIONS.md#versioned-offline-release-candidates)). [PR #71](https://github.com/Sparkz400/performance_dashboard/pull/71): generated
   release notes (changes since the previous tag, new migrations, open P0/P1 items), the
   compatibility list in the signed package, `release-evidence.mjs` (CI checks of the revision plus
   container/operations runs on the exact image), a key-custody procedure ([releasing](docs/RELEASING.md))
@@ -1017,7 +1017,7 @@ below retain their unfulfilled acceptance criteria.
   Done: label small tasks by subsystem and expected evidence, document connector/widget
   boundaries and add fixtures useful to reviewers. Maintain existing public-repo policies
   instead of adding redundant workflows or unmaintained template files.
-  Completed (wave 4): CONTRIBUTING maps TODO prefixes and subsystems to code paths and the
+  Completed ([PR #71](https://github.com/Sparkz400/performance_dashboard/pull/71)): CONTRIBUTING maps TODO prefixes and subsystems to code paths and the
   evidence to quote, states the owned-database rule and the unqualified widget runtime, and
   points to sanitized examples; existing issue templates and workflows are reused.
 - [ ] **P06 — Review product usefulness after each pilot milestone** · P1 · M1 · Research · M. Depends: D06, P01.
