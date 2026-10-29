@@ -141,4 +141,40 @@ describe("bounded read-only Modbus", () => {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
   });
+  it("addresses serial devices behind an RTU-to-TCP gateway by unit identifier", async () => {
+    // Units 1 and 2 answer with their own registers; the absent unit 3 gets gateway exception 0x0B.
+    const units = new Map([
+      [1, "0001"],
+      [2, "0002"],
+    ]);
+    const server = createServer((socket) => {
+      socket.on("error", () => {});
+      socket.once("data", (request) => {
+        if (!Buffer.isBuffer(request))
+          throw new Error("Expected binary fixture request");
+        const registers = units.get(request[6]);
+        const response = Buffer.from(
+          registers ? `000000000005000302${registers}` : "00000000000300830b",
+          "hex",
+        );
+        request.copy(response, 0, 0, 2);
+        response[6] = request[6];
+        socket.end(response);
+      });
+    });
+    server.listen(0, "127.0.0.1");
+    await once(server, "listening");
+    const address = server.address();
+    if (!address || typeof address === "string")
+      throw new Error("No owned listener");
+    const read = (unitId: number) =>
+      readRegisters({ ...block, port: address.port, unitId, count: 1 });
+    try {
+      expect((await read(1)).toString("hex")).toBe("0001");
+      expect((await read(2)).toString("hex")).toBe("0002");
+      await expect(read(3)).rejects.toThrow("Modbus exception 11");
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
 });

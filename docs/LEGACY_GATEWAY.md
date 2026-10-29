@@ -2,7 +2,8 @@
 
 The optional reference adapter polls one explicitly configured Modbus TCP register
 block and exposes scalar values through encrypted OPC UA on **127.0.0.1 only**.
-It supports register reads 03/04, never writes, coils or RTU. It is a bounded
+It supports register reads 03/04, never writes or coils. Serial Modbus RTU devices
+are reached through an RTU-to-TCP gateway, not a serial port of the app. It is a bounded
 starting point for a legacy-machine pilot, not a vendor-qualified universal driver.
 The nominated S7-1500 pilot still uses its native OPC UA server; this example does
 not assume that a Siemens CPU exposes the fixture's register map.
@@ -44,6 +45,35 @@ node server/dist/src/gateway/runGateway.js examples/legacy-gateway.json
 Set the example's `trustedClientCertificate` to the app's public certificate;
 standalone paths resolve relative to the configuration file. Keep that process
 co-located with the collector, and back up its configuration and PKI separately.
+
+## Serial RTU devices through a TCP gateway
+
+The adapter has no serial driver. A serial Modbus RTU device is read through an
+approved RTU-to-TCP gateway (a serial device server running in Modbus gateway mode).
+The gateway forwards each Modbus TCP request to the serial line and routes it by the
+MBAP unit identifier, which is the device's serial slave address.
+
+1. Configure the gateway per its manual: baud rate, parity, stop bits and RTU framing
+   of the serial line, a fixed IP address on the isolated machine network, TCP port
+   502 or the port it documents, and a serial response timeout.
+2. Write down each device's slave address, readable register block and permitted poll
+   rate. A serial line serves one request at a time: keep `pollMs` per device at or
+   above what the line and every device on it allow, and keep the adapter's
+   `timeoutMs` above the gateway's serial timeout.
+3. Create one gateway configuration per device with the gateway's host and port and
+   `unitId` set to the slave address. Several devices on one line use separate
+   configurations (own OPC UA port and PKI directory, as for the second standalone
+   gateway above), each commissioned as its own machine.
+4. If a device does not answer, the gateway replies with a Modbus exception
+   (typically 0x0B, target device failed to respond, or 0x0A, path unavailable). The
+   adapter exposes this as bad quality and the interval stays unknown.
+
+Unit 0 is a broadcast address in RTU and gets no reply; do not use it. Use only
+read functions 03/04; the adapter has no write function, and gateway settings that
+allow other masters to write are the deployer's responsibility. Evidence:
+`modbusRead.test.ts` routes reads to two units behind one owned gateway fixture
+and rejects the absent unit's 0x0B exception. No physical serial gateway or RTU
+device has been qualified.
 
 ## Container installation
 
