@@ -26,11 +26,11 @@ where marked *(local)*.
 | Dashboard widgets: batch monitor, SPC chart, digital twin, custom widgets | admin | Experimental | `batchQuality.test.ts`, `spcReference.test.ts`, `sanitizeSvg.test.ts` | custom-widget runtime unqualified (I07) | U |
 | Selected-data links (`/shared/:token`, `/embed/:token`) | anyone with a live link; created by admin | Supported (new in F08) | `test-shares.mjs` | revoked, expired, demoted creator, legacy and guessed links 410; foreign widgets 404; frame-ancestors: `shareService.test.ts` | U D B |
 | Production → shift workspace (`/production`) | granted; operators classify | Supported | `test-production.mjs` | stop overlap, DST, counter gaps, independent reconciliation mismatch: `shiftCalculation.test.ts`, `test-production.mjs` | U D B S |
-| Production → operator handover | granted; operators write | Supported | `test-operator.mjs` *(local)*, `test-offline-operator.mjs` | stale edits, duplicate retries, offline expiry: same scripts | U D B |
+| Production → operator handover | granted; operators write | Supported | `test-operator.mjs` *(local)*, `test-offline-operator.mjs`; reviewed declarations in the report: `test-daily-workflows.mjs` | stale edits, duplicate retries, offline expiry; unreviewed declarations ignored, declared counts never verify: `shiftCalculation.test.ts` | U D B |
 | Production → incident replay | granted | Supported | `test-incident-replay.mjs` *(local)* | gaps, quality, clock skew: `incidentReplay.test.ts` | U D B |
 | Production → commission machine | admin | Supported | `test-secure-machine.mjs` *(local)*, `test-production.mjs` | wrong credentials, untrusted/expired certificate, host mismatch | U D B S |
 | Wallboard (`/wallboard`) | wallboard/viewer accounts | Supported | `test-operator.mjs` *(local)* | stale/failed updates become unknown; viewing-distance acceptance open (U05) | D B |
-| Daily operations → planning, maintenance, energy, history | granted; supervisors configure | Supported | `test-daily-workflows.mjs`, `test-history.mjs`, `test-maintenance-costs.mjs` | DST/holiday edge cases, stale plans, retention preview expiry | U D B |
+| Daily operations → planning, maintenance, energy, history | granted; supervisors configure | Supported | `test-daily-workflows.mjs` (incl. machine search, remembered machine/tab, revision reasons, reproducibility check), `test-history.mjs`, `test-maintenance-costs.mjs` | DST/holiday edge cases, stale plans, retention preview expiry, revision without reason refused, regenerated report differences named: `reportRevisionCheck.test.ts`; locale formatting: `i18n.test.ts` | U D B |
 | Daily operations → production line, alarm actions, comparisons | supervisor/admin | Supported | `test-quality-line.mjs`, `test-supervisor-workflows.mjs`, `test-period-comparisons.mjs` | foreign machines 403, stale revisions, incomparable periods | U D B |
 | Daily operations → diagnostics, alarm usefulness, work orders | supervisor/admin | Supported | `test-operational-diagnostics.mjs`, `test-work-orders.mjs` | expired reviews, duplicate imports, unknown counters | U D B |
 | Daily operations → asset overview, calculated signals | granted; supervisors define signals | Supported | `test-asset-overview.mjs`, `test-measurement-corrections.mjs` | bad quality, division by zero, unit mismatch: `derivedSignalExpression.test.ts` | U D B |
@@ -56,7 +56,8 @@ where marked *(local)*.
 | Route × role × identifier matrix (REST and tRPC) | `accessMatrix.test.ts` (snapshot), `anonymous.test.ts`, `test-access.mjs`, `test-supervisor-workflows.mjs`; see [security boundaries](SECURITY_BOUNDARIES.md#access-matrix-f07) | U D B |
 | Live sockets | `test-access.mjs` (rooms, alarm events, revocation), `socketSessions.test.ts`, `accessMatrix.test.ts` (no global broadcasts) | U D |
 | Durable acquisition and replay | `test-recovery.mjs`, `measurementSpool.test.ts`, `test-database-client-errors.mjs` | U D S |
-| Installation, backup, restore, upgrade, rollback | `test-operations.mjs`, `test-container.mjs` | D |
+| Installation, backup, restore, upgrade, rollback | `test-operations.mjs` (incl. restore after retention cancels pending deletions), `test-container.mjs` | D |
+| Operational metrics | `operationalMetrics.test.ts`; real-database admin scrape and viewer refusal in `test-access.mjs` | U D |
 | Release packaging | `test-release-package.mjs`, `offline-package.mjs verify` | D |
 | Endurance | `test-installation-endurance.mjs` short run in CI; the 72-hour gate (FR01) is open | D B S |
 

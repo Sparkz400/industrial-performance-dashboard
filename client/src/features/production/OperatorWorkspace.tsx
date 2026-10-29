@@ -483,9 +483,10 @@ export default function OperatorWorkspace() {
                   {t('Manual declaration:')} {entry.quantity.total} {t('total,')}{' '}
                   {entry.quantity.good} {t('good,')} {entry.quantity.reject} {t('reject.')}{' '}
                   {entry.status === 'resolved'
-                    ? t('Reviewed; ')
-                    : t('Awaiting administrator review; ')}
-                  {t('measured KPIs are unchanged.')}{' '}
+                    ? t(
+                        'Reviewed; the shift report uses it only where machine counters are incomplete and stays unverified.',
+                      )
+                    : t('Awaiting review; not used in the shift report.')}{' '}
                 </Alert>
               )}
               <Button onClick={() => setHistory(history === entry.id ? null : entry.id)}>

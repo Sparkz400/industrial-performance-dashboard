@@ -125,6 +125,7 @@ export function calculateShift(input: {
   reasons: DowntimeReason[];
   samples: Record<string, ShiftSample[]>;
   evidence: ShiftReport["evidence"];
+  declaration?: ShiftReport["declaration"];
 }): ShiftReport {
   const { profile, start, end } = input;
   const intervals = stateTimeline(
@@ -198,9 +199,11 @@ export function calculateShift(input: {
     good: null,
     reject: null,
   };
+  let measuredComplete = true;
   for (const key of ["total", "good", "reject"] as const) {
     const signal = profile.signals[key];
     if (!signal) {
+      measuredComplete = false;
       issues.push(`Missing ${key} counter mapping.`);
       continue;
     }
@@ -212,9 +215,35 @@ export function calculateShift(input: {
       end,
     );
     quantities[key] = result.count;
-    if (!result.complete)
+    if (!result.complete) {
+      measuredComplete = false;
       issues.push(
         `${key} counter has gaps, a decrease, or unsampled shift boundaries; quantity is only observed deltas.`,
+      );
+    }
+  }
+  // A reviewed declaration stands in only for incomplete counters and never verifies a shift.
+  const declaration = input.declaration ?? null;
+  let quantitySource: ShiftReport["quantitySource"] = "measured";
+  if (declaration) {
+    const declared = {
+      total: declaration.total,
+      good: declaration.good,
+      reject: declaration.reject,
+    };
+    if (!measuredComplete) {
+      Object.assign(quantities, declared);
+      quantitySource = "declaration";
+      issues.push(
+        `Quantities come from reviewed manual declaration #${declaration.entryId} because machine counters are incomplete.`,
+      );
+    } else if (
+      (["total", "good", "reject"] as const).some(
+        (key) => quantities[key] !== declared[key],
+      )
+    )
+      issues.push(
+        `Reviewed manual declaration #${declaration.entryId} differs from measured counts.`,
       );
   }
   const scheduledSeconds =
@@ -284,6 +313,8 @@ export function calculateShift(input: {
     plannedSeconds,
     observedSeconds: (end.getTime() - start.getTime()) / 1000 - seconds.unknown,
     quantities,
+    quantitySource,
+    declaration,
     oee: {
       availability,
       performance,

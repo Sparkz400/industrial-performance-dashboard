@@ -161,6 +161,9 @@ await dailyFixture(
     );
     assert.equal(revision.snapshot.runs.length, 2);
     assert.equal(revision.snapshot.oee.performance, 5 / 60);
+    const verify = (id) =>
+      ok("viewer", "GET", `/planning/shifts/${shift.id}/revisions/${id}/verify`);
+    assert.deepEqual((await verify(revision.id)).changedSections, []);
     await pool.query("UPDATE production_shifts SET breaks=$1 WHERE id=$2", [
       JSON.stringify([{ start: middle, end }]),
       shift.id,
@@ -188,6 +191,10 @@ await dailyFixture(
       version: 2,
       runs: [],
     });
+    const replanned = await verify(revision.id);
+    assert.equal(replanned.reproducible, false);
+    assert.equal(replanned.causes.planChanged, true);
+    assert(replanned.changedSections.includes("runs"), replanned.changedSections);
     assert.deepEqual(
       (
         await ok(
@@ -242,18 +249,98 @@ await dailyFixture(
       ).status(),
       409,
     );
+    for (const reason of [undefined, "   "])
+      assert.equal(
+        (
+          await call(
+            "supervisor",
+            "POST",
+            `/api/v1/planning/shifts/${shift.id}/revisions`,
+            reason === undefined ? {} : { reason },
+          )
+        ).status(),
+        400,
+        "Later revisions need a reason",
+      );
     const energyRevision = await ok(
       "supervisor",
       "POST",
       `/planning/shifts/${shift.id}/revisions`,
-      {},
+      { reason: "Independent meter reconciliation recorded" },
       201,
     );
     assert.equal(energyRevision.snapshot.energy.reconciled, true);
+    assert.equal(
+      energyRevision.reason,
+      "Independent meter reconciliation recorded",
+    );
+    assert.equal((await verify(energyRevision.id)).reproducible, true);
     await pool.query(
       "UPDATE opcua_data SET status_code='Bad' WHERE machine_id=$1 AND node_key='Energy' AND timestamp=$2",
       [machine, end],
     );
+    // An unrecorded change is detected but not attributed to any recorded cause.
+    const tampered = await verify(energyRevision.id);
+    assert.equal(tampered.reproducible, false);
+    assert(tampered.changedSections.includes("energy"), tampered.changedSections);
+    assert.deepEqual(tampered.causes, {
+      laterCorrections: 0,
+      lateArrivals: 0,
+      laterDeclarations: 0,
+      planChanged: false,
+      removedSamplesInOverlappingHours: 0,
+    });
+    // A declaration enters the report only after review, with its provenance, and never verifies it.
+    const handCount = {
+      text: "Hand count at shift end",
+      priority: "normal",
+      ownerId: null,
+      dueAt: null,
+    };
+    const declaration = await ok(
+      "operator",
+      "POST",
+      "/production/operator/entries",
+      {
+        ...handCount,
+        requestId: randomUUID(),
+        machineId: machine,
+        shiftId: shift.id,
+        intervalStart: null,
+        intervalEnd: null,
+        kind: "quantity",
+        quantity: { total: 99, good: 98, reject: 1 },
+      },
+      201,
+    );
+    assert.equal(
+      (await ok("viewer", "GET", `/production/shifts/${shift.id}/report`))
+        .declaration,
+      null,
+      "Unreviewed declarations stay out of the report",
+    );
+    await ok("supervisor", "POST", `/production/operator/entries/${declaration.id}`, {
+      ...handCount,
+      version: 1,
+      status: "resolved",
+    });
+    const declared = await ok(
+      "viewer",
+      "GET",
+      `/production/shifts/${shift.id}/report`,
+    );
+    assert.equal(declared.declaration.entryId, declaration.id);
+    assert.equal(declared.verified, false);
+    if (declared.quantitySource === "declaration")
+      assert.deepEqual(declared.quantities, { total: 99, good: 98, reject: 1 });
+    else
+      assert(
+        declared.issues.includes(
+          `Reviewed manual declaration #${declaration.id} differs from measured counts.`,
+        ),
+        declared.issues,
+      );
+    assert.equal((await verify(energyRevision.id)).causes.laterDeclarations, 1);
     assert.equal(
       (await ok("viewer", "GET", `/energy/shifts/${shift.id}`)).kWhPerGoodPart,
       null,
@@ -375,11 +462,22 @@ await dailyFixture(
       await expect(
         page.getByRole("heading", { name: "Daily operations" }),
       ).toBeVisible();
-      await page.getByLabel("Machine").click();
+      // Machine search filters by name; the choice is remembered for this account.
+      const picker = page.getByRole("combobox", { name: "Machine", exact: true });
+      await picker.fill("no such machine");
+      await expect(page.getByText("No matching machine", { exact: true })).toBeVisible();
+      await picker.fill("daily");
       await page
         .getByRole("option", { name: "Daily Line", exact: true })
         .click();
       await page.getByRole("tab", { name: "Maintenance", exact: true }).click();
+      await page.reload();
+      await expect(
+        page.getByRole("combobox", { name: "Machine", exact: true }),
+      ).toHaveValue("Daily Line");
+      await expect(
+        page.getByRole("tab", { name: "Maintenance", exact: true }),
+      ).toHaveAttribute("aria-selected", "true");
       await expect(
         page.getByText("Weekly inspection", { exact: true }),
       ).toBeVisible();
@@ -457,10 +555,26 @@ await dailyFixture(
         .click();
       await expect(
         page.getByRole("button", { name: "Save report revision", exact: true }),
+      ).toBeDisabled();
+      await page
+        .getByLabel("Revision reason", { exact: true })
+        .fill("UI product run added");
+      await expect(
+        page.getByRole("button", { name: "Save report revision", exact: true }),
       ).toBeEnabled();
       await page
         .getByRole("button", { name: "Save report revision", exact: true })
         .click();
+      await expect(page.getByText("UI product run added", { exact: false })).toBeVisible();
+      await page
+        .getByRole("button", { name: "Check reproducibility", exact: true })
+        .first()
+        .click();
+      await expect(
+        page.getByText("Regenerating from retained data gives the same report.", {
+          exact: true,
+        }),
+      ).toBeVisible();
       await expect
         .poll(
           async () =>

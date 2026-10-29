@@ -109,6 +109,20 @@ export interface DowntimeReason {
   createdAt: string;
   supersedesId: number | null;
 }
+/** Result of regenerating a saved report revision from today's retained data. */
+export interface ReportRevisionCheck {
+  revisionId: number;
+  reproducible: boolean;
+  changedSections: string[];
+  causes: {
+    laterCorrections: number;
+    lateArrivals: number;
+    laterDeclarations: number;
+    planChanged: boolean;
+    removedSamplesInOverlappingHours: number;
+  };
+  checkedAt: string;
+}
 export interface ShiftReport {
   measurementEvidence?: {
     digest: string;
@@ -140,6 +154,16 @@ export interface ShiftReport {
     good: number | null;
     reject: number | null;
   };
+  /** Absent in revisions saved before reviewed declarations were applied. */
+  quantitySource?: "measured" | "declaration";
+  /** Latest reviewed operator quantity declaration for the shift, if any. */
+  declaration?: {
+    entryId: number;
+    total: number;
+    good: number;
+    reject: number;
+    reviewedAt: string;
+  } | null;
   oee: {
     availability: number | null;
     performance: number | null;

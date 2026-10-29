@@ -14,8 +14,12 @@ not create a second entry. Attachments are not enabled.
 
 Operators may declare total/good/reject counts. Good plus reject must equal total,
 and the declaration must link to a shift. Supervisors and administrators can mark a declaration
-reviewed. Review does **not** change measured counts or verify a shift report: use
-the separate reconciliation flow with independent evidence. Notes and actions can
+reviewed. The shift report then shows the latest reviewed declaration. It replaces
+machine counts only when a counter mapping is missing or has gaps, resets or unsampled
+boundaries; the report labels the source and is never verified from a declaration.
+With complete counters the report keeps the measured counts and flags any difference.
+Product-run sections always use measured counts. To verify a shift, use the separate
+reconciliation flow with independent evidence. Notes and actions can
 be edited collaboratively by signed-in operators; this is a single-company policy,
 not asset-level or tenant isolation.
 

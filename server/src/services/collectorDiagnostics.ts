@@ -52,6 +52,12 @@ export class CollectorDiagnostics {
   connection(machineId: number) {
     return this.connections.get(machineId) ?? null;
   }
+  connectionEntries() {
+    return this.connections.entries();
+  }
+  ingestionEntries() {
+    return this.ingestion.entries();
+  }
   ingestionState(machineId: number) {
     return this.ingestion.get(machineId) ?? null;
   }

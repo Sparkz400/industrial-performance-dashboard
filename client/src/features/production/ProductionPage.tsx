@@ -1,4 +1,4 @@
-import { translate as t, useLanguage } from '@/i18n';
+import { formatNumber, formatPercent, translate as t, useLanguage } from '@/i18n';
 /* eslint-disable security/detect-object-injection -- Dynamic keys below come from fixed field/role lists; imported profiles are validated by the API. */
 import React, { useEffect, useState } from 'react';
 import {
@@ -35,10 +35,8 @@ interface Shift {
   end: string;
 }
 const iso = (time: number) => new Date(time).toISOString();
-const percent = (value: number | null) =>
-  value == null ? 'Unavailable' : `${(value * 100).toFixed(1)}%`;
-const number = (value: number | null) =>
-  value == null ? 'Unknown' : value.toLocaleString(useLanguage.getState().language);
+const percent = (value: number | null) => formatPercent(value);
+const number = (value: number | null) => formatNumber(value);
 
 /**
  *
@@ -352,6 +350,9 @@ export default function ProductionPage() {
                 {Object.entries(data.quantities).map(([key, value]) => (
                   <Chip key={key} label={`${key}: ${number(value)}`} />
                 ))}
+                {data.quantitySource === 'declaration' && (
+                  <Chip color="warning" label={t('Quantities: reviewed manual declaration')} />
+                )}
               </Stack>
               <Typography>
                 {t('Scheduled production:')} {(data.scheduledSeconds / 60).toFixed(1)}{' '}

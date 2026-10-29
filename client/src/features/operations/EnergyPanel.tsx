@@ -1,9 +1,8 @@
-import { useLanguage } from '@/i18n';
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { useT } from '@/i18n';
+import { formatNumber, useT } from '@/i18n';
 import { operationRequest } from './api';
 import type { ProductionSignal } from '@performance-dashboard/shared';
 import EnergyCostPanel from './EnergyCostPanel';
@@ -80,10 +79,7 @@ export default function EnergyPanel({ machineId }: { machineId: number }) {
   const config = draft ?? meter.data?.config ?? initial;
   const signal = (patch: Partial<ProductionSignal>) =>
     setDraft({ ...config, signal: { ...config.signal, ...patch } });
-  const number = (value: number | null | undefined) =>
-    value == null
-      ? t('Unknown')
-      : value.toLocaleString(useLanguage.getState().language, { maximumFractionDigits: 4 });
+  const number = (value: number | null | undefined) => formatNumber(value, 4);
   return (
     <Stack spacing={3}>
       <Typography variant="h5">{t('Energy and losses')}</Typography>

@@ -335,6 +335,19 @@ await dailyFixture(
     } finally {
       live.disconnect();
     }
+    // Operational metrics: real PostgreSQL queries, administrator only.
+    assert.equal((await call("viewer", "GET", "/metrics")).status(), 403);
+    const metrics = await (await call("admin", "GET", "/metrics")).text();
+    for (const series of [
+      /^database_up 1$/m,
+      /^database_roundtrip_seconds \d/m,
+      /^measurement_spool_pending \d+$/m,
+      /^measurement_spool_oldest_age_seconds /m,
+      /^# TYPE background_jobs gauge$/m,
+      /^# TYPE opcua_connection_reconnects gauge$/m,
+      /^# TYPE measurement_last_commit_age_seconds gauge$/m,
+    ])
+      assert.match(metrics, series);
     const page = await actors.admin.newPage();
     await page.goto(frontend + "/settings");
     await page

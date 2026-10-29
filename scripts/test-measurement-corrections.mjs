@@ -224,10 +224,18 @@ await dailyFixture(
     );
     assert.deepEqual(stillFrozen.snapshot, frozen.snapshot);
     assert.equal(stillFrozen.digest, frozen.digest);
+    // Regeneration attributes the difference to the correction recorded after the revision.
+    const check = await ok(
+      "GET",
+      `/planning/shifts/${shift.id}/revisions/${frozen.id}/verify`,
+    );
+    assert.equal(check.reproducible, false);
+    assert.equal(check.causes.laterCorrections, 1);
+    assert(check.changedSections.includes("measurementEvidence"), check.changedSections);
     const revised = await ok(
       "POST",
       `/planning/shifts/${shift.id}/revisions`,
-      {},
+      { reason: "Reviewed measurement correction" },
       201,
     );
     assert.notEqual(revised.digest, frozen.digest);

@@ -132,7 +132,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   const latest = await ok(
     "POST",
     `/planning/shifts/${saved[0].shift.id}/revisions`,
-    {},
+    { reason: "Counter reset reviewed" },
     201,
   );
   const preserved = await ok("GET", path());

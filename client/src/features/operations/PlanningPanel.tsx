@@ -12,7 +12,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ProductRun } from '@performance-dashboard/shared';
+import type { ProductRun, ReportRevisionCheck } from '@performance-dashboard/shared';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useT } from '@/i18n';
 import { operationRequest, localInput, toIso } from './api';
@@ -420,6 +420,57 @@ export default function PlanningPanel({ machineId }: { machineId: number }) {
   );
 }
 /**
+ * Regeneration result: unchanged, or which sections differ and the recorded reasons.
+ * @param root0
+ * @param root0.check
+ */
+function RevisionCheck({ check }: { check: ReportRevisionCheck }) {
+  const t = useT();
+  if (check.reproducible)
+    return (
+      <Alert severity="success" role="status">
+        {t(
+          'Regenerating from retained data gives the same report.',
+          'Die Neuberechnung aus den aufbewahrten Daten ergibt denselben Bericht.',
+        )}
+      </Alert>
+    );
+  const { causes } = check;
+  const known = [
+    causes.laterCorrections &&
+      `${causes.laterCorrections} ${t('later measurement corrections', 'spätere Messwertkorrekturen')}`,
+    causes.lateArrivals &&
+      `${causes.lateArrivals} ${t('measurements received afterwards', 'danach empfangene Messwerte')}`,
+    causes.laterDeclarations &&
+      `${causes.laterDeclarations} ${t(
+        'quantity declarations changed afterwards',
+        'danach geänderte Mengenmeldungen',
+      )}`,
+    causes.planChanged && t('product runs or plan changed', 'Produktläufe oder Plan geändert'),
+    causes.removedSamplesInOverlappingHours &&
+      `${causes.removedSamplesInOverlappingHours} ${t(
+        'raw samples removed by retention in overlapping hours',
+        'durch Aufbewahrung entfernte Rohwerte in überlappenden Stunden',
+      )}`,
+  ].filter(Boolean);
+  return (
+    <Alert severity="warning" role="status">
+      {t('Regenerating gives a different report in', 'Die Neuberechnung weicht ab in')}:{' '}
+      {check.changedSections.join(', ')}.{' '}
+      {known.length
+        ? `${t('Recorded reasons', 'Erfasste Ursachen')}: ${known.join('; ')}.`
+        : t(
+            'No recorded correction, late data, plan change or retention explains it.',
+            'Keine erfasste Korrektur, verspätete Daten, Planänderung oder Aufbewahrung erklärt dies.',
+          )}{' '}
+      {t(
+        'The saved revision itself is unchanged.',
+        'Die gespeicherte Version selbst bleibt unverändert.',
+      )}
+    </Alert>
+  );
+}
+/**
  *
  * @param root0
  * @param root0.machineId
@@ -430,7 +481,9 @@ function ProductRuns({ machineId, editable }: { machineId: number; editable: boo
     [selected, setSelected] = useState(''),
     [runs, setRuns] = useState<ProductRun[] | null>(null),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
+    [error, setError] = useState(''),
+    [reason, setReason] = useState(''),
+    [checks, setChecks] = useState<Record<number, ReportRevisionCheck>>({});
   const shifts = useQuery({
     queryKey: ['production-shifts'],
     queryFn: () => operationRequest<Shift[]>('/production/shifts'),
@@ -446,9 +499,15 @@ function ProductRuns({ machineId, editable }: { machineId: number; editable: boo
   const revisions = useQuery({
     queryKey: ['shift-revisions', selected],
     queryFn: () =>
-      operationRequest<{ id: number; digest: string; createdAt: string; createdBy: number }[]>(
-        `/planning/shifts/${selected}/revisions`,
-      ),
+      operationRequest<
+        {
+          id: number;
+          digest: string;
+          reason: string | null;
+          createdAt: string;
+          createdBy: number;
+        }[]
+      >(`/planning/shifts/${selected}/revisions`),
     enabled: !!selected,
   });
   const rows = runs ?? plan.data?.runs ?? [];
@@ -595,11 +654,28 @@ function ProductRuns({ machineId, editable }: { machineId: number; editable: boo
                 >
                   {t('Save product runs', 'Produktläufe speichern')}
                 </Button>
+                <TextField
+                  label={t('Revision reason', 'Grund der Version')}
+                  helperText={
+                    revisions.data?.length
+                      ? t(
+                          'Required: what this revision corrects or adds.',
+                          'Erforderlich: was diese Version korrigiert oder ergänzt.',
+                        )
+                      : t('Optional for the first revision.', 'Für die erste Version optional.')
+                  }
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  slotProps={{ htmlInput: { maxLength: 500 } }}
+                />
                 <Button
-                  disabled={busy || runs !== null}
+                  disabled={busy || runs !== null || (!!revisions.data?.length && !reason.trim())}
                   onClick={() =>
                     void run(async () => {
-                      await operationRequest(`/planning/shifts/${selected}/revisions`, 'POST', {});
+                      await operationRequest(`/planning/shifts/${selected}/revisions`, 'POST', {
+                        reason,
+                      });
+                      setReason('');
                       await revisions.refetch();
                     })
                   }
@@ -609,24 +685,41 @@ function ProductRuns({ machineId, editable }: { machineId: number; editable: boo
               </>
             )}
             {revisions.data?.map((r) => (
-              <Stack key={r.id} direction={{ xs: 'column', sm: 'row' }} gap={1}>
-                <Typography>
-                  {new Date(r.createdAt).toLocaleString(useLanguage.getState().language)} ·{' '}
-                  {t('Author', 'Autor')}: {r.createdBy} · {r.digest.slice(0, 16)}
-                </Typography>
-                <Button
-                  disabled={busy}
-                  onClick={() =>
-                    void run(async () =>
-                      downloadJson(
-                        await operationRequest(`/planning/shifts/${selected}/revisions/${r.id}`),
-                        `shift-${selected}-revision-${r.id}.json`,
-                      ),
-                    )
-                  }
-                >
-                  {t('Download revision', 'Version herunterladen')}
-                </Button>
+              <Stack key={r.id} spacing={1}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} gap={1}>
+                  <Typography>
+                    {new Date(r.createdAt).toLocaleString(useLanguage.getState().language)} ·{' '}
+                    {t('Author', 'Autor')}: {r.createdBy} · {r.digest.slice(0, 16)}
+                    {r.reason ? ` · ${r.reason}` : ''}
+                  </Typography>
+                  <Button
+                    disabled={busy}
+                    onClick={() =>
+                      void run(async () =>
+                        downloadJson(
+                          await operationRequest(`/planning/shifts/${selected}/revisions/${r.id}`),
+                          `shift-${selected}-revision-${r.id}.json`,
+                        ),
+                      )
+                    }
+                  >
+                    {t('Download revision', 'Version herunterladen')}
+                  </Button>
+                  <Button
+                    disabled={busy}
+                    onClick={() =>
+                      void run(async () => {
+                        const check = await operationRequest<ReportRevisionCheck>(
+                          `/planning/shifts/${selected}/revisions/${r.id}/verify`,
+                        );
+                        setChecks((current) => ({ ...current, [r.id]: check }));
+                      })
+                    }
+                  >
+                    {t('Check reproducibility', 'Reproduzierbarkeit prüfen')}
+                  </Button>
+                </Stack>
+                {checks[r.id] && <RevisionCheck check={checks[r.id]} />}
               </Stack>
             ))}
           </>

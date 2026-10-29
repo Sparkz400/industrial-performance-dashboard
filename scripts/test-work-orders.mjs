@@ -206,7 +206,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   const saved = await ok(
     "POST",
     `/planning/shifts/${shiftId}/revisions`,
-    {},
+    { reason: "Independent reconciliation recorded" },
     201,
   );
   const completed = (await ok("GET", path("completions"))).rows.find(
