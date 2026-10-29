@@ -206,7 +206,9 @@ const envVarsSchema = Joi.object({
   // Compliance
   COMPLIANCE_MODE_ENABLED: Joi.boolean()
     .default(false)
-    .description("Enable 21 CFR Part 11 compliance mode"),
+    .description(
+      "Enable recipe/batch and audit features (not a validated regulatory mode)",
+    ),
 
   // Edge Gateway
   EDGE_MODE_ENABLED: Joi.boolean()

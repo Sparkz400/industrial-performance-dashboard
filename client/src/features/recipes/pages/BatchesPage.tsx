@@ -103,7 +103,9 @@ const BatchesPage: React.FC = () => {
         <Box>
           <Typography variant="h5">Batch Monitoring</Typography>
           <Typography variant="body2" color="text.secondary">
-            Track production runs and verify actual process values against specification tolerances.
+            Record production runs in this application and verify actual process values against
+            specification tolerances. Start, complete and abort only change these records; they
+            never control the machine.
           </Typography>
         </Box>
         <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
@@ -114,6 +116,11 @@ const BatchesPage: React.FC = () => {
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           Failed to load batches: {(error as Error).message}
+        </Alert>
+      )}
+      {(startBatch.error ?? completeBatch.error ?? abortBatch.error) && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {((startBatch.error ?? completeBatch.error ?? abortBatch.error) as Error).message}
         </Alert>
       )}
 
@@ -166,7 +173,7 @@ const BatchesPage: React.FC = () => {
                   <TableCell>{formatDuration(batch.startedAt, batch.completedAt)}</TableCell>
                   <TableCell align="right">
                     {batch.status === 'planned' && (
-                      <Tooltip title="Start Batch">
+                      <Tooltip title="Record batch start (does not control the machine)">
                         <IconButton
                           size="small"
                           color="primary"
@@ -179,7 +186,7 @@ const BatchesPage: React.FC = () => {
                     )}
                     {batch.status === 'running' && (
                       <>
-                        <Tooltip title="Complete Batch">
+                        <Tooltip title="Record batch completion">
                           <IconButton
                             size="small"
                             color="success"
@@ -189,7 +196,7 @@ const BatchesPage: React.FC = () => {
                             <CheckCircleIcon />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Abort Batch">
+                        <Tooltip title="Record batch abort">
                           <IconButton
                             size="small"
                             color="error"

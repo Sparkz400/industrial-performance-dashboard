@@ -45,8 +45,8 @@ where marked *(local)*.
 | Settings → certificates, audit trail | admin | Supported | `test-secure-machine.mjs` *(local)*, `auditLogService.test.ts` | rejected/expired certificates | U D |
 | Settings → edge status | admin | Disabled transfer/ingest (501); read-only status | `experimentalBoundaries.test.ts` | transfers cannot be presented as central history | U B |
 | Advanced → plants, OEE config, reports | admin | Supported | `test-access.mjs`, `oeeCalculationService.test.ts`, `test-report-pdf.mjs` | report generation vs delivery failure: `reportScheduler.test.ts`; deleted schedules, PDF retention and non-admin downloads: `test-report-boundaries.mjs` | U D B |
-| Advanced → compliance, SPC, digital twins | admin | Experimental | `spcIsolation.test.ts`, `spcReference.test.ts`, `assetOverview.test.ts` | statistics unqualified (Q01/Q02); no compliance claims (Q07) | U D |
-| Advanced → recipes, batches | admin, only with `COMPLIANCE_MODE_ENABLED=true` | Experimental | `test-quality-line.mjs` | unknown/excluded readings never imply compliance | U D B |
+| Advanced → compliance, SPC, digital twins | admin | Experimental | `spcIsolation.test.ts`, `spcReference.test.ts`, `spcLive.test.ts`, `test-spc-live.mjs` (restart rebuild), `test-compliance-audit.mjs` (browser integrity check), `assetOverview.test.ts` | concurrent audit writers, edited/deleted records, forged or unverified signatures 400; statistics not qualified on a real process (Q02); no regulatory claim | U D B |
+| Advanced → recipes, batches | admin, only with `COMPLIANCE_MODE_ENABLED=true` | Experimental | `test-quality-line.mjs`, `test-batch-lifecycle.mjs` | unknown/excluded readings never imply compliance; concurrent starts on one machine and complete/abort races leave one outcome, refusals shown | U D B |
 | Help (`/help`) | everyone | Supported (static) | — | — | — |
 | AI assistant | — | Removed (F05) | `e2e/p0.spec.ts` checks it is absent | — | B |
 
@@ -61,6 +61,7 @@ where marked *(local)*.
 | History rollups and indexes | `test-history.mjs` (raw and retained summaries identical); `scripts/benchmark-history.mjs` *(local evidence)*, see [capacity](CAPACITY.md) | D |
 | Installation, backup, restore, upgrade, rollback | `test-operations.mjs` (incl. restore after retention cancels pending deletions), `test-container.mjs` | D |
 | Operational metrics | `operationalMetrics.test.ts`; real-database admin scrape and viewer refusal in `test-access.mjs` | U D |
+| Accessibility (WCAG 2.2 A/AA) | `test-accessibility.mjs`: axe on seven screens with zero findings, keyboard login and widget layout, reduced motion, 320 px reflow; see [accessibility](ACCESSIBILITY.md) | B |
 | Release packaging | `test-release-package.mjs`, `offline-package.mjs verify` | D |
 | Endurance | `test-installation-endurance.mjs` short run in CI; the 72-hour gate (FR01) is open | D B S |
 

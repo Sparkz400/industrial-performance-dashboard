@@ -50,6 +50,7 @@ const SystemStatsCard: React.FC<SystemStatsCardProps> = ({
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Box sx={{ flexGrow: 1, mr: 1 }}>
             <LinearProgress
+              aria-label="Memory usage"
               variant="determinate"
               value={systemStats?.memoryUsage?.percentUsed || 0}
               sx={{ height: 8, borderRadius: 5 }}
@@ -70,6 +71,7 @@ const SystemStatsCard: React.FC<SystemStatsCardProps> = ({
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Box sx={{ flexGrow: 1, mr: 1 }}>
             <LinearProgress
+              aria-label="CPU usage"
               variant="determinate"
               value={systemStats?.cpuUsage || 0}
               sx={{ height: 8, borderRadius: 5 }}

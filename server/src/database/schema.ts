@@ -390,7 +390,7 @@ export const customWidgets = pgTable("custom_widgets", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
-// --- Feature: Compliance Audit Trail (21 CFR Part 11) ---
+// --- Feature: Compliance Audit Trail (application records; no regulatory validation) ---
 
 export const complianceAuditLogs = pgTable(
   "compliance_audit_logs",
@@ -411,6 +411,8 @@ export const complianceAuditLogs = pgTable(
     snapshotBefore: jsonb("snapshot_before"),
     snapshotAfter: jsonb("snapshot_after"),
     checksum: varchar("checksum", { length: 64 }).notNull(),
+    // 1: legacy fields only; 2: canonical JSON of every recorded field.
+    checksumVersion: integer("checksum_version").notNull().default(1),
     previousChecksum: varchar("previous_checksum", { length: 64 }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

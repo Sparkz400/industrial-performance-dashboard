@@ -24,24 +24,49 @@ export const spcEvents = new EventEmitter();
 // ---------------------------------------------------------------------------
 // Each profile owns its samples; aliases shared by different machines are not identity.
 // ---------------------------------------------------------------------------
-const ringBuffers = new Map<string, number[]>();
+// Windows count samples, not time: OPC UA reports on change, so a quiet signal is not missing.
+type Sample = { value: number; at: number };
+const ringBuffers = new Map<string, Sample[]>();
+const evaluationChains = new Map<string, Promise<void>>();
 
-function getBuffer(nodeKey: string): number[] {
-  let buf = ringBuffers.get(nodeKey);
-  if (!buf) {
-    buf = [];
-    ringBuffers.set(nodeKey, buf);
-  }
-  return buf;
+/** Samples each method needs before it judges anything; fewer is not evidence. */
+function requiredSamples(method: string, windowSize: number): number {
+  if (method === "zscore") return 1;
+  if (method === "std_bands") return 8;
+  return windowSize;
 }
 
-function pushValue(nodeKey: string, value: number, maxSize: number): number[] {
-  const buf = getBuffer(nodeKey);
-  buf.push(value);
-  if (buf.length > maxSize) {
-    buf.splice(0, buf.length - maxSize);
+/**
+ * Append a good sample to the profile's window. After a restart the window is rebuilt
+ * from stored history, so a verdict does not depend on when the process last started.
+ * Returns null for a duplicate or older timestamp (e.g. the value re-sent on reconnect).
+ */
+async function pushValue(
+  key: string,
+  sample: Sample,
+  maxSize: number,
+  machineId: number | undefined,
+  nodeKey: string,
+): Promise<number[] | null> {
+  let buf = ringBuffers.get(key);
+  if (!buf) {
+    buf =
+      machineId == null
+        ? []
+        : (
+            await spcRepository.recentGoodRun(
+              machineId,
+              nodeKey,
+              new Date(sample.at),
+              maxSize,
+            )
+          ).map((row) => ({ value: row.value, at: row.at.getTime() }));
+    ringBuffers.set(key, buf);
   }
-  return buf;
+  if (buf.length && sample.at <= buf[buf.length - 1].at) return null;
+  buf.push(sample);
+  if (buf.length > maxSize) buf.splice(0, buf.length - maxSize);
+  return buf.map((entry) => entry.value);
 }
 
 // ---------------------------------------------------------------------------
@@ -95,8 +120,33 @@ export const spcService = {
 
   // ---- Real-time evaluation (called from opcuaBridge) ----
 
-  async evaluateDataPoint(nodeKey: string, value: number, machineId?: number) {
-    if (!Number.isFinite(value)) return;
+  /** Callers do not await this; evaluation runs per signal in arrival order. */
+  evaluateDataPoint(
+    nodeKey: string,
+    value: number | null,
+    machineId?: number,
+    at: Date | string | number = Date.now(),
+    quality = "Good",
+  ): Promise<void> {
+    const signal = `${machineId ?? "legacy"}:${nodeKey}`;
+    const run = (evaluationChains.get(signal) ?? Promise.resolve()).then(() =>
+      this.evaluateInOrder(nodeKey, value, machineId, at, quality),
+    );
+    evaluationChains.set(
+      signal,
+      run.catch(() => {}),
+    );
+    return run;
+  },
+
+  async evaluateInOrder(
+    nodeKey: string,
+    value: number | null,
+    machineId: number | undefined,
+    at: Date | string | number,
+    quality: string,
+  ) {
+    const time = new Date(at).getTime();
     const profiles = await spcRepository.listActiveProfilesByNodeKey(
       nodeKey,
       machineId,
@@ -106,8 +156,19 @@ export const spcService = {
 
     for (const profile of profiles) {
       if (profile.machineId !== (machineId ?? null)) continue;
+      const key = `${profile.id}:${machineId ?? "legacy"}:${nodeKey}`;
+      // A bad or missing value breaks the run; the window starts again afterwards.
+      if (
+        !quality.startsWith("Good") ||
+        typeof value !== "number" ||
+        !Number.isFinite(value) ||
+        !Number.isFinite(time)
+      ) {
+        ringBuffers.set(key, []);
+        continue;
+      }
       try {
-        await evaluateAgainstProfile(profile, nodeKey, value, machineId);
+        await evaluateAgainstProfile(profile, nodeKey, value, machineId, time);
       } catch (error) {
         logger.error(
           `[SPC] Error evaluating data point against profile ${profile.id}: ${
@@ -199,14 +260,22 @@ async function evaluateAgainstProfile(
   profile: SpcProfile,
   nodeKey: string,
   value: number,
-  machineId?: number,
+  machineId: number | undefined,
+  at: number,
 ) {
   const windowSize = profile.windowSize ?? 100;
-  const buffer = pushValue(
+  const buffer = await pushValue(
     `${profile.id}:${machineId ?? "legacy"}:${nodeKey}`,
-    value,
-    windowSize,
+    { value, at },
+    Math.max(windowSize, 8),
+    machineId,
+    nodeKey,
   );
+  if (!buffer || buffer.length < requiredSamples(profile.method, windowSize))
+    return;
+  // A baseline without positive variation cannot say what is unusual.
+  const baselineKnown =
+    profile.mean != null && profile.stddev != null && profile.stddev > 0;
 
   let isAnomaly = false;
   let alertType: string | undefined;
@@ -214,11 +283,11 @@ async function evaluateAgainstProfile(
 
   switch (profile.method) {
     case "zscore": {
-      if (profile.mean == null || profile.stddev == null) break;
+      if (!baselineKnown) break;
       const result = zScoreCheck(
         value,
-        profile.mean,
-        profile.stddev,
+        profile.mean!,
+        profile.stddev!,
         profile.sensitivity ?? 3.0,
       );
       isAnomaly = result.isAnomaly;
@@ -248,22 +317,27 @@ async function evaluateAgainstProfile(
     }
 
     case "cusum": {
-      const target = profile.mean ?? 0;
-      const allowance = (profile.stddev ?? 1) * 0.5;
-      const result = cusumCheck(buffer, target, allowance);
+      // No target or variation is invented for a profile without an approved baseline.
+      if (!baselineKnown) break;
+      const allowance = profile.stddev! * 0.5;
+      const result = cusumCheck(
+        buffer.slice(-windowSize),
+        profile.mean!,
+        allowance,
+      );
       isAnomaly = result.isAnomaly;
       alertType = result.alertType;
-      threshold = allowance * 5;
+      threshold = allowance * 10;
       break;
     }
 
     case "std_bands": {
-      if (profile.mean == null || profile.stddev == null) break;
+      if (!baselineKnown) break;
       // Use Western Electric rules for std_bands method
       const result = westernElectricRules(
         buffer.slice(-8),
-        profile.mean,
-        profile.stddev,
+        profile.mean!,
+        profile.stddev!,
       );
       isAnomaly = result.isAnomaly;
       alertType = result.alertType;

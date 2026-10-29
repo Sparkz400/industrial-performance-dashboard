@@ -110,13 +110,19 @@ export function setupOpcuaBridge({
 
       // Alarm evaluation runs from the durable queue, including unknown-quality markers.
 
-      // SPC: fire-and-forget anomaly detection
+      // SPC: fire-and-forget; a bad sample is passed too, so it breaks the window.
       if (
-        data.statusCode?.startsWith("Good") &&
-        typeof data.value === "number"
+        typeof data.value === "number" ||
+        !data.statusCode?.startsWith("Good")
       ) {
         spcService
-          .evaluateDataPoint(data.key, data.value, data.machineId ?? undefined)
+          .evaluateDataPoint(
+            data.key,
+            typeof data.value === "number" ? data.value : null,
+            data.machineId ?? undefined,
+            data.timestamp,
+            data.statusCode ?? "Uncertain",
+          )
           .catch((err) => {
             logger.debug(`[SPC] Evaluation error for ${data.key}: ${err}`);
           });

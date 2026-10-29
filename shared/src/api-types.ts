@@ -587,6 +587,8 @@ export interface IntegrityCheckResponse {
   valid: boolean;
   checkedRecords: number;
   firstBrokenId: number | null;
+  brokenReason?: "checksum" | "link" | null;
+  lastChecksum?: string | null;
 }
 
 export type GetDashboardVersionsResponse = DashboardVersion[];

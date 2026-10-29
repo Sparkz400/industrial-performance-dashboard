@@ -106,8 +106,9 @@ export function cusumCheck(
   let cusumHigh = 0;
   let cusumLow = 0;
 
-  // The decision interval H is typically 4-5 times the allowance
-  const decisionInterval = allowance * 5;
+  // Tabular CUSUM: callers pass k = 0.5σ, and h = 5σ = 10k (Montgomery). The former
+  // h = 5k = 2.5σ signalled far more often on an in-control process.
+  const decisionInterval = allowance * 10;
 
   for (const value of values) {
     cusumHigh = Math.max(0, cusumHigh + (value - target) - allowance);

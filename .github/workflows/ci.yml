@@ -104,6 +104,10 @@ jobs:
       - run: node scripts/test-integration-outbox.mjs
       - run: node scripts/test-api-contract.mjs
       - run: node scripts/test-spool-quarantine.mjs
+      - run: node scripts/test-batch-lifecycle.mjs
+      - run: node scripts/test-compliance-audit.mjs
+      - run: node scripts/test-spc-live.mjs
+      - run: node scripts/test-accessibility.mjs
       - run: node scripts/test-history.mjs
       - run: node scripts/test-quality-line.mjs
       - run: node scripts/test-supervisor-workflows.mjs

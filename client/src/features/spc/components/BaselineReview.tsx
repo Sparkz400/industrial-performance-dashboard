@@ -21,6 +21,7 @@ interface Baseline {
     excludedCount: number;
     violations: unknown[];
     digest: string;
+    context?: { alarms: number; stops: number; products: string[] };
   };
 }
 /**
@@ -140,6 +141,9 @@ export default function BaselineReview() {
           <Typography key={b.id}>
             Mean {b.evidence.mean.toFixed(4)}, s {b.evidence.stddev.toFixed(4)}, excluded{' '}
             {b.evidence.excludedCount}. Evidence SHA-256: {b.evidence.digest}
+            {b.evidence.context
+              ? `. Window context: products ${b.evidence.context.products.join(', ') || 'not recorded'}; ${b.evidence.context.alarms} alarms and ${b.evidence.context.stops} classified stops overlap.`
+              : '. Window context not recorded; compute a new candidate.'}
           </Typography>
         ))}
       <TextField

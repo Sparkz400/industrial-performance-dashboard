@@ -43,6 +43,18 @@ Raw and retained-summary history answer identically, and an index benchmark reco
 which indexes the history endpoints use (H06). The database container gets 256 MB of
 shared memory for parallel maintenance on large history.
 
+## Backlog wave 3
+
+Live SPC judges only full windows against a positive approved baseline, restarts runs
+after bad data, ignores re-sent samples, rebuilds windows after a restart and uses the
+standard CUSUM decision interval (h = 5σ instead of 2.5σ) (Q01). Batch start, complete
+and abort are race-free and labelled as application records (Q04). The audit chain is
+serialised, covers every recorded field and detects deletions; signatures need the
+signer's password and a stated meaning, forged signature metadata is refused, and the
+UI no longer presents a 21 CFR Part 11 checklist (Q07). Seven screens pass an automated
+WCAG 2.2 A/AA scan with zero findings, and widgets can be moved and resized without
+dragging ([accessibility](ACCESSIBILITY.md), U06; screen-reader walkthrough open).
+
 ## Data integrity and reviewed operations
 
 The [six-feature integrity wave](DATA_INTEGRITY.md) replaces generated widget data,

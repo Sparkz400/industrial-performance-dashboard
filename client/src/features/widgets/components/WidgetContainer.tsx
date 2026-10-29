@@ -11,6 +11,8 @@ import {
   Tooltip,
   Fade,
   Box,
+  Menu,
+  MenuItem,
 } from '@mui/material';
 import WidgetSkeleton from '@/shared/components/loading/WidgetSkeleton';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -19,6 +21,7 @@ import ErrorIcon from '@mui/icons-material/Error';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
+import OpenWithIcon from '@mui/icons-material/OpenWith';
 import { motion } from 'framer-motion';
 import { useWidgetStore } from '@/stores/useWidgetStore';
 import { widgetRegistry } from '../registry/WidgetRegistry';
@@ -147,18 +150,34 @@ const SettingsDialog = memo<SettingsDialogProps>(({ open, onClose, widget, onCon
 });
 SettingsDialog.displayName = 'SettingsDialog';
 
+export type LayoutNudge = Partial<Record<'x' | 'y' | 'w' | 'h', number>>;
+
+// Single-pointer and keyboard alternative to dragging (WCAG 2.2 SC 2.5.7).
+const NUDGES: [string, LayoutNudge][] = [
+  ['Move left', { x: -1 }],
+  ['Move right', { x: 1 }],
+  ['Move up', { y: -1 }],
+  ['Move down', { y: 1 }],
+  ['Wider', { w: 1 }],
+  ['Narrower', { w: -1 }],
+  ['Taller', { h: 1 }],
+  ['Shorter', { h: -1 }],
+];
+
 // Widget Container props
 interface WidgetContainerProps {
   widget: Widget;
   readOnly?: boolean;
   onDelete: (id: string) => void;
+  onNudge?: (id: string, change: LayoutNudge) => void;
   layoutItem?: LayoutItem;
   commonData?: Record<string, unknown>;
 }
 
 // Main Widget Container with industrial surfaces, fullscreen, export, and animation
 const WidgetContainer = memo<WidgetContainerProps>(
-  ({ widget, onDelete, layoutItem, commonData, readOnly = false }) => {
+  ({ widget, onDelete, onNudge, layoutItem, commonData, readOnly = false }) => {
+    const [layoutMenu, setLayoutMenu] = useState<HTMLElement | null>(null);
     const updateWidgetConfig = useWidgetStore((s) => s.updateWidgetConfig);
     const fullscreenWidgetId = useWidgetStore((s) => s.fullscreenWidgetId);
     const setFullscreenWidget = useWidgetStore((s) => s.setFullscreenWidget);
@@ -296,6 +315,38 @@ const WidgetContainer = memo<WidgetContainerProps>(
             </Tooltip>
             {!readOnly && (
               <>
+                {onNudge && (
+                  <>
+                    <Tooltip title="Move or resize without dragging">
+                      <IconButton
+                        aria-label="Move or resize widget"
+                        aria-haspopup="menu"
+                        onClick={(event) => setLayoutMenu(event.currentTarget)}
+                        sx={{
+                          bgcolor: 'background.paper',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          '&:hover': { bgcolor: 'action.hover' },
+                        }}
+                        size="small"
+                        className="no-drag"
+                      >
+                        <OpenWithIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Menu
+                      anchorEl={layoutMenu}
+                      open={!!layoutMenu}
+                      onClose={() => setLayoutMenu(null)}
+                    >
+                      {NUDGES.map(([label, change]) => (
+                        <MenuItem key={label} onClick={() => onNudge(widget.id, change)}>
+                          {label}
+                        </MenuItem>
+                      ))}
+                    </Menu>
+                  </>
+                )}
                 <Tooltip title="Widget Settings">
                   <IconButton
                     onClick={handleOpenSettings}
@@ -340,6 +391,8 @@ const WidgetContainer = memo<WidgetContainerProps>(
         widgetMeta.title,
         widget.type,
         widget.id,
+        onNudge,
+        layoutMenu,
       ],
     );
 

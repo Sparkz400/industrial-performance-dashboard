@@ -125,6 +125,7 @@ const ComplianceOverviewTab: React.FC = () => {
             <CardContent sx={{ pt: 0 }}>
               <Typography variant="h4">{stats.signatureCoverage}%</Typography>
               <LinearProgress
+                aria-label="Signature coverage"
                 variant="determinate"
                 value={stats.signatureCoverage}
                 color={signatureCoverageColor}
@@ -144,6 +145,7 @@ const ComplianceOverviewTab: React.FC = () => {
             <CardContent sx={{ pt: 0 }}>
               <Typography variant="h4">{stats.reasonCoverage}%</Typography>
               <LinearProgress
+                aria-label="Reason coverage"
                 variant="determinate"
                 value={stats.reasonCoverage}
                 color={reasonCoverageColor}

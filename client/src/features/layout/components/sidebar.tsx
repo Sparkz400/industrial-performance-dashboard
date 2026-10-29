@@ -9,6 +9,7 @@ import {
   Drawer,
   IconButton,
   List,
+  ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
@@ -114,20 +115,22 @@ export default function ResponsiveSidebar({ open, onToggle, onWidthChange }: Pro
         )}
         <List>
           {links.map((link) => (
-            <Tooltip key={link.to} title={open ? '' : t(link.label)} placement="right">
-              <ListItemButton
-                component={Link}
-                to={link.to}
-                aria-label={t(link.label)}
-                aria-current={location.pathname === link.to ? 'page' : undefined}
-                selected={location.pathname === link.to}
-                onClick={navigate}
-                sx={{ minHeight: 48, px: 1.5, borderRadius: 1 }}
-              >
-                <ListItemIcon sx={{ minWidth: open ? 36 : 24 }}>{link.icon}</ListItemIcon>
-                {open && <ListItemText primary={t(link.label)} />}
-              </ListItemButton>
-            </Tooltip>
+            <ListItem key={link.to} disablePadding>
+              <Tooltip title={open ? '' : t(link.label)} placement="right">
+                <ListItemButton
+                  component={Link}
+                  to={link.to}
+                  aria-label={t(link.label)}
+                  aria-current={location.pathname === link.to ? 'page' : undefined}
+                  selected={location.pathname === link.to}
+                  onClick={navigate}
+                  sx={{ minHeight: 48, px: 1.5, borderRadius: 1 }}
+                >
+                  <ListItemIcon sx={{ minWidth: open ? 36 : 24 }}>{link.icon}</ListItemIcon>
+                  {open && <ListItemText primary={t(link.label)} />}
+                </ListItemButton>
+              </Tooltip>
+            </ListItem>
           ))}
         </List>
         {admin && open && (
@@ -142,16 +145,17 @@ export default function ResponsiveSidebar({ open, onToggle, onWidthChange }: Pro
             <Collapse in={advanced}>
               <List id="advanced-navigation">
                 {advancedLinks.map(([to, label]) => (
-                  <ListItemButton
-                    key={to}
-                    component={Link}
-                    to={to}
-                    onClick={navigate}
-                    selected={location.pathname === to}
-                    sx={{ minHeight: 48 }}
-                  >
-                    <ListItemText primary={t(label)} />
-                  </ListItemButton>
+                  <ListItem key={to} disablePadding>
+                    <ListItemButton
+                      component={Link}
+                      to={to}
+                      onClick={navigate}
+                      selected={location.pathname === to}
+                      sx={{ minHeight: 48 }}
+                    >
+                      <ListItemText primary={t(label)} />
+                    </ListItemButton>
+                  </ListItem>
                 ))}
               </List>
             </Collapse>

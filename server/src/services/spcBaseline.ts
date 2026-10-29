@@ -85,8 +85,35 @@ export async function proposeBaseline(
         Number.isFinite(Number(r.value)),
     );
     const stats = baselineStatistics(good.map((r) => Number(r.value)));
+    // Process context of the window: a baseline must not silently learn from a fault.
+    const overlap = [profile.machine_id, start, end];
+    const [{ alarms }] = (
+      await c.query(
+        "SELECT count(*)::int AS alarms FROM alert_history WHERE machine_id IS NOT DISTINCT FROM $1 AND created_at < $3 AND (resolved_at IS NULL OR resolved_at > $2)",
+        overlap,
+      )
+    ).rows;
+    const [{ stops }] = (
+      await c.query(
+        'SELECT count(*)::int AS stops FROM downtime_reasons d JOIN production_shifts s ON s.id=d.shift_id WHERE s.machine_id=$1 AND d.start < $3 AND d."end" > $2',
+        overlap,
+      )
+    ).rows;
+    const products = new Set<string>();
+    for (const shift of (
+      await c.query(
+        'SELECT job, runs FROM production_shifts WHERE machine_id=$1 AND start < $3 AND "end" > $2',
+        overlap,
+      )
+    ).rows) {
+      if (shift.job?.product) products.add(shift.job.product);
+      for (const run of shift.runs ?? [])
+        if (run.start < end.toISOString() && run.end > start.toISOString())
+          products.add(run.product);
+    }
     const evidence = {
       ...stats,
+      context: { alarms, stops, products: [...products].sort() },
       excludedCount: rows.length - good.length,
       start: start.toISOString(),
       end: end.toISOString(),
@@ -154,6 +181,14 @@ export async function approveBaseline(
       p.sensitivity !== e.profile.sensitivity
     )
       throw new ConflictError("Profile changed; compute a new baseline");
+    if (!e.context)
+      throw new ConflictError(
+        "This candidate predates fault-period checks; compute a new baseline",
+      );
+    if (e.context.alarms || e.context.stops)
+      throw new ValidationError(
+        `The reference window overlaps ${e.context.alarms} alarms and ${e.context.stops} classified stops; choose a fault-free window`,
+      );
     if (
       e.sampleCount < 100 ||
       e.excludedCount ||
