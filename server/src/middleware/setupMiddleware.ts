@@ -4,7 +4,6 @@ import express, {
   type NextFunction,
 } from "express";
 import session from "express-session";
-import { hasServiceToken } from "./serviceToken.js";
 import connectPgSimple from "connect-pg-simple";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -19,6 +18,10 @@ import { CSRF_HEADER_NAME } from "../utils/csrf.js";
 import config from "../config/config.js";
 import { customWidgetService } from "../services/customWidgetService.js";
 
+import { hasServiceToken } from "./serviceToken.js";
+
+// H08: edges authenticate with a bearer token; no cookie session is read or created.
+const isEdgeSync = (req: Request) => req.path.startsWith("/api/v1/edge-sync/");
 const pgSession = connectPgSimple(session);
 
 export interface MiddlewareContext {
@@ -59,7 +62,11 @@ export function setupMiddleware(app: express.Application): MiddlewareContext {
   );
   app.use(rateLimiter);
   app.use(compression());
-  app.use(express.json());
+  // Edge batches have their own larger limit (edgeSyncRoutes).
+  const json = express.json();
+  app.use((req, res, next) =>
+    isEdgeSync(req) ? next() : json(req, res, next),
+  );
   app.use(logger.middleware);
 
   // --- Session ---
@@ -98,7 +105,9 @@ export function setupMiddleware(app: express.Application): MiddlewareContext {
   });
   // Service-token requests carry no cookie session; none is read or created for them.
   app.use((req, res, next) =>
-    hasServiceToken(req) ? next() : sessionMiddleware(req, res, next),
+    hasServiceToken(req) || isEdgeSync(req)
+      ? next()
+      : sessionMiddleware(req, res, next),
   );
 
   app.set("etag", "strong");
@@ -136,6 +145,7 @@ export function setupMiddleware(app: express.Application): MiddlewareContext {
     if (
       ["GET", "HEAD", "OPTIONS"].includes(req.method) ||
       hasServiceToken(req) ||
+      isEdgeSync(req) ||
       req.path === "/api/v1/auth/oidc/backchannel-logout"
     ) {
       return next();

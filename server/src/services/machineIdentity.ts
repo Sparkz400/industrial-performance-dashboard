@@ -50,14 +50,20 @@ async function encryptionKey(create = false) {
   return key;
 }
 
-export async function sealMachineSecret(machineId: number, secret: Secret) {
+export const sealMachineSecret = (machineId: number, secret: Secret) =>
+  sealSecret(`machine:${machineId}`, secret);
+export const openMachineSecret = (machineId: number, encrypted: string) =>
+  openSecret(`machine:${machineId}`, encrypted);
+
+/** AES-256-GCM with the installation's secret key; the context binds a secret to its use. */
+export async function sealSecret(context: string, secret: Secret) {
   const nonce = randomBytes(12);
   const cipher = createCipheriv(
     "aes-256-gcm",
     await encryptionKey(true),
     nonce,
   );
-  cipher.setAAD(Buffer.from(`machine:${machineId}`));
+  cipher.setAAD(Buffer.from(context));
   const ciphertext = Buffer.concat([
     cipher.update(JSON.stringify(secret), "utf8"),
     cipher.final(),
@@ -67,8 +73,8 @@ export async function sealMachineSecret(machineId: number, secret: Secret) {
   );
 }
 
-export async function openMachineSecret(
-  machineId: number,
+export async function openSecret(
+  context: string,
   encrypted: string,
 ): Promise<Secret> {
   try {
@@ -78,7 +84,7 @@ export async function openMachineSecret(
       await encryptionKey(),
       bytes.subarray(0, 12),
     );
-    decipher.setAAD(Buffer.from(`machine:${machineId}`));
+    decipher.setAAD(Buffer.from(context));
     decipher.setAuthTag(bytes.subarray(12, 28));
     return JSON.parse(
       Buffer.concat([

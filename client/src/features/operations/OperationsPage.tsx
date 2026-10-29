@@ -21,6 +21,7 @@ const DerivedSignalsPanel = React.lazy(() => import('./DerivedSignalsPanel'));
 const ChangeoverPanel = React.lazy(() => import('./ChangeoverPanel'));
 const ImprovementActionsPanel = React.lazy(() => import('./ImprovementActionsPanel'));
 const PlcAlarmsPanel = React.lazy(() => import('./PlcAlarmsPanel'));
+const SitesOverviewPanel = React.lazy(() => import('./SitesOverviewPanel'));
 /**
  *
  */
@@ -95,6 +96,7 @@ export default function OperationsPage() {
       de: 'SPS-Alarme',
       content: <PlcAlarmsPanel machineId={Number(machine)} />,
     },
+    { name: 'Sites', de: 'Standorte', content: <SitesOverviewPanel /> },
   ];
   // Role changes can shorten the tab list since the tab was remembered.
   const tab = savedTab < panels.length ? savedTab : 0;
@@ -130,7 +132,8 @@ export default function OperationsPage() {
             />
           ))}
         </Tabs>
-        {machine && (
+        {/* The site overview spans machines; every other panel needs a selected machine. */}
+        {(machine || panels.at(tab)?.name === 'Sites') && (
           <Box
             role="tabpanel"
             id={`operations-panel-${tab}`}

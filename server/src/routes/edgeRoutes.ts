@@ -1,81 +1,77 @@
 import express, { type Request, type Response } from "express";
 import Joi from "joi";
+import { X509Certificate } from "node:crypto";
 
-import { validateBody, validateQuery } from "../middleware/validation.js";
+import { validateBody } from "../middleware/validation.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { requireRole } from "../middleware/auth.js";
-import { edgeSyncService } from "../services/edgeSyncService.js";
+import { auditLogService, getAuditActor } from "../services/auditLogService.js";
+import { edgeSync } from "../services/edgeSyncService.js";
+import { ValidationError } from "../utils/errors.js";
 
+// H08/E04 edge side: this installation's link to a central installation. Administrator-only.
 const router = express.Router();
-
-// --- Schemas ---
-
-const updateConfigSchema = Joi.object({
-  cloudUrl: Joi.string().uri().allow(null),
-  syncIntervalMs: Joi.number().integer().min(5000),
-  syncBatchSize: Joi.number().integer().min(10),
-  dataRetentionDays: Joi.number().integer().min(1),
-  lightweightMode: Joi.boolean(),
-}).min(1);
-
-const ingestSchema = Joi.object({
-  edgeId: Joi.string().required(),
-  items: Joi.array()
-    .items(
-      Joi.object({
-        tableName: Joi.string().required(),
-        operation: Joi.string().valid("INSERT", "UPDATE", "DELETE").required(),
-        recordId: Joi.string().required(),
-        payload: Joi.any().required(),
-        originalTimestamp: Joi.string().isoDate().required(),
-      }),
-    )
-    .required()
-    .min(1),
-});
-
-// --- Routes ---
+router.use(requireRole("admin"));
 
 router.get(
-  "/status",
+  "/link",
   asyncHandler(async (_req: Request, res: Response) => {
-    res.json(await edgeSyncService.getStatus());
-  }),
-);
-
-router.get(
-  "/config",
-  asyncHandler(async (_req: Request, res: Response) => {
-    res.json(await edgeSyncService.getConfig());
-  }),
-);
-
-router.put(
-  "/config",
-  requireRole("admin"),
-  validateBody(updateConfigSchema),
-  asyncHandler(async (req: Request, res: Response) => {
-    const updated = await edgeSyncService.updateConfig(req.body);
-    res.json(updated);
+    res.json(await edgeSync.status());
   }),
 );
 
 router.post(
-  "/sync/trigger",
-  requireRole("admin"),
-  asyncHandler(async (_req: Request, res: Response) => {
-    const synced = await edgeSyncService.processSync();
-    res.json({ message: "Sync triggered", queued: synced });
+  "/link",
+  validateBody(
+    Joi.object({
+      centralUrl: Joi.string()
+        .uri({ scheme: ["https"] })
+        .max(500)
+        .required(),
+      caCertificate: Joi.string()
+        .max(16384)
+        .pattern(/-----BEGIN CERTIFICATE-----/)
+        .required(),
+      enrollmentCode: Joi.string()
+        .pattern(/^pdee_[A-Za-z0-9_-]{43}$/)
+        .required(),
+    }),
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      new X509Certificate(req.body.caCertificate);
+    } catch {
+      throw new ValidationError(
+        "The CA certificate is not a readable PEM certificate",
+      );
+    }
+    const status = await edgeSync.enroll(req.body, req.session.userId!);
+    await auditLogService.recordEvent(
+      {
+        action: "edge.link.enrolled",
+        entityType: "edge",
+        message: `Linked to ${req.body.centralUrl} as edge "${status.linked ? status.edgeName : ""}"`,
+      },
+      getAuditActor(req),
+    );
+    res.status(201).json(status);
   }),
 );
 
-router.post(
-  "/ingest",
-  validateBody(ingestSchema),
+router.delete(
+  "/link",
   asyncHandler(async (req: Request, res: Response) => {
-    const { edgeId, items } = req.body;
-    const received = await edgeSyncService.ingestFromEdge(edgeId, items);
-    res.json({ received, message: `Ingested ${received} items` });
+    await edgeSync.unlink();
+    await auditLogService.recordEvent(
+      {
+        action: "edge.link.removed",
+        entityType: "edge",
+        message:
+          "Link to the central installation removed; local history is kept",
+      },
+      getAuditActor(req),
+    );
+    res.status(204).end();
   }),
 );
 

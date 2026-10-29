@@ -55,7 +55,6 @@ import {
 } from "./src/opcuaBridge.js";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter, createContext } from "./src/trpc/index.js";
-import { edgeSyncService } from "./src/services/edgeSyncService.js";
 import { reportSchedulerService } from "./src/services/reportSchedulerService.js";
 import { healthIncidentService } from "./src/services/healthIncidentService.js";
 
@@ -94,6 +93,8 @@ import recipeRoutes from "./src/routes/recipeRoutes.js";
 import batchRoutes from "./src/routes/batchRoutes.js";
 import digitalTwinRoutes from "./src/routes/digitalTwinRoutes.js";
 import edgeRoutes from "./src/routes/edgeRoutes.js";
+import edgeSyncRoutes from "./src/routes/edgeSyncRoutes.js";
+import edgeAdminRoutes from "./src/routes/edgeAdminRoutes.js";
 
 // --- Tier 1 Route modules ---
 import plantRoutes from "./src/routes/plantRoutes.js";
@@ -158,6 +159,7 @@ export function createApp() {
     next();
   });
   app.use("/api/v1/auth/oidc", oidcRoutes);
+  app.use("/api/v1/edge-sync", edgeSyncRoutes);
   app.use("/api/v1/auth", authRoutes);
   app.use("/api/v1/share", shareRoutes);
   app.use(
@@ -238,6 +240,7 @@ export function createApp() {
   }
   app.use("/api/v1/digital-twins", requireAuth, digitalTwinRoutes);
   app.use("/api/v1/edge", requireAuth, edgeRoutes);
+  app.use("/api/v1/edges", edgeAdminRoutes);
 
   // --- tRPC API ---
   app.use(
@@ -272,9 +275,6 @@ async function bootstrap() {
 
   setupOpcuaBridge(services);
   startOpcuaServices(services);
-
-  // Start edge sync loop if in edge mode
-  if (!config.RECOVERY_MODE) edgeSyncService.startSyncLoop();
 
   // Activate persisted report schedules
   if (!config.RECOVERY_MODE) reportSchedulerService.init();

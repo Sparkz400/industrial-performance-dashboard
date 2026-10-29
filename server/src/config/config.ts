@@ -243,9 +243,11 @@ const envVarsSchema = Joi.object({
     .description("Cloud server URL for edge sync"),
   EDGE_SYNC_INTERVAL_MS: Joi.number()
     .integer()
-    .min(5000)
+    .min(1000)
     .default(30000)
     .description("Edge sync interval (ms)"),
+  // H08: an edge ships rows only up to an id recorded this long ago (longest open write).
+  EDGE_SETTLE_MS: Joi.number().integer().min(1000).max(600000).default(30000),
   EDGE_SYNC_BATCH_SIZE: Joi.number()
     .integer()
     .min(10)
@@ -375,6 +377,7 @@ export interface AppConfig {
   EDGE_CLOUD_URL: string;
   EDGE_SYNC_INTERVAL_MS: number;
   EDGE_SYNC_BATCH_SIZE: number;
+  EDGE_SETTLE_MS: number;
   EDGE_DATA_RETENTION_DAYS: number;
   EDGE_LIGHTWEIGHT_MODE: boolean;
   OTEL_ENABLED: boolean;

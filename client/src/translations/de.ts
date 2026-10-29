@@ -66,7 +66,7 @@ export const german: Record<string, string> = {
   'Backup & Restore': 'Sicherung und Wiederherstellung',
   Certificates: 'Zertifikate',
   'Audit Trail': 'Änderungsprotokoll',
-  'Edge Status': 'Gateway-Status',
+  Edges: 'Edges',
   'Custom Widgets': 'Eigene Widgets',
   'System Info': 'Systeminformationen',
   'Daily operations': 'Täglicher Betrieb',

@@ -23,7 +23,7 @@ import alarmEvaluator, { toAlarmEvent } from "./services/alarmService.js";
 import type { AlertHistoryRow } from "./database/schema.js";
 import { webhookService } from "./services/webhookService.js";
 import { spcService, spcEvents } from "./services/spcService.js";
-import { edgeSyncService } from "./services/edgeSyncService.js";
+import { edgeSync } from "./services/edgeSyncService.js";
 import { healthIncidentService } from "./services/healthIncidentService.js";
 import { stopConfiguredGateway } from "./gateway/configuredGateway.js";
 import { mqttIngestion } from "./services/mqttIngestion.js";
@@ -131,27 +131,7 @@ export function setupOpcuaBridge({
           });
       }
 
-      // Edge: buffer data for cloud sync if in edge mode
-      if (edgeSyncService.isEdgeMode()) {
-        edgeSyncService
-          .queueForSync(
-            "opcua_data",
-            "INSERT",
-            `${data.key}-${data.timestamp}`,
-            {
-              nodeKey: data.key,
-              nodeLabel: data.label,
-              timestamp: data.timestamp,
-              value: data.value,
-              machineId: data.machineId,
-              statusCode: data.statusCode,
-              dataType: data.dataType,
-            },
-          )
-          .catch((err) => {
-            logger.debug(`[Edge] Queue error: ${err}`);
-          });
-      }
+      // An edge ships committed rows from PostgreSQL (edgeSyncService), not from this stream.
 
       if (
         statusManager.getServiceStatus(StatusConstants.OPCUA) ===
@@ -199,6 +179,9 @@ export async function startOpcuaServices({
     void plcAlarms
       .stopAll()
       .catch((error) => logger.error("PLC alarm disconnect failed", error));
+    void edgeSync
+      .stop()
+      .catch((error) => logger.error("Edge sync stop failed", error));
     void multiMachineManager
       .disconnectAll()
       .catch((error) => logger.error("Collector disconnect failed", error));
@@ -248,6 +231,14 @@ export async function startOpcuaServices({
   await plcAlarms
     .startAll()
     .catch((err) => logger.error("PLC alarm observation not started:", err));
+  // One collector ships an edge's history; it starts only when a link exists.
+  if (
+    await edgeSync.status().then(
+      (s) => s.linked,
+      () => false,
+    )
+  )
+    edgeSync.start();
 }
 
 /** Gracefully shut down all services. */
@@ -301,7 +292,7 @@ export function createShutdown(
       await healthIncidentService.stop();
       await opcuaQueueWorker.stop();
       await webhookService.stop();
-      edgeSyncService.stopSyncLoop();
+      await edgeSync.stop();
       await releaseCollectorLock().catch((error) =>
         logger.warn("[Shutdown] Collector lock release failed", error),
       );

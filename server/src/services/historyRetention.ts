@@ -5,8 +5,10 @@ import { ValidationError } from "../utils/errors.js";
 import { rollupRemoved } from "./historyRollup.js";
 import { auditLogService } from "./auditLogService.js";
 // Shift source evidence is retained regardless of age. Deletion never activates itself.
+// On an edge, readings the central installation has not yet confirmed are kept (H08).
 export const eligible = `d.machine_id=$1 AND d.timestamp < $2 AND d.id <= $3
   AND d.correction_revision=0
+  AND NOT EXISTS (SELECT 1 FROM edge_link l WHERE d.id > l.cursor)
   AND (d.received_at IS NULL OR d.received_at < now()-interval '24 hours')
   AND NOT EXISTS (SELECT 1 FROM batches b WHERE b.machine_id=d.machine_id AND d.timestamp>=b.started_at AND (b.completed_at IS NULL OR d.timestamp<b.completed_at))
   AND NOT EXISTS
