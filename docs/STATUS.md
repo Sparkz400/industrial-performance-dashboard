@@ -79,6 +79,18 @@ Retention keeps seconds per production state and counter increments of commissio
 production signals, computed with the shift report's own rules, so removing raw readings no
 longer reduces those signals to averages (H06).
 
+## Backlog wave 7
+
+Supervisors compare changeovers between product runs with expected times per product
+transition; unknown, never-running and cross-shift transitions are listed unmeasured and
+nothing ranks operators (O06). Declared lot links are corrected by appended, attributable
+records that balances, cycle checks and the trace respect (Q05). A
+[data ownership inventory](DATA_OWNERSHIP.md) lists stored data, exports, outbound flows,
+deletion and retention; exports, retention steps, configuration deletions, destination
+changes and failed sign-ins are now audited, and a destination's signing secret is
+returned only at creation (E05). Shift reports need no rollup fallback because retention
+protects their readings (H06 decision).
+
 ## Data integrity and reviewed operations
 
 The [six-feature integrity wave](DATA_INTEGRITY.md) replaces generated widget data,

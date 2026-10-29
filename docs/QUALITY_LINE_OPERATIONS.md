@@ -41,6 +41,16 @@ rejected under a transaction lock. Trace reports expose links in both directions
 with a 5,000-link truncation flag. These are declared lot movements, not automatic
 material reconciliation or supplier certification.
 
+A wrong lot quantity is corrected, not edited: **Record lot correction** appends the
+new quantity (or voids the link) with a reason and the administrator's identity; the
+declared link and earlier corrections stay readable. The latest correction applies to
+balances, cycle checks and the trace. A producer cannot fall below recorded consumption,
+a consumed output cannot be voided, restoring a void link may not close a cycle, and a
+restored consumption needs an active producer or a supplier reference. Void links stop
+connecting batches in the trace but remain listed, and the trace exports every
+correction of its links. A correction naming an outdated previous correction is refused
+(`test-lot-corrections.mjs`).
+
 Start, complete and abort **record** a batch in this application; they never control
 the machine, and the page says so. Starting takes a per-machine lock, so two batches
 cannot run on one machine even when two people press start at once; the second

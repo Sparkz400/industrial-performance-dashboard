@@ -41,7 +41,7 @@ F07, F08, F09, F10 and D01. A following P1 gap wave closed R04, O05, H05, D05 an
 backlog wave 1 closed E01, R05, R02 and A08, and recorded research decisions
 ([decisions](docs/RESEARCH_DECISIONS.md)): I08, E06 and X02 closed as rejected; the rest
 stay open with explicit triggers.
-Backlog status: 71 checked and 37 open; I06 is withdrawn.
+Backlog status: 74 checked and 34 open; I06 is withdrawn.
 
 ### Data integrity and reviewed operations — 2026-10-28
 
@@ -379,6 +379,10 @@ below retain their unfulfilled acceptance criteria.
   increments (gap, reset and rollover rules of the profile) for commissioned production signals;
   `test-history-rollups.mjs` removes 6,006 readings in two batches and finds the kept values equal to
   the shift calculation on those readings ([scope](docs/DAILY_OPERATIONS.md)).
+  Decision (wave 7): no report fallback to rollups is needed. Shift reports keep their raw
+  readings because retention protects every recorded shift, and the configurable OEE widget
+  uses its own mapping, so it shows removed windows as unknown instead of borrowing profile
+  rollups ([scope](docs/DAILY_OPERATIONS.md#history-storage-and-retention)).
 - [x] **H07 — Handle late and corrected measurements predictably** · P1 · M2 · New · L. Depends: H01.
   Done: event-time ordering, duplicate identities and late arrivals have a defined policy;
   affected aggregates are recomputed with provenance and finalized reports keep their
@@ -453,13 +457,18 @@ below retain their unfulfilled acceptance criteria.
   when complete counters differ (`shiftCalculation.test.ts`, `test-daily-workflows.mjs`).
   Sampling and rollover behaviour on the physical machine stay with the S7-1500 pilot (D06).
 
-- [ ] **O06 — Measure setup and changeover loss** · P2 · M3 · New · M. Depends: O04, O02.
+- [x] **O06 — Measure setup and changeover loss** · P2 · M3 · New · M. Depends: O04, O02.
   Done: expected/actual changeover periods use product transitions and operator-confirmed
   context; overlapping runs and unobserved transitions remain visible. Compare comparable
   changeovers rather than ranking unrelated jobs or operators.
   Progress: changeover is an explicit stop category with energy/loss accounting
-  ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)). Remaining:
-  expected-versus-actual changeover from product transitions and comparable grouping.
+  ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)).
+  Completed (wave 7): a changeover runs from the last running state of one product run to the
+  first of the next product, minus breaks, beside operator-classified changeover time; unknown
+  state, runs without running state and cross-shift transitions are listed unmeasured (runs inside
+  a shift cannot overlap); only the same transition on the same machine is grouped against an
+  append-only expected standard (`test-changeovers.mjs`,
+  [scope](docs/DAILY_OPERATIONS.md#calendars-product-runs-and-frozen-reports)).
 - [x] **O07 — Analyze microstops and cycle distributions** · P2 · M3 · New · L. Depends: O02.
   Done: configurable thresholds distinguish short stops and slow cycles; histograms,
   percentiles and loss Pareto preserve acquisition-resolution limits. A 1 Hz sample
@@ -739,13 +748,17 @@ below retain their unfulfilled acceptance criteria.
   record-not-control labels; `test-batch-lifecycle.mjs` races starts five times, complete against
   abort, and checks an aborted batch makes no compliance claim. Recipes/batches stay experimental
   until a pilot validates the field meanings.
-- [ ] **Q05 — Add bounded lot and batch genealogy** · P2 · M3 · New · L. Depends: Q04, Q03.
+- [x] **Q05 — Add bounded lot and batch genealogy** · P2 · M3 · New · L. Depends: Q04, Q03.
   Done: input/output lots, splits, merges and affected batches can be traced with stable
   IDs and corrections; export a demonstrable trace query. Scope this to observed records,
   without promising a complete supply-chain or regulated recall system.
   Progress: declared lots, unit/quantity checks, cycle rejection and a bidirectional
   bounded trace report ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)).
-  Remaining: correction records for declared lot movements.
+  Completed (wave 7): appended lot corrections and voids with reason and actor; balances,
+  cycle checks and the trace use the latest correction, void links stop connecting batches,
+  and the trace exports every correction of its links (`test-lot-corrections.mjs`,
+  [scope](docs/QUALITY_LINE_OPERATIONS.md#batch-quality-and-genealogy)). Recipes and batches
+  remain experimental.
 - [ ] **Q06 — Compare recipes with observed settings** · P2 · M3 · Improve · L. Depends: Q04, C04.
   Done: approved recipe revisions and tolerances can be compared to read-only measured
   parameters; deviations retain time, quality and context. Recipe edits do not apply
@@ -954,10 +967,17 @@ below retain their unfulfilled acceptance criteria.
   Done: enrollment, credential rotation/revocation, config revision and staged upgrades
   are attributable; an edge can reject incompatible configuration. Fleet updates have
   a documented stop/rollback path and do not issue machine commands.
-- [ ] **E05 — Define data ownership, residency and retention policies** · P2 · M4 · New · M. Depends: E01, H05.
+- [x] **E05 — Define data ownership, residency and retention policies** · P2 · M4 · New · M. Depends: E01, H05.
   Done: deployment operators can identify stored/exported data and optional external
   flows; export, deletion, retention and access review have explicit scope and audit
   records. Do not claim jurisdictional compliance from settings alone.
+  Completed (wave 7): [data ownership](docs/DATA_OWNERSHIP.md) lists stored data, secrets,
+  exports, outbound flows, deletion and retention rules and audit scope. Exports, retention
+  steps (including scheduled runs and report-file pruning), configuration deletions and
+  destination changes are now audited; failed sign-ins and grant/account changes keep
+  previous values; a destination's signing secret is no longer returned after creation
+  (`test-data-ownership.mjs`). Open limits are listed there: audit records are not
+  tamper-evident or exportable, backups hold every secret, and four settings do nothing.
 - [x] **E06 — Decide whether separate-company tenancy is justified** · P3 · M5 · Research · XL. Depends: E02, E03, E05.
   Done: compare separate installations with a hosted tenancy design using real demand,
   costs and threat boundaries; require independent isolation testing before implementation

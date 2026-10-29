@@ -55,7 +55,8 @@ links; legacy alarm email/chat/SMS channels are disabled.
 See the [production workflow](docs/PRODUCTION_WORKFLOW.md),
 [P0 acceptance evidence](docs/P0_ACCEPTANCE.md), the per-screen
 [acceptance matrix](docs/ACCEPTANCE_MATRIX.md), the
-[security and deployment boundaries](docs/SECURITY_BOUNDARIES.md) and the WCAG 2.2
+[security and deployment boundaries](docs/SECURITY_BOUNDARIES.md), the
+[data ownership and retention inventory](docs/DATA_OWNERSHIP.md) and the WCAG 2.2
 [accessibility checklist](docs/ACCESSIBILITY.md).
 The first nominated pilot family is [Siemens SIMATIC S7-1500](docs/S7_1500_PILOT.md);
 software acceptance uses owned simulators, with physical CPU qualification still open.
