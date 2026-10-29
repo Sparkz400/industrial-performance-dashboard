@@ -542,7 +542,7 @@ try {
     "Good recovery did not clear persisted incident",
   );
   accepts = true;
-  await pool.query("UPDATE webhook_deliveries SET next_attempt_at=now()");
+  await pool.query("UPDATE webhook_deliveries SET next_attempt_at=now()-interval '1 second'");
   await waitFor(
     async () =>
       Number(

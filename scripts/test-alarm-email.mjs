@@ -72,7 +72,7 @@ try {
     const { webhookService } = await import("../server/dist/src/services/webhookService.js");
     smtp.failures = 2;
     for (let i = 0; i < 3; i++) {
-      await pool.query("UPDATE webhook_deliveries SET next_attempt_at=now() WHERE id=$1", [deliveries[0].id]);
+      await pool.query("UPDATE webhook_deliveries SET next_attempt_at=now()-interval '1 second' WHERE id=$1", [deliveries[0].id]);
       await webhookService.processDeliveries();
     }
     const [sent] = (

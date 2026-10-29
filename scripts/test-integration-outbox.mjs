@@ -104,7 +104,7 @@ try {
     await webhookService.processDeliveries();
     assert.equal(received.length, 2);
     await pool.query(
-      "UPDATE webhook_deliveries SET attempts=$2, next_attempt_at=now() WHERE id=$1",
+      "UPDATE webhook_deliveries SET attempts=$2, next_attempt_at=now()-interval '1 second' WHERE id=$1",
       [queued.id, MAX_DELIVERY_ATTEMPTS - 1],
     );
     await webhookService.processDeliveries();
@@ -117,7 +117,7 @@ try {
     assert.equal(dead.last_status, 503);
     assert.equal(dead.last_error, "HTTP 503");
     await pool.query(
-      "UPDATE webhook_deliveries SET next_attempt_at=now() WHERE id=$1",
+      "UPDATE webhook_deliveries SET next_attempt_at=now()-interval '1 second' WHERE id=$1",
       [queued.id],
     );
     await webhookService.processDeliveries();
