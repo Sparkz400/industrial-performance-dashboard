@@ -446,7 +446,8 @@ router.post(
         .trim()
         .toLowerCase();
     if (!file.length) throw new ValidationError("Attach a non-empty file");
-    if (!attachmentTypes.get(type)?.(file))
+    const matches = attachmentTypes.get(type);
+    if (typeof matches !== "function" || !matches(file))
       throw new ValidationError(
         "Attach a PNG, JPEG, PDF or UTF-8 text file whose content matches its type",
       );

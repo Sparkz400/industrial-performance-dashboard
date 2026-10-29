@@ -45,7 +45,7 @@ await dailyFixture(async ({ pool, call, users, actors, api, frontend, expect }) 
   }));
   const host = createServer((req, res) => {
     const page = pages.get(req.url);
-    if (!page) return res.writeHead(404).end();
+    if (typeof page !== "function") return res.writeHead(404).end();
     res.writeHead(200, { "content-type": req.url.endsWith(".json") ? "application/json" : "text/html" }).end(page());
   }).listen(0, "127.0.0.1");
   await once(host, "listening");
