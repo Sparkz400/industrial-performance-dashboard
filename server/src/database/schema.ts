@@ -1528,6 +1528,30 @@ export const batchLots = pgTable(
     check("lot_quantity", sql`${t.quantity}>0`),
   ],
 );
+/** An improvement action and the frozen shift revisions it is judged against; immutable. */
+export const improvementActions = pgTable(
+  "improvement_actions",
+  {
+    id: serial("id").primaryKey(),
+    machineId: integer("machine_id")
+      .notNull()
+      .references(() => machines.id, { onDelete: "restrict" }),
+    title: varchar("title", { length: 200 }).notNull(),
+    description: text("description").notNull(),
+    implementedAt: timestamp("implemented_at", {
+      withTimezone: true,
+    }).notNull(),
+    beforeRevisionIds: jsonb("before_revision_ids").$type<number[]>().notNull(),
+    afterRevisionIds: jsonb("after_revision_ids").$type<number[]>().notNull(),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("improvement_action_machine").on(t.machineId, t.id)],
+);
 /** Checks required for a product on a machine; append-only, the latest plan applies. */
 export const inspectionPlans = pgTable(
   "inspection_plans",

@@ -122,9 +122,11 @@ export async function authorizeAssetRequest(
     return;
   }
   if (
-    read &&
     canSupervise(scope.role) &&
-    (found = match(/^\/comparisons\/machines\/(\d+)$/))
+    (found = match(
+      /^\/comparisons\/machines\/(\d+)(\/revisions|\/actions)?$/,
+    )) &&
+    (read || (method === "POST" && found[2] === "/actions"))
   ) {
     assertMachine(found[1]);
     return;
