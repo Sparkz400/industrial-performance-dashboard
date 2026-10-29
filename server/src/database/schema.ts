@@ -1528,6 +1528,51 @@ export const batchLots = pgTable(
     check("lot_quantity", sql`${t.quantity}>0`),
   ],
 );
+/** Opt-in observation of a machine's OPC UA alarms and conditions (read-only). */
+export const plcAlarmSubscriptions = pgTable("plc_alarm_subscriptions", {
+  machineId: integer("machine_id")
+    .primaryKey()
+    .references(() => machines.id, { onDelete: "restrict" }),
+  enabled: boolean("enabled").notNull(),
+  updatedBy: integer("updated_by")
+    .notNull()
+    .references(() => users.id),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+/** OPC UA alarm and condition events as received; one row per source EventId. */
+export const plcAlarmEvents = pgTable(
+  "plc_alarm_events",
+  {
+    id: serial("id").primaryKey(),
+    machineId: integer("machine_id")
+      .notNull()
+      .references(() => machines.id, { onDelete: "restrict" }),
+    eventId: varchar("event_id", { length: 200 }).notNull(),
+    eventType: varchar("event_type", { length: 200 }).notNull(),
+    conditionId: varchar("condition_id", { length: 500 }),
+    conditionName: varchar("condition_name", { length: 500 }),
+    sourceName: varchar("source_name", { length: 500 }),
+    sourceNode: varchar("source_node", { length: 500 }),
+    eventTime: timestamp("event_time", { withTimezone: true }).notNull(),
+    receiveTime: timestamp("receive_time", { withTimezone: true }),
+    receivedAt: timestamp("received_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    severity: integer("severity").notNull(),
+    message: text("message"),
+    active: boolean("active"),
+    acked: boolean("acked"),
+    retain: boolean("retain"),
+    // Delivered between RefreshStart and RefreshEnd: a replay of current state.
+    refresh: boolean("refresh").notNull(),
+  },
+  (t) => [
+    unique("plc_alarm_event_identity").on(t.machineId, t.eventId),
+    index("plc_alarm_event_time").on(t.machineId, t.eventTime),
+  ],
+);
 /** A read-only MQTT subscription for a machine: TLS broker, pinned CA and topic mappings. */
 export const mqttSources = pgTable("mqtt_sources", {
   id: serial("id").primaryKey(),

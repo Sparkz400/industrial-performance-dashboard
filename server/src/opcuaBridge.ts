@@ -27,6 +27,7 @@ import { edgeSyncService } from "./services/edgeSyncService.js";
 import { healthIncidentService } from "./services/healthIncidentService.js";
 import { stopConfiguredGateway } from "./gateway/configuredGateway.js";
 import { mqttIngestion } from "./services/mqttIngestion.js";
+import { plcAlarms } from "./services/plcAlarms.js";
 import {
   acquireCollectorLock,
   releaseCollectorLock,
@@ -195,6 +196,9 @@ export async function startOpcuaServices({
     void mqttIngestion
       .stopAll()
       .catch((error) => logger.error("MQTT disconnect failed", error));
+    void plcAlarms
+      .stopAll()
+      .catch((error) => logger.error("PLC alarm disconnect failed", error));
     void multiMachineManager
       .disconnectAll()
       .catch((error) => logger.error("Collector disconnect failed", error));
@@ -241,6 +245,9 @@ export async function startOpcuaServices({
     .catch((err) =>
       logger.error("MQTT sources not started; they remain disconnected:", err),
     );
+  await plcAlarms
+    .startAll()
+    .catch((err) => logger.error("PLC alarm observation not started:", err));
 }
 
 /** Gracefully shut down all services. */
@@ -287,6 +294,7 @@ export function createShutdown(
 
       logger.info("[Shutdown] Disconnecting OPC UA connections...");
       await mqttIngestion.stopAll();
+      await plcAlarms.stopAll();
       await multiMachineManager.disconnectAll();
       await opcuaConnectionManager.disconnectConnection();
       await stopConfiguredGateway();
