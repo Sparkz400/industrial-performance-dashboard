@@ -32,7 +32,7 @@ data is never filled in: values from non-Good samples are `null`, and averages a
 | Endpoint | Role | Bounds | Returns |
 | --- | --- | --- | --- |
 | `GET /api/v1/production/assets` | viewer | granted machines only | `[{ id, name, status }]` |
-| `GET /api/v1/history/{machineId}/summaries?nodeKey&start&end` | viewer | end > start, at most 366 days; at most 8 785 hourly rows | `[{ bucket, samples, good, sum, min, max, average, identity, corrected_samples, retained_samples, source, continuity }]` |
+| `GET /api/v1/history/{machineId}/summaries?nodeKey&start&end` | viewer | end > start, at most 366 days; at most 8 785 hourly rows | `[{ bucket, samples, good, sum, min, max, average, identity, corrected_samples, retained_samples, source, continuity, retained_state_seconds, retained_increment, retained_increment_pairs, retained_unknown_pairs }]` |
 | `GET /api/v1/production/replay/{machineId}?start&end&keys=…` | viewer | at most 48 hours; 1–8 distinct keys; 2 000 samples per key (`truncated: true` beyond) | `incident-replay-v1`: per key `{ at, sourceAt, receivedAt, value, raw, quality, identity }`, plus alarms and operator events in the window |
 | `GET /api/v1/work-orders/machines/{machineId}/completions` | supervisor | latest 100 imported orders (`truncated` beyond) | `work-order-completions-v1`: per order the saved report revision, digest and reconciled or unverified facts |
 

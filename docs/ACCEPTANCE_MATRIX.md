@@ -58,7 +58,7 @@ where marked *(local)*.
 | Live sockets | `test-access.mjs` (rooms, alarm events, revocation), `socketSessions.test.ts`, `accessMatrix.test.ts` (no global broadcasts) | U D |
 | Durable acquisition and replay | `test-recovery.mjs`, `measurementSpool.test.ts`, `opcuaQueueWorker.test.ts` (capacity, quarantine), `test-database-client-errors.mjs`, `test-spool-quarantine.mjs`, `test-collector-lock.mjs` | U D S |
 | Integration API v1 and webhook contract | `test-api-contract.mjs` runs `scripts/examples/integration-client.mjs`; `test-integration-outbox.mjs`; see [integration contract](INTEGRATION_API.md) | D B |
-| History rollups and indexes | `test-history.mjs` (raw and retained summaries identical); `scripts/benchmark-history.mjs` *(local evidence)*, see [capacity](CAPACITY.md) | D |
+| History rollups and indexes | `test-history.mjs` (raw and retained summaries identical); `test-history-rollups.mjs` (state seconds and counter increments equal the shift calculation across two retention batches); `scripts/benchmark-history.mjs` *(local evidence)*, see [capacity](CAPACITY.md) | D |
 | Installation, backup, restore, upgrade, rollback | `test-operations.mjs` (incl. restore after retention cancels pending deletions), `test-container.mjs` | D |
 | Operational metrics | `operationalMetrics.test.ts`; real-database admin scrape and viewer refusal in `test-access.mjs` | U D |
 | Accessibility (WCAG 2.2 A/AA) | `test-accessibility.mjs`: axe on seven screens with zero findings, keyboard login and widget layout, reduced motion, 320 px reflow; see [accessibility](ACCESSIBILITY.md) | B |

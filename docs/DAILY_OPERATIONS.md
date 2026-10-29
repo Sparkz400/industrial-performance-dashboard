@@ -61,7 +61,18 @@ intervals is protected, including boundary lookback. Protected history can there
 keep growing beyond the retention age. Hourly summaries describe removed rows only;
 do not add them to an overlapping raw query without a disjoint-range policy.
 Missing/mixed source identities or bad samples suppress an aggregate average.
-These summaries cannot reconstruct raw counters, transitions or report evidence.
+
+For signals in the machine's commissioned production profile, retention also keeps
+what an average would lose: seconds per production state (running, idle, fault,
+planned) and counter increments with the profile's gap and reset/rollover rules,
+exactly as the shift report calculates them. Each removed reading keeps the state
+interval or counter pair that starts at it, so rows that stay stored never double-count;
+state time is split by hour and a counter increment belongs to the hour of the later
+reading. Bad, unmapped or out-of-gap data is not stored and stays unknown (the rest of
+the hour). The summaries API returns these as `retained_state_seconds`,
+`retained_increment`, `retained_increment_pairs` and `retained_unknown_pairs`.
+Individual transitions, raw counter values and report evidence are still not
+reconstructable (`test-history-rollups.mjs`).
 
 Storage shows database/history allocation, measured row size and recent receipt
 rate. The thirty-day growth forecast estimates **row bytes only**; indexes, free

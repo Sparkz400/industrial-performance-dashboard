@@ -45,14 +45,23 @@ router.get(
               CASE WHEN count(signal_metadata)=0 THEN 'unknown' WHEN count(signal_metadata)<count(*) OR min(md5(signal_metadata::text))<>max(md5(signal_metadata::text)) THEN 'mixed' ELSE min(md5(signal_metadata::text)) END,
               count(*) FILTER(WHERE correction_revision>0)::integer,0::integer
             FROM opcua_data WHERE machine_id=$1 AND node_key=$2 AND timestamp >= $3 AND timestamp < $4 + interval '1 hour' AND date_trunc('hour',timestamp,'UTC') >= $3 AND date_trunc('hour',timestamp,'UTC') < $4 GROUP BY 1
+            UNION ALL
+            -- Hours that only a retained state interval or counter pair reaches.
+            SELECT bucket,0,0,NULL,NULL,NULL,NULL,0,0 FROM history_state_seconds WHERE machine_id=$1 AND node_key=$2 AND bucket >= $3 AND bucket < $4
+            UNION ALL
+            SELECT bucket,0,0,NULL,NULL,NULL,NULL,0,0 FROM history_counter_increments WHERE machine_id=$1 AND node_key=$2 AND bucket >= $3 AND bucket < $4
           ), combined AS (
             SELECT bucket,sum(samples)::integer AS samples,sum(good)::integer AS good,sum(sum) AS sum,min(min) AS min,max(max) AS max,
-              CASE WHEN min(identity)=max(identity) THEN min(identity) ELSE 'mixed' END AS identity,
+              CASE WHEN min(identity) IS NULL THEN 'unknown' WHEN min(identity)=max(identity) THEN min(identity) ELSE 'mixed' END AS identity,
               sum(corrected_samples)::integer AS corrected_samples,sum(retained_samples)::integer AS retained_samples
             FROM parts GROUP BY bucket
-          ) SELECT *,CASE WHEN good=samples AND good>0 AND identity NOT IN ('unknown','mixed') THEN sum/good ELSE NULL END AS average,
-            'retained-and-current' AS source,'unverified' AS continuity
-          FROM combined ORDER BY bucket LIMIT 8785`,
+          ) SELECT combined.*,CASE WHEN good=samples AND good>0 AND identity NOT IN ('unknown','mixed') THEN sum/good ELSE NULL END AS average,
+            'retained-and-current' AS source,'unverified' AS continuity,
+            -- Production state seconds and counter increments kept for removed readings.
+            (SELECT jsonb_object_agg(s.state,s.seconds) FROM history_state_seconds s WHERE s.machine_id=$1 AND s.node_key=$2 AND s.bucket=combined.bucket) AS retained_state_seconds,
+            ci.increment AS retained_increment,ci.pairs AS retained_increment_pairs,ci.unknown_pairs AS retained_unknown_pairs
+          FROM combined LEFT JOIN history_counter_increments ci ON ci.machine_id=$1 AND ci.node_key=$2 AND ci.bucket=combined.bucket
+          ORDER BY combined.bucket LIMIT 8785`,
           [Number(req.params.id), req.query.nodeKey, start, end],
         )
       ).rows,
