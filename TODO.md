@@ -311,7 +311,7 @@ below retain their unfulfilled acceptance criteria.
   status, queue settings, reconnect observations and freshness
   ([PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64),
   [scope](docs/FACTORY_OPERATIONS.md#connection-diagnostics-and-alarm-review)); sampling
-  is configurable per signal. Completed (wave 2): per-endpoint publishing interval, queue size and
+  is configurable per signal. Completed ([PR #69](https://github.com/Sparkz400/performance_dashboard/pull/69)): per-endpoint publishing interval, queue size and
   notifications per publish in the machine form; `test-subscription-limits.mjs` shows requested/revised
   values and server overflow indications with a queue of 2, then refuses and restores seven clients
   on one owned server and records spread first reconnect delays (node-opcua drops the randomisation
@@ -372,7 +372,7 @@ below retain their unfulfilled acceptance criteria.
   and preserve state durations and counter semantics instead of averaging every tag.
   Progress: hourly quality summaries retain counts/status for removed rows
   ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)). Remaining: index
-  benchmark and raw/aggregate comparison on a sustained dataset (D04). Wave 2: `test-history.mjs`
+  benchmark and raw/aggregate comparison on a sustained dataset (D04). [PR #69](https://github.com/Sparkz400/performance_dashboard/pull/69): `test-history.mjs`
   shows raw and retained-summary answers identical for 72 hourly buckets; `benchmark-history.mjs`
   records endpoint timings and index use on 5.2 million synthetic rows ([capacity](docs/CAPACITY.md)).
   Remaining: state-duration and counter-increment rollups so retention never reduces those tags to averages.
@@ -393,7 +393,7 @@ below retain their unfulfilled acceptance criteria.
   using measured capacity, while preserving all acknowledged records within that boundary.
   Progress: One-million-event cap, 64 MiB reserve and visible backlog/failure status stop acquisition before loss.
   Measured disk runway and storage incidents ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62))
-  and reviewed retention (H05) are implemented. Wave 2: capacity, reserve, backlog-age and runway
+  and reviewed retention (H05) are implemented. [PR #69](https://github.com/Sparkz400/performance_dashboard/pull/69): capacity, reserve, backlog-age and runway
   thresholds are configurable (80% capacity warns before the stop); operators see spool bytes, age,
   rows written per minute and the last write failure; records PostgreSQL refuses are quarantined on
   the collector with audited export/retry (`test-spool-quarantine.mjs`). Remaining: choose production
@@ -789,7 +789,7 @@ below retain their unfulfilled acceptance criteria.
   Done: actual application events enter a durable queue with stable IDs, schema versions,
   scoped payloads, retries/backoff and dead-letter inspection; receivers can deduplicate.
   Test process failure around send/ack and keep outbound-request protections intact.
-  Completed (wave 2): alarm, health and CMMS events are written to `webhook_deliveries` in the
+  Completed ([PR #69](https://github.com/Sparkz400/performance_dashboard/pull/69)): alarm, health and CMMS events are written to `webhook_deliveries` in the
   producing transaction; bodies carry the stable delivery `id` and `schemaVersion`; 100 failed
   attempts dead-letter with an incident, inspection and audited browser requeue under the same ID.
   `test-integration-outbox.mjs` kills a sender after the receiver got the event and before the
@@ -798,7 +798,7 @@ below retain their unfulfilled acceptance criteria.
   Done: document supported machine/history/job endpoints, errors, scopes, pagination,
   rate limits and version policy; supply runnable examples and contract tests. Align
   REST/tRPC ownership without rewriting working callers solely for architectural symmetry.
-  Completed (wave 2): [integration contract](docs/INTEGRATION_API.md) for assets, hourly summaries,
+  Completed ([PR #69](https://github.com/Sparkz400/performance_dashboard/pull/69)): [integration contract](docs/INTEGRATION_API.md) for assets, hourly summaries,
   raw replay and work-order completions, with one error shape, grants, time-window paging, rate-limit
   headers and an additive-only v1 policy; tRPC stays browser-internal. `test-api-contract.mjs` runs the
   published `scripts/examples/integration-client.mjs`. The unmounted, stale Swagger draft was removed.
@@ -897,7 +897,7 @@ below retain their unfulfilled acceptance criteria.
   Done: distinguish database recovery, web redundancy and collector ownership; demonstrate
   fencing against two active collectors and test failover on a declared topology.
   Defer implementation if the pilot's recovery targets are met by simpler operation.
-  Decision 2026-10-29: DEFER until agreed RPO/RTO are missed by the D06 restore drill. The startup collector lock is built (wave 2, `test-collector-lock.mjs`); fencing stays with this item. [decision](docs/RESEARCH_DECISIONS.md#d08--design-high-availability-from-measured-needs).
+  Decision 2026-10-29: DEFER until agreed RPO/RTO are missed by the D06 restore drill. The startup collector lock is built (`test-collector-lock.mjs`); fencing stays with this item. [decision](docs/RESEARCH_DECISIONS.md#d08--design-high-availability-from-measured-needs).
 
 ## Enterprise and multi-site
 
