@@ -67,7 +67,8 @@ and a restricted display account. Physical viewing-distance acceptance remains o
 [Unattended operation](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/UNATTENDED_OPERATION.md)
 covers durable report recovery, separate email retry status, measured alarm holds
 and collector/data-health incidents, including SMTP and self-monitoring limits,
-spool capacity and quarantine, and the single-collector lock.
+spool capacity and quarantine, and the single-collector lock with fenced leases
+([high availability](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/HIGH_AVAILABILITY.md)).
 
 The [integration API contract](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/INTEGRATION_API.md)
 lists the supported read endpoints, error shape, rate limits, durable webhook outbox

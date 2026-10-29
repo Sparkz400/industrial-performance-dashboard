@@ -1,6 +1,8 @@
 import { collectorDiagnostics } from "../services/collectorDiagnostics.js";
 import db from "../database/db.js";
-import { opcuaData } from "../database/schema.js";
+import { collectorEpochs, opcuaData } from "../database/schema.js";
+import { asc, gte } from "drizzle-orm";
+import { currentLease } from "../services/collectorLock.js";
 import logger from "../utils/logger.js";
 import config from "../config/config.js";
 import alarmEvaluator from "../services/alarmService.js";
@@ -43,7 +45,10 @@ export class OpcuaQueueWorker {
     }
     // Fail visibly if local storage is unavailable; never acknowledge a lost sample.
     try {
-      this.getSpool().enqueue(data);
+      this.getSpool().enqueue({
+        ...data,
+        leaseEpoch: data.leaseEpoch ?? currentLease()?.epoch,
+      });
       collectorDiagnostics.accepted(data.machineId);
     } catch (error) {
       collectorDiagnostics.rejected(data.machineId);
@@ -95,8 +100,57 @@ export class OpcuaQueueWorker {
     }
   }
 
+  /**
+   * D08 fencing: a sample received after a different collector's newer lease began is a
+   * duplicate collection by a collector that lost its lock; it is quarantined, not stored.
+   * A collector's own backlog after its own restart or retake is kept.
+   */
+  private async fence(batch: SpoolEntry[]) {
+    const stamped = batch.filter((entry) => entry.data.leaseEpoch != null);
+    if (!stamped.length) return batch;
+    const oldest = Math.min(...stamped.map((entry) => entry.data.leaseEpoch!));
+    const epochs = await db
+      .select()
+      .from(collectorEpochs)
+      .where(gte(collectorEpochs.epoch, oldest))
+      .orderBy(asc(collectorEpochs.epoch));
+    const accepted: SpoolEntry[] = [];
+    for (const entry of batch) {
+      const own = epochs.find((e) => e.epoch === entry.data.leaseEpoch);
+      const received = entry.data.receivedAt
+        ? new Date(entry.data.receivedAt).getTime()
+        : NaN;
+      const newer =
+        own && Number.isFinite(received)
+          ? epochs.find(
+              (e) =>
+                e.epoch > own.epoch &&
+                e.holder !== own.holder &&
+                e.acquiredAt.getTime() <= received,
+            )
+          : undefined;
+      if (!newer) {
+        accepted.push(entry);
+        continue;
+      }
+      this.getSpool().quarantine(
+        entry,
+        `Fenced: received after collector lease ${newer.epoch} (${newer.holder}) began; taken under lease ${own!.epoch} (${own!.holder})`,
+      );
+      logger.error(
+        "Measurement from a superseded collector lease quarantined",
+        {
+          id: entry.id,
+          lease: own!.epoch,
+          newer: newer.epoch,
+        },
+      );
+    }
+    return accepted;
+  }
+
   async processBatch(): Promise<void> {
-    let batch = this.getSpool().peek(config.OPCUA_BATCH_SIZE);
+    let batch = await this.fence(this.getSpool().peek(config.OPCUA_BATCH_SIZE));
     if (!batch.length) return;
     try {
       await this.write(batch);

@@ -1,4 +1,6 @@
 import type { PoolClient } from "pg";
+import { randomBytes } from "node:crypto";
+import { hostname } from "node:os";
 import manager from "../database/dbConnection.js";
 import logger from "../utils/logger.js";
 
@@ -9,6 +11,11 @@ let holder: PoolClient | undefined;
 let retry: ReturnType<typeof setInterval> | undefined;
 let onTaken: () => void = () => {};
 let retryMs = 5000;
+// D08 fencing: this process's identity and its latest lease (kept after a lost session, so
+// samples spooled during a database outage still name the lease they were taken under).
+const HOLDER = `${hostname()}:${process.pid}:${randomBytes(4).toString("hex")}`;
+let lease: { epoch: number; holder: string } | undefined;
+export const currentLease = () => lease;
 
 async function tryLock(): Promise<boolean> {
   const client = await manager.pool.connect();
@@ -27,6 +34,11 @@ async function tryLock(): Promise<boolean> {
   }
   holder = client;
   watch(client);
+  const { rows } = await client.query<{ epoch: number }>(
+    "INSERT INTO collector_epochs(holder) VALUES ($1) RETURNING epoch",
+    [HOLDER],
+  );
+  lease = { epoch: Number(rows[0].epoch), holder: HOLDER };
   return true;
 }
 

@@ -2137,3 +2137,11 @@ export const usefulnessEvents = pgTable(
     ),
   ],
 );
+/** D08: each collector lock acquisition opens a lease; samples carry the lease they were taken under. */
+export const collectorEpochs = pgTable("collector_epochs", {
+  epoch: serial("epoch").primaryKey(),
+  holder: varchar("holder", { length: 200 }).notNull(),
+  acquiredAt: timestamp("acquired_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

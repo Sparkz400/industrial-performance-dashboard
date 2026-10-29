@@ -9,6 +9,10 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("../../database/db.js", () => ({ default: { insert: mocks.insert } }));
 vi.mock("../../utils/logger.js", () => ({ default: { error: vi.fn() } }));
+// Unstamped samples (no collector lease) are not fenced; fencing is covered by test-collector-fencing.mjs.
+vi.mock("../../services/collectorLock.js", () => ({
+  currentLease: () => undefined,
+}));
 import config from "../../config/config.js";
 import { OpcuaQueueWorker } from "../../queue/opcuaQueueWorker.js";
 let dir: string;

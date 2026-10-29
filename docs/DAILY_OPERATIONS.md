@@ -180,6 +180,36 @@ store is counted, not retried: current conditions return with the next refresh, 
 transitions during a database outage are lost (`test-plc-alarms.mjs`). These PLC alarms
 are separate from the dashboard's own threshold alarms.
 
+## Completion forecast
+
+Supervisors choose a product and a remaining good quantity under **Completion forecast**.
+The estimate uses comparable runs only: verified, fully covered, intact saved revisions of
+that product since the latest improvement action (a declared process change). The median
+good-parts-per-planned-hour rate gives the estimate, and the 90th and 10th percentile rates
+the range. Below 10 comparable runs the estimate is withheld with the reason. A rolling
+backtest over the installation's own runs shows how often the actual hours fell inside the
+range and the median error beside a mean-rate benchmark. Runs are measured over their
+planned windows because actual run ends are not recorded. The estimate is advisory; it
+reschedules, plans and controls nothing (`test-forecasts-recommendations.mjs`).
+
+## Recommendations
+
+Supervisors see at most three kinds of recommendation under **Recommendations**, each with
+the revisions or alarm action it rests on and its assumptions:
+
+- *Classify stops first* when unclassified stops exceed 20 % of measured stop time in the
+  last five verified shift reports.
+- *Escalate* when an alarm recurred after its alarm action was completed with a service
+  record.
+- *Open an improvement action* when the same classified loss was largest in at least three
+  of the last five verified reports and no improvement action was implemented since.
+
+A recommendation is accepted by linking the improvement or alarm action taken on the same
+machine, whose outcome is then shown, or dismissed with a reason. Decisions are final and
+audited. A usefulness log counts what was shown and decided for the recommendations and for
+the ranked loss list (with a labelled proxy for actions after viewing the list) for the
+pilot review; it draws no conclusion (`test-forecasts-recommendations.mjs`).
+
 ## Energy and losses
 
 Configure a cumulative Wh/kWh meter with identity, scale, maximum sampling gap and

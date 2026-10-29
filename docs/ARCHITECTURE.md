@@ -62,7 +62,9 @@ The AI assistant and its external-provider integration have been removed.
 
 The spool is for one collector process on a durable local filesystem. A PostgreSQL
 session advisory lock held on a dedicated connection keeps a second collector against
-the same database from acquiring. Preserve `server/data/` or the container volume. Disk exhaustion and abrupt hardware loss
+the same database from acquiring. Each acquisition opens a lease; samples carry it, and a
+sample received after another collector's newer lease began is quarantined instead of
+stored ([high availability](HIGH_AVAILABILITY.md)). Preserve `server/data/` or the container volume. Disk exhaustion and abrupt hardware loss
 are operational limits; monitor storage. This is not a replicated historian.
 
 OEE reads the last sample at or before the window start, then subsequent changes.

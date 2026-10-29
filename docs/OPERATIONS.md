@@ -55,7 +55,8 @@ node scripts/operate.mjs activate --project factory-pilot --file .local/factory-
 
 Activation removes the preview proxy, enables normal networking and restarts the
 installation without deleting volumes. Configured jobs and connections may begin.
-Keep only one active collector. Set up HTTPS and the correct `CLIENT_URL` before
+Keep only one active collector; a second app process on the same database waits for the
+collector lease and takes over when the holder dies ([high availability](HIGH_AVAILABILITY.md)). Set up HTTPS and the correct `CLIENT_URL` before
 exposing the service beyond the workstation; the installer binds only to loopback.
 For the first PLC, follow the [S7-1500 guide](S7_1500_PILOT.md).
 

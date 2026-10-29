@@ -100,6 +100,7 @@ jobs:
       - run: node scripts/test-alarm-replay.mjs
       - run: node scripts/test-report-boundaries.mjs
       - run: node scripts/test-collector-lock.mjs
+      - run: node scripts/test-collector-fencing.mjs
       - run: node scripts/test-subscription-limits.mjs
       - run: node scripts/test-integration-outbox.mjs
       - run: node scripts/test-api-contract.mjs
@@ -128,6 +129,7 @@ jobs:
       - run: node scripts/test-plc-alarms.mjs
       - run: node scripts/test-oidc.mjs
       - run: node scripts/test-edge-history.mjs
+      - run: node scripts/test-forecasts-recommendations.mjs
       - run: node scripts/test-quality-line.mjs
       - run: node scripts/test-supervisor-workflows.mjs
       - run: node scripts/test-period-comparisons.mjs
