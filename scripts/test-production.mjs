@@ -576,7 +576,8 @@ try {
   ).rows[0].id;
   const rule = (
     await pool.query(
-      "INSERT INTO alert_rules(name,node_key,condition,threshold,cooldown_seconds) VALUES ('Replay fixture','ReplayValue','gt',5,0) RETURNING id",
+      // In force before the samples below; the database clock may run ahead of this host.
+      "INSERT INTO alert_rules(name,node_key,condition,threshold,cooldown_seconds,created_at,updated_at) VALUES ('Replay fixture','ReplayValue','gt',5,0,now()-interval '1 minute',now()-interval '1 minute') RETURNING id",
     )
   ).rows[0].id;
   const receiptTime = new Date();
