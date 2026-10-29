@@ -1,0 +1,1 @@
+ALTER TABLE "compliance_audit_logs" ADD COLUMN "checksum_version" integer DEFAULT 1 NOT NULL;

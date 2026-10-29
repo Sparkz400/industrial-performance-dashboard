@@ -76,6 +76,7 @@ const AutoRefreshIndicator: React.FC = () => {
         >
           {autoRefresh && (
             <CircularProgress
+              aria-label="Time until the next refresh"
               variant="determinate"
               value={progress}
               size={28}

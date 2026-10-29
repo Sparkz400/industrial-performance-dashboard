@@ -1,6 +1,6 @@
 import { useT, translate as t } from '@/i18n';
 import { useAuthStore } from '@/stores/useAuthStore';
-import React, { useRef, useMemo, useState } from 'react';
+import React, { useCallback, useRef, useMemo, useState } from 'react';
 import {
   CircularProgress,
   Box,
@@ -19,7 +19,7 @@ import 'react-resizable/css/styles.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSnackbar } from 'notistack';
 
-import WidgetContainer from '../../widgets/components/WidgetContainer';
+import WidgetContainer, { type LayoutNudge } from '../../widgets/components/WidgetContainer';
 import { ButtonLoader, LoadingOverlay } from '@/shared/components/loading/index';
 import KpiSummaryBar from '../components/KpiSummaryBar';
 import DashboardTemplates from '../components/DashboardTemplates';
@@ -131,6 +131,33 @@ function DashboardPageInternal(): React.JSX.Element {
     }
     return map;
   }, [layout]);
+
+  // Menu alternative to dragging; the grid resolves any overlap it creates.
+  const handleNudge = useCallback(
+    (id: string, change: LayoutNudge) =>
+      updateLayout(
+        layout.map((item) => {
+          if (item.i !== id) return item;
+          const w = Math.min(
+            item.maxW ?? 12,
+            12,
+            Math.max(item.minW ?? 1, item.w + (change.w ?? 0)),
+          );
+          const h = Math.min(
+            item.maxH ?? Infinity,
+            Math.max(item.minH ?? 1, item.h + (change.h ?? 0)),
+          );
+          return {
+            ...item,
+            w,
+            h,
+            x: Math.min(12 - w, Math.max(0, item.x + (change.x ?? 0))),
+            y: Math.max(0, item.y + (change.y ?? 0)),
+          };
+        }),
+      ),
+    [layout, updateLayout],
+  );
 
   const commonWidgetData = useMemo(
     () => ({
@@ -258,6 +285,7 @@ function DashboardPageInternal(): React.JSX.Element {
                       readOnly={!editable}
                       widget={widget}
                       onDelete={handleRemoveWidget}
+                      onNudge={handleNudge}
                       layoutItem={layoutItem}
                       commonData={commonWidgetData}
                     />

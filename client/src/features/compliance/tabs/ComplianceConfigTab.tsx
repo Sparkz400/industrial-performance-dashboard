@@ -111,8 +111,9 @@ const ComplianceConfigTab: React.FC = () => {
               )}
             </List>
             <Alert severity="info" sx={{ mt: 2 }}>
-              These actions require the user to re-enter their password to create an electronic
-              signature (21 CFR Part 11).
+              Listed for signature, not enforced: these actions are not blocked without one. A
+              signature is recorded only when an API request includes the password of the signer and
+              its meaning (authored, reviewed or approved); the server verifies both.
             </Alert>
           </CardContent>
         </Card>
@@ -149,25 +150,25 @@ const ComplianceConfigTab: React.FC = () => {
         </Card>
       </Grid>
 
-      {/* Section 4: 21 CFR Part 11 Checklist */}
+      {/* Section 4: audit feature status, without regulatory claims */}
       <Grid size={{ xs: 12 }}>
         <Card>
           <CardHeader
             avatar={<GavelIcon color="primary" />}
-            title="21 CFR Part 11 Checklist"
-            subheader="Compliance feature status overview"
+            title="Audit feature status"
+            subheader="Application features only. No regulatory validation has been performed; do not rely on them for 21 CFR Part 11 or EU Annex 11 without a separate validation program."
           />
           <Divider />
           <CardContent>
             <List>
               <ListItem>
-                <ListItemText primary="SHA-256 audit trail checksums" />
+                <ListItemText primary="SHA-256 audit trail checksums (a database administrator can rewrite the whole chain; keep the latest checksum elsewhere)" />
                 <Chip label="Enabled" color="success" size="small" />
               </ListItem>
               <Divider component="li" />
               <ListItem>
-                <ListItemText primary="Electronic signatures" />
-                <Chip label="Enabled" color="success" size="small" />
+                <ListItemText primary="Electronic signatures (password and meaning, API only)" />
+                <Chip label="Not enforced per action" color="warning" size="small" />
               </ListItem>
               <Divider component="li" />
               <ListItem>

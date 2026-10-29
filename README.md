@@ -54,8 +54,9 @@ Administrators can share selected trend widgets through expiring, revocable read
 links; legacy alarm email/chat/SMS channels are disabled.
 See the [production workflow](docs/PRODUCTION_WORKFLOW.md),
 [P0 acceptance evidence](docs/P0_ACCEPTANCE.md), the per-screen
-[acceptance matrix](docs/ACCEPTANCE_MATRIX.md) and the
-[security and deployment boundaries](docs/SECURITY_BOUNDARIES.md).
+[acceptance matrix](docs/ACCEPTANCE_MATRIX.md), the
+[security and deployment boundaries](docs/SECURITY_BOUNDARIES.md) and the WCAG 2.2
+[accessibility checklist](docs/ACCESSIBILITY.md).
 The first nominated pilot family is [Siemens SIMATIC S7-1500](docs/S7_1500_PILOT.md);
 software acceptance uses owned simulators, with physical CPU qualification still open.
 For isolated installation, complete backups, restore checks and upgrades, see the
@@ -80,7 +81,9 @@ metered energy and reviewed history retention. Core workflows support English/Ge
 See [daily workflow acceptance](docs/DAILY_OPERATIONS_ACCEPTANCE.md) for software evidence.
 
 [Quality and line operations](docs/QUALITY_LINE_OPERATIONS.md) adds frozen batch
-recipes, inspections/rework/lot traceability, reviewed SPC reference baselines,
+recipes, race-free batch records, inspections/rework/lot traceability, reviewed SPC
+reference baselines, restart-stable live SPC, a tamper-evident audit chain without
+regulatory claims,
 line-loss investigations and linked alarm maintenance actions. It also documents
 measured disk runway, reviewed retention scheduling, offline image packages and
 configurable multi-day synthetic workloads. Advanced screens currently require

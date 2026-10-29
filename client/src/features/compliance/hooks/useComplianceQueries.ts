@@ -43,6 +43,8 @@ export interface IntegrityCheckResult {
   checkedRecords: number;
   invalidRecords: number;
   firstBrokenId: number | null;
+  brokenReason?: 'checksum' | 'link' | null;
+  lastChecksum?: string | null;
   details: Array<{ id: number; reason: string }>;
   checkedAt: string;
 }
@@ -228,6 +230,9 @@ export function useRestoreVersion() {
 
 // ── New hooks for compliance overview, config, and reports ───────────────
 
+/**
+ *
+ */
 export function useComplianceStats() {
   return useQuery({
     queryKey: complianceKeys.stats(),
@@ -236,6 +241,9 @@ export function useComplianceStats() {
   });
 }
 
+/**
+ *
+ */
 export function useComplianceConfig() {
   return useQuery({
     queryKey: complianceKeys.config(),
@@ -243,6 +251,9 @@ export function useComplianceConfig() {
   });
 }
 
+/**
+ *
+ */
 export function useUpdateComplianceConfig() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -254,6 +265,9 @@ export function useUpdateComplianceConfig() {
   });
 }
 
+/**
+ *
+ */
 export function useGenerateReport() {
   return useMutation({
     mutationFn: (request: ReportRequest) =>

@@ -129,8 +129,8 @@ const ComplianceAuditTrailTab: React.FC = () => {
           onClose={() => {}}
         >
           {integrityData.valid
-            ? `Integrity check passed. ${integrityData.checkedRecords ?? integrityData.totalRecords} records verified — SHA-256 chain intact.`
-            : `Integrity check FAILED. Chain broken at record #${integrityData.firstBrokenId}. ${integrityData.checkedRecords ?? integrityData.totalRecords} records checked.`}
+            ? `Integrity check passed. ${integrityData.checkedRecords ?? integrityData.totalRecords} records verified; SHA-256 chain intact. Latest checksum ${integrityData.lastChecksum ?? 'unavailable'}: record it outside this database to detect a rewritten chain later.`
+            : `Integrity check FAILED. Chain broken at record #${integrityData.firstBrokenId}${integrityData.brokenReason === 'link' ? ' (a record before it is missing, reordered or forked)' : integrityData.brokenReason === 'checksum' ? ' (its content changed after recording)' : ''}. ${integrityData.checkedRecords ?? integrityData.totalRecords} records checked.`}
         </Alert>
       )}
 
@@ -273,7 +273,7 @@ const ComplianceAuditTrailTab: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     {entry.electronicSignature || entry.signature ? (
-                      <Tooltip title="Electronically signed">
+                      <Tooltip title="Password-verified electronic signature">
                         <VerifiedUserIcon fontSize="small" color="success" />
                       </Tooltip>
                     ) : (

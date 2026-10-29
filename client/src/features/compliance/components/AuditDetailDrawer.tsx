@@ -139,8 +139,10 @@ const AuditDetailDrawer: React.FC<AuditDetailDrawerProps> = ({ entry, open, onCl
               <Stack direction="row" alignItems="center" spacing={0.5}>
                 <VerifiedUserIcon fontSize="small" color="success" />
                 <Typography variant="body2" color="success.main">
-                  Signed by{' '}
-                  {(entry.electronicSignature as Record<string, unknown>).username as string} at{' '}
+                  {String(
+                    (entry.electronicSignature as Record<string, unknown>).meaning ?? 'Signed',
+                  )}{' '}
+                  by {(entry.electronicSignature as Record<string, unknown>).username as string} at{' '}
                   {(entry.electronicSignature as Record<string, unknown>).signedAt as string}
                 </Typography>
               </Stack>

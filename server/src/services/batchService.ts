@@ -247,22 +247,19 @@ export const batchService = {
       );
     }
 
-    if (batch.machineId) {
-      const activeBatch = await batchRepository.findActiveBatch(
-        batch.machineId,
+    const { running, started: updated } = await batchRepository.start(
+      id,
+      batch.machineId,
+      { status: "running", startedAt: new Date(), startedBy: userId },
+    );
+    if (running)
+      throw new ConflictError(
+        `Machine already has a running batch: "${running.batchNumber}" (id=${running.id})`,
       );
-      if (activeBatch) {
-        throw new ConflictError(
-          `Machine already has a running batch: "${activeBatch.batchNumber}" (id=${activeBatch.id})`,
-        );
-      }
-    }
-
-    const updated = await batchRepository.update(id, {
-      status: "running",
-      startedAt: new Date(),
-      startedBy: userId,
-    });
+    if (!updated)
+      throw new ConflictError(
+        "The batch was changed by another request; reload it",
+      );
 
     logger.info(`[Batch] Started batch "${batch.batchNumber}" (id=${id})`);
 
@@ -293,11 +290,15 @@ export const batchService = {
       );
     }
 
-    let updated = await batchRepository.update(id, {
+    let updated = await batchRepository.transition(id, "running", {
       status: "completed",
       completedAt: new Date(),
       completedBy: userId,
     });
+    if (!updated)
+      throw new ConflictError(
+        "The batch was changed by another request; reload it",
+      );
 
     // Compute summary after completion
     try {
@@ -352,12 +353,16 @@ export const batchService = {
         : `[ABORTED] ${reason}`
       : batch.notes;
 
-    const updated = await batchRepository.update(id, {
+    const updated = await batchRepository.transition(id, "running", {
       status: "aborted",
       completedAt: new Date(),
       completedBy: userId,
       notes,
     });
+    if (!updated)
+      throw new ConflictError(
+        "The batch was changed by another request; reload it",
+      );
 
     logger.info(
       `[Batch] Aborted batch "${batch.batchNumber}" (id=${id}), reason: ${reason ?? "none"}`,

@@ -41,6 +41,13 @@ rejected under a transaction lock. Trace reports expose links in both directions
 with a 5,000-link truncation flag. These are declared lot movements, not automatic
 material reconciliation or supplier certification.
 
+Start, complete and abort **record** a batch in this application; they never control
+the machine, and the page says so. Starting takes a per-machine lock, so two batches
+cannot run on one machine even when two people press start at once; the second
+request gets a conflict that the page shows. Complete and abort change a batch only
+from `running`, so a racing pair leaves one outcome and one audit entry. An aborted
+batch keeps no summary and makes no compliance claim (`test-batch-lifecycle.mjs`).
+
 ## Reviewed SPC reference periods
 
 The SPC screen prepares a candidate from a selected past window of up to seven
@@ -51,7 +58,11 @@ Western Electric rules are evaluated across the ordered sequence.
 Approval requires at least 100 usable readings, no excluded readings, positive
 variation and no detected rule signals. The reviewer must also supply evidence
 and explicitly attest stability, independence and approximate normality. Absence
-of rule signals alone does not demonstrate these assumptions. Approval installs
+of rule signals alone does not demonstrate these assumptions. Each candidate records
+its process context: alarms and classified stops overlapping the window and the
+products made in it. Approval is refused while any alarm or classified stop overlaps,
+so a baseline never silently learns from a fault; candidates made before this check
+must be recomputed. Approval installs
 the reference mean and three-sigma limits. Editing a profile invalidates its
 capability eligibility; a new approval supersedes earlier baselines.
 
@@ -60,6 +71,45 @@ describe only the approved reference period, not current-process stability.
 The reference tests reproduce the [NIST example](https://www.itl.nist.gov/div898/handbook/pmc/section1/pmc16.htm)
 with LSL=8, USL=20, mean=16 and s=2: Cp=1 and Cpk=2/3. Synthetic test approvals
 exercise the workflow and are not evidence of a real stable process.
+
+## Live SPC evaluation
+
+Live evaluation judges each machine's samples per profile in arrival order:
+
+- **Windows count samples, not time.** OPC UA reports on change, so a quiet signal is
+  not missing data and a time gap does not reset the window. Irregular spacing changes
+  how much time a window spans; choose window sizes with the sampling in mind.
+- A bad or non-numeric sample ends the run; judging resumes once enough good samples
+  follow. A duplicate or older timestamp (for example the value re-sent on reconnect)
+  is not counted twice.
+- Nothing is judged before the method has its samples: the moving average needs a full
+  window, Western Electric rules eight samples, CUSUM its window. Z-score, CUSUM and
+  Western Electric rules need an approved baseline with positive variation; no target or
+  variation is assumed.
+- CUSUM uses k = 0.5σ and h = 5σ (Montgomery's tabular CUSUM). The earlier h = 2.5σ
+  signalled far more often on an in-control process; expect fewer CUSUM alerts.
+- After a restart the window is rebuilt from stored samples back to the last bad one,
+  so a verdict does not depend on when the server started (`test-spc-live.mjs`,
+  `spcLive.test.ts`). Samples still waiting in the collector spool at that moment are
+  not yet stored and are missing from the rebuilt window.
+
+## Audit records, signatures and their limits
+
+Compliance mode keeps an append-only SHA-256 chain of audit records. Appends are
+serialised, so concurrent writers cannot fork the chain. Records written from this
+release on (checksum version 2) cover every recorded field, including actor, reason,
+signature and before/after snapshots, using key-sorted JSON; older records keep their
+original checksum. The integrity check reports whether a record's content changed
+(`checksum`) or a record is missing, reordered or forked (`link`), and returns the
+latest checksum. Store that value outside the database: a database administrator can
+rewrite the whole chain, which only an external copy reveals.
+
+An electronic signature is recorded only when a request carries the signer's password
+and a meaning (`authored`, `reviewed` or `approved`); the server verifies the password
+and records who, when and the meaning, never the password. Signature metadata sent by a
+client is refused. Signatures are not yet required for any action, and the
+application makes no 21 CFR Part 11 or EU Annex 11 claim; that needs a separate
+validation programme (`test-compliance-audit.mjs`).
 
 ## Production-line investigations
 

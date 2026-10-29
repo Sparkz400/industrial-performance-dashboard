@@ -84,6 +84,9 @@ export const createModernTheme = (mode: 'dark' | 'light') => {
           },
         },
       },
+      // Every progress indicator needs an accessible name; specific labels override this.
+      MuiCircularProgress: { defaultProps: { 'aria-label': 'Loading' } },
+      MuiLinearProgress: { defaultProps: { 'aria-label': 'Loading' } },
       MuiFormLabel: { styleOverrides: { root: { fontWeight: 500 } } },
       MuiFormControlLabel: { styleOverrides: { label: { fontWeight: 500 } } },
       MuiButton: {

@@ -1,6 +1,7 @@
-import { and, eq, desc, isNull, isNotNull, sql, asc } from "drizzle-orm";
+import { and, eq, desc, isNull, isNotNull, lt, sql, asc } from "drizzle-orm";
 import db, { getReadDb } from "../database/db.js";
 import {
+  opcuaData,
   spcProfiles,
   spcAlerts,
   type NewSpcProfile,
@@ -101,6 +102,41 @@ export const spcRepository = {
     );
 
     return getReadDb().select().from(spcProfiles).where(conditions);
+  },
+
+  /**
+   * Newest stored samples before `before`, oldest first, ending at the last bad or
+   * missing value: the contiguous good run a live window may continue after a restart.
+   */
+  async recentGoodRun(
+    machineId: number,
+    nodeKey: string,
+    before: Date,
+    limit: number,
+  ) {
+    const rows = await db
+      .select({
+        value: opcuaData.value,
+        at: opcuaData.timestamp,
+        statusCode: opcuaData.statusCode,
+      })
+      .from(opcuaData)
+      .where(
+        and(
+          eq(opcuaData.machineId, machineId),
+          eq(opcuaData.nodeKey, nodeKey),
+          lt(opcuaData.timestamp, before),
+        ),
+      )
+      .orderBy(desc(opcuaData.timestamp), desc(opcuaData.id))
+      .limit(limit);
+    const run: { value: number; at: Date }[] = [];
+    for (const row of rows) {
+      if (!row.statusCode?.startsWith("Good") || !Number.isFinite(row.value))
+        break;
+      run.unshift({ value: row.value as number, at: row.at });
+    }
+    return run;
   },
 
   // ---- Alerts ----

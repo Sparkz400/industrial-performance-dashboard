@@ -41,7 +41,7 @@ F07, F08, F09, F10 and D01. A following P1 gap wave closed R04, O05, H05, D05 an
 backlog wave 1 closed E01, R05, R02 and A08, and recorded research decisions
 ([decisions](docs/RESEARCH_DECISIONS.md)): I08, E06 and X02 closed as rejected; the rest
 stay open with explicit triggers.
-Backlog status: 61 checked and 47 open; I06 is withdrawn.
+Backlog status: 65 checked and 43 open; I06 is withdrawn.
 
 ### Data integrity and reviewed operations — 2026-10-28
 
@@ -528,13 +528,16 @@ below retain their unfulfilled acceptance criteria.
   Progress: Six-machine pages, selection/rotation/fullscreen, observed target progress,
   freshness/unknown states and a read-only account are browser tested. Viewing-distance
   and sustained display acceptance remain open; see [workflow](docs/OPERATOR_WORKFLOW.md).
-- [ ] **U06 — Establish accessible interaction patterns** · P1 · M1 · Improve · L. Depends: none.
+- [x] **U06 — Establish accessible interaction patterns** · P1 · M1 · Improve · L. Depends: none.
   Done: commissioning, login, dashboards and operator actions support keyboard focus,
   non-drag alternatives, semantic labels and screen-reader status; test contrast, zoom,
   reduced motion and touch targets against an explicit WCAG 2.2 acceptance checklist.
   Progress: keyboard focus, skip link, 44-pixel coarse-pointer targets and touch flows
   are browser tested ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)).
-  Remaining: the explicit WCAG 2.2 checklist, screen-reader and reduced-motion checks.
+  Completed ([PR #70](https://github.com/Sparkz400/performance_dashboard/pull/70)): [WCAG 2.2 checklist](docs/ACCESSIBILITY.md); `test-accessibility.mjs`: zero
+  axe A/AA findings on seven screens, keyboard login and widget layout menu (2.5.7), reduced motion,
+  320 px reflow and live regions. Open as a separate manual step: a screen-reader walkthrough and
+  200 % text zoom on the operator device.
 - [x] **U07 — Improve navigation, localization and display units** · P1 · M1 · Improve · M. Depends: U02, F07.
   Done: role-appropriate navigation, machine search and saved filters reduce clutter;
   English/German, dates, decimal formats and display units follow a declared locale.
@@ -563,7 +566,7 @@ below retain their unfulfilled acceptance criteria.
   justify it. Preserve accessible loading states and compare results on the same workload.
   Progress: deferring the widget library reduced the dashboard page chunk from 3.9 MB to
   about 54 KB ([acceptance](docs/DAILY_OPERATIONS_ACCEPTANCE.md#measured-bounds)).
-  Remaining: startup/navigation/memory/live-update timing on an ordinary operator device.
+  Blocker: startup/navigation/memory/live-update timing needs the ordinary operator device.
 
 ## Alerts
 
@@ -684,15 +687,19 @@ below retain their unfulfilled acceptance criteria.
 
 ## Quality and traceability
 
-- [ ] **Q01 — Validate SPC methods and baseline lifecycle** · P1 · M3 · Improve · L. Depends: F02, H01.
+- [x] **Q01 — Validate SPC methods and baseline lifecycle** · P1 · M3 · Improve · L. Depends: F02, H01.
   Done: test evaluator reference datasets, sample spacing, minimum sample counts,
   zero variance, missing/bad values and restart behavior; baseline approval/revision
   records the process/product context and never silently trains on a fault period.
   Progress: reviewed SPC reference periods freeze ordered readings with a digest, require
   100 usable readings, positive variation, no rule signals and reviewer attestation, and
   reproduce the NIST reference example ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62),
-  [scope](docs/QUALITY_LINE_OPERATIONS.md#reviewed-spc-reference-periods)). Remaining:
-  sample-spacing and live-evaluator restart checks against reference datasets.
+  [scope](docs/QUALITY_LINE_OPERATIONS.md#reviewed-spc-reference-periods)). Completed ([PR #70](https://github.com/Sparkz400/performance_dashboard/pull/70)):
+  live windows count samples, restart after bad data, ignore re-sent timestamps, judge only
+  full windows against a positive baseline and rebuild after a restart; CUSUM h corrected
+  from 2.5σ to 5σ; candidates record alarms, stops and products and approval refuses a fault
+  window ([live SPC](docs/QUALITY_LINE_OPERATIONS.md#live-spc-evaluation), `spcLive.test.ts`,
+  `test-spc-live.mjs`).
 - [ ] **Q02 — Add appropriate control charts and capability** · P2 · M3 · New · L. Depends: Q01.
   Done: select I-MR, subgroup or attribute charts only for declared data assumptions;
   distinguish specification from control limits. Cp/Cpk or other capability output
@@ -708,13 +715,16 @@ below retain their unfulfilled acceptance criteria.
   closed only by a newer passing inspection ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62),
   [scope](docs/QUALITY_LINE_OPERATIONS.md#batch-quality-and-genealogy)). Recipes/batches
   remain experimental. Remaining: inspection plans linked to product/job outside batches.
-- [ ] **Q04 — Harden batch lifecycle and summaries** · P1 · M3 · Improve · M. Depends: O04.
+- [x] **Q04 — Harden batch lifecycle and summaries** · P1 · M3 · Improve · M. Depends: O04.
   Done: concurrent starts, transitions, missing data and partial batches have tested
   behavior; summary windows use actual batch boundaries and product context. Start/stop
   buttons clearly describe application records rather than PLC control.
   Progress: frozen batch recipes, `[startedAt, completedAt)` windows and unknown-aware
   good-quality summaries ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)).
-  Remaining: confirm concurrent-start and partial-batch fixtures before leaving experimental.
+  Completed ([PR #70](https://github.com/Sparkz400/performance_dashboard/pull/70)): per-machine start lock, conditional complete/abort, visible refusals and
+  record-not-control labels; `test-batch-lifecycle.mjs` races starts five times, complete against
+  abort, and checks an aborted batch makes no compliance claim. Recipes/batches stay experimental
+  until a pilot validates the field meanings.
 - [ ] **Q05 — Add bounded lot and batch genealogy** · P2 · M3 · New · L. Depends: Q04, Q03.
   Done: input/output lots, splits, merges and affected batches can be traced with stable
   IDs and corrections; export a demonstrable trace query. Scope this to observed records,
@@ -729,10 +739,15 @@ below retain their unfulfilled acceptance criteria.
   Progress: batch parameters compare good-quality observed means with frozen tolerances;
   missing parameters are unknown ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)).
   Remaining: qualification before the experimental recipe module is supported.
-- [ ] **Q07 — Strengthen audit records without compliance overclaims** · P1 · M3 · Improve · L. Depends: F07, Q04.
+- [x] **Q07 — Strengthen audit records without compliance overclaims** · P1 · M3 · Improve · L. Depends: F07, Q04.
   Done: verify concurrent integrity-chain updates, actor identity, signature purpose,
   correction reasons and exports; document database-admin/tamper boundaries. Keep
   regulatory claims disabled until a separate named validation program establishes them.
+  Completed ([PR #70](https://github.com/Sparkz400/performance_dashboard/pull/70)): serialised appends; checksum version 2 over every recorded field in
+  key-sorted JSON; link and content breaks reported with the latest checksum to keep elsewhere;
+  signatures require the signer's password and a meaning, forged metadata is refused; the
+  Part 11 checklist is replaced by an unvalidated feature status (`test-compliance-audit.mjs`,
+  [limits](docs/QUALITY_LINE_OPERATIONS.md#audit-records-signatures-and-their-limits)).
 
 ## Maintenance and energy
 
@@ -978,6 +993,8 @@ below retain their unfulfilled acceptance criteria.
   Done: initialize/verify the GitHub wiki publication path if still needed, keep its source
   in docs/wiki, and provide sanitized mapping/dashboard/report examples with expected
   outputs. Accept contributions without uploading customer data or machine credentials.
+  Blocker 2026-10-29: the wiki sync workflow runs but GitHub reports the wiki uninitialised;
+  a maintainer must create its first page once in GitHub. Examples remain to be added.
 - [ ] **P04 — Establish evidence-backed versioned releases** · P1 · M2 · Improve · M. Depends: D03, F10.
   Done: a release identifies commit/image digest, changelog, migrations, compatibility,
   SBOM/dependency notices and checks for that exact revision; package signatures/provenance

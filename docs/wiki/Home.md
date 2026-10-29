@@ -22,7 +22,8 @@ test equipment; physical-machine and production acceptance remain open.
 The first P0 wave fixes trend completeness, SPC isolation and measurement identity.
 Edge transfer is disabled. The AI assistant and provider integration have been removed.
 See [acceptance evidence](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/P0_ACCEPTANCE.md),
-the per-screen [acceptance matrix](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/ACCEPTANCE_MATRIX.md)
+the per-screen [acceptance matrix](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/ACCEPTANCE_MATRIX.md),
+the WCAG 2.2 [accessibility checklist](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/ACCESSIBILITY.md)
 and the [security and deployment boundaries](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/SECURITY_BOUNDARIES.md).
 
 - [[Getting Started]]
@@ -72,8 +73,8 @@ maintenance and energy. [Acceptance evidence](https://github.com/Sparkz400/perfo
 separates software checks from physical S7-1500 and operator acceptance.
 
 [Quality and line operations](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/QUALITY_LINE_OPERATIONS.md)
-adds frozen batch recipes, inspection/rework/lot evidence, reviewed SPC reference
-periods, production-line analysis and alarm-linked maintenance actions. It also
+adds frozen batch recipes, race-free batch records, inspection/rework/lot evidence,
+reviewed SPC reference periods, restart-stable live SPC, a tamper-evident audit chain, production-line analysis and alarm-linked maintenance actions. It also
 covers measured disk runway, exact reviewed retention schedules, offline image
 bundles and configurable synthetic endurance workloads. Scoped supervisor access
 now extends line investigations and alarm actions. These workflows do not establish
