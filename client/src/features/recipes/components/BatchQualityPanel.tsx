@@ -1,5 +1,14 @@
 import React, { useRef, useState } from 'react';
-import { Alert, Button, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import {
+  Alert,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { operationRequest, localInput, toIso } from '@/features/operations/api';
 interface Inspection {
@@ -20,10 +29,24 @@ interface Lot {
   id: number;
   lot: string;
   direction: string;
-  quantity: number;
+  /** Latest corrected quantity; null when the link is void. */
+  quantity: number | null;
+  declared_quantity: number;
+  correction_id: number | null;
   unit: string;
   batch_id: number;
 }
+interface LotCorrection {
+  id: number;
+  lot_link_id: number;
+  quantity: number | null;
+  reason: string;
+  created_at: string;
+}
+const lotText = (l: Lot) =>
+  `${l.direction} · ${l.lot} · ${l.quantity ?? 'void'}${l.quantity == null ? '' : ` ${l.unit}`}${
+    l.correction_id ? ` (declared ${l.declared_quantity} ${l.unit}, corrected)` : ''
+  }`;
 /**
  *
  * @param root0
@@ -48,16 +71,28 @@ export default function BatchQualityPanel({ batchId }: { batchId: number }) {
     [unit, setUnit] = useState('pieces'),
     [lotQuantity, setLotQuantity] = useState('1'),
     [supplier, setSupplier] = useState('');
+  const [correcting, setCorrecting] = useState(''),
+    [corrected, setCorrected] = useState(''),
+    [voiding, setVoiding] = useState(false),
+    [correctionReason, setCorrectionReason] = useState('');
   const [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
-    [trace, setTrace] = useState<{ links: Lot[]; truncated: boolean } | null>(null);
+    [trace, setTrace] = useState<{
+      links: Lot[];
+      corrections: LotCorrection[];
+      truncated: boolean;
+    } | null>(null);
   const query = useQuery({
     queryKey: ['batch-quality', batchId],
     queryFn: () =>
-      operationRequest<{ inspections: Inspection[]; rework: Rework[]; lots: Lot[] }>(
-        `/quality/batches/${batchId}`,
-      ),
+      operationRequest<{
+        inspections: Inspection[];
+        rework: Rework[];
+        lots: Lot[];
+        lotCorrections: LotCorrection[];
+      }>(`/quality/batches/${batchId}`),
   });
+  const correctedLot = query.data?.lots.find((l) => l.id === Number(correcting));
   const owners = useQuery({
     queryKey: ['action-owners'],
     queryFn: () =>
@@ -246,10 +281,67 @@ export default function BatchQualityPanel({ batchId }: { batchId: number }) {
       </Button>
       <Typography variant="h6">Lots</Typography>
       {query.data?.lots.map((l) => (
-        <Typography key={l.id}>
-          {l.direction}: {l.lot} · {l.quantity} {l.unit}
+        <Typography key={l.id}>{lotText(l)}</Typography>
+      ))}
+      {query.data?.lotCorrections.map((c) => (
+        <Typography key={c.id} variant="body2">
+          Correction {c.id} of link {c.lot_link_id}: {c.quantity ?? 'void'} · {c.reason} ·{' '}
+          {new Date(c.created_at).toLocaleString()}
         </Typography>
       ))}
+      {!!query.data?.lots.length && (
+        <>
+          <TextField
+            select
+            label="Lot link to correct"
+            value={correcting}
+            onChange={(e) => setCorrecting(e.target.value)}
+          >
+            {query.data.lots.map((l) => (
+              <MenuItem key={l.id} value={l.id}>
+                {lotText(l)}
+              </MenuItem>
+            ))}
+          </TextField>
+          <FormControlLabel
+            control={<Checkbox checked={voiding} onChange={(e) => setVoiding(e.target.checked)} />}
+            label="Void this lot link"
+          />
+          {!voiding && (
+            <TextField
+              label="Corrected lot quantity"
+              type="number"
+              value={corrected}
+              onChange={(e) => setCorrected(e.target.value)}
+            />
+          )}
+          <TextField
+            label="Correction reason"
+            value={correctionReason}
+            onChange={(e) => setCorrectionReason(e.target.value)}
+          />
+          <Button
+            disabled={
+              busy || !correctedLot || !correctionReason || (!voiding && Number(corrected) <= 0)
+            }
+            onClick={async () => {
+              if (
+                await save(`/quality/lots/${correctedLot!.id}/corrections`, {
+                  quantity: voiding ? null : Number(corrected),
+                  reason: correctionReason,
+                  previousCorrectionId: correctedLot!.correction_id,
+                })
+              ) {
+                setCorrected('');
+                setCorrectionReason('');
+                setVoiding(false);
+              }
+            }}
+          >
+            Record lot correction
+          </Button>
+        </>
+      )}
       <TextField label="Lot identifier" value={lot} onChange={(e) => setLot(e.target.value)} />
       <TextField
         select
@@ -292,9 +384,7 @@ export default function BatchQualityPanel({ batchId }: { batchId: number }) {
       <Button
         onClick={() => {
           setError('');
-          void operationRequest<{ links: Lot[]; truncated: boolean }>(
-            `/quality/batches/${batchId}/trace`,
-          )
+          void operationRequest<NonNullable<typeof trace>>(`/quality/batches/${batchId}/trace`)
             .then(setTrace)
             .catch((e) => setError(String(e)));
         }}
@@ -303,9 +393,15 @@ export default function BatchQualityPanel({ batchId }: { batchId: number }) {
       </Button>
       {trace?.links.map((l) => (
         <Typography key={l.id}>
-          Batch {l.batch_id} · {l.direction} · {l.lot} · {l.quantity} {l.unit}
+          Batch {l.batch_id} · {lotText(l)}
         </Typography>
       ))}
+      {!!trace?.corrections.length && (
+        <Typography variant="body2">
+          {trace.corrections.length} correction(s) recorded on these links; void links do not
+          connect batches.
+        </Typography>
+      )}
       {trace?.truncated && (
         <Alert severity="warning">
           Trace exceeds 5,000 links; displayed results are incomplete.

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import Joi from "joi";
+import type { PoolClient } from "pg";
 import manager from "../database/dbConnection.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { validateBody, validateParams } from "../middleware/validation.js";
@@ -12,6 +13,95 @@ import {
 
 const router = Router();
 const id = Joi.object({ id: Joi.number().integer().positive().required() });
+// Declared lot links with their latest correction applied; a null quantity is a voided link.
+const currentLots = `(SELECT l.id,l.batch_id,l.lot,l.direction,l.unit,l.supplier_reference,l.created_by,l.created_at,
+  CASE WHEN c.id IS NULL THEN l.quantity ELSE c.quantity END AS quantity,l.quantity AS declared_quantity,c.id AS correction_id
+  FROM batch_lots l LEFT JOIN LATERAL (SELECT id,quantity FROM batch_lot_corrections WHERE lot_link_id=l.id ORDER BY id DESC LIMIT 1) c ON true)`;
+
+async function genealogyChange<T>(change: (c: PoolClient) => Promise<T>) {
+  const c = await manager.pool.connect();
+  try {
+    await c.query("BEGIN");
+    // Serialize genealogy changes so concurrent edges cannot introduce a cycle.
+    await c.query("SELECT pg_advisory_xact_lock(743901)");
+    const result = await change(c);
+    await c.query("COMMIT");
+    return result;
+  } catch (error) {
+    await c.query("ROLLBACK");
+    throw error;
+  } finally {
+    c.release();
+  }
+}
+
+/**
+ * Refuses a link quantity that breaks the lot balance or closes a cycle among active links.
+ * `link.id` is the link being corrected, judged as if it were new. Returns the active producer.
+ */
+async function checkGenealogy(
+  c: PoolClient,
+  link: {
+    id: number | null;
+    batchId: number;
+    lot: string;
+    direction: string;
+    quantity: number;
+  },
+) {
+  const others = (
+    await c.query(
+      `SELECT * FROM ${currentLots} cl WHERE cl.lot=$1 AND cl.quantity IS NOT NULL AND cl.id IS DISTINCT FROM $2`,
+      [link.lot, link.id],
+    )
+  ).rows;
+  const producer = others.find((r) => r.direction === "output");
+  // Each edge runs from the producing batch to a consuming batch.
+  const edges =
+    link.direction === "output"
+      ? others.map((r) => [link.batchId, r.batch_id])
+      : producer
+        ? [[producer.batch_id, link.batchId]]
+        : [];
+  for (const [from, to] of edges) {
+    const cycle = await c.query(
+      `WITH RECURSIVE active AS (SELECT * FROM ${currentLots} cl WHERE cl.quantity IS NOT NULL AND cl.id IS DISTINCT FROM $3),
+      descendants(id) AS (
+        SELECT $1::integer UNION SELECT i.batch_id FROM descendants d JOIN active o ON o.batch_id=d.id AND o.direction='output'
+        JOIN active i ON i.lot=o.lot AND i.direction='input') SELECT 1 FROM descendants WHERE id=$2`,
+      [to, from, link.id],
+    );
+    if (cycle.rowCount)
+      throw new ConflictError("Lot link would create circular traceability");
+  }
+  const consumed = `SELECT coalesce(sum(quantity::numeric),0) AS n FROM ${currentLots} cl
+    WHERE cl.lot=$1 AND cl.direction='input' AND cl.quantity IS NOT NULL AND cl.id IS DISTINCT FROM $2`;
+  if (link.direction === "output") {
+    const exceeded = (
+      await c.query(`SELECT n > $3::numeric AS exceeded FROM (${consumed}) s`, [
+        link.lot,
+        link.id,
+        link.quantity,
+      ])
+    ).rows[0].exceeded;
+    if (exceeded)
+      throw new ValidationError(
+        "Produced quantity cannot fall below recorded consumption",
+      );
+  } else if (producer) {
+    const exceeded = (
+      await c.query(
+        `SELECT n+$3::numeric > $4::numeric AS exceeded FROM (${consumed}) s`,
+        [link.lot, link.id, link.quantity, producer.quantity],
+      )
+    ).rows[0].exceeded;
+    if (exceeded)
+      throw new ValidationError(
+        "Consumption exceeds the produced lot quantity",
+      );
+  }
+  return producer;
+}
 // This module is administrator-only under the central asset allowlist.
 router.use(requireRole("admin"));
 router.get(
@@ -19,7 +109,7 @@ router.get(
   validateParams(id),
   asyncHandler(async (req, res) => {
     const batchId = Number(req.params.id);
-    const [inspections, rework, lots] = await Promise.all([
+    const [inspections, rework, lots, lotCorrections] = await Promise.all([
       manager.pool.query(
         "SELECT * FROM quality_inspections WHERE batch_id=$1 ORDER BY id",
         [batchId],
@@ -29,7 +119,11 @@ router.get(
         [batchId],
       ),
       manager.pool.query(
-        "SELECT * FROM batch_lots WHERE batch_id=$1 ORDER BY id",
+        `SELECT * FROM ${currentLots} cl WHERE cl.batch_id=$1 ORDER BY id`,
+        [batchId],
+      ),
+      manager.pool.query(
+        "SELECT k.* FROM batch_lot_corrections k JOIN batch_lots l ON l.id=k.lot_link_id WHERE l.batch_id=$1 ORDER BY k.id",
         [batchId],
       ),
     ]);
@@ -37,6 +131,7 @@ router.get(
       inspections: inspections.rows,
       rework: rework.rows,
       lots: lots.rows,
+      lotCorrections: lotCorrections.rows,
     });
   }),
 );
@@ -162,11 +257,7 @@ router.post(
     }),
   ),
   asyncHandler(async (req, res) => {
-    const c = await manager.pool.connect();
-    try {
-      await c.query("BEGIN");
-      // Serialize genealogy changes so concurrent edges cannot introduce a cycle.
-      await c.query("SELECT pg_advisory_xact_lock(743901)");
+    const saved = await genealogyChange(async (c) => {
       const batchId = Number(req.params.id),
         { lot, direction, quantity, unit, supplierReference } = req.body;
       const batch = await c.query(
@@ -174,6 +265,7 @@ router.post(
         [batchId],
       );
       if (!batch.rowCount) throw new NotFoundError("Batch");
+      // Voided links still hold their lot identity and unit.
       const related = await c.query("SELECT * FROM batch_lots WHERE lot=$1", [
         lot,
       ]);
@@ -181,72 +273,118 @@ router.post(
         throw new ConflictError(
           "Lot already linked to this batch or uses a different unit",
         );
-      const producer = related.rows.find((r) => r.direction === "output");
       if (direction === "output" && related.rowCount)
         throw new ConflictError(
           "Register a lot's output before its consumption",
         );
+      const producer = await checkGenealogy(c, {
+        id: null,
+        batchId,
+        lot,
+        direction,
+        quantity,
+      });
       if (direction === "input" && !producer && !supplierReference)
         throw new ValidationError(
           "External input lots require a supplier reference",
         );
-      if (producer) {
-        const cycle = await c.query(
-          `WITH RECURSIVE descendants(id) AS (
-        SELECT $1::integer UNION SELECT i.batch_id FROM descendants d JOIN batch_lots o ON o.batch_id=d.id AND o.direction='output'
-        JOIN batch_lots i ON i.lot=o.lot AND i.direction='input') SELECT 1 FROM descendants WHERE id=$2`,
-          [batchId, producer.batch_id],
+      return (
+        await c.query(
+          "INSERT INTO batch_lots(batch_id,lot,direction,quantity,unit,supplier_reference,created_by) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *",
+          [
+            batchId,
+            lot,
+            direction,
+            quantity,
+            unit,
+            supplierReference,
+            req.session.userId,
+          ],
+        )
+      ).rows[0];
+    });
+    res.status(201).json(saved);
+  }),
+);
+// Corrections are appended; the declared link and every earlier correction stay readable.
+router.post(
+  "/lots/:id/corrections",
+  validateParams(id),
+  validateBody(
+    Joi.object({
+      quantity: Joi.number().positive().max(1e12).allow(null).required(),
+      reason: Joi.string().trim().min(1).max(500).required(),
+      previousCorrectionId: Joi.number()
+        .integer()
+        .positive()
+        .allow(null)
+        .required(),
+    }),
+  ),
+  asyncHandler(async (req, res) => {
+    const { quantity, reason, previousCorrectionId } = req.body;
+    const saved = await genealogyChange(async (c) => {
+      const link = (
+        await c.query(`SELECT * FROM ${currentLots} cl WHERE cl.id=$1`, [
+          Number(req.params.id),
+        ])
+      ).rows[0];
+      if (!link) throw new NotFoundError("Lot link");
+      if (link.correction_id !== previousCorrectionId)
+        throw new ConflictError("Lot link changed; reload before correcting");
+      if (quantity === link.quantity)
+        throw new ValidationError("A correction must change the quantity");
+      if (quantity === null) {
+        const consumed = await c.query(
+          `SELECT 1 FROM ${currentLots} cl WHERE cl.lot=$1 AND cl.direction='input' AND cl.quantity IS NOT NULL`,
+          [link.lot],
         );
-        if (cycle.rowCount)
-          throw new ConflictError(
-            "Lot link would create circular traceability",
-          );
-        const overdrawn = (
-          await c.query(
-            "SELECT coalesce(sum(quantity::numeric),0)+$2::numeric > $3::numeric AS exceeded FROM batch_lots WHERE lot=$1 AND direction='input'",
-            [lot, quantity, producer.quantity],
-          )
-        ).rows[0].exceeded;
-        if (overdrawn)
+        if (link.direction === "output" && consumed.rowCount)
+          throw new ConflictError("Void the consumption of this lot first");
+      } else {
+        const producer = await checkGenealogy(c, {
+          id: link.id,
+          batchId: link.batch_id,
+          lot: link.lot,
+          direction: link.direction,
+          quantity,
+        });
+        if (link.direction === "input" && !producer && !link.supplier_reference)
           throw new ValidationError(
-            "Consumption exceeds the produced lot quantity",
+            "External input lots require a supplier reference",
           );
       }
-      const saved = await c.query(
-        "INSERT INTO batch_lots(batch_id,lot,direction,quantity,unit,supplier_reference,created_by) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *",
-        [
-          batchId,
-          lot,
-          direction,
-          quantity,
-          unit,
-          supplierReference,
-          req.session.userId,
-        ],
-      );
-      await c.query("COMMIT");
-      res.status(201).json(saved.rows[0]);
-    } catch (error) {
-      await c.query("ROLLBACK");
-      throw error;
-    } finally {
-      c.release();
-    }
+      return (
+        await c.query(
+          "INSERT INTO batch_lot_corrections(lot_link_id,quantity,reason,created_by) VALUES($1,$2,$3,$4) RETURNING *",
+          [link.id, quantity, reason, req.session.userId],
+        )
+      ).rows[0];
+    });
+    res.status(201).json(saved);
   }),
 );
 router.get(
   "/batches/:id/trace",
   validateParams(id),
   asyncHandler(async (req, res) => {
+    // Batches connect through active links only; voided links of those batches stay listed.
     const result = await manager.pool.query(
-      `WITH RECURSIVE related(id) AS (
-    SELECT $1::integer UNION SELECT other.batch_id FROM related r JOIN batch_lots own ON own.batch_id=r.id
-    JOIN batch_lots other ON other.lot=own.lot)
-    SELECT l.*,b.batch_number FROM related r JOIN batch_lots l ON l.batch_id=r.id JOIN batches b ON b.id=r.id ORDER BY l.id LIMIT 5001`,
+      `WITH RECURSIVE active AS (SELECT * FROM ${currentLots} cl WHERE cl.quantity IS NOT NULL),
+    related(id) AS (
+    SELECT $1::integer UNION SELECT other.batch_id FROM related r JOIN active own ON own.batch_id=r.id
+    JOIN active other ON other.lot=own.lot)
+    SELECT l.*,b.batch_number FROM related r JOIN ${currentLots} l ON l.batch_id=r.id JOIN batches b ON b.id=r.id ORDER BY l.id LIMIT 5001`,
       [Number(req.params.id)],
     );
+    const links = result.rows.slice(0, 5000);
+    const corrections = await manager.pool.query(
+      "SELECT * FROM batch_lot_corrections WHERE lot_link_id=ANY($1::int[]) ORDER BY id",
+      [links.map((l) => l.id)],
+    );
     res.json({
-      links: result.rows.slice(0, 5000),
+      links,
+      corrections: corrections.rows,
       truncated: result.rows.length > 5000,
     });
   }),
