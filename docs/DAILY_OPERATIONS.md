@@ -74,6 +74,13 @@ the hour). The summaries API returns these as `retained_state_seconds`,
 Individual transitions, raw counter values and report evidence are still not
 reconstructable (`test-history-rollups.mjs`).
 
+Shift reports and their OEE never need these rollups: retention keeps every reading
+from an hour before a recorded shift until its end (`test-daily-workflows.mjs` checks
+the protected count). The configurable OEE widget reads its own operation-mode and
+counter settings rather than the commissioned profile, so it does not substitute
+profile rollups for removed readings; windows without readings there report unknown
+time and incomplete data, which the OEE gauge and trend show as unknown or a gap.
+
 Storage shows database/history allocation, measured row size and recent receipt
 rate. The thirty-day growth forecast estimates **row bytes only**; indexes, free
 disk, compression and future workload are not inferred. Monitor actual host free
@@ -93,6 +100,17 @@ job/target and ideal cycle. Counter evidence is clipped to each run; missing bou
 samples remain uncertain. Performance combines each run's actual count and cycle
 standard only when running time is assigned and counters are complete. Running
 during an excluded break remains unresolved until the plan is corrected.
+
+**Changeovers** (supervisors, Daily operations) compare product transitions over up to
+31 days. A changeover runs from the last running state of one product run to the first
+running state of the next product, minus scheduled breaks; a trial run before the next
+run's planned start stays inside it. Time operators classified as changeover is shown
+beside it, also without breaks. Unknown state inside the changeover, a run that never
+reached running, and transitions between two shifts are listed with the reason but not
+measured. Only the same transition on the same machine is grouped (count, median actual,
+standard, median difference); operators and unrelated jobs are never ranked. Supervisors
+record expected minutes per transition with a basis; standards are append-only and the
+latest applies (`test-changeovers.mjs`).
 
 Commissioning supports reject-decrease, declared reset-to-zero and declared rollover.
 Rollover requires an exclusive modulus and a transition from the top ten percent to

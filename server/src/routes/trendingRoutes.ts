@@ -1,3 +1,4 @@
+import { auditRequest } from "../services/auditLogService.js";
 import { streamHistory } from "../services/historyExport.js";
 import { Router, type Request, type Response } from "express";
 import Joi from "joi";
@@ -68,6 +69,7 @@ router.get(
 router.get(
   "/export-csv",
   validateQuery(trendingQuerySchema),
+  auditRequest("export.trending_csv", "machine", "Exported trend data as CSV"),
   asyncHandler(async (req: Request, res: Response) => {
     const {
       nodeKeys,

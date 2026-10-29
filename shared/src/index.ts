@@ -354,6 +354,8 @@ export type {
   DowntimeReason,
   ShiftReport,
   ReportRevisionCheck,
+  ChangeoverTransition,
+  ChangeoverAnalysis,
 } from "./production.js";
 export type {
   ScheduledReportConfig,

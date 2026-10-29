@@ -28,6 +28,7 @@ import { renderScheduledReport } from "./reportGeneratorService.js";
 import { reportEmailService } from "./reportEmailService.js";
 import { NotFoundError, ValidationError } from "../utils/errors.js";
 import logger from "../utils/logger.js";
+import { auditLogService } from "./auditLogService.js";
 
 export function nextReportRun(
   cronExpression: string,
@@ -481,7 +482,7 @@ class ReportJobService {
         ),
       )
       .limit(500);
-    let removed = 0;
+    const removed: number[] = [];
     for (const row of rows) {
       const file = path.resolve(row.filePath!);
       if (!file.startsWith(root)) {
@@ -503,9 +504,16 @@ class ReportJobService {
         })
         .where(eq(reportHistory.id, row.id));
       await rm(file, { force: true });
-      removed++;
+      removed.push(row.id);
     }
-    return removed;
+    if (removed.length)
+      await auditLogService.recordEvent({
+        action: "retention.report_files.removed",
+        entityType: "report_history",
+        message: `Removed ${removed.length} report PDFs older than ${days} days`,
+        metadata: { retentionDays: days, reportIds: removed },
+      });
+    return removed.length;
   }
 
   async markLegacyInterrupted(): Promise<void> {

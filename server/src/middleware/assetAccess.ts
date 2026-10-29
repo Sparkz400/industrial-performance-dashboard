@@ -172,7 +172,11 @@ export async function authorizeAssetRequest(
     await assertResource("maintenance", found[1]);
     return;
   }
-  if ((found = match(/^\/planning\/machines\/(\d+)\/(calendars|plan)$/))) {
+  if (
+    (found = match(
+      /^\/planning\/machines\/(\d+)\/(calendars|plan|changeovers|changeover-standards)$/,
+    ))
+  ) {
     if (!read && !canSupervise(scope.role)) denied();
     assertMachine(found[1]);
     return;

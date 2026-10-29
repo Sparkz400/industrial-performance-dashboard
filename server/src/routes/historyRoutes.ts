@@ -1,3 +1,8 @@
+import {
+  auditLogService,
+  auditRequest,
+  getAuditActor,
+} from "../services/auditLogService.js";
 import { eligible, applyRetention } from "../services/historyRetention.js";
 import measurementCorrectionRoutes from "./measurementCorrectionRoutes.js";
 import { Router } from "express";
@@ -121,6 +126,11 @@ router.get(
 router.put(
   "/:id/policy",
   validateParams(id),
+  auditRequest(
+    "retention.policy.saved",
+    "machine",
+    "Saved a measurement retention policy",
+  ),
   validateBody(
     Joi.object({ days: Joi.number().integer().min(1).max(3650).required() }),
   ),
@@ -144,6 +154,11 @@ router.put(
 router.post(
   "/:id/preview",
   validateParams(id),
+  auditRequest(
+    "retention.preview.created",
+    "machine",
+    "Previewed measurement removal",
+  ),
   asyncHandler(async (req, res) => {
     const machine = Number(req.params.id),
       connection = await manager.pool.connect();
@@ -216,19 +231,37 @@ router.post(
     }),
   ),
   asyncHandler(async (req, res) => {
-    res.json(
-      await applyRetention(
-        Number(req.params.id),
-        req.body.previewId,
-        req.body.confirmRows,
-        req.session.userId!,
-      ),
+    const result = await applyRetention(
+      Number(req.params.id),
+      req.body.previewId,
+      req.body.confirmRows,
+      req.session.userId!,
     );
+    await auditLogService.recordEvent(
+      {
+        action: "retention.applied",
+        entityType: "machine",
+        entityId: Number(req.params.id),
+        message: `Removed ${result.deleted} of ${result.rows} reviewed measurements`,
+        metadata: {
+          previewId: result.id,
+          deleted: result.deleted,
+          completed: result.completed,
+        },
+      },
+      getAuditActor(req),
+    );
+    res.json(result);
   }),
 );
 router.post(
   "/:id/schedule",
   validateParams(id),
+  auditRequest(
+    "retention.scheduled",
+    "machine",
+    "Scheduled a reviewed measurement removal",
+  ),
   validateBody(
     Joi.object({
       previewId: Joi.string().uuid().required(),

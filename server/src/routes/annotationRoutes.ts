@@ -1,3 +1,4 @@
+import { auditRequest } from "../services/auditLogService.js";
 import { Router, type Request, type Response } from "express";
 import Joi from "joi";
 import {
@@ -72,6 +73,7 @@ router.put(
 router.delete(
   "/:id",
   validateParams(idParamSchema),
+  auditRequest("annotation.deleted", "annotation", "Deleted an annotation"),
   asyncHandler(async (req: Request, res: Response) => {
     const deleted = await annotationRepository.delete(String(req.params.id));
     if (!deleted) {

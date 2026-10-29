@@ -1,3 +1,4 @@
+import { auditRequest } from "../services/auditLogService.js";
 import { Router, type Request, type Response } from "express";
 import Joi from "joi";
 import {
@@ -164,6 +165,11 @@ router.delete(
   "/templates/:id",
   requireRole("admin"),
   validateParams(idParamSchema),
+  auditRequest(
+    "report_template.deleted",
+    "report_template",
+    "Deleted a report template",
+  ),
   asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const deleted = await reportRepository.deleteTemplate(id);
@@ -195,6 +201,11 @@ router.post(
   "/schedules",
   requireRole("admin"),
   validateBody(scheduleBodySchema),
+  auditRequest(
+    "report_schedule.created",
+    "report_schedule",
+    "Created a report schedule and its recipients",
+  ),
   asyncHandler(async (req: Request, res: Response) => {
     const schedule = await reportRepository.createSchedule({
       ...req.body,
@@ -210,6 +221,11 @@ router.put(
   requireRole("admin"),
   validateParams(idParamSchema),
   validateBody(scheduleUpdateSchema),
+  auditRequest(
+    "report_schedule.updated",
+    "report_schedule",
+    "Changed a report schedule or its recipients",
+  ),
   asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const resetCursor =
@@ -232,6 +248,11 @@ router.delete(
   "/schedules/:id",
   requireRole("admin"),
   validateParams(idParamSchema),
+  auditRequest(
+    "report_schedule.deleted",
+    "report_schedule",
+    "Deleted a report schedule",
+  ),
   asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const deleted = await reportRepository.deleteSchedule(id);
@@ -305,6 +326,11 @@ router.get(
 router.get(
   "/history/:id/download",
   validateParams(idParamSchema),
+  auditRequest(
+    "export.report_pdf",
+    "report_history",
+    "Downloaded a generated report",
+  ),
   asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const entry = await reportRepository.findHistoryById(id);

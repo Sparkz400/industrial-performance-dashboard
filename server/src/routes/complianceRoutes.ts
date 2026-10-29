@@ -1,3 +1,4 @@
+import { auditRequest } from "../services/auditLogService.js";
 import express, { type Request, type Response } from "express";
 import Joi from "joi";
 import { validateParams, validateQuery } from "../middleware/validation.js";
@@ -114,6 +115,11 @@ router.get(
   "/export",
   requireRole("admin"),
   validateQuery(exportQuerySchema),
+  auditRequest(
+    "export.compliance_log",
+    "compliance_audit_log",
+    "Exported the compliance audit log",
+  ),
   asyncHandler(async (req: Request, res: Response) => {
     const format = (req.query.format as "csv" | "json") || "json";
     const filters = {
@@ -270,6 +276,11 @@ router.put(
 router.post(
   "/reports/generate",
   requireRole("admin"),
+  auditRequest(
+    "export.compliance_report",
+    "compliance_audit_log",
+    "Generated a compliance report",
+  ),
   asyncHandler(async (req: Request, res: Response) => {
     const { reportType, dateFrom, dateTo, format } = req.body;
     const report = await complianceService.generateReport({

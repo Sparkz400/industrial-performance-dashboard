@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { router, authedProcedure } from "../trpc.js";
 import { annotationRepository } from "../../repositories/annotationRepository.js";
+import {
+  auditLogService,
+  type AuditActor,
+} from "../../services/auditLogService.js";
 
 export const annotationRouter = router({
   list: authedProcedure
@@ -45,9 +49,18 @@ export const annotationRouter = router({
 
   delete: authedProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const deleted = await annotationRepository.delete(input.id);
       if (!deleted) throw new Error("Annotation not found");
+      await auditLogService.recordEvent(
+        {
+          action: "annotation.deleted",
+          entityType: "annotation",
+          entityId: input.id,
+          message: "Deleted an annotation",
+        },
+        ctx.session as AuditActor,
+      );
       return { message: "Annotation deleted successfully" };
     }),
 });

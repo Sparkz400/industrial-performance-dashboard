@@ -2,9 +2,10 @@ import { Router } from "express";
 import Joi from "joi";
 import { createHash } from "node:crypto";
 import { canonicalJson } from "../utils/canonicalJson.js";
-import { and, eq, desc, gt, gte, lte, sql } from "drizzle-orm";
+import { and, asc, eq, desc, gt, gte, lt, lte, sql } from "drizzle-orm";
 import db from "../database/db.js";
 import {
+  changeoverStandards,
   historySummaries,
   measurementCorrections,
   opcuaData,
@@ -14,7 +15,11 @@ import {
   shiftReportRevisions,
 } from "../database/schema.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
-import { validateBody, validateParams } from "../middleware/validation.js";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../middleware/validation.js";
 import { requireRole } from "../middleware/auth.js";
 import {
   ConflictError,
@@ -29,7 +34,11 @@ import {
 import { report } from "./productionRoutes.js";
 import { energyAnalysis } from "../services/energyAnalysis.js";
 import { changedSections } from "../services/reportRevisionCheck.js";
+import { measureChangeovers } from "../services/changeoverAnalysis.js";
+import type { TimeWindow } from "../services/shiftCalculation.js";
 import type {
+  ChangeoverAnalysis,
+  ProductionProfile,
   ProductRun,
   ReportRevisionCheck,
   ShiftReport,
@@ -232,6 +241,124 @@ router.post(
       return { digest: token, items, applied: !!req.body.confirmDigest };
     });
     res.json(result);
+  }),
+);
+router.get(
+  "/machines/:id/changeover-standards",
+  validateParams(id),
+  asyncHandler(async (req, res) => {
+    res.json(
+      await db
+        .select()
+        .from(changeoverStandards)
+        .where(eq(changeoverStandards.machineId, Number(req.params.id)))
+        .orderBy(desc(changeoverStandards.id))
+        .limit(200),
+    );
+  }),
+);
+router.post(
+  "/machines/:id/changeover-standards",
+  requireRole("admin", "supervisor"),
+  validateParams(id),
+  validateBody(
+    Joi.object({
+      fromProduct: Joi.string().trim().min(1).max(160).required(),
+      toProduct: Joi.string()
+        .trim()
+        .min(1)
+        .max(160)
+        .invalid(Joi.ref("fromProduct"))
+        .required(),
+      expectedSeconds: Joi.number().integer().min(1).max(86400).required(),
+      note: Joi.string().trim().max(500).allow("").default(""),
+    }),
+  ),
+  asyncHandler(async (req, res) => {
+    const [saved] = await db
+      .insert(changeoverStandards)
+      .values({
+        ...req.body,
+        note: req.body.note || null,
+        machineId: Number(req.params.id),
+        createdBy: req.session.userId!,
+      })
+      .returning();
+    res.status(201).json(saved);
+  }),
+);
+router.get(
+  "/machines/:id/changeovers",
+  validateParams(id),
+  validateQuery(
+    Joi.object({
+      start: Joi.date().iso().required(),
+      end: Joi.date().iso().required(),
+    }),
+  ),
+  asyncHandler(async (req, res) => {
+    const machineId = Number(req.params.id),
+      start = new Date(String(req.query.start)),
+      end = new Date(String(req.query.end));
+    if (end <= start || end.getTime() - start.getTime() > 31 * 86400000)
+      throw new ValidationError("Choose up to 31 days");
+    const rows = await db
+      .select()
+      .from(productionShifts)
+      .where(
+        and(
+          eq(productionShifts.machineId, machineId),
+          lt(productionShifts.start, end),
+          gt(productionShifts.end, start),
+        ),
+      )
+      .orderBy(asc(productionShifts.start))
+      .limit(101);
+    const shifts = [];
+    for (const shift of rows.slice(0, 100)) {
+      const profile = shift.profile as ProductionProfile,
+        job = shift.job as ShiftReport["job"];
+      // A shift without product runs makes one run of its job.
+      const runs: ProductRun[] = shift.runs.length
+        ? shift.runs
+        : [
+            {
+              ...job,
+              start: shift.start.toISOString(),
+              end: shift.end.toISOString(),
+              idealCycleMs: profile.idealCycleMs,
+            },
+          ];
+      const observed =
+        runs.length > 1
+          ? await report(shift.id, {
+              start: shift.start.toISOString(),
+              end: shift.end.toISOString(),
+              job,
+              idealCycleMs: profile.idealCycleMs,
+            })
+          : null;
+      shifts.push({
+        id: shift.id,
+        name: shift.name,
+        runs,
+        breaks: shift.breaks as TimeWindow[],
+        intervals: observed?.intervals ?? [],
+        reasons: observed?.reasons ?? [],
+      });
+    }
+    const standards = await db
+      .select()
+      .from(changeoverStandards)
+      .where(eq(changeoverStandards.machineId, machineId));
+    const analysis: ChangeoverAnalysis = {
+      machineId,
+      start: start.toISOString(),
+      end: end.toISOString(),
+      ...measureChangeovers(shifts, standards),
+      truncated: rows.length > 100,
+    };
+    res.json(analysis);
   }),
 );
 router.get(

@@ -90,7 +90,7 @@ router.put(
     const id = Number(req.params.id);
     const [user] = await db.select().from(users).where(eq(users.id, id));
     if (!user) throw new NotFoundError("User");
-    await db.transaction(async (tx) => {
+    const previous = await db.transaction(async (tx) => {
       // Lock the account so concurrent grants cannot restore a revoked permission.
       await tx.select().from(users).where(eq(users.id, id)).for("update");
       const machineIds = req.body.machineIds as number[],
@@ -111,8 +111,14 @@ router.put(
           .length !== plantIds.length
       )
         throw new ValidationError("Unknown site");
-      await tx.delete(machineGrants).where(eq(machineGrants.userId, id));
-      await tx.delete(plantMemberships).where(eq(plantMemberships.userId, id));
+      const removedGrants = await tx
+        .delete(machineGrants)
+        .where(eq(machineGrants.userId, id))
+        .returning({ machineId: machineGrants.machineId });
+      const removedPlants = await tx
+        .delete(plantMemberships)
+        .where(eq(plantMemberships.userId, id))
+        .returning({ plantId: plantMemberships.plantId });
       if (machineIds.length)
         await tx
           .insert(machineGrants)
@@ -131,6 +137,10 @@ router.put(
           updatedAt: sql`greatest(now(), ${users.updatedAt} + interval '1 millisecond')`,
         })
         .where(eq(users.id, id));
+      return {
+        machineIds: removedGrants.map((g) => g.machineId).sort((a, b) => a - b),
+        plantIds: removedPlants.map((p) => p.plantId).sort((a, b) => a - b),
+      };
     });
     sessionEvents.emit("userRevoked", id);
     await auditLogService.recordEvent(
@@ -139,7 +149,7 @@ router.put(
         entityType: "user",
         entityId: id,
         message: "Machine and site permissions replaced; sessions revoked",
-        metadata: req.body,
+        metadata: { ...req.body, previous },
       },
       getAuditActor(req),
     );

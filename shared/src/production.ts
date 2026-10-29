@@ -109,6 +109,41 @@ export interface DowntimeReason {
   createdAt: string;
   supersedesId: number | null;
 }
+/** Product transition between consecutive runs and the stop observed around it. */
+export interface ChangeoverTransition {
+  shiftId: number;
+  shiftName: string;
+  from: { product: string; reference: string; plannedEnd: string };
+  to: { product: string; reference: string; plannedStart: string };
+  status: "observed" | "unobserved" | "across-shifts";
+  issue: string | null;
+  stoppedAt: string | null;
+  resumedAt: string | null;
+  /** Elapsed time from the last running in the earlier run to the first in the later one, minus breaks. */
+  actualSeconds: number | null;
+  breakSeconds: number;
+  /** Time inside the changeover that operators classified as changeover. */
+  confirmedSeconds: number;
+  expectedSeconds: number | null;
+}
+export interface ChangeoverAnalysis {
+  machineId: number;
+  start: string;
+  end: string;
+  transitions: ChangeoverTransition[];
+  /** Comparable changeovers: the same product transition on this machine. */
+  groups: {
+    fromProduct: string;
+    toProduct: string;
+    transitions: number;
+    observed: number;
+    medianActualSeconds: number | null;
+    expectedSeconds: number | null;
+    standardId: number | null;
+    medianDifferenceSeconds: number | null;
+  }[];
+  truncated: boolean;
+}
 /** Result of regenerating a saved report revision from today's retained data. */
 export interface ReportRevisionCheck {
   revisionId: number;

@@ -1,3 +1,4 @@
+import { auditRequest } from "../services/auditLogService.js";
 import express, { type Request, type Response } from "express";
 import Joi from "joi";
 import {
@@ -207,6 +208,7 @@ router.delete(
   "/profiles/:id",
   requireRole("admin"),
   validateParams(idParamSchema),
+  auditRequest("spc_profile.deleted", "spc_profile", "Deleted an SPC profile"),
   asyncHandler(async (req: Request, res: Response) => {
     await spcService.deleteProfile(Number(req.params.id));
     res.json({ message: "SPC profile deleted" });

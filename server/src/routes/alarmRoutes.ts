@@ -1,3 +1,4 @@
+import { auditRequest } from "../services/auditLogService.js";
 import { Router, type Request, type Response } from "express";
 import Joi from "joi";
 import {
@@ -163,6 +164,7 @@ router.put(
 router.delete(
   "/rules/:id",
   validateParams(idParamSchema),
+  auditRequest("alarm_rule.deleted", "alarm_rule", "Deleted an alarm rule"),
   asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const deleted = await alarmRepository.deleteRule(id);

@@ -1,3 +1,4 @@
+import { auditRequest } from "../services/auditLogService.js";
 import { Router, type Request, type Response } from "express";
 import Joi from "joi";
 import {
@@ -160,6 +161,7 @@ router.delete(
   requireAuth,
   requireRole("admin"),
   validateParams(idParamSchema),
+  auditRequest("alert_rule.deleted", "alert_rule", "Deleted an alert rule"),
   asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const deleted = await alertRepository.deleteRule(id);
@@ -278,6 +280,11 @@ router.delete(
   requireAuth,
   requireRole("admin"),
   validateParams(idParamSchema),
+  auditRequest(
+    "notification_channel.deleted",
+    "notification_channel",
+    "Deleted a notification channel",
+  ),
   asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const deleted = await alertRepository.deleteChannel(id);
