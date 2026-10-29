@@ -228,6 +228,11 @@ export const german: Record<string, string> = {
   'Awaiting review; not used in the shift report.':
     'Prüfung ausstehend; wird im Schichtbericht nicht verwendet.',
   'Quantities: reviewed manual declaration': 'Mengen: geprüfte manuelle Meldung',
+  'Open handover items': 'Offene Übergabepunkte',
+  'High priority': 'Hohe Priorität',
+  Owner: 'Verantwortlich',
+  Due: 'Fällig',
+  'No open handover items for this shift.': 'Keine offenen Übergabepunkte für diese Schicht.',
   'History #': 'Historie #',
   'Review / edit #': 'Prüfen / bearbeiten #',
   'Latest 100 revisions shown.': 'Die letzten 100 Versionen werden angezeigt.',

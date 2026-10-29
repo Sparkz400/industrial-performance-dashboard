@@ -1,4 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
+import { rm } from "node:fs/promises";
+import path from "node:path";
 import {
   and,
   asc,
@@ -7,9 +9,11 @@ import {
   isNotNull,
   isNull,
   lte,
+  notInArray,
   or,
   sql,
 } from "drizzle-orm";
+import config from "../config/config.js";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { CronExpressionParser } from "cron-parser";
 import db from "../database/db.js";
@@ -436,6 +440,63 @@ class ReportJobService {
           })
           .where(eq(reportHistory.id, id));
     });
+  }
+
+  /** Opt-in PDF retention: only files inside the reports directory and not awaiting email. */
+  async pruneFiles(
+    days = config.REPORT_RETENTION_DAYS,
+    now = new Date(),
+  ): Promise<number> {
+    if (!days) return 0;
+    const root = path.resolve(process.env.REPORTS_DIR || "reports") + path.sep;
+    const rows = await db
+      .select({
+        id: reportHistory.id,
+        filePath: reportHistory.filePath,
+        metadata: reportHistory.metadata,
+      })
+      .from(reportHistory)
+      .where(
+        and(
+          isNotNull(reportHistory.filePath),
+          lte(
+            reportHistory.completedAt,
+            new Date(now.getTime() - days * 86_400_000),
+          ),
+          notInArray(reportHistory.emailStatus, [
+            "queued",
+            "sending",
+            "retrying",
+            "blocked",
+          ]),
+        ),
+      )
+      .limit(500);
+    let removed = 0;
+    for (const row of rows) {
+      const file = path.resolve(row.filePath!);
+      if (!file.startsWith(root)) {
+        logger.warn(
+          `[Reports] Retention skipped a file outside ${root}: ${file}`,
+        );
+        continue;
+      }
+      // Clear the pointer first: a crash leaves an orphan file, never a dangling download.
+      await db
+        .update(reportHistory)
+        .set({
+          filePath: null,
+          metadata: {
+            ...(row.metadata as Record<string, unknown>),
+            fileRemovedAt: now.toISOString(),
+            retentionDays: days,
+          },
+        })
+        .where(eq(reportHistory.id, row.id));
+      await rm(file, { force: true });
+      removed++;
+    }
+    return removed;
   }
 
   async markLegacyInterrupted(): Promise<void> {

@@ -820,6 +820,22 @@ export const alertRules = pgTable(
   ],
 );
 
+// Written by a database trigger on every rule insert/update, whatever the write path.
+export const alertRuleVersions = pgTable(
+  "alert_rule_versions",
+  {
+    id: serial("id").primaryKey(),
+    ruleId: integer("rule_id")
+      .notNull()
+      .references(() => alertRules.id, { onDelete: "cascade" }),
+    effectiveAt: timestamp("effective_at", { withTimezone: true }).notNull(),
+    rule: jsonb("rule").$type<Record<string, unknown>>().notNull(),
+  },
+  (table) => [
+    index("idx_alert_rule_versions_rule").on(table.ruleId, table.effectiveAt),
+  ],
+);
+
 export const alertHistory = pgTable(
   "alert_history",
   {

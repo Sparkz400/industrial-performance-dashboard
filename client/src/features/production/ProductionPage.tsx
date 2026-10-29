@@ -1,4 +1,4 @@
-import { formatNumber, formatPercent, translate as t, useLanguage } from '@/i18n';
+import { formatDateTime, formatNumber, formatPercent, translate as t, useLanguage } from '@/i18n';
 /* eslint-disable security/detect-object-injection -- Dynamic keys below come from fixed field/role lists; imported profiles are validated by the API. */
 import React, { useEffect, useState } from 'react';
 import {
@@ -373,6 +373,21 @@ export default function ProductionPage() {
                   {loss.reason}: {(loss.seconds / 60).toFixed(2)} {t('min')}{' '}
                 </Typography>
               ))}
+              <Typography variant="h6">{t('Open handover items')}</Typography>
+              {data.handover?.length ? (
+                <Box component="ul">
+                  {data.handover.map((item) => (
+                    <li key={item.id}>
+                      #{item.id} · {item.priority === 'high' ? `${t('High priority')} · ` : ''}
+                      {item.text} · {t('Owner')}:{' '}
+                      {item.ownerName ?? (item.ownerId ? `#${item.ownerId}` : t('Unassigned'))}
+                      {item.dueAt ? ` · ${t('Due')} ${formatDateTime(item.dueAt)}` : ''}
+                    </li>
+                  ))}
+                </Box>
+              ) : (
+                <Typography>{t('No open handover items for this shift.')}</Typography>
+              )}
               <Typography variant="h6">{t('Machine timeline')} </Typography>
               <Box sx={{ overflowX: 'auto' }}>
                 <Table size="small">

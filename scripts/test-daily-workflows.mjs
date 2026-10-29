@@ -287,6 +287,7 @@ await dailyFixture(
       laterCorrections: 0,
       lateArrivals: 0,
       laterDeclarations: 0,
+      laterHandoverChanges: 0,
       planChanged: false,
       removedSamplesInOverlappingHours: 0,
     });
@@ -341,6 +342,32 @@ await dailyFixture(
         declared.issues,
       );
     assert.equal((await verify(energyRevision.id)).causes.laterDeclarations, 1);
+    // R02: open handover actions appear in the report with their owner and reference.
+    const followUp = await ok(
+      "operator",
+      "POST",
+      "/production/operator/entries",
+      {
+        ...handCount,
+        text: "Replace worn guide rail",
+        priority: "high",
+        ownerId: users.operator.id,
+        requestId: randomUUID(),
+        machineId: machine,
+        shiftId: shift.id,
+        intervalStart: null,
+        intervalEnd: null,
+        kind: "action",
+        quantity: null,
+      },
+      201,
+    );
+    const withHandover = await ok("viewer", "GET", `/production/shifts/${shift.id}/report`);
+    assert.deepEqual(
+      withHandover.handover.map(({ id, kind, priority, ownerName }) => ({ id, kind, priority, ownerName })),
+      [{ id: followUp.id, kind: "action", priority: "high", ownerName: "operator" }],
+    );
+    assert.equal((await verify(energyRevision.id)).causes.laterHandoverChanges, 1);
     assert.equal(
       (await ok("viewer", "GET", `/energy/shifts/${shift.id}`)).kWhPerGoodPart,
       null,

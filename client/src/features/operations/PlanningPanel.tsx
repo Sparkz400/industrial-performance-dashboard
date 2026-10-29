@@ -446,6 +446,11 @@ function RevisionCheck({ check }: { check: ReportRevisionCheck }) {
         'quantity declarations changed afterwards',
         'danach geänderte Mengenmeldungen',
       )}`,
+    causes.laterHandoverChanges &&
+      `${causes.laterHandoverChanges} ${t(
+        'handover notes or actions changed afterwards',
+        'danach geänderte Übergabenotizen oder Aktionen',
+      )}`,
     causes.planChanged && t('product runs or plan changed', 'Produktläufe oder Plan geändert'),
     causes.removedSamplesInOverlappingHours &&
       `${causes.removedSamplesInOverlappingHours} ${t(

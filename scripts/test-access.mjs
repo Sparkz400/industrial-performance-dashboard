@@ -72,6 +72,10 @@ await dailyFixture(
         [a, b],
       )
     ).rows;
+    await pool.query(
+      "INSERT INTO alert_rules(name,machine_id,node_key,condition,threshold) VALUES ('Site A rule',$1,'Count','gt',1),('Site B rule',$2,'Count','gt',1)",
+      [a, b],
+    );
     const since = new Date(Date.now() - 60000).toISOString(),
       until = new Date(Date.now() + 1000).toISOString();
     const query = new URLSearchParams({
@@ -153,6 +157,19 @@ await dailyFixture(
       ).json();
       assert.equal(list.total, 1);
       assert.equal(list.data[0].machineId, a);
+      // E01: alarm rules are scoped by site on every read path.
+      for (const path of ["/api/v1/alerts/rules", "/api/v1/alarms/rules"])
+        assert.deepEqual(
+          (await (await call(role, "GET", path)).json()).map((r) => r.name),
+          ["Site A rule"],
+          `${role} ${path}`,
+        );
+      assert.deepEqual(
+        (
+          await (await call(role, "GET", "/api/trpc/alarm.listRules")).json()
+        ).result.data.map((r) => r.name),
+        ["Site A rule"],
+      );
       assert.equal(
         (
           await call(

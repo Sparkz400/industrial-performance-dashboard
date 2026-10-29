@@ -24,6 +24,7 @@ toward machines; physical-machine qualification is separate from automated check
 - [Full roadmap and milestone criteria](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/ROADMAP.md)
 - [TODO priorities, dependencies and completion checks](https://github.com/Sparkz400/performance_dashboard/blob/main/TODO.md)
 - [Current capabilities, code findings and primary-source research](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/RESEARCH.md)
+- [Research decisions: what to build, defer or reject, and the triggers to revisit](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/RESEARCH_DECISIONS.md)
 - [Current status and limitations](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/STATUS.md)
 - [Machine compatibility](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/COMPATIBILITY.md)
 

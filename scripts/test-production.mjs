@@ -728,6 +728,24 @@ try {
   await page
     .getByRole("button", { name: "Save operator reason", exact: true })
     .click();
+  // R02: an open, owned action linked to the shift appears in the rendered report.
+  const openShift = (
+    await pool.query("SELECT id, machine_id FROM production_shifts")
+  ).rows[0];
+  const handoverAction = await call("POST", "/api/v1/production/operator/entries", {
+    requestId: randomUUID(),
+    machineId: openShift.machine_id,
+    shiftId: openShift.id,
+    intervalStart: null,
+    intervalEnd: null,
+    quantity: null,
+    kind: "action",
+    text: "Clear jam sensor before next shift",
+    priority: "high",
+    ownerId: adminId,
+    dueAt: null,
+  });
+  assert.equal(handoverAction.status(), 201, await handoverAction.text());
   await page.getByLabel("Independent total", { exact: true }).fill("15");
   await page.getByLabel("Independent good", { exact: true }).fill("13");
   await page.getByLabel("Independent reject", { exact: true }).fill("2");
@@ -753,6 +771,10 @@ try {
   assert.equal(report.verified, true);
   assert.equal(report.oee.overall, 13 / 30);
   assert.deepEqual(report.quantities, { total: 15, good: 13, reject: 2 });
+  assert.equal(report.handover[0].text, "Clear jam sensor before next shift");
+  await expectVisible(
+    page.getByText("Clear jam sensor before next shift", { exact: false }).first(),
+  );
   await page
     .getByText("Reconciled against recorded independent counts", {
       exact: true,

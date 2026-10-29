@@ -308,6 +308,12 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const entry = await reportRepository.findHistoryById(id);
+    if ((entry?.metadata as { fileRemovedAt?: string } | null)?.fileRemovedAt) {
+      res.status(410).json({
+        error: "Report file was removed by the configured retention policy",
+      });
+      return;
+    }
     if (!entry || !entry.filePath) {
       throw new NotFoundError("Report file");
     }

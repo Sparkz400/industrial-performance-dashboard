@@ -1,8 +1,9 @@
 import { EventEmitter } from "node:events";
-import { and, eq, isNull, desc, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, desc, sql } from "drizzle-orm";
 import db from "../database/db.js";
 import {
   alertHistory,
+  alertRuleVersions,
   alarmEvaluationState,
   alarmEvaluationReceipts,
   webhooks,
@@ -13,6 +14,55 @@ import {
 import { alarmRepository } from "../repositories/alarmRepository.js";
 import type { SpoolEntry } from "../queue/measurementSpool.js";
 import type { AlarmEvent } from "@performance-dashboard/shared";
+import logger from "../utils/logger.js";
+
+export interface RuleVersion {
+  effectiveAt: number;
+  rule: AlertRuleRow;
+}
+
+/** Trigger snapshots use column names; map them back to the rule shape the evaluator uses. */
+export function ruleFromSnapshot(s: Record<string, unknown>): AlertRuleRow {
+  const date = (v: unknown) => (v == null ? null : new Date(String(v)));
+  return {
+    id: s.id as number,
+    name: s.name as string,
+    description: (s.description ?? null) as string | null,
+    machineId: (s.machine_id ?? null) as number | null,
+    plantId: (s.plant_id ?? null) as number | null,
+    nodeKey: s.node_key as string,
+    condition: s.condition as string,
+    threshold: (s.threshold ?? null) as number | null,
+    thresholdHigh: (s.threshold_high ?? null) as number | null,
+    rateWindowSeconds: (s.rate_window_seconds ?? null) as number | null,
+    severity: s.severity as AlertRuleRow["severity"],
+    channels: s.channels ?? [],
+    cooldownSeconds: (s.cooldown_seconds ?? null) as number | null,
+    debounceSeconds: (s.debounce_seconds ?? 0) as number,
+    clearDebounceSeconds: (s.clear_debounce_seconds ?? 0) as number,
+    hysteresis: (s.hysteresis ?? 0) as number,
+    isActive: (s.is_active ?? null) as boolean | null,
+    createdBy: (s.created_by ?? null) as number | null,
+    createdAt: date(s.created_at),
+    updatedAt: date(s.updated_at),
+  };
+}
+
+/**
+ * A sample is judged by the rule version in force when it was received, so replay after an
+ * outage cannot apply thresholds that did not exist yet. Null: no recorded version covers it.
+ */
+export function ruleAt(
+  rule: AlertRuleRow,
+  versions: RuleVersion[] | undefined,
+  receivedAt: number,
+): AlertRuleRow | null {
+  if (!rule.updatedAt || receivedAt >= rule.updatedAt.getTime()) return rule;
+  return (
+    versions?.filter((version) => version.effectiveAt <= receivedAt).at(-1)
+      ?.rule ?? null
+  );
+}
 
 interface RuleState {
   eventId: string;
@@ -197,9 +247,30 @@ async function queueTransition(
 
 export class AlarmEvaluator extends EventEmitter {
   private rules?: AlertRuleRow[];
+  private versions = new Map<number, RuleVersion[]>();
 
   async loadRules(): Promise<void> {
     const rules = await alarmRepository.getAllActiveRules();
+    const ids = rules.map((rule) => rule.id);
+    const rows = ids.length
+      ? await db
+          .select()
+          .from(alertRuleVersions)
+          .where(inArray(alertRuleVersions.ruleId, ids))
+          .orderBy(
+            asc(alertRuleVersions.effectiveAt),
+            asc(alertRuleVersions.id),
+          )
+      : [];
+    this.versions = new Map();
+    for (const row of rows)
+      this.versions.set(row.ruleId, [
+        ...(this.versions.get(row.ruleId) ?? []),
+        {
+          effectiveAt: row.effectiveAt.getTime(),
+          rule: ruleFromSnapshot(row.rule),
+        },
+      ]);
     this.rules = rules.filter((rule) => rule.plantId == null);
   }
   async reloadRules(): Promise<void> {
@@ -271,15 +342,28 @@ export class AlarmEvaluator extends EventEmitter {
     const data = entry.data;
     if (data.machineId == null) return;
     if (!this.rules) await this.loadRules();
-    for (const rule of this.rules!) {
+    for (const current of this.rules!) {
       if (
-        rule.nodeKey !== data.key ||
-        (rule.machineId != null && rule.machineId !== data.machineId)
+        current.nodeKey !== data.key ||
+        (current.machineId != null && current.machineId !== data.machineId)
       )
         continue;
-      const key = `${rule.id}:${data.machineId}`;
+      const key = `${current.id}:${data.machineId}`;
       const receivedAt = new Date(data.receivedAt ?? data.timestamp).getTime();
-      if (rule.createdAt && receivedAt < rule.createdAt.getTime()) continue;
+      if (current.createdAt && receivedAt < current.createdAt.getTime())
+        continue;
+      const rule = ruleAt(current, this.versions.get(current.id), receivedAt);
+      if (
+        !rule ||
+        rule.isActive === false ||
+        rule.nodeKey !== data.key ||
+        (rule.machineId != null && rule.machineId !== data.machineId)
+      ) {
+        logger.warn(
+          `[Alarm] Sample ${entry.id} received before rule ${current.id} changed is not evaluated: no matching active version covers its receipt time`,
+        );
+        continue;
+      }
       const sourceTime = new Date(
         data.sourceTimestamp ?? data.timestamp,
       ).getTime();
@@ -391,6 +475,7 @@ export class AlarmEvaluator extends EventEmitter {
                 conditionState,
                 sourceTime: new Date(sourceTime).toISOString(),
                 eventId: entry.id,
+                ruleVersion: rule.updatedAt?.toISOString() ?? null,
               },
             })
             .returning();

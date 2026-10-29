@@ -1,4 +1,4 @@
-import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
+import { eq, and, desc, gte, inArray, lte, sql } from "drizzle-orm";
 import db, { getReadDb } from "../database/db.js";
 import {
   reportTemplates,
@@ -90,12 +90,42 @@ export const reportRepository = {
     return updated ?? null;
   },
 
+  /** Deleting a schedule also stops its queued generation and undelivered email. */
   async deleteSchedule(id: number) {
-    const [deleted] = await db
-      .delete(reportSchedules)
-      .where(eq(reportSchedules.id, id))
-      .returning();
-    return deleted ?? null;
+    return db.transaction(async (tx) => {
+      await tx
+        .update(reportHistory)
+        .set({ status: "cancelled", retryAt: null, error: "Schedule deleted" })
+        .where(
+          and(
+            eq(reportHistory.scheduleId, id),
+            inArray(reportHistory.status, ["queued", "failed"]),
+          ),
+        );
+      await tx
+        .update(reportHistory)
+        .set({
+          emailStatus: "cancelled",
+          emailRetryAt: null,
+          emailError: "Schedule deleted",
+        })
+        .where(
+          and(
+            eq(reportHistory.scheduleId, id),
+            inArray(reportHistory.emailStatus, [
+              "queued",
+              "sending",
+              "retrying",
+              "blocked",
+            ]),
+          ),
+        );
+      const [deleted] = await tx
+        .delete(reportSchedules)
+        .where(eq(reportSchedules.id, id))
+        .returning();
+      return deleted ?? null;
+    });
   },
 
   // ===== Report History =====
