@@ -1,12 +1,16 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import Joi from "joi";
-import { and, eq, desc, sql } from "drizzle-orm";
+import { createHash } from "node:crypto";
+import { and, asc, eq, desc, gte, inArray, sql } from "drizzle-orm";
 import type { ProductionProfile } from "@performance-dashboard/shared";
 import db from "../database/db.js";
 import {
+  downtimeReasons,
+  maintenanceAttachments,
   maintenancePlans,
   maintenanceEvents,
   operatorEntries,
+  productionShifts,
 } from "../database/schema.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { validateBody, validateParams } from "../middleware/validation.js";
@@ -28,7 +32,43 @@ interface Plan {
   active: boolean;
 }
 const router = Router(),
-  id = Joi.object({ id: Joi.number().integer().positive().required() });
+  positive = Joi.number().integer().positive().required(),
+  id = Joi.object({ id: positive });
+// Content must match the declared type; anything else is refused rather than stored.
+const attachmentTypes: Record<string, (file: Buffer) => boolean> = {
+  "image/png": (f) =>
+    f.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])),
+  "image/jpeg": (f) => f[0] === 0xff && f[1] === 0xd8 && f[2] === 0xff,
+  "application/pdf": (f) => f.subarray(0, 5).toString("latin1") === "%PDF-",
+  "text/plain": (f) => {
+    try {
+      new TextDecoder("utf-8", { fatal: true }).decode(f);
+      return !f.includes(0);
+    } catch {
+      return false;
+    }
+  },
+};
+const attachmentColumns = {
+  id: maintenanceAttachments.id,
+  eventId: maintenanceAttachments.eventId,
+  filename: maintenanceAttachments.filename,
+  contentType: maintenanceAttachments.contentType,
+  size: maintenanceAttachments.size,
+  sha256: maintenanceAttachments.sha256,
+  createdBy: maintenanceAttachments.createdBy,
+  createdAt: maintenanceAttachments.createdAt,
+};
+const stopColumns = {
+  id: downtimeReasons.id,
+  shiftId: downtimeReasons.shiftId,
+  shiftName: productionShifts.name,
+  start: downtimeReasons.start,
+  end: downtimeReasons.end,
+  category: downtimeReasons.category,
+  reason: downtimeReasons.reason,
+  supersedesId: downtimeReasons.supersedesId,
+};
 router.get(
   "/machines/:id",
   validateParams(id),
@@ -91,9 +131,32 @@ router.get(
       const due = checks.some(
         (c) => c.observed != null && c.observed >= c.limit!,
       );
+      const eventIds = events.map((e) => e.id),
+        stopIds = events.flatMap((e) => (e.stopId ? [e.stopId] : []));
+      const attachments = eventIds.length
+        ? await db
+            .select(attachmentColumns)
+            .from(maintenanceAttachments)
+            .where(inArray(maintenanceAttachments.eventId, eventIds))
+            .orderBy(asc(maintenanceAttachments.id))
+        : [];
+      const stops = stopIds.length
+        ? await db
+            .select(stopColumns)
+            .from(downtimeReasons)
+            .innerJoin(
+              productionShifts,
+              eq(productionShifts.id, downtimeReasons.shiftId),
+            )
+            .where(inArray(downtimeReasons.id, stopIds))
+        : [];
       result.push({
         ...plan,
-        events,
+        events: events.map((event) => ({
+          ...event,
+          stop: stops.find((s) => s.id === event.stopId) ?? null,
+          attachments: attachments.filter((a) => a.eventId === event.id),
+        })),
         usage,
         dueDate,
         status: !config.active
@@ -184,9 +247,35 @@ router.post(
         .required(),
       note: Joi.string().trim().min(1).max(2000).required(),
       incidentId: Joi.number().integer().positive().allow(null).default(null),
+      stopId: Joi.number().integer().positive().allow(null).default(null),
+      trend: Joi.object({
+        start: Joi.date().iso().required(),
+        end: Joi.date().iso().required(),
+        keys: Joi.array()
+          .items(Joi.string().trim().min(1).max(200))
+          .min(1)
+          .max(8)
+          .unique()
+          .required(),
+      })
+        .allow(null)
+        .default(null),
     }),
   ),
   asyncHandler(async (req, res) => {
+    const trend = req.body.trend as {
+      start: Date;
+      end: Date;
+      keys: string[];
+    } | null;
+    if (
+      trend &&
+      (trend.end <= trend.start ||
+        trend.end.getTime() - trend.start.getTime() > 7 * 86400000)
+    )
+      throw new ValidationError("Link a trend window of at most seven days");
+    const trendKey = (t: typeof trend) =>
+      t ? JSON.stringify([t.start.getTime(), t.end.getTime(), t.keys]) : null;
     res.status(201).json(
       await db.transaction(async (tx) => {
         const [plan] = await tx
@@ -195,8 +284,15 @@ router.post(
           .where(eq(maintenancePlans.id, Number(req.params.id)))
           .for("update");
         if (!plan) throw new NotFoundError("Service plan");
-        const { requestId, version, serviced, checks, note, incidentId } =
-          req.body;
+        const {
+          requestId,
+          version,
+          serviced,
+          checks,
+          note,
+          incidentId,
+          stopId,
+        } = req.body;
         const [existing] = await tx
           .select()
           .from(maintenanceEvents)
@@ -208,6 +304,16 @@ router.post(
             existing.serviced !== serviced ||
             existing.note !== note ||
             existing.incidentId !== incidentId ||
+            existing.stopId !== stopId ||
+            trendKey(
+              existing.trendStart && existing.trendEnd
+                ? {
+                    start: existing.trendStart,
+                    end: existing.trendEnd,
+                    keys: existing.trendKeys ?? [],
+                  }
+                : null,
+            ) !== trendKey(trend) ||
             JSON.stringify(Object.entries(existing.checks as object).sort()) !==
               JSON.stringify(Object.entries(checks).sort())
           )
@@ -243,6 +349,29 @@ router.post(
           if (!entry)
             throw new ValidationError("Incident must belong to this machine");
         }
+        if (stopId) {
+          const [stop] = await tx
+            .select({ id: downtimeReasons.id })
+            .from(downtimeReasons)
+            .innerJoin(
+              productionShifts,
+              eq(productionShifts.id, downtimeReasons.shiftId),
+            )
+            .where(
+              and(
+                eq(downtimeReasons.id, stopId),
+                eq(productionShifts.machineId, plan.machineId),
+              ),
+            );
+          const [replaced] = await tx
+            .select({ id: downtimeReasons.id })
+            .from(downtimeReasons)
+            .where(eq(downtimeReasons.supersedesId, stopId));
+          if (!stop || replaced)
+            throw new ValidationError(
+              "Link a current classified stop of this machine",
+            );
+        }
         const [saved] = await tx
           .insert(maintenanceEvents)
           .values({
@@ -252,6 +381,10 @@ router.post(
             checks,
             note,
             incidentId,
+            stopId,
+            trendStart: trend?.start ?? null,
+            trendEnd: trend?.end ?? null,
+            trendKeys: trend?.keys ?? null,
             createdBy: req.session.userId!,
           })
           .returning();
@@ -262,6 +395,130 @@ router.post(
         return saved;
       }),
     );
+  }),
+);
+/** Current classified stops of the machine's last 31 days, for linking a service record. */
+router.get(
+  "/machines/:id/stops",
+  validateParams(id),
+  asyncHandler(async (req, res) => {
+    const rows = await db
+      .select(stopColumns)
+      .from(downtimeReasons)
+      .innerJoin(
+        productionShifts,
+        eq(productionShifts.id, downtimeReasons.shiftId),
+      )
+      .where(
+        and(
+          eq(productionShifts.machineId, Number(req.params.id)),
+          gte(downtimeReasons.start, new Date(Date.now() - 31 * 86400000)),
+        ),
+      )
+      .orderBy(desc(downtimeReasons.start))
+      .limit(500);
+    const replaced = new Set(rows.map((r) => r.supersedesId));
+    res.json(rows.filter((r) => !replaced.has(r.id)).slice(0, 200));
+  }),
+);
+const attachmentParams = validateParams(
+  Joi.object({ id: positive, eventId: positive }),
+);
+router.post(
+  "/plans/:id/events/:eventId/attachments",
+  requireRole("admin", "supervisor", "operator"),
+  attachmentParams,
+  express.raw({ type: () => true, limit: "5mb" }),
+  asyncHandler(async (req, res) => {
+    const file = req.body as Buffer,
+      type = String(req.headers["content-type"] ?? "")
+        .split(";")[0]
+        .trim()
+        .toLowerCase();
+    if (!Buffer.isBuffer(file) || !file.length)
+      throw new ValidationError("Attach a non-empty file");
+    if (!attachmentTypes[type]?.(file))
+      throw new ValidationError(
+        "Attach a PNG, JPEG, PDF or UTF-8 text file whose content matches its type",
+      );
+    let filename = "";
+    try {
+      filename = decodeURIComponent(String(req.headers["x-filename"] ?? ""));
+    } catch {
+      /* An undecodable name is refused below. */
+    }
+    filename = filename
+      .replace(/[\\/"\u0000-\u001f\u007f]/g, "_")
+      .trim()
+      .slice(0, 200);
+    if (!filename) throw new ValidationError("Name the attached file");
+    const saved = await db.transaction(async (tx) => {
+      const [event] = await tx
+        .select({ id: maintenanceEvents.id })
+        .from(maintenanceEvents)
+        .where(
+          and(
+            eq(maintenanceEvents.id, Number(req.params.eventId)),
+            eq(maintenanceEvents.planId, Number(req.params.id)),
+          ),
+        )
+        .for("update");
+      if (!event) throw new NotFoundError("Service record");
+      const [{ count }] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(maintenanceAttachments)
+        .where(eq(maintenanceAttachments.eventId, event.id));
+      if (count >= 10)
+        throw new ValidationError(
+          "A service record keeps at most 10 attachments",
+        );
+      const [row] = await tx
+        .insert(maintenanceAttachments)
+        .values({
+          eventId: event.id,
+          filename,
+          contentType: type,
+          size: file.length,
+          sha256: createHash("sha256").update(file).digest("hex"),
+          data: file,
+          createdBy: req.session.userId!,
+        })
+        .returning(attachmentColumns);
+      return row;
+    });
+    res.status(201).json(saved);
+  }),
+);
+router.get(
+  "/plans/:id/events/:eventId/attachments/:attachmentId",
+  validateParams(
+    Joi.object({ id: positive, eventId: positive, attachmentId: positive }),
+  ),
+  asyncHandler(async (req, res) => {
+    const [file] = await db
+      .select({ ...attachmentColumns, data: maintenanceAttachments.data })
+      .from(maintenanceAttachments)
+      .innerJoin(
+        maintenanceEvents,
+        eq(maintenanceEvents.id, maintenanceAttachments.eventId),
+      )
+      .where(
+        and(
+          eq(maintenanceAttachments.id, Number(req.params.attachmentId)),
+          eq(maintenanceAttachments.eventId, Number(req.params.eventId)),
+          eq(maintenanceEvents.planId, Number(req.params.id)),
+        ),
+      );
+    if (!file) throw new NotFoundError("Attachment");
+    // Always a download, never rendered in the application's origin.
+    res.set({
+      "Content-Type": file.contentType,
+      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "sandbox",
+      "Cache-Control": "private, no-store",
+    });
+    res.send(file.data);
   }),
 );
 export default router;

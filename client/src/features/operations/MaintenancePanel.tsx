@@ -13,9 +13,12 @@ import {
   Typography,
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { useT } from '@/i18n';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { operationRequest } from './api';
+import { API_BASE_URL } from '@/config/config';
+import { protectedFetch } from '@/utils/protectedFetch';
+import { operationRequest, toIso } from './api';
 interface Config {
   name: string;
   days: number | null;
@@ -23,6 +26,22 @@ interface Config {
   cycles: number | null;
   checks: string[];
   active: boolean;
+}
+interface Stop {
+  id: number;
+  shiftId: number;
+  shiftName: string;
+  start: string;
+  end: string;
+  category: string;
+  reason: string;
+}
+interface Attachment {
+  id: number;
+  filename: string;
+  contentType: string;
+  size: number;
+  sha256: string;
 }
 interface ServiceEvent {
   id: number;
@@ -32,6 +51,97 @@ interface ServiceEvent {
   serviced: boolean;
   checks: Record<string, boolean>;
   incidentId: number | null;
+  stop: Stop | null;
+  trendStart: string | null;
+  trendEnd: string | null;
+  trendKeys: string[] | null;
+  attachments: Attachment[];
+}
+const attachmentPath = (plan: number, event: number) =>
+  `${API_BASE_URL}/maintenance/plans/${plan}/events/${event}/attachments`;
+/**
+ * Lists a service record's attachments and adds new ones.
+ * @param root0
+ * @param root0.plan
+ * @param root0.event
+ * @param root0.canAdd
+ * @param root0.onSaved
+ */
+function Attachments({
+  plan,
+  event,
+  canAdd,
+  onSaved,
+}: {
+  plan: number;
+  event: ServiceEvent;
+  canAdd: boolean;
+  onSaved: () => Promise<unknown>;
+}) {
+  const t = useT(),
+    [error, setError] = useState(''),
+    [busy, setBusy] = useState(false);
+  const download = async (file: Attachment) => {
+    setError('');
+    const response = await protectedFetch(`${attachmentPath(plan, event.id)}/${file.id}`);
+    if (!response.ok) return setError(`${t('Download failed')} (${response.status})`);
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = file.filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  return (
+    <Stack spacing={1}>
+      {error && <Alert severity="error">{error}</Alert>}
+      {event.attachments.map((file) => (
+        <Stack key={file.id} direction="row" alignItems="center" gap={1} flexWrap="wrap">
+          <Button size="small" onClick={() => void download(file)}>
+            {file.filename}
+          </Button>
+          <Typography variant="body2">
+            {file.contentType} · {(file.size / 1024).toFixed(1)} KiB · SHA-256{' '}
+            {file.sha256.slice(0, 12)}…
+          </Typography>
+        </Stack>
+      ))}
+      {canAdd && event.attachments.length < 10 && (
+        <Button component="label" size="small" disabled={busy}>
+          {t('Attach photo, PDF or text', 'Foto, PDF oder Text anhängen')}
+          <input
+            hidden
+            type="file"
+            accept="image/png,image/jpeg,application/pdf,text/plain"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (!file) return;
+              setBusy(true);
+              setError('');
+              void protectedFetch(attachmentPath(plan, event.id), {
+                method: 'POST',
+                body: file,
+                headers: {
+                  'Content-Type': file.type || 'application/octet-stream',
+                  'X-Filename': encodeURIComponent(file.name),
+                },
+              })
+                .then(async (response) => {
+                  if (!response.ok) {
+                    const body = await response.json().catch(() => ({}));
+                    throw new Error(body.error ?? `HTTP ${response.status}`);
+                  }
+                  await onSaved();
+                })
+                .catch((failure) => setError(String(failure)))
+                .finally(() => setBusy(false));
+            }}
+          />
+        </Button>
+      )}
+    </Stack>
+  );
 }
 interface Plan {
   id: number;
@@ -169,6 +279,38 @@ export default function MaintenancePanel({ machineId }: { machineId: number }) {
                     {t('Linked incident', 'Verknüpfter Vorfall')} #{event.incidentId}
                   </Typography>
                 )}
+                {event.stop && (
+                  <Typography>
+                    {t('Linked stop', 'Verknüpfter Stopp')}:{' '}
+                    <Link to={`/production?shift=${event.stop.shiftId}`}>
+                      {event.stop.reason} · {event.stop.shiftName}
+                    </Link>{' '}
+                    ({new Date(event.stop.start).toLocaleString(useLanguage.getState().language)} –{' '}
+                    {new Date(event.stop.end).toLocaleString(useLanguage.getState().language)})
+                  </Typography>
+                )}
+                {event.trendStart && event.trendEnd && (
+                  <Typography>
+                    {t('Linked trend', 'Verknüpfter Verlauf')}:{' '}
+                    <Link
+                      to={`/production?${new URLSearchParams({
+                        replay: '1',
+                        machine: String(machineId),
+                        keys: (event.trendKeys ?? []).join(','),
+                        start: event.trendStart,
+                        end: event.trendEnd,
+                      })}`}
+                    >
+                      {(event.trendKeys ?? []).join(', ')}
+                    </Link>
+                  </Typography>
+                )}
+                <Attachments
+                  plan={plan.id}
+                  event={event}
+                  canAdd={operate}
+                  onSaved={() => plans.refetch()}
+                />
               </Paper>
             ))}
           </Stack>
@@ -299,6 +441,8 @@ function Inspection({
     [checks, setChecks] = useState(new Map<string, boolean>()),
     [note, setNote] = useState(''),
     [incident, setIncident] = useState(''),
+    [stop, setStop] = useState(''),
+    [trend, setTrend] = useState({ start: '', end: '', keys: '' }),
     [serviced, setServiced] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
@@ -310,6 +454,16 @@ function Inspection({
         `/production/operator/entries?machineId=${machineId}`,
       ),
   });
+  const stops = useQuery({
+    queryKey: ['maintenance-stops', machineId],
+    queryFn: () => operationRequest<Stop[]>(`/maintenance/machines/${machineId}/stops`),
+  });
+  const trendKeys = trend.keys
+    .split(',')
+    .map((k) => k.trim())
+    .filter(Boolean);
+  const trendReady =
+    !trend.start && !trend.end ? true : !!(trend.start && trend.end && trendKeys.length);
   // Keep the request ID for retries; changing evidence creates a new operation.
   const changed = () => setRequestId(crypto.randomUUID());
   return (
@@ -356,6 +510,53 @@ function Inspection({
           </MenuItem>
         ))}
       </TextField>
+      <TextField
+        select
+        label={t('Linked stop (optional)', 'Verknüpfter Stopp (optional)')}
+        value={stop}
+        onChange={(e) => {
+          changed();
+          setStop(e.target.value);
+        }}
+      >
+        <MenuItem value="">{t('None', 'Keine')}</MenuItem>
+        {stops.data?.map((s) => (
+          <MenuItem key={s.id} value={s.id}>
+            {s.reason} · {s.shiftName} ·{' '}
+            {new Date(s.start).toLocaleString(useLanguage.getState().language)}
+          </MenuItem>
+        ))}
+      </TextField>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        <TextField
+          label={t('Trend window start (optional)', 'Beginn des Verlaufs (optional)')}
+          type="datetime-local"
+          value={trend.start}
+          onChange={(e) => {
+            changed();
+            setTrend({ ...trend, start: e.target.value });
+          }}
+          slotProps={{ inputLabel: { shrink: true } }}
+        />
+        <TextField
+          label={t('Trend window end', 'Ende des Verlaufs')}
+          type="datetime-local"
+          value={trend.end}
+          onChange={(e) => {
+            changed();
+            setTrend({ ...trend, end: e.target.value });
+          }}
+          slotProps={{ inputLabel: { shrink: true } }}
+        />
+        <TextField
+          label={t('Trend signals (comma separated)', 'Verlaufssignale (kommagetrennt)')}
+          value={trend.keys}
+          onChange={(e) => {
+            changed();
+            setTrend({ ...trend, keys: e.target.value });
+          }}
+        />
+      </Stack>
       <FormControlLabel
         label={t(
           'Service completed; start the next interval',
@@ -373,7 +574,10 @@ function Inspection({
       />
       <Button
         disabled={
-          busy || !note.trim() || (serviced && plan.config.checks.some((c) => !checks.get(c)))
+          busy ||
+          !note.trim() ||
+          !trendReady ||
+          (serviced && plan.config.checks.some((c) => !checks.get(c)))
         }
         onClick={() => {
           setBusy(true);
@@ -385,10 +589,16 @@ function Inspection({
             checks: Object.fromEntries(plan.config.checks.map((c) => [c, checks.get(c) ?? false])),
             note,
             incidentId: incident ? Number(incident) : null,
+            stopId: stop ? Number(stop) : null,
+            trend: trend.start
+              ? { start: toIso(trend.start), end: toIso(trend.end), keys: trendKeys }
+              : null,
           })
             .then(async () => {
               setNote('');
               setChecks(new Map());
+              setStop('');
+              setTrend({ start: '', end: '', keys: '' });
               setServiced(false);
               setRequestId(crypto.randomUUID());
               await onSaved();

@@ -96,25 +96,28 @@ export function errorHandler(invalidCsrfTokenError: unknown) {
 
     // --- Unexpected (non-operational) errors ---
     const cause = (err as Error & { cause?: Error }).cause;
-    logger.error({
-      message: "Unhandled error",
+    const statusCode = err.statusCode || 500;
+    // Body parsers mark client errors, such as an oversized upload, as safe to show.
+    const rejected =
+      statusCode < 500 && (err as { expose?: boolean }).expose === true;
+    logger[rejected ? "warn" : "error"]({
+      message: rejected ? "Rejected request" : "Unhandled error",
       requestId,
       error: err.message,
       ...(cause ? { cause: cause.message ?? String(cause) } : {}),
-      stack: err.stack,
-      statusCode: err.statusCode || 500,
+      ...(rejected ? {} : { stack: err.stack }),
+      statusCode,
     });
 
-    const statusCode = err.statusCode || 500;
     const message =
-      process.env.NODE_ENV === "production"
-        ? "An unexpected error occurred."
-        : err.message || "Internal Server Error";
+      rejected || process.env.NODE_ENV !== "production"
+        ? err.message || "Internal Server Error"
+        : "An unexpected error occurred.";
 
     const body: ErrorResponse = {
       status: "error",
       error: message,
-      code: "INTERNAL_ERROR",
+      code: rejected ? "REQUEST_REJECTED" : "INTERNAL_ERROR",
       requestId,
     };
     res.status(statusCode).json(body);

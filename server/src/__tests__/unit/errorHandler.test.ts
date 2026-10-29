@@ -161,6 +161,29 @@ describe("errorHandler", () => {
     );
   });
 
+  it("shows a body parser's client error, such as an oversized upload, even in production", () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    const res = createMockRes();
+    handler(
+      Object.assign(new Error("request entity too large"), {
+        statusCode: 413,
+        expose: true,
+      }),
+      createMockReq(),
+      res,
+      next,
+    );
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: "request entity too large",
+        code: "REQUEST_REJECTED",
+      }),
+    );
+    process.env.NODE_ENV = originalEnv;
+  });
+
   it("should hide error details in production for unexpected errors", () => {
     const originalEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = "production";

@@ -225,6 +225,13 @@
       "when": 1793298979006,
       "tag": "0031_job_inspections",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793299308212,
+      "tag": "0032_maintenance_links_attachments",
+      "breakpoints": true
     }
   ]
 }

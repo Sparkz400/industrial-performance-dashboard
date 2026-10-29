@@ -26,7 +26,7 @@ import CommissioningPanel, { productionRequest, downloadJson } from './Commissio
 import OperatorWorkspace from './OperatorWorkspace';
 import ShiftInspectionsPanel from './ShiftInspectionsPanel';
 import IncidentReplayPanel from './IncidentReplayPanel';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 interface Shift {
   id: number;
@@ -48,8 +48,10 @@ export default function ProductionPage() {
   const admin = role === 'admin';
   const supervisor = admin || role === 'supervisor';
   const operator = supervisor || role === 'operator';
-  const [tab, setTab] = useState(0);
-  const [selected, setSelected] = useState('');
+  // Links from service records open a shift (?shift=) or a prefilled replay (?replay=1).
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState(params.get('replay') ? 3 : 0);
+  const [selected, setSelected] = useState(params.get('shift') ?? '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState({

@@ -147,6 +147,20 @@ export async function authorizeAssetRequest(
     await assertResource("shift", found[1]);
     return;
   }
+  if (read && (found = match(/^\/maintenance\/machines\/(\d+)\/stops$/))) {
+    assertMachine(found[1]);
+    return;
+  }
+  if (
+    (found = match(
+      /^\/maintenance\/plans\/(\d+)\/events\/\d+\/attachments(\/\d+)?$/,
+    ))
+  ) {
+    if (!read && (method !== "POST" || found[2] || !canOperate(scope.role)))
+      denied();
+    await assertResource("maintenance", found[1]);
+    return;
+  }
   if ((found = match(/^\/(maintenance|energy)\/machines\/(\d+)$/))) {
     if (!read && !canSupervise(scope.role)) denied();
     assertMachine(found[2]);

@@ -19,6 +19,7 @@ import { sql } from "drizzle-orm";
 import {
   bigint,
   check,
+  customType,
   uniqueIndex,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
@@ -1091,25 +1092,73 @@ export const maintenancePlans = pgTable("maintenance_plans", {
     .notNull()
     .defaultNow(),
 });
-export const maintenanceEvents = pgTable("maintenance_events", {
-  id: serial("id").primaryKey(),
-  requestId: text("request_id").notNull().unique(),
-  planId: integer("plan_id")
-    .notNull()
-    .references(() => maintenancePlans.id, { onDelete: "restrict" }),
-  serviced: boolean("serviced").notNull(),
-  checks: jsonb("checks").notNull(),
-  note: text("note").notNull(),
-  incidentId: integer("incident_id").references(() => operatorEntries.id, {
-    onDelete: "restrict",
-  }),
-  createdBy: integer("created_by")
-    .notNull()
-    .references(() => users.id),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+export const maintenanceEvents = pgTable(
+  "maintenance_events",
+  {
+    id: serial("id").primaryKey(),
+    requestId: text("request_id").notNull().unique(),
+    planId: integer("plan_id")
+      .notNull()
+      .references(() => maintenancePlans.id, { onDelete: "restrict" }),
+    serviced: boolean("serviced").notNull(),
+    checks: jsonb("checks").notNull(),
+    note: text("note").notNull(),
+    incidentId: integer("incident_id").references(() => operatorEntries.id, {
+      onDelete: "restrict",
+    }),
+    // The classified stop and the trend window this intervention concerns.
+    stopId: integer("stop_id").references(() => downtimeReasons.id, {
+      onDelete: "restrict",
+    }),
+    trendStart: timestamp("trend_start", { withTimezone: true }),
+    trendEnd: timestamp("trend_end", { withTimezone: true }),
+    trendKeys: jsonb("trend_keys").$type<string[]>(),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    check(
+      "maintenance_event_trend",
+      sql`(${t.trendStart} IS NULL AND ${t.trendEnd} IS NULL AND ${t.trendKeys} IS NULL)
+        OR (${t.trendEnd} > ${t.trendStart} AND ${t.trendKeys} IS NOT NULL)`,
+    ),
+  ],
+);
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => "bytea",
 });
+/** Files attached to a service record; kept in the database so backups include them. */
+export const maintenanceAttachments = pgTable(
+  "maintenance_attachments",
+  {
+    id: serial("id").primaryKey(),
+    eventId: integer("event_id")
+      .notNull()
+      .references(() => maintenanceEvents.id, { onDelete: "restrict" }),
+    filename: varchar("filename", { length: 200 }).notNull(),
+    contentType: varchar("content_type", { length: 100 }).notNull(),
+    size: integer("size").notNull(),
+    sha256: varchar("sha256", { length: 64 }).notNull(),
+    data: bytea("data").notNull(),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("maintenance_attachment_event").on(t.eventId),
+    check(
+      "maintenance_attachment_size",
+      sql`${t.size} > 0 AND ${t.size} <= 5242880`,
+    ),
+  ],
+);
 export const energyMeters = pgTable("energy_meters", {
   machineId: integer("machine_id")
     .primaryKey()
