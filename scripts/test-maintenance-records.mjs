@@ -101,6 +101,7 @@ await dailyFixture(async ({ pool, call, users, actors, api, frontend, expect }) 
   assert.equal(photo.sha256, createHash("sha256").update(png).digest("hex"));
   await upload("operator", Buffer.from("not an image"), "image/png", "fake.png", 400);
   await upload("operator", Buffer.from("<script>alert(1)</script>"), "text/html", "page.html", 400);
+  await upload("operator", Buffer.from("anything"), "constructor", "proto.txt", 400); // not an Object.prototype method
   await upload("operator", Buffer.alloc(5 * 1024 * 1024 + 1, 65), "text/plain", "big.txt", 413);
   await upload("viewer", Buffer.from("view"), "text/plain", "view.txt", 403);
   await upload("operator", Buffer.from("x"), "text/plain", "x.txt", 404, `/maintenance/plans/${plan.id}/events/${record.id + 999}/attachments`);
@@ -125,10 +126,15 @@ await dailyFixture(async ({ pool, call, users, actors, api, frontend, expect }) 
   // In the browser: the links open the stop's shift and a prefilled replay; a file is attached.
   await pool.query("DELETE FROM maintenance_attachments WHERE event_id=$1 AND filename LIKE 'note-%'", [record.id]);
   const page = await actors.operator.newPage();
-  const openMaintenance = async () => {
+  const openMaintenance = async (remembered = false) => {
     await page.goto(`${frontend}/operations`);
-    await page.getByRole("combobox", { name: "Machine", exact: true }).fill("Service");
-    await page.getByRole("option", { name: "Service press", exact: true }).click();
+    const picker = page.getByRole("combobox", { name: "Machine", exact: true });
+    // A revisit restores the machine once the list loads; typing before that would be reset.
+    if (remembered) await expect(picker).toHaveValue("Service press");
+    else {
+      await picker.fill("Service");
+      await page.getByRole("option", { name: "Service press", exact: true }).click();
+    }
     await page.getByRole("tab", { name: "Maintenance" }).click();
   };
   await openMaintenance();
@@ -141,7 +147,7 @@ await dailyFixture(async ({ pool, call, users, actors, api, frontend, expect }) 
   await page.getByRole("link", { name: "Belt worn · Service shift" }).click();
   await expect(page).toHaveURL(new RegExp(`/production\\?shift=${serviceShift}$`));
   await expect(page.getByText("Belt worn").first()).toBeVisible();
-  await openMaintenance();
+  await openMaintenance(true);
   await page.getByRole("link", { name: "State", exact: true }).click();
   await expect(page.getByLabel("Signal keys (comma separated, up to 8)")).toHaveValue("State");
   await expect(page.getByLabel("Replay start (ISO with offset)")).toHaveValue(trend.start);
