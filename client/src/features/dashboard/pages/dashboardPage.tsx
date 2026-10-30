@@ -13,7 +13,7 @@ import {
   Button,
   alpha,
 } from '@mui/material';
-import { Responsive, WidthProvider } from 'react-grid-layout';
+import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -252,9 +252,9 @@ function DashboardPageInternal(): React.JSX.Element {
               breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
               cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
               rowHeight={35}
-              onLayoutChange={(currentLayout: LayoutItem[]) => {
+              onLayoutChange={(currentLayout: readonly LayoutItem[]) => {
                 if (!editable) return;
-                const normalize = (items: LayoutItem[]) =>
+                const normalize = (items: readonly LayoutItem[]) =>
                   items
                     .map(({ i, x, y, w, h, minW, minH, maxW, maxH }) => ({
                       i,
@@ -271,7 +271,7 @@ function DashboardPageInternal(): React.JSX.Element {
                 const oldStr = JSON.stringify(normalize(layout));
                 const newStr = JSON.stringify(normalize(currentLayout));
                 if (oldStr !== newStr) {
-                  updateLayout(currentLayout);
+                  updateLayout([...currentLayout]);
                 }
               }}
               margin={[16, 16]}
