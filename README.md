@@ -114,7 +114,8 @@ offline drafts, reviewed CMMS handoff and versioned energy estimates.
 [Factory operations](docs/FACTORY_OPERATIONS.md) adds reviewed setup bundles with
 rollback, connection diagnostics, alarm usefulness/replay, local work-order exchange
 and a scoped interactive asset view. It includes a repeatable synthetic walkthrough
-and signed, versioned offline release candidates with revision-specific evidence.
+and signed, versioned offline release candidates with revision-specific evidence; the
+next package updates an installation offline after a verified backup.
 ERP vendor acceptance, publisher trust and physical qualification remain separate.
 
 ## Where it is going

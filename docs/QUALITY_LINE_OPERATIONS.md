@@ -245,7 +245,9 @@ with newly generated credentials. Follow `INSTALL.txt` and the existing operatio
 guide for activation. The bundle reproduces the packaged image, not necessarily a
 bit-identical rebuild from moving base-image tags. It is platform-specific and
 does not bundle Docker itself. Hashes detect corruption, not publisher identity; signed
-releases add that ([releasing](RELEASING.md)).
+releases add that ([releasing](RELEASING.md)). The next package updates an existing
+installation with its `upgrade` command after a verified backup
+([offline updates](FACTORY_OPERATIONS.md#versioned-offline-release-candidates)).
 
 Without internet access, outbound destinations fail visibly and within their timeouts
 (10 s to reach the mail server, 10 s per webhook request): a report still completes and stays

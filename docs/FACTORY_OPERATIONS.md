@@ -135,15 +135,38 @@ Verification checks the signature using the caller's trusted public key, every f
 hash, required files, unexpected files and matching evidence/image identities. Hashes
 or a public key obtained only from an untrusted package are not publisher trust.
 The verifier is included for offline use; obtain the verifier/key through a trusted
-channel before executing downloaded code. Verify before using the existing offline
-installer, which starts a new installation in recovery preview. Upgrade/rollback
-continues to use the complete-backup workflow in [operations](OPERATIONS.md).
+channel before executing downloaded code. Verify before using the offline installer,
+which starts a new installation in recovery preview.
+
+To update, verify the next package the same way, then run its own installer against the
+installation's configuration, from inside the package directory:
+
+```text
+node offline-package.mjs upgrade --directory . --project factory-local --file PATH_TO_INSTALL/compose.json --output NEW_BACKUP_DIRECTORY
+```
+
+It rechecks the package digests, loads its images and runs the complete-backup upgrade
+from [operations](OPERATIONS.md) with that package's `operate.mjs`. Only the application
+image changes; the installed PostgreSQL image stays. A failed upgrade leaves the app
+stopped; restore the verified checkpoint into a fresh project to roll back, as the
+failure message says.
+
+`node scripts/test-offline-update.mjs PREVIOUS_REVISION` rehearses this on owned
+containers. It builds and signs packages for `PREVIOUS_REVISION` and `HEAD` with a
+throwaway fixture key, removes the built images so each package is their only source,
+and installs the first package with internal-only networks. A changed SBOM, license
+inventory or image archive is refused before the installation is touched. One upgrade
+is made to fail health after its verified backup and is rolled back into a fresh
+project; that installation is then upgraded from the second package alone. The test
+checks the pre-upgrade backup, that the applied migrations extend the earlier list
+without removing a column, and that measurements and report files are unchanged.
+It needs Docker and builds both revisions, so it is not part of CI.
 
 ## Validation
 
 Focused fixtures: `test-configuration-bundles.mjs`, `test-work-orders.mjs`,
-`test-operational-diagnostics.mjs`, `test-asset-overview.mjs`, and
-`test-release-package.mjs`; unit coverage
+`test-operational-diagnostics.mjs`, `test-asset-overview.mjs`,
+`test-release-package.mjs` and `test-offline-update.mjs`; unit coverage
 checks validation, identities, queue observations, replay and tampering. Both builds,
 client types, lint/format, existing browser regressions, recovery and container
 operations are integration gates. Final run receipts and exact revision are recorded
