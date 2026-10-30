@@ -9,6 +9,10 @@ transitions are durably spooled and retried after database failures, with a visi
 pending count. A guarded dependency patch preserves non-Good OPC UA quality during
 server notification queue overflow. These regressions do not close the separate 72-hour or physical-pilot gates.
 
+The sustained run on `1a5abff7` exposed an hourly harness login-refresh error after
+11 recovery cycles. Renewal now confirms logout before login and is exercised in
+the short smoke; a fresh complete 72-hour run remains required.
+
 Performance Dashboard is development software. Its intended starting point is an
 owned simulator or an isolated test installation using OPC UA scalar signals.
 
