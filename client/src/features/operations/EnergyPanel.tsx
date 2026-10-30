@@ -76,6 +76,14 @@ export default function EnergyPanel({ machineId }: { machineId: number }) {
     queryFn: () => operationRequest<Analysis>(`/energy/shifts/${shift}`),
     enabled: !!shift,
   });
+  // X06: the ranked loss list's views are logged beside the recommendations' for P06.
+  const lossesShown = edit && analysis.data ? `${shift}` : '';
+  useEffect(() => {
+    if (lossesShown)
+      void operationRequest(`/recommendations/machines/${machineId}/usefulness`, 'POST', {
+        source: 'ranked-losses',
+      }).catch(() => {});
+  }, [lossesShown, machineId]);
   const config = draft ?? meter.data?.config ?? initial;
   const signal = (patch: Partial<ProductionSignal>) =>
     setDraft({ ...config, signal: { ...config.signal, ...patch } });

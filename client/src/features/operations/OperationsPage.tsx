@@ -20,6 +20,8 @@ const AssetOverviewPanel = React.lazy(() => import('./AssetOverviewPanel'));
 const DerivedSignalsPanel = React.lazy(() => import('./DerivedSignalsPanel'));
 const ChangeoverPanel = React.lazy(() => import('./ChangeoverPanel'));
 const ImprovementActionsPanel = React.lazy(() => import('./ImprovementActionsPanel'));
+const RecommendationsPanel = React.lazy(() => import('./RecommendationsPanel'));
+const CompletionForecastPanel = React.lazy(() => import('./CompletionForecastPanel'));
 const PlcAlarmsPanel = React.lazy(() => import('./PlcAlarmsPanel'));
 const SitesOverviewPanel = React.lazy(() => import('./SitesOverviewPanel'));
 /**
@@ -78,6 +80,16 @@ export default function OperationsPage() {
             name: 'Improvement actions',
             de: 'Verbesserungsmaßnahmen',
             content: <ImprovementActionsPanel machineId={Number(machine)} />,
+          },
+          {
+            name: 'Recommendations',
+            de: 'Empfehlungen',
+            content: <RecommendationsPanel machineId={Number(machine)} />,
+          },
+          {
+            name: 'Completion forecast',
+            de: 'Fertigstellungsprognose',
+            content: <CompletionForecastPanel machineId={Number(machine)} />,
           },
         ]
       : []),

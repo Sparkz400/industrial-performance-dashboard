@@ -71,7 +71,8 @@ The [operator workflow](docs/OPERATOR_WORKFLOW.md) covers handover actions, revi
 manual counts and the supervisor wallboard with a dedicated read-only account.
 [Unattended operation](docs/UNATTENDED_OPERATION.md) covers durable scheduled reports,
 email retry status, alarm holds/hysteresis, collector/data-health incidents, spool
-capacity and quarantine, and the single-collector lock.
+capacity and quarantine, and the single-collector lock with fenced leases
+([high availability](docs/HIGH_AVAILABILITY.md)).
 Integrations use the bounded [integration API contract](docs/INTEGRATION_API.md):
 four read endpoints, a durable webhook outbox and a version policy.
 The [legacy gateway recipe](docs/LEGACY_GATEWAY.md) includes a read-only Modbus TCP

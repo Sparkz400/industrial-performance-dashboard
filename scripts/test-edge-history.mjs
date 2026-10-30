@@ -132,7 +132,7 @@ await dailyFixture(async ({ pool, call, actors, users, frontend, api, expect }) 
   }
   async function stop(edge) {
     await edge.context?.dispose();
-    if (edge.process.exitCode === null) {
+    if (edge.process.exitCode === null && edge.process.signalCode === null) {
       edge.process.kill("SIGKILL");
       await once(edge.process, "exit");
     }

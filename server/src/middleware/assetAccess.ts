@@ -138,6 +138,19 @@ export async function authorizeAssetRequest(
     assertMachine(found[1]);
     return;
   }
+  // X04/X06: supervisor reads, decisions and usefulness events for one granted machine.
+  if (
+    canSupervise(scope.role) &&
+    ((found = match(/^\/forecasts\/machines\/(\d+)\/completion$/)) ||
+      (found = match(
+        /^\/recommendations\/machines\/(\d+)(\/decisions|\/usefulness)?$/,
+      ))) &&
+    (read ||
+      (method === "POST" && ["/decisions", "/usefulness"].includes(found[2])))
+  ) {
+    assertMachine(found[1]);
+    return;
+  }
   // These routes validate line membership or the action's machine before accessing data.
   if (
     canSupervise(scope.role) &&

@@ -133,6 +133,17 @@ shows each site's availability, data end and comparable definitions without pres
 silent site as current (E03), and edge enrollment, rotation, revocation, configuration
 revisions and staged versions are attributable (E04, [edge sites](MULTI_SITE.md)).
 
+## Backlog wave 12
+
+Supervisors get an advisory completion estimate from comparable verified runs, withheld
+with too few runs and reset by a declared process change, with a backtest on the
+installation's own runs (X04). Three explicit recommendation rules cite their evidence and
+assumptions and are accepted with a linked action or dismissed with a reason; a usefulness
+log sits beside the ranked loss list for the pilot review (X06). High availability is
+designed per concern with labelled assumptions, and collector leases now fence a superseded
+collector's samples; two collector processes hand over after `kill -9` without duplicates
+(D08, [high availability](HIGH_AVAILABILITY.md)).
+
 ## Data integrity and reviewed operations
 
 The [six-feature integrity wave](DATA_INTEGRITY.md) replaces generated widget data,
@@ -229,7 +240,8 @@ simulator evidence do not establish physical-machine acceptance or release readi
   Legacy OEE still assumes reset-to-zero. Calendars handle IANA timezones, holidays and
   explicit DST ambiguity. Unsampled counter/run boundaries prevent verified reports;
   resets near rollover and multiple wraps still require source/sampling qualification.
-- The disk spool needs free space, a persistent volume and a single collector.
+- The disk spool needs free space and a persistent volume. One collector holds the lease;
+  automatic database and cross-host failover are not built ([high availability](HIGH_AVAILABILITY.md)).
 - Edge-to-central history is tested with owned installations only; real site networks,
   central high availability and automatic fleet upgrades are not covered. The former
   edge queue records are retained unread ([edge sites](MULTI_SITE.md)).

@@ -267,6 +267,20 @@
       "when": 1793306745532,
       "tag": "0037_edge_history",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793309461761,
+      "tag": "0038_recommendations",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793310003894,
+      "tag": "0039_collector_epochs",
+      "breakpoints": true
     }
   ]
 }

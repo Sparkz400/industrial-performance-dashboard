@@ -22,6 +22,8 @@ operator runs it.
 | Quality, batches and SPC | recipes, batches, inspections, rework, `batch_lots`, `batch_lot_corrections`, `inspection_plans`, `job_inspections`, SPC profiles/alerts/baselines |
 | Maintenance and energy | maintenance plans/events/actions, `maintenance_attachments` (uploaded files up to 5 MB each, stored in the database), CMMS handoffs, energy meters/reconciliations/tariffs |
 | Alarms and outbound delivery | alert rules and versions, alert history, `plc_alarm_events` (observed PLC alarms, append-only), notification channels, alarm evaluation state, `webhooks`, `webhook_deliveries` |
+| Analytics decisions | `recommendation_decisions` (who accepted or dismissed what, with reasons), `usefulness_events` (which account was shown which list) |
+| Collector leases | `collector_epochs` (host name, process id and time of each collector lock acquisition) |
 | Audit | `audit_logs`, `compliance_audit_logs` |
 
 Personal data and secrets in the database:

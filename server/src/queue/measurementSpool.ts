@@ -17,6 +17,8 @@ export interface OpcuaDataItem {
   machineId?: number;
   /** Deterministic identity from a redelivering source; a repeat is stored once. */
   eventId?: string;
+  /** D08: the collector lease the sample was taken under. */
+  leaseEpoch?: number;
 }
 
 export interface SpoolEntry {

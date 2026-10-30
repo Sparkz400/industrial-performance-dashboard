@@ -41,7 +41,7 @@ F07, F08, F09, F10 and D01. A following P1 gap wave closed R04, O05, H05, D05 an
 backlog wave 1 closed E01, R05, R02 and A08, and recorded research decisions
 ([decisions](docs/RESEARCH_DECISIONS.md)): I08, E06 and X02 closed as rejected; the rest
 stay open with explicit triggers.
-Backlog status: 86 checked and 22 open; I06 is withdrawn.
+Backlog status: 88 checked and 20 open; I06 is withdrawn.
 
 ### Data integrity and reviewed operations — 2026-10-28
 
@@ -978,11 +978,15 @@ below retain their unfulfilled acceptance criteria.
   [PR #71](https://github.com/Sparkz400/performance_dashboard/pull/71): unresolvable mail and webhook destinations fail within their timeouts with a clear
   status while the report completes (`test-offline-destinations.mjs`). Remaining: an offline
   update rehearsal from one offline package to the next.
-- [ ] **D08 — Design high availability from measured needs** · P2 · M4 · Research · XL. Depends: D04, H08, E03.
+- [x] **D08 — Design high availability from measured needs** · P2 · M4 · Research · XL. Depends: D04, H08, E03.
   Done: distinguish database recovery, web redundancy and collector ownership; demonstrate
   fencing against two active collectors and test failover on a declared topology.
   Defer implementation if the pilot's recovery targets are met by simpler operation.
   Decision 2026-10-29: DEFER until agreed RPO/RTO are missed by the D06 restore drill. The startup collector lock is built (`test-collector-lock.mjs`); fencing stays with this item. [decision](docs/RESEARCH_DECISIONS.md#d08--design-high-availability-from-measured-needs).
+  Completed ([PR #79](https://github.com/Sparkz400/performance_dashboard/pull/79)): database recovery, web redundancy and collector ownership are designed separately with labelled
+  assumptions ([design](docs/HIGH_AVAILABILITY.md)); collector leases fence a superseded collector's samples into
+  quarantine, and two collector processes on one database hand over after `kill -9` without duplicates
+  (`test-collector-fencing.mjs`). Replication and automatic failover wait for agreed targets, as the Done text allows.
 
 ## Enterprise and multi-site
 
@@ -1053,16 +1057,23 @@ below retain their unfulfilled acceptance criteria.
   bounded replay, playback cursor, raw quality/clocks, immutable operator revisions,
   later stop annotations and export in `incidentReplay.test.ts` and
   `scripts/test-incident-replay.mjs`; [contract](docs/INCIDENT_REPLAY.md).
-- [ ] **X04 — Prototype bounded capacity and completion forecasts** · P3 · M5 · Research · L. Depends: O05, R06.
+- [x] **X04 — Prototype bounded capacity and completion forecasts** · P3 · M5 · Research · L. Depends: O05, R06.
   Done: estimate using comparable jobs and recent capacity with uncertainty ranges;
   backtest against actual completion and disclose unsupported process changes. Forecasts
   are advisory and do not automatically reschedule or control machines.
   Decision 2026-10-29: DEFER until the pilot records about 20 comparable completed runs to backtest. [decision](docs/RESEARCH_DECISIONS.md#x04--prototype-bounded-capacity-and-completion-forecasts).
+  Completed ([PR #79](https://github.com/Sparkz400/performance_dashboard/pull/79)): an advisory estimate with a 10th–90th percentile range from comparable verified runs since the
+  latest declared process change, withheld below 10 runs, with a rolling backtest against each run's actual hours and a
+  mean-rate benchmark (`test-forecasts-recommendations.mjs`, [scope](docs/DAILY_OPERATIONS.md#completion-forecast)). The
+  evidence is synthetic; the backtest on pilot runs remains.
 - [ ] **X06 — Test improvement recommendations with evidence** · P3 · M5 · Research · M. Depends: X03, R06, M06.
   Done: recommendations cite loss/energy/maintenance evidence and assumptions, allow
   human dismissal and link accepted actions to outcomes. Compare usefulness with a
   simple ranked loss list; recommendations use explicit rules and measured evidence.
   Decision 2026-10-29: DEFER until a P06 review shows the ranked loss list is seen but not acted on, and M06 links an action to before/after periods. [decision](docs/RESEARCH_DECISIONS.md#x06--test-improvement-recommendations-with-evidence).
+  Progress ([PR #79](https://github.com/Sparkz400/performance_dashboard/pull/79)): three explicit rules cite revisions or actions and assumptions; acceptance links an action and shows
+  its outcome, dismissal needs a reason, and a usefulness log records both lists (`test-forecasts-recommendations.mjs`,
+  [scope](docs/DAILY_OPERATIONS.md#recommendations)). Still open: the usefulness comparison with pilot users (P06).
 
 ## Public project and pilot learning
 

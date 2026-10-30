@@ -8,12 +8,12 @@ They follow the ROADMAP's "Decisions that remain conditional" defaults: OPC UA p
 | --- | --- | --- | --- |
 | C07 | DEFER; option 2 documented and tested (wave 10) | Open | Ranking needs the P01 device inventory; RTU through a TCP gateway needs no new adapter |
 | A07 | BUILT (owner lifted the deferral, wave 10) | Done | Read-only observation with ConditionRefresh as the only method call; pilot alarm configuration still unknown |
-| D08 | DEFER | Open | No recovery targets yet; the spool already rides through database outages |
+| D08 | DESIGNED; fencing BUILT (wave 12) | Done | Concerns separated with labelled assumptions; replication and web failover wait for agreed targets |
 | I08 | REJECT packaging; the extension boundary is a read-only OPC UA server | Close as rejected | Both adapters already meet at OPC UA; no need for a loader or marketplace |
 | E06 | REJECT hosted tenancy | Close as rejected | Zero demand; the authorization model is single-company by design |
 | X02 | REJECT | Close as rejected | No labeled incidents; the Done text prescribes rejection |
-| X04 | DEFER | Open | No completed-run history to backtest |
-| X06 | DEFER | Open | A ranked loss list exists; the usefulness comparison needs users; M06 is open |
+| X04 | BUILT as an advisory prototype (wave 12) | Done | Withheld below 10 comparable runs; backtest on the installation's own runs, synthetic here |
+| X06 | BUILT rules and usefulness log (wave 12) | Open | The comparison with the ranked list needs P06 users |
 | C06 | BUILT plain MQTT; Sparkplug not selected (wave 10) | Done | Owner lifted the deferral; Sparkplug host duties still conflict with read-only operation |
 | H08 | BUILT (owner lifted the deferral, wave 11) | Done | Token-authenticated, site-qualified, acknowledged history; tested with owned installations |
 | E02 | BUILT (owner lifted the deferral, wave 11) | Done | OIDC with openid-client against an owned provider; read-only service tokens; no customer IdP qualified |
@@ -153,6 +153,12 @@ Trigger: the pilot owner agrees RPO/RTO (ROADMAP "Recovery objectives") and the 
 - Limit: this does not detect a second installation using a *different* database. That remains procedural.
 - Optional, separate from HA: the startup lock alone is a cheap guard against accidentally running two replicas.
 
+**Outcome 2026-10-29 (wave 12).** The owner asked for the deferred items to be built. Without agreed RPO/RTO, the design ([high availability](HIGH_AVAILABILITY.md)) separates database recovery, web redundancy and collector ownership with labelled assumptions, and only fencing is built:
+- `collector_epochs` records a lease per lock acquisition; spooled samples carry their lease. Before writing, a sample received after a *different* collector's newer lease began is quarantined (`Fenced: …`). A collector's own backlog after its own retake or restart is kept.
+- Fencing is decided by receive time against lease start (assumes synchronised clocks), checked just before the insert rather than in its transaction; both limits are documented.
+- `test-collector-fencing.mjs`: the rule in-process, then two app processes on one owned database and OPC UA server — the second waits, takes over after `kill -9` and no source timestamp is stored twice.
+- Replication, automatic failover and cross-host failover remain for an agreed target missed by the D06 drill.
+
 ---
 
 ## I08 — Evaluate connector packaging for contributors
@@ -288,6 +294,11 @@ Reopen trigger, all of:
 - One advisory panel. It never reschedules.
 - Tests: insufficient history withholds the estimate; a process change resets comparability.
 
+**Outcome 2026-10-29 (wave 12).** Built as scoped above, with improvement actions (M06) as the declared process changes:
+- Comparable runs come from verified, fully covered, intact revisions of the product; a shift without planned runs counts as one run. Rates are good parts per *planned* run hour, because actual run ends are not recorded.
+- The estimate (median rate; 10th–90th percentile range) is withheld below 10 runs. A rolling-origin backtest compares each later run's actual hours with the range and with a mean-rate benchmark.
+- `completionForecast.test.ts` and `test-forecasts-recommendations.mjs` use synthetic runs; the backtest on about 20 real pilot runs, as the decision required, remains.
+
 ---
 
 ## X06 — Test improvement recommendations with evidence
@@ -316,6 +327,8 @@ Reopen trigger, all of:
 - At most three explicit rules over existing evidence. Examples: an unclassified-stop share above a threshold means classify first; a recurring alarm after a completed action means escalate.
 - Each recommendation cites its report revision and assumptions, can be dismissed with a reason, and links to the existing maintenance-action outcome.
 - An A/B usefulness log compared with the ranked list.
+
+**Outcome 2026-10-29 (wave 12).** M06's part of the trigger is met; the owner asked for the build. Three rules (classify stops above 20 % unclassified, escalate a recurrence after a completed alarm action, open an improvement action for a classified loss topping three of five reports) cite revisions or actions and assumptions. Accepting requires linking an action on the same machine; dismissing requires a reason; decisions are final and audited. A usefulness log counts views and decisions for both lists, with a labelled proxy for actions after viewing the ranked list. The item stays open: the comparison itself needs P06 users.
 
 ---
 
