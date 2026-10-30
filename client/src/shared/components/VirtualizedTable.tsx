@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { FixedSizeList as List } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
+import { List, type RowComponentProps } from 'react-window';
 import {
   Table,
   TableHead,
@@ -50,7 +49,7 @@ function VirtualizedTableInner<T>({
   stickyHeader = true,
 }: VirtualizedTableProps<T>) {
   const Row = useCallback(
-    ({ index, style }: { index: number; style: React.CSSProperties }) => {
+    ({ index, style }: RowComponentProps) => {
       // eslint-disable-next-line security/detect-object-injection -- index is from react-window, always numeric
       const row = rows[index];
       return (
@@ -154,13 +153,15 @@ function VirtualizedTableInner<T>({
   return (
     <TableContainer component={Paper} variant="outlined">
       <Table component="div">{headerRow}</Table>
-      <AutoSizer disableHeight>
-        {({ width }: { width: number }) => (
-          <List height={listHeight} itemCount={rows.length} itemSize={rowHeight} width={width}>
-            {Row}
-          </List>
-        )}
-      </AutoSizer>
+      {/* No list role: the rows are MUI table rows, as they were with react-window 1. */}
+      <List
+        role={undefined}
+        rowComponent={Row}
+        rowCount={rows.length}
+        rowHeight={rowHeight}
+        rowProps={{}}
+        style={{ height: listHeight }}
+      />
     </TableContainer>
   );
 }
