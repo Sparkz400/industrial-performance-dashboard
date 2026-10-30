@@ -62,7 +62,8 @@ current toolchain. Reopen a migration when its callers and checks can move toget
 
 ## Coordinated major migrations — 2026-10-30
 
-The families deferred above migrate one per commit, so each can be reverted alone.
+The families deferred above migrate one per commit in
+[PR #81](https://github.com/Sparkz400/performance_dashboard/pull/81), so each can be reverted alone.
 Every family's peers were checked against the registry first. ESLint is the only
 family whose peers are still incompatible, and it was not forced.
 

@@ -214,7 +214,7 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   peer validation; full runtime/development npm audit zero. Scoped UUID/esbuild fixes,
   Storybook builds, Drizzle transforms/generation and CSRF/socket-origin regressions pass.
   Follow-up: Vitest 5, Storybook 10/Vite 8, MUI 9, react-window 2 and react-grid-layout 2
-  are migrated with per-family evidence ([decisions](docs/DEPENDENCY_REVIEW.md#coordinated-major-migrations--2026-10-30)).
+  are migrated in [PR #81](https://github.com/Sparkz400/performance_dashboard/pull/81) ([decisions](docs/DEPENDENCY_REVIEW.md#coordinated-major-migrations--2026-10-30)).
   ESLint stays on 9 until eslint-plugin-react supports 10; Node 26 needs its own support
   decision. The full boundary audit remains open.
   Image remediation complete: Node 24/Wolfi with direct PDF rendering removes the
