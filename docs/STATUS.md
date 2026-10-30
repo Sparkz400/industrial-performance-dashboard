@@ -144,6 +144,16 @@ designed per concern with labelled assumptions, and collector leases now fence a
 collector's samples; two collector processes hand over after `kill -9` without duplicates
 (D08, [high availability](HIGH_AVAILABILITY.md)).
 
+## Disconnected installation
+
+An offline installation updates from the next signed package alone: its
+`offline-package.mjs upgrade` rechecks the package digests, takes the verified backup and
+changes only the application image. A rehearsal on owned containers from wave 11 to this
+revision applied two additive migrations with measurements and files preserved, refused a
+changed SBOM, license inventory or image archive, and rolled a failed upgrade back into a
+fresh project (D07, [factory operations](FACTORY_OPERATIONS.md#versioned-offline-release-candidates)).
+Publisher-key custody and site acceptance remain separate.
+
 ## Data integrity and reviewed operations
 
 The [six-feature integrity wave](DATA_INTEGRITY.md) replaces generated widget data,
