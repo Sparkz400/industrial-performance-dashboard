@@ -973,7 +973,7 @@ below retain their unfulfilled acceptance criteria.
   Done: record exact machines/settings/software, supervised shift reconciliation,
   interruptions, restore evidence, observed defects and unresolved limits; the process
   owner accepts the bounded pilot. Automation alone cannot close this item.
-- [ ] **D07 — Support a documented disconnected installation** · P2 · M2 · New · M. Depends: D03.
+- [x] **D07 — Support a documented disconnected installation** · P2 · M2 · New · M. Depends: D03.
   Done: installation/update artifacts, dependencies, image digests and instructions work
   without runtime internet access; disabled external email/report destinations fail
   clearly. License notices and dependency inventory accompany the package.
@@ -981,8 +981,12 @@ below retain their unfulfilled acceptance criteria.
   ([PR #62](https://github.com/Sparkz400/performance_dashboard/pull/62)); signed release
   envelopes with SBOM and license inventory ([PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64)).
   [PR #71](https://github.com/Sparkz400/performance_dashboard/pull/71): unresolvable mail and webhook destinations fail within their timeouts with a clear
-  status while the report completes (`test-offline-destinations.mjs`). Remaining: an offline
-  update rehearsal from one offline package to the next.
+  status while the report completes (`test-offline-destinations.mjs`).
+  Completed ([PR #80](https://github.com/Sparkz400/performance_dashboard/pull/80)): `offline-package.mjs upgrade` updates an installation from the next package alone
+  after a verified backup. `test-offline-update.mjs 02d4a60f` passed at commit `718d776f` on owned
+  containers: signed packages from wave 11 and that commit, an internal-only install, changed
+  SBOM/license inventory/image archive refused, a failed upgrade rolled back into a fresh project,
+  then an upgrade applying two additive migrations with measurements and files preserved.
 - [x] **D08 — Design high availability from measured needs** · P2 · M4 · Research · XL. Depends: D04, H08, E03.
   Done: distinguish database recovery, web redundancy and collector ownership; demonstrate
   fencing against two active collectors and test failover on a declared topology.

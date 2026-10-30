@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { mkdir, copyFile, readFile, writeFile } from "node:fs/promises";
@@ -17,12 +17,14 @@ const {
     "database-image": { type: "string", default: "postgres:16-alpine" },
     project: { type: "string" },
     destination: { type: "string" },
+    file: { type: "string" },
+    output: { type: "string" },
     port: { type: "string", default: "3001" },
   },
 });
 assert(
-  ["create", "verify", "install"].includes(command),
-  "Use create|verify|install --directory DIRECTORY",
+  ["create", "verify", "install", "upgrade"].includes(command),
+  "Use create|verify|install|upgrade --directory DIRECTORY",
 );
 assert(o.directory);
 const directory = resolve(o.directory),
@@ -95,7 +97,7 @@ if (command === "create") {
   );
   await writeFile(
     join(directory, "INSTALL.txt"),
-    `Prerequisites: Node.js 24 and a working Docker Engine with Compose already installed for ${manifest.platform}. No source build or network download is needed.\nVerify: node offline-package.mjs verify --directory .\nInstall into a NEW directory: node offline-package.mjs install --directory . --project factory-local --destination PATH_TO_NEW_INSTALL --port 3001\nInstallation starts in recovery preview. Review the generated initial-login.json privately, then activate with operate.mjs after site acceptance. No customer data or credentials are included. Keep manifest.json from a trusted distribution channel; hashes detect corruption, not an untrusted publisher.\n`,
+    `Prerequisites: Node.js 24 and a working Docker Engine with Compose already installed for ${manifest.platform}. No source build or network download is needed.\nVerify: node offline-package.mjs verify --directory .\nInstall into a NEW directory: node offline-package.mjs install --directory . --project factory-local --destination PATH_TO_NEW_INSTALL --port 3001\nInstallation starts in recovery preview. Review the generated initial-login.json privately, then activate with operate.mjs after site acceptance.\nUpgrade an installation from an earlier package: node offline-package.mjs upgrade --directory . --project factory-local --file PATH_TO_INSTALL/compose.json --output NEW_BACKUP_DIRECTORY\nUpgrade takes a verified complete backup first and replaces only the application image. If it fails, the app stays stopped; restore that backup into a fresh project with operate.mjs restore to roll back. No customer data or credentials are included. Keep manifest.json from a trusted distribution channel; hashes detect corruption, not an untrusted publisher.\n`,
   );
   console.log(JSON.stringify({ directory, ...manifest }));
 } else {
@@ -111,10 +113,14 @@ if (command === "create") {
     );
   for (const value of [manifest.appImage, manifest.databaseImage])
     assert.match(value, /^sha256:[a-f0-9]{64}$/);
-  if (command === "install") {
+  if (command === "install" || command === "upgrade") {
     assert(
-      o.project && o.destination,
-      "Use --project and --destination for a new installation",
+      command === "install"
+        ? o.project && o.destination
+        : o.project && o.file && o.output,
+      command === "install"
+        ? "Use --project and --destination for a new installation"
+        : "Use --project, the installation's --file and a new --output backup directory",
     );
     await run(docker, ["image", "load", "-i", join(directory, "images.tar")]);
     for (const id of [manifest.appImage, manifest.databaseImage])
@@ -122,21 +128,29 @@ if (command === "create") {
         JSON.parse(await run(docker, ["image", "inspect", id]))[0].Id,
         id,
       );
-    console.log(
-      await run(process.execPath, [
+    // Upgrade keeps the installed database image; only the application image changes.
+    // Inherited output keeps operate.mjs's rollback instructions visible on failure.
+    execFileSync(
+      process.execPath,
+      [
         join(directory, "operate.mjs"),
-        "install",
+        command,
         "--project",
         o.project,
-        "--directory",
-        resolve(o.destination),
+        ...(command === "install"
+          ? [
+              "--directory",
+              resolve(o.destination),
+              "--database-image",
+              manifest.databaseImage,
+              "--port",
+              o.port,
+            ]
+          : ["--file", resolve(o.file), "--output", resolve(o.output)]),
         "--image",
         manifest.appImage,
-        "--database-image",
-        manifest.databaseImage,
-        "--port",
-        o.port,
-      ]),
+      ],
+      { stdio: "inherit", windowsHide: true },
     );
   } else console.log(`Verified offline package for ${manifest.platform}`);
 }

@@ -7,7 +7,8 @@ Frozen reports and physical qualification remain separate.
 
 [Factory operations](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/FACTORY_OPERATIONS.md)
 adds reviewed setup transfer, connection/alarm diagnostics, work-order files,
-interactive asset context, synthetic walkthroughs and signed offline release candidates.
+interactive asset context, synthetic walkthroughs and signed offline release candidates;
+the next package updates an installation offline after a verified backup.
 Physical, ERP vendor and publisher-trust acceptance remain separate gates.
 
 [Factory readiness](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/FACTORY_READINESS.md)

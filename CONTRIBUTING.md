@@ -77,7 +77,7 @@ D deployment, I integrations, E enterprise, X experiments, P project).
 | Integration API | `docs/INTEGRATION_API.md` endpoints | `test-api-contract.mjs` (additive changes only) |
 | User interface | `client/src/` | client tests, `tsc`, lint, `test-accessibility.mjs` and the browser test of the screen you changed |
 | Access control | `server/src/middleware/assetAccess.ts` | `accessMatrix.test.ts` snapshot review, `test-access.mjs` |
-| Releases | `scripts/release-*.mjs` | `test-release-package.mjs`; see [releasing](docs/RELEASING.md) |
+| Releases | `scripts/release-*.mjs`, `scripts/offline-package.mjs` | `test-release-package.mjs`, `test-offline-update.mjs PREVIOUS_REVISION` (Docker); see [releasing](docs/RELEASING.md) |
 
 Browser and database scripts create and drop their own database on the local test
 container (port 55432) and use owned simulators; never point them at a production

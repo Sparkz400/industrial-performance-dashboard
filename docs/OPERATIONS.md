@@ -126,6 +126,10 @@ the app stopped and its volumes intact. Restore the checkpoint into a fresh proj
 to investigate or roll back. A healthy process does not qualify PLC operation;
 check freshness, queued measurements and reports after a supervised upgrade.
 
+Without internet access, run the next offline package's `offline-package.mjs upgrade`;
+it verifies and loads the package images, then runs this upgrade
+([factory operations](FACTORY_OPERATIONS.md#versioned-offline-release-candidates)).
+
 For a rehearsal, restore a backup with `--image` set to the candidate image. This
 tests its migrations in isolated preview without changing the original installation.
 
