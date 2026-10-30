@@ -2,6 +2,13 @@
  * Vitest setup file for server tests.
  * Sets required environment variables before any module imports.
  */
+import { vi } from "vitest";
+
+// Unit tests never open real PostgreSQL connections; files needing pool behavior mock it themselves.
+vi.mock("../database/dbConnection.js", () => ({
+  default: { pool: {}, getReadPool: () => ({}) },
+}));
+
 process.env.NODE_ENV = "test";
 process.env.PORT = "3099";
 process.env.CLIENT_URL = "http://localhost:5173";
