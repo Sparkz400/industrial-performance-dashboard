@@ -1763,7 +1763,6 @@ export const maintenanceActions = pgTable(
   {
     id: serial("id").primaryKey(),
     version: integer("version").notNull().default(1),
-    revisions: jsonb("revisions").notNull().default([]),
     machineId: integer("machine_id")
       .notNull()
       .references(() => machines.id),
@@ -1801,6 +1800,17 @@ export const maintenanceActions = pgTable(
       .on(t.dueAt)
       .where(sql`${t.completedAt} IS NULL`),
   ],
+);
+export const maintenanceActionRevisions = pgTable(
+  "maintenance_action_revisions",
+  {
+    actionId: integer("action_id")
+      .notNull()
+      .references(() => maintenanceActions.id),
+    version: integer("version").notNull(),
+    revision: jsonb("revision").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.actionId, t.version] })],
 );
 export const storageObservations = pgTable(
   "storage_observations",

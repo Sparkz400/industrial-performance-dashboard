@@ -156,6 +156,7 @@ export async function authorizeAssetRequest(
     canSupervise(scope.role) &&
     ((path === "/lines" && (read || method === "POST")) ||
       (read && /^\/lines\/\d+\/report$/.test(path)) ||
+      (read && /^\/maintenance-actions\/\d+\/revisions$/.test(path)) ||
       (/^\/maintenance-actions\/machines\/\d+(?:\/owners)?$/.test(path) &&
         (read || method === "POST")) ||
       (/^\/maintenance-actions\/\d+\/(revise|complete)$/.test(path) &&

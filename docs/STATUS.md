@@ -13,6 +13,12 @@ The sustained run on `1a5abff7` exposed an hourly harness login-refresh error af
 11 recovery cycles. Renewal now confirms logout before login and is exercised in
 the short smoke; a fresh complete 72-hour run remains required.
 
+Maintenance corrections now use a separate, paged history with no 100-correction
+ceiling. Migration preserves existing entries; concurrent stale edits remain
+rejected. Shift calculation uses sorted boundary events instead of repeatedly
+scanning every observation and declaration. Neither change closes external
+qualification gates or supplies machine-specific counter rollover settings.
+
 Performance Dashboard is development software. Its intended starting point is an
 owned simulator or an isolated test installation using OPC UA scalar signals.
 

@@ -362,7 +362,7 @@ async function main() {
     JSON.stringify(
       {
         policy:
-          "Additive migrations run at startup; use the complete pre-upgrade backup for rollback.",
+          "Schema migrations run at startup; use the complete pre-upgrade backup for rollback.",
         migrations: migrationInventory,
       },
       null,

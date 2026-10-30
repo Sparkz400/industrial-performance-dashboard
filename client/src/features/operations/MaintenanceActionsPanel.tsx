@@ -23,18 +23,77 @@ interface Action {
   created_at: string;
   completion_note: string | null;
   completed_by: number | null;
-  revisions: {
-    changedBy: number;
-    changedAt: string;
-    reason: string;
-    previous: {
-      version: number;
-      action: string;
-      owner_id: number;
-      escalation_owner_id: number;
-      due_at: string;
-    };
-  }[];
+}
+interface Revision {
+  changedBy: number;
+  changedAt: string;
+  reason: string;
+  previous: {
+    version: number;
+    action: string;
+    owner_id: number;
+    escalation_owner_id: number;
+    due_at: string;
+  };
+}
+/**
+ *
+ * @param root0
+ * @param root0.action
+ * @param root0.ownerName
+ */
+function CorrectionHistory({
+  action,
+  ownerName,
+}: {
+  action: Action;
+  ownerName: (id: number) => string;
+}) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const [cursors, setCursors] = useState([0]);
+  const after = cursors[cursors.length - 1];
+  const history = useQuery({
+    queryKey: ['maintenance-action-history', action.id, action.version, after],
+    queryFn: () =>
+      operationRequest<{ revisions: Revision[]; next: number | null }>(
+        `/maintenance-actions/${action.id}/revisions?after=${after}`,
+      ),
+    enabled: open,
+  });
+  return (
+    <details onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary>{t('Correction history', 'Korrekturverlauf')}</summary>
+      {history.isFetching && <Typography role="status">{t('Loading…')}</Typography>}
+      {history.error && <Alert severity="error">{String(history.error)}</Alert>}
+      {history.data?.revisions.length === 0 && (
+        <Typography>{t('No corrections.', 'Keine Korrekturen.')}</Typography>
+      )}
+      {history.data?.revisions.map((r) => (
+        <Stack key={r.previous.version} spacing={1} sx={{ mt: 1 }}>
+          <Typography>
+            {t('Revision', 'Version')} {r.previous.version}: {r.previous.action} ·{' '}
+            {ownerName(r.previous.owner_id)} · {new Date(r.previous.due_at).toLocaleString()}
+          </Typography>
+          <Typography>
+            {r.reason} · {ownerName(r.changedBy)} · {new Date(r.changedAt).toLocaleString()}
+          </Typography>
+        </Stack>
+      ))}
+      <Button
+        disabled={cursors.length === 1 || history.isFetching}
+        onClick={() => setCursors(cursors.slice(0, -1))}
+      >
+        {t('Previous corrections', 'Vorherige Korrekturen')}
+      </Button>
+      <Button
+        disabled={history.data?.next == null || history.isFetching}
+        onClick={() => setCursors([...cursors, history.data!.next!])}
+      >
+        {t('Next corrections', 'Weitere Korrekturen')}
+      </Button>
+    </details>
+  );
 }
 const time = (minute: number | null) =>
   minute == null
@@ -184,25 +243,7 @@ export default function MaintenanceActionsPanel({ machineId }: { machineId: numb
               {a.completed_by && ownerName(a.completed_by)}
             </Typography>
           )}
-          {!!a.revisions.length && (
-            <details>
-              <summary>
-                {t('Correction history', 'Korrekturverlauf')} ({a.revisions.length})
-              </summary>
-              {a.revisions.map((r) => (
-                <Stack key={r.previous.version} spacing={1} sx={{ mt: 1 }}>
-                  <Typography>
-                    {t('Revision', 'Version')} {r.previous.version}: {r.previous.action} ·{' '}
-                    {ownerName(r.previous.owner_id)} ·{' '}
-                    {new Date(r.previous.due_at).toLocaleString()}
-                  </Typography>
-                  <Typography>
-                    {r.reason} · {ownerName(r.changedBy)} · {new Date(r.changedAt).toLocaleString()}
-                  </Typography>
-                </Stack>
-              ))}
-            </details>
-          )}
+          {a.version > 1 && <CorrectionHistory key={a.version} action={a} ownerName={ownerName} />}
         </Paper>
       ))}
       <Typography variant="h6">
@@ -215,8 +256,8 @@ export default function MaintenanceActionsPanel({ machineId }: { machineId: numb
         onChange={(e) => edit(actions.data?.find((a) => a.id === Number(e.target.value)) ?? null)}
       >
         <MenuItem value="">{t('New action', 'Neue Maßnahme')}</MenuItem>
-        {actions.data
-          ?.filter((a) => !a.completed_at)
+        {(actions.data ?? [])
+          .filter((a) => !a.completed_at)
           .map((a) => (
             <MenuItem key={a.id} value={a.id}>
               {a.action}
@@ -359,8 +400,8 @@ export default function MaintenanceActionsPanel({ machineId }: { machineId: numb
           setService('');
         }}
       >
-        {actions.data
-          ?.filter((a) => !a.completed_at)
+        {(actions.data ?? [])
+          .filter((a) => !a.completed_at)
           .map((a) => (
             <MenuItem key={a.id} value={a.id}>
               {a.action}
@@ -373,7 +414,7 @@ export default function MaintenanceActionsPanel({ machineId }: { machineId: numb
         value={service}
         onChange={(e) => setService(e.target.value)}
       >
-        {plans.data?.flatMap((p) =>
+        {(plans.data ?? []).flatMap((p) =>
           p.events
             .filter(
               (e) =>

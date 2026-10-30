@@ -17,10 +17,25 @@ other machines. Maintenance actions remain scoped to the selected machine.
 
 Assignments and corrections retain the actor, reason and previous values. Changes
 must use the current action version so one person's stale form cannot overwrite
-another person's work. Each action retains at most 100 corrections; further edits
-are rejected without discarding history. An unchanged overdue deadline can be
+another person's work. Corrections have no fixed count ceiling. Previous values,
+actor, timestamp and reason are stored atomically in a separate history table;
+machine-scoped history is browsed 20 entries at a time. Migration 0040 copies every
+existing JSON history entry before removing the old column, in the migration
+transaction. Use a complete pre-upgrade backup for rollback to older software.
+An unchanged overdue deadline can be
 retained during correction; a replacement deadline must be in the future.
 API timestamps require an explicit UTC offset.
+
+`GET /api/v1/maintenance-actions/:id/revisions?after=0` returns `revisions` and a
+`next` version cursor (null at the end). Follow that cursor to read the complete
+history; action list and mutation responses no longer embed it. The same
+administrator/supervisor and machine-access checks apply to every page.
+
+Shift reports merge ordered observations and manual-state boundary events in one
+sweep after sorting. Repeated or overlapping declarations remain active until their
+last end boundary; measured states still win and conflicting declarations leave
+unknown time. Seeded reference comparisons and a 10,000-boundary regression protect
+these rules without imposing a machine-dependent timing threshold.
 
 Completion requires a newer completed service inspection on the same machine.
 Measured recovery is tracked separately: recording work can leave the action

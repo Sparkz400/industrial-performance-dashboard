@@ -141,34 +141,63 @@ export function applyManualStates(
   if (!manual.length) return { ...result, intervals };
   const clip = (t: number) =>
     Math.min(end.getTime(), Math.max(start.getTime(), t));
+  // stateTimeline supplies ordered, disjoint observations; parse each boundary once.
+  const observedIntervals = intervals.map((i) => ({
+    start: Date.parse(i.start),
+    end: Date.parse(i.end),
+    state: i.state,
+  }));
+  const events = manual
+    .flatMap((m) => {
+      const from = clip(Date.parse(m.start)),
+        to = clip(Date.parse(m.end));
+      return from < to
+        ? [
+            { at: from, state: m.state, delta: 1 },
+            { at: to, state: m.state, delta: -1 },
+          ]
+        : [];
+    })
+    .sort((a, b) => a.at - b.at);
+  const counts = new Map<ProductionState, number>();
+  let observedIndex = 0,
+    eventIndex = 0;
   const points = [
     ...new Set([
       start.getTime(),
       end.getTime(),
-      ...intervals.flatMap((i) => [Date.parse(i.start), Date.parse(i.end)]),
-      ...manual.flatMap((m) => [
-        clip(Date.parse(m.start)),
-        clip(Date.parse(m.end)),
-      ]),
+      ...observedIntervals.flatMap((i) => [i.start, i.end]),
+      ...events.map((e) => e.at),
     ]),
   ].sort((a, b) => a - b);
   for (let k = 0; k < points.length - 1; k++) {
     const from = points[k],
       to = points[k + 1],
       seconds = (to - from) / 1000;
-    // shortcut: scans every interval per boundary (quadratic); fine for one shift's
-    // timeline, index the intervals if a report ever spans far more state changes.
-    const covers = (i: { start: string; end: string }) =>
-      Date.parse(i.start) <= from && Date.parse(i.end) >= to;
-    const observed = intervals.find(covers)?.state ?? "unknown";
-    const declared = new Set(manual.filter(covers).map((m) => m.state));
+    while (eventIndex < events.length && events[eventIndex].at <= from) {
+      const event = events[eventIndex++];
+      const count = (counts.get(event.state) ?? 0) + event.delta;
+      if (count) counts.set(event.state, count);
+      else counts.delete(event.state);
+    }
+    while (
+      observedIndex < observedIntervals.length &&
+      observedIntervals[observedIndex].end <= from
+    )
+      observedIndex++;
+    const interval = observedIntervals[observedIndex];
+    const observed =
+      interval && interval.start <= from && interval.end >= to
+        ? interval.state
+        : "unknown";
+    const declared = counts;
     let state: ProductionState = observed,
       source: "manual" | undefined;
     if (observed !== "unknown") {
-      if ([...declared].some((s) => s !== observed))
+      if ([...declared.keys()].some((s) => s !== observed))
         result.contradictedSeconds += seconds;
     } else if (declared.size === 1) {
-      state = [...declared][0];
+      state = [...declared.keys()][0];
       source = "manual";
       result.manualSeconds += seconds;
     } else if (declared.size > 1) result.conflictSeconds += seconds;

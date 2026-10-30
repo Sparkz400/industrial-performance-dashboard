@@ -100,6 +100,7 @@ exports[`REST access matrix > matches the reviewed per-role matrix 1`] = `
     "GET /history/:id/summaries",
     "GET /lines",
     "GET /lines/:id/report",
+    "GET /maintenance-actions/:id/revisions",
     "GET /maintenance-actions/machines/:id",
     "GET /maintenance-actions/machines/:id/owners",
     "GET /maintenance/machines/:id",
