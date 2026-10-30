@@ -977,7 +977,7 @@ below retain their unfulfilled acceptance criteria.
   envelopes with SBOM and license inventory ([PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64)).
   [PR #71](https://github.com/Sparkz400/performance_dashboard/pull/71): unresolvable mail and webhook destinations fail within their timeouts with a clear
   status while the report completes (`test-offline-destinations.mjs`).
-  Completed: `offline-package.mjs upgrade` updates an installation from the next package alone
+  Completed ([PR #80](https://github.com/Sparkz400/performance_dashboard/pull/80)): `offline-package.mjs upgrade` updates an installation from the next package alone
   after a verified backup. `test-offline-update.mjs 02d4a60f` passed at commit `718d776f` on owned
   containers: signed packages from wave 11 and that commit, an internal-only install, changed
   SBOM/license inventory/image archive refused, a failed upgrade rolled back into a fresh project,
