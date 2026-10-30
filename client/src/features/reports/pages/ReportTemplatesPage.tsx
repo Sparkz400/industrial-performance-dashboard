@@ -250,10 +250,20 @@ const ReportTemplatesPage: React.FC = () => {
     <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h4" fontWeight="bold">
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 'bold',
+            }}
+          >
             Report Templates
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             Configure report templates for automated report generation
           </Typography>
         </Box>
@@ -277,10 +287,22 @@ const ReportTemplatesPage: React.FC = () => {
         <PageSkeleton variant="cards" count={3} />
       ) : templates.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
-          <Typography variant="h6" color="text.secondary" gutterBottom>
+          <Typography
+            variant="h6"
+            gutterBottom
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             No report templates configured
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+              mb: 3,
+            }}
+          >
             Create templates to define the structure of your automated reports.
           </Typography>
           <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>

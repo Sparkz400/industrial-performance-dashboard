@@ -295,10 +295,20 @@ const ReportSchedulesPage: React.FC = () => {
     <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h4" fontWeight="bold">
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 'bold',
+            }}
+          >
             Report Schedules
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             Schedule automated report generation and delivery
           </Typography>
         </Box>
@@ -322,10 +332,22 @@ const ReportSchedulesPage: React.FC = () => {
         <PageSkeleton variant="cards" count={3} />
       ) : schedules.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
-          <Typography variant="h6" color="text.secondary" gutterBottom>
+          <Typography
+            variant="h6"
+            gutterBottom
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             No report schedules configured
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+              mb: 3,
+            }}
+          >
             Schedule reports to be generated and delivered automatically.
           </Typography>
           <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>
@@ -355,11 +377,23 @@ const ReportSchedulesPage: React.FC = () => {
                       schedule.templateId}
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontFamily: 'monospace',
+                        fontSize: '0.75rem',
+                      }}
+                    >
                       {schedule.cronExpression}
                     </Typography>
                     {schedule.cronHumanReadable && (
-                      <Typography variant="caption" color="text.secondary" display="block">
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: 'text.secondary',
+                          display: 'block',
+                        }}
+                      >
                         {schedule.cronHumanReadable}
                       </Typography>
                     )}

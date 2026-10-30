@@ -96,7 +96,15 @@ function Attachments({
     <Stack spacing={1}>
       {error && <Alert severity="error">{error}</Alert>}
       {event.attachments.map((file) => (
-        <Stack key={file.id} direction="row" alignItems="center" gap={1} flexWrap="wrap">
+        <Stack
+          key={file.id}
+          direction="row"
+          sx={{
+            alignItems: 'center',
+            gap: 1,
+            flexWrap: 'wrap',
+          }}
+        >
           <Button size="small" onClick={() => void download(file)}>
             {file.filename}
           </Button>
@@ -218,7 +226,13 @@ export default function MaintenancePanel({ machineId }: { machineId: number }) {
       {plans.data?.map((plan) => (
         <Paper key={plan.id} sx={{ p: 2 }}>
           <Stack spacing={2}>
-            <Stack direction="row" gap={2} alignItems="center">
+            <Stack
+              direction="row"
+              sx={{
+                gap: 2,
+                alignItems: 'center',
+              }}
+            >
               <Typography variant="h6">{plan.config.name}</Typography>
               <Chip
                 label={t(

@@ -255,10 +255,20 @@ const PlantsPage: React.FC = () => {
     <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h4" fontWeight="bold">
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 'bold',
+            }}
+          >
             Plants
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             Manage plant locations and their members
           </Typography>
         </Box>
@@ -282,10 +292,22 @@ const PlantsPage: React.FC = () => {
         <PageSkeleton variant="cards" count={3} />
       ) : plants.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
-          <Typography variant="h6" color="text.secondary" gutterBottom>
+          <Typography
+            variant="h6"
+            gutterBottom
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             No plants configured
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+              mb: 3,
+            }}
+          >
             Add a plant to organize your machines by location.
           </Typography>
           <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>
@@ -387,7 +409,12 @@ const PlantsPage: React.FC = () => {
                             </Box>
                           )}
                           {members.length === 0 ? (
-                            <Typography variant="body2" color="text.secondary">
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: 'text.secondary',
+                              }}
+                            >
                               No members in this plant
                             </Typography>
                           ) : (
@@ -397,10 +424,12 @@ const PlantsPage: React.FC = () => {
                                   <ListItemText
                                     primary={member.username}
                                     secondary={member.role}
-                                    primaryTypographyProps={{ variant: 'body2' }}
-                                    secondaryTypographyProps={{
-                                      variant: 'caption',
-                                      textTransform: 'capitalize',
+                                    slotProps={{
+                                      primary: { variant: 'body2' },
+                                      secondary: {
+                                        variant: 'caption',
+                                        sx: { textTransform: 'capitalize' },
+                                      },
                                     }}
                                   />
                                   <ListItemSecondaryAction>

@@ -17,10 +17,10 @@ import {
   Tooltip,
 } from '@mui/material';
 import NotificationsIcon from '@mui/icons-material/Notifications';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlined';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import CloseIcon from '@mui/icons-material/Close';
@@ -87,10 +87,12 @@ const NotificationCenter: React.FC = () => {
         anchor="right"
         open={isOpen}
         onClose={() => setOpen(false)}
-        PaperProps={{
-          sx: {
-            width: { xs: '100vw', sm: 380 },
-            maxWidth: '100vw',
+        slotProps={{
+          paper: {
+            sx: {
+              width: { xs: '100vw', sm: 380 },
+              maxWidth: '100vw',
+            },
           },
         }}
       >
@@ -151,7 +153,13 @@ const NotificationCenter: React.FC = () => {
             {notifications.length === 0 ? (
               <Box sx={{ p: 4, textAlign: 'center' }}>
                 <NotificationsIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
-                <Typography color="text.secondary">{t('No notifications')}</Typography>
+                <Typography
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
+                  {t('No notifications')}
+                </Typography>
               </Box>
             ) : (
               notifications.map((notif, index) => {

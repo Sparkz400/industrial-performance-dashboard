@@ -202,7 +202,9 @@ export default function DerivedSignalsPanel({ machineId }: { machineId: number }
             label={t('Calculation name', 'Berechnungsname')}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            inputProps={{ maxLength: 100 }}
+            slotProps={{
+              htmlInput: { maxLength: 100 },
+            }}
           />
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
             <TextField
@@ -275,7 +277,9 @@ export default function DerivedSignalsPanel({ machineId }: { machineId: number }
             type="number"
             value={maxAge}
             onChange={(e) => setMaxAge(Number(e.target.value))}
-            inputProps={{ min: 1, max: 3600 }}
+            slotProps={{
+              htmlInput: { min: 1, max: 3600 },
+            }}
           />
           {existing && (
             <Alert severity="warning">
@@ -354,7 +358,9 @@ export default function DerivedSignalsPanel({ machineId }: { machineId: number }
           label={t('Start', 'Beginn')}
           value={start}
           onChange={(e) => setStart(e.target.value)}
-          InputLabelProps={{ shrink: true }}
+          slotProps={{
+            inputLabel: { shrink: true },
+          }}
         />
         <TextField
           fullWidth
@@ -362,7 +368,9 @@ export default function DerivedSignalsPanel({ machineId }: { machineId: number }
           label={t('End', 'Ende')}
           value={end}
           onChange={(e) => setEnd(e.target.value)}
-          InputLabelProps={{ shrink: true }}
+          slotProps={{
+            inputLabel: { shrink: true },
+          }}
         />
         <Button disabled={!selected || busy} onClick={() => void evaluate()}>
           {t('Evaluate history', 'Verlauf berechnen')}

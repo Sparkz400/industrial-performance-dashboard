@@ -176,10 +176,20 @@ const AlertRulesPage: React.FC = () => {
     <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h4" fontWeight="bold">
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 'bold',
+            }}
+          >
             Alert Rules
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             Configure threshold-based alert rules for monitored nodes
           </Typography>
         </Box>
@@ -222,10 +232,22 @@ const AlertRulesPage: React.FC = () => {
         <PageSkeleton variant="cards" count={3} />
       ) : rules.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
-          <Typography variant="h6" color="text.secondary" gutterBottom>
+          <Typography
+            variant="h6"
+            gutterBottom
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             No alert rules configured
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+              mb: 3,
+            }}
+          >
             Create alert rules to get notified when node values exceed thresholds.
           </Typography>
           <Button
@@ -256,7 +278,12 @@ const AlertRulesPage: React.FC = () => {
                 <TableRow key={rule.id}>
                   <TableCell>{rule.name}</TableCell>
                   <TableCell>
-                    <Typography variant="body2" fontFamily="monospace">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontFamily: 'monospace',
+                      }}
+                    >
                       {rule.nodeKey}
                     </Typography>
                   </TableCell>
@@ -283,12 +310,14 @@ const AlertRulesPage: React.FC = () => {
                   <TableCell>
                     <Switch
                       disabled={!admin}
-                      inputProps={{ 'aria-label': `Enable ${rule.name}` }}
                       checked={rule.isActive}
                       onChange={() =>
                         toggleMutation.mutate({ id: rule.id, isActive: !rule.isActive })
                       }
                       size="small"
+                      slotProps={{
+                        input: { 'aria-label': `Enable ${rule.name}` },
+                      }}
                     />
                   </TableCell>
                   <TableCell>

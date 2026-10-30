@@ -82,8 +82,10 @@ const TreeNode: React.FC<TreeNodeProps> = ({ node, machineId, depth, isSelected,
         <ListItemText
           primary={node.displayName}
           secondary={isVariable ? node.nodeId : undefined}
-          primaryTypographyProps={{ fontSize: '0.875rem' }}
-          secondaryTypographyProps={{ fontSize: '0.75rem', noWrap: true }}
+          slotProps={{
+            primary: { sx: { fontSize: '0.875rem' } },
+            secondary: { noWrap: true, sx: { fontSize: '0.75rem' } },
+          }}
         />
         <Chip
           label={node.nodeClass}

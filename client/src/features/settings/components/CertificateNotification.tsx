@@ -129,7 +129,12 @@ const CertificateNotification: React.FC = () => {
       <DialogContent>
         {notification && (
           <Box sx={{ mt: 2 }}>
-            <Typography variant="body1" paragraph>
+            <Typography
+              variant="body1"
+              sx={{
+                marginBottom: '16px',
+              }}
+            >
               An untrusted certificate has been received from an OPC UA server. Do you want to
               accept and trust this certificate?
             </Typography>

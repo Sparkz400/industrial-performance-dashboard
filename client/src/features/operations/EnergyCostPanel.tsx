@@ -102,20 +102,26 @@ export default function EnergyCostPanel({
               label={t('Tariff valid from', 'Tarif gültig ab')}
               value={draft.validFrom}
               onChange={(e) => setDraft({ ...draft, validFrom: e.target.value })}
-              InputLabelProps={{ shrink: true }}
+              slotProps={{
+                inputLabel: { shrink: true },
+              }}
             />
             <TextField
               type="datetime-local"
               label={t('Tariff valid until', 'Tarif gültig bis')}
               value={draft.validTo}
               onChange={(e) => setDraft({ ...draft, validTo: e.target.value })}
-              InputLabelProps={{ shrink: true }}
+              slotProps={{
+                inputLabel: { shrink: true },
+              }}
             />
             <TextField
               label={t('Currency code', 'Währungscode')}
               value={draft.currency}
-              inputProps={{ maxLength: 3 }}
               onChange={(e) => setDraft({ ...draft, currency: e.target.value.toUpperCase() })}
+              slotProps={{
+                htmlInput: { maxLength: 3 },
+              }}
             />
             <TextField
               type="number"

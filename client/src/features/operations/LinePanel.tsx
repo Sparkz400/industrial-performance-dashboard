@@ -199,7 +199,12 @@ export default function LinePanel() {
             {report.targetShortfall ?? t('Unknown', 'Unbekannt')}
           </Alert>
           {report.uncertainty.map((s) => (
-            <Typography key={s} color="text.secondary">
+            <Typography
+              key={s}
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {t(
                 s,
                 new Map(

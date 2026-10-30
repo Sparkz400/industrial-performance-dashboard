@@ -52,7 +52,13 @@ const CurrentAirConsumptionWidget = memo<CurrentAirConsumptionWidgetProps>(({ co
   if (loading && data.length === 0) {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <Typography color="text.secondary">Loading...</Typography>
+        <Typography
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
+          Loading...
+        </Typography>
       </Box>
     );
   }
@@ -115,7 +121,12 @@ const CurrentAirConsumptionWidget = memo<CurrentAirConsumptionWidgetProps>(({ co
           fill={[{ match: '*', id: 'gradient' }]}
         />
       </Box>
-      <Typography variant="caption" color="text.secondary">
+      <Typography
+        variant="caption"
+        sx={{
+          color: 'text.secondary',
+        }}
+      >
         Current reading: {freshness}. Last 60 observed samples; gaps remain unknown.
       </Typography>
       <WidgetReadingEvidence rows={data} />

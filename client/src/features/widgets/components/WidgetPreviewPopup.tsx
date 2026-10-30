@@ -82,10 +82,12 @@ const WidgetPreviewPopup: React.FC<WidgetPreviewPopupProps> = ({ open, onClose, 
       anchor="right"
       open={open}
       onClose={handleClose}
-      PaperProps={{
-        sx: {
-          width: { xs: '100vw', sm: DRAWER_WIDTH },
-          maxWidth: '100vw',
+      slotProps={{
+        paper: {
+          sx: {
+            width: { xs: '100vw', sm: DRAWER_WIDTH },
+            maxWidth: '100vw',
+          },
         },
       }}
     >
@@ -114,7 +116,12 @@ const WidgetPreviewPopup: React.FC<WidgetPreviewPopupProps> = ({ open, onClose, 
             <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
               Widget Library
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {Object.keys(widgetRegistry).length} widgets available - drag or click to add
             </Typography>
           </Box>
@@ -136,7 +143,13 @@ const WidgetPreviewPopup: React.FC<WidgetPreviewPopupProps> = ({ open, onClose, 
         }}
       >
         <DragIndicatorIcon sx={{ fontSize: 16, color: 'info.main' }} />
-        <Typography variant="caption" color="info.main" sx={{ fontWeight: 500 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'info.main',
+            fontWeight: 500,
+          }}
+        >
           Drag widgets onto the dashboard or click to add at the bottom
         </Typography>
       </Box>
@@ -151,23 +164,25 @@ const WidgetPreviewPopup: React.FC<WidgetPreviewPopupProps> = ({ open, onClose, 
           size="small"
           fullWidth
           autoFocus
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon sx={{ color: 'text.disabled' }} />
-              </InputAdornment>
-            ),
-            endAdornment: searchQuery ? (
-              <InputAdornment position="end">
-                <IconButton size="small" onClick={() => setSearchQuery('')} edge="end">
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              </InputAdornment>
-            ) : null,
-          }}
           sx={{
             '& .MuiOutlinedInput-root': {
               borderRadius: 2.5,
+            },
+          }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: 'text.disabled' }} />
+                </InputAdornment>
+              ),
+              endAdornment: searchQuery ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setSearchQuery('')} edge="end">
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
             },
           }}
         />
@@ -232,7 +247,12 @@ const WidgetPreviewPopup: React.FC<WidgetPreviewPopupProps> = ({ open, onClose, 
             >
               <Box sx={{ p: 6, textAlign: 'center' }}>
                 <WidgetsIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
-                <Typography color="text.secondary" variant="body1">
+                <Typography
+                  variant="body1"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {searchQuery
                     ? `No widgets match "${searchQuery}"`
                     : 'No widgets in this category.'}

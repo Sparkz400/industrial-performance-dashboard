@@ -91,7 +91,12 @@ export default function EdgeSettingsPanel() {
           <Typography variant="h6" component="h2">
             {t('Link to a central installation', 'Verbindung zu einer zentralen Installation')}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {t(
               'As an edge, this installation keeps collecting and serving its own data and sends committed measurements to the central installation. A batch counts as sent only when the central installation confirms it was stored; until then it is retried.',
               'Als Edge sammelt und zeigt diese Installation weiter ihre eigenen Daten und sendet gespeicherte Messwerte an die zentrale Installation. Ein Paket gilt erst als gesendet, wenn die zentrale Installation die Speicherung bestätigt; bis dahin wird es wiederholt.',
@@ -228,7 +233,11 @@ export default function EdgeSettingsPanel() {
           </Stack>
           {edges.data?.map((edge) => (
             <Box key={edge.id} sx={{ borderTop: 1, borderColor: 'divider', pt: 1 }}>
-              <Typography fontWeight={600}>
+              <Typography
+                sx={{
+                  fontWeight: 600,
+                }}
+              >
                 {edge.name} ·{' '}
                 {edge.revokedAt
                   ? t('revoked', 'widerrufen')

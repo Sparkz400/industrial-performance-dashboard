@@ -445,10 +445,20 @@ const CertificateManagement: React.FC = () => {
                 {clientCert.certificate}
               </Typography>
               <Divider sx={{ my: 1 }} />
-              <Typography variant="caption" display="block">
+              <Typography
+                variant="caption"
+                sx={{
+                  display: 'block',
+                }}
+              >
                 Certificate Path: {clientCert.certificatePath}
               </Typography>
-              <Typography variant="caption" display="block">
+              <Typography
+                variant="caption"
+                sx={{
+                  display: 'block',
+                }}
+              >
                 Private Key Path: {clientCert.privateKeyPath}
               </Typography>
             </Paper>
@@ -746,7 +756,13 @@ const CertificateManagement: React.FC = () => {
               >
                 {decodeCertContent(selectedCert.content)}
               </Typography>
-              <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  display: 'block',
+                  mt: 1,
+                }}
+              >
                 Path: {selectedCert.path}
               </Typography>
             </Box>

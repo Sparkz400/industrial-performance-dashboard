@@ -25,7 +25,7 @@ import BuildIcon from '@mui/icons-material/Build';
 import SettingsIcon from '@mui/icons-material/Settings';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import MenuIcon from '@mui/icons-material/Menu';
-import HelpIcon from '@mui/icons-material/HelpOutline';
+import HelpIcon from '@mui/icons-material/HelpOutlined';
 import ContrastIcon from '@mui/icons-material/Contrast';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -171,7 +171,12 @@ export default function ResponsiveSidebar({ open, onToggle, onWidthChange }: Pro
               label={status.overall.statusText || t('Unknown')}
               color={status.overall.status === 'ERROR' ? 'error' : 'default'}
             />
-            <Typography variant="caption" display="block">
+            <Typography
+              variant="caption"
+              sx={{
+                display: 'block',
+              }}
+            >
               {socket
                 ? t('Live connection', 'Live-Verbindung')
                 : t('Polling', 'Regelmäßige Abfrage')}

@@ -83,7 +83,13 @@ const PageLoader = () => (
         >
           <CircularProgress size={24} sx={{ color: 'primary.contrastText' }} />
         </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
+            fontWeight: 500,
+          }}
+        >
           {t('Loading...')}{' '}
         </Typography>
       </Box>
@@ -111,7 +117,7 @@ const ErrorFallback = ({ error, resetErrorBoundary }: ErrorFallbackProps) => (
     <Typography variant="h4" color="error" gutterBottom>
       {t('Something went wrong')}{' '}
     </Typography>
-    <Typography variant="body1" paragraph align="center" sx={{ maxWidth: 500, mb: 3 }}>
+    <Typography variant="body1" align="center" sx={{ maxWidth: 500, mb: 3 }}>
       {error?.message || 'An unexpected error occurred. Please try refreshing the page.'}
     </Typography>
     <Button variant="contained" color="primary" onClick={resetErrorBoundary}>

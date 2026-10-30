@@ -15,7 +15,7 @@ import {
   Tabs,
 } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutlined';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import WidgetsIcon from '@mui/icons-material/Widgets';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -23,7 +23,7 @@ import StorageIcon from '@mui/icons-material/Storage';
 import DnsIcon from '@mui/icons-material/Dns';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 
 // TabPanel props
 interface TabPanelProps {
@@ -81,7 +81,13 @@ const HelpPage: React.FC = () => {
           flexDirection: 'column',
         }}
       >
-        <Grid container spacing={2} alignItems="center">
+        <Grid
+          container
+          spacing={2}
+          sx={{
+            alignItems: 'center',
+          }}
+        >
           <Grid>
             <HelpOutlineIcon sx={{ fontSize: 50, color: '#b3b3b3' }} />
           </Grid>

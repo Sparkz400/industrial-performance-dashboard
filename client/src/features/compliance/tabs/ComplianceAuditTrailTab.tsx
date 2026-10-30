@@ -97,7 +97,14 @@ const ComplianceAuditTrailTab: React.FC = () => {
 
   return (
     <Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 2,
+        }}
+      >
         <Typography variant="h6">Compliance Audit Trail</Typography>
         <Stack direction="row" spacing={1}>
           <Button
@@ -136,7 +143,14 @@ const ComplianceAuditTrailTab: React.FC = () => {
 
       {/* Filters */}
       <Paper sx={{ p: 2, mb: 2 }} variant="outlined">
-        <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+        <Stack
+          direction="row"
+          spacing={2}
+          useFlexGap
+          sx={{
+            flexWrap: 'wrap',
+          }}
+        >
           <TextField
             select
             label="Action"
@@ -246,7 +260,13 @@ const ComplianceAuditTrailTab: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">{entry.entityName || entry.entityType}</Typography>
-                    <Typography variant="caption" color="text.secondary" fontFamily="monospace">
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: 'text.secondary',
+                        fontFamily: 'monospace',
+                      }}
+                    >
                       {entry.entityType}
                       {entry.entityId ? ` #${entry.entityId}` : ''}
                     </Typography>
@@ -264,7 +284,13 @@ const ComplianceAuditTrailTab: React.FC = () => {
                         }}
                       >
                         {entry.reasonForChange || entry.reason || (
-                          <Typography component="span" variant="body2" color="warning.main">
+                          <Typography
+                            component="span"
+                            variant="body2"
+                            sx={{
+                              color: 'warning.main',
+                            }}
+                          >
                             Missing
                           </Typography>
                         )}
@@ -277,7 +303,12 @@ const ComplianceAuditTrailTab: React.FC = () => {
                         <VerifiedUserIcon fontSize="small" color="success" />
                       </Tooltip>
                     ) : (
-                      <Typography variant="body2" color="text.disabled">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: 'text.disabled',
+                        }}
+                      >
                         -
                       </Typography>
                     )}
@@ -294,7 +325,12 @@ const ComplianceAuditTrailTab: React.FC = () => {
             ) : (
               <TableRow>
                 <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     No compliance logs found.
                   </Typography>
                 </TableCell>

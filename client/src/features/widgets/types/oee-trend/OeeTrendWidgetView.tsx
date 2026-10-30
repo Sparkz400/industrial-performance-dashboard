@@ -123,7 +123,12 @@ const OeeTrendWidgetView: React.FC<OeeTrendWidgetViewProps> = ({ data, isLoading
           <Box
             sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
           >
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               No OEE trend data available
             </Typography>
           </Box>

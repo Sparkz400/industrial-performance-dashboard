@@ -356,7 +356,13 @@ function DashboardPageInternal(): React.JSX.Element {
                 borderColor: 'warning.main',
               }}
             >
-              <Typography variant="body2" sx={{ mr: 2 }} color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                  mr: 2,
+                }}
+              >
                 {t('Unsaved changes')}
               </Typography>
               <ButtonLoader

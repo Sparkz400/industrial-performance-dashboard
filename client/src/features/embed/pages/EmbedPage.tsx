@@ -88,7 +88,12 @@ export default function EmbedPage({ mode }: EmbedPageProps) {
           <Typography variant="h5" component="h1">
             This shared view is unavailable
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             The link may have expired or been revoked. Ask the person who shared it for a new one.
           </Typography>
         </Box>
@@ -119,13 +124,24 @@ export default function EmbedPage({ mode }: EmbedPageProps) {
           <Typography variant="h5" component="h1">
             {view.label || 'Shared trends'}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             Read-only · last {view.windowHours} h · link expires{' '}
             {new Date(view.expiresAt).toLocaleString()}
           </Typography>
         </Box>
       )}
-      <Typography variant="caption" color="text.secondary" role="status">
+      <Typography
+        variant="caption"
+        role="status"
+        sx={{
+          color: 'text.secondary',
+        }}
+      >
         {error
           ? `Update failed: ${error}. Showing data from ${updatedAt ? new Date(updatedAt).toLocaleString() : 'an earlier request'}.`
           : `Updated ${updatedAt ? new Date(updatedAt).toLocaleString() : ''}`}

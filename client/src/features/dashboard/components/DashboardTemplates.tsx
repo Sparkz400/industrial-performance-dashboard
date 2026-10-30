@@ -133,7 +133,12 @@ const DashboardTemplates: React.FC<DashboardTemplatesProps> = ({
         <Typography variant="h6" sx={{ fontWeight: 700 }}>
           Dashboard Templates
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           Start with a pre-built layout
         </Typography>
       </Box>
@@ -216,13 +221,22 @@ const DashboardTemplates: React.FC<DashboardTemplatesProps> = ({
                         }}
                       />
                     </Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: 'text.secondary',
+                        lineHeight: 1.5,
+                      }}
+                    >
                       {template.description}
                     </Typography>
                     <Typography
                       variant="caption"
-                      color="text.disabled"
-                      sx={{ mt: 1, display: 'block' }}
+                      sx={{
+                        color: 'text.disabled',
+                        mt: 1,
+                        display: 'block',
+                      }}
                     >
                       {template.widgets.length} widgets
                     </Typography>

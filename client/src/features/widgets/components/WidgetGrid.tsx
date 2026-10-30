@@ -201,7 +201,13 @@ const WidgetGrid: React.FC<WidgetGridProps> = ({
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <Typography color="text.secondary">Loading widgets...</Typography>
+        <Typography
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
+          Loading widgets...
+        </Typography>
       </Box>
     );
   }

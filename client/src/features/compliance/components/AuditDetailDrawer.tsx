@@ -32,14 +32,35 @@ const getActionColor = (
 };
 
 const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <Typography variant="subtitle1" fontWeight="bold" sx={{ mt: 2, mb: 1 }}>
+  <Typography
+    variant="subtitle1"
+    sx={{
+      fontWeight: 'bold',
+      mt: 2,
+      mb: 1,
+    }}
+  >
     {children}
   </Typography>
 );
 
 const FieldRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ py: 0.5 }}>
-    <Typography variant="body2" color="text.secondary" sx={{ minWidth: 140, flexShrink: 0 }}>
+  <Stack
+    direction="row"
+    sx={{
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      py: 0.5,
+    }}
+  >
+    <Typography
+      variant="body2"
+      sx={{
+        color: 'text.secondary',
+        minWidth: 140,
+        flexShrink: 0,
+      }}
+    >
       {label}
     </Typography>
     <Box sx={{ textAlign: 'right', maxWidth: 300, wordBreak: 'break-word' }}>{children}</Box>
@@ -56,14 +77,19 @@ const AuditDetailDrawer: React.FC<AuditDetailDrawerProps> = ({ entry, open, onCl
       anchor="right"
       open={open}
       onClose={onClose}
-      PaperProps={{ sx: { width: DRAWER_WIDTH, maxWidth: '100vw' } }}
+      slotProps={{
+        paper: { sx: { width: DRAWER_WIDTH, maxWidth: '100vw' } },
+      }}
     >
       {/* Header */}
       <Stack
         direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ px: 2, py: 1.5 }}
+        sx={{
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          px: 2,
+          py: 1.5,
+        }}
       >
         <Typography variant="h6">Audit Log Detail</Typography>
         <IconButton onClick={onClose} size="small">
@@ -88,7 +114,13 @@ const AuditDetailDrawer: React.FC<AuditDetailDrawerProps> = ({ entry, open, onCl
             <Typography variant="body2">{entry.entityType}</Typography>
           </FieldRow>
           <FieldRow label="Entity ID">
-            <Typography variant="body2" fontFamily="monospace" fontSize="0.8rem">
+            <Typography
+              variant="body2"
+              sx={{
+                fontFamily: 'monospace',
+                fontSize: '0.8rem',
+              }}
+            >
               {entry.entityId}
             </Typography>
           </FieldRow>
@@ -126,9 +158,20 @@ const AuditDetailDrawer: React.FC<AuditDetailDrawerProps> = ({ entry, open, onCl
             {reasonValue ? (
               <Typography variant="body2">{reasonValue}</Typography>
             ) : (
-              <Stack direction="row" alignItems="center" spacing={0.5}>
+              <Stack
+                direction="row"
+                spacing={0.5}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
                 <WarningAmberIcon fontSize="small" color="warning" />
-                <Typography variant="body2" color="warning.main">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'warning.main',
+                  }}
+                >
                   Not provided
                 </Typography>
               </Stack>
@@ -136,9 +179,20 @@ const AuditDetailDrawer: React.FC<AuditDetailDrawerProps> = ({ entry, open, onCl
           </FieldRow>
           <FieldRow label="Electronic Signature">
             {entry.electronicSignature ? (
-              <Stack direction="row" alignItems="center" spacing={0.5}>
+              <Stack
+                direction="row"
+                spacing={0.5}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
                 <VerifiedUserIcon fontSize="small" color="success" />
-                <Typography variant="body2" color="success.main">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'success.main',
+                  }}
+                >
                   {String(
                     (entry.electronicSignature as Record<string, unknown>).meaning ?? 'Signed',
                   )}{' '}
@@ -147,9 +201,20 @@ const AuditDetailDrawer: React.FC<AuditDetailDrawerProps> = ({ entry, open, onCl
                 </Typography>
               </Stack>
             ) : (
-              <Stack direction="row" alignItems="center" spacing={0.5}>
+              <Stack
+                direction="row"
+                spacing={0.5}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
                 <WarningIcon fontSize="small" color="warning" />
-                <Typography variant="body2" color="warning.main">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'warning.main',
+                  }}
+                >
                   Not electronically signed
                 </Typography>
               </Stack>
@@ -164,9 +229,9 @@ const AuditDetailDrawer: React.FC<AuditDetailDrawerProps> = ({ entry, open, onCl
             <Tooltip title={entry.checksum} arrow>
               <Typography
                 variant="body2"
-                fontFamily="monospace"
-                fontSize="0.75rem"
                 sx={{
+                  fontFamily: 'monospace',
+                  fontSize: '0.75rem',
                   maxWidth: 200,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -182,9 +247,9 @@ const AuditDetailDrawer: React.FC<AuditDetailDrawerProps> = ({ entry, open, onCl
               <Tooltip title={entry.previousChecksum} arrow>
                 <Typography
                   variant="body2"
-                  fontFamily="monospace"
-                  fontSize="0.75rem"
                   sx={{
+                    fontFamily: 'monospace',
+                    fontSize: '0.75rem',
                     maxWidth: 200,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -195,7 +260,12 @@ const AuditDetailDrawer: React.FC<AuditDetailDrawerProps> = ({ entry, open, onCl
                 </Typography>
               </Tooltip>
             ) : (
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 -
               </Typography>
             )}
@@ -209,7 +279,13 @@ const AuditDetailDrawer: React.FC<AuditDetailDrawerProps> = ({ entry, open, onCl
 
               {entry.snapshotBefore && (
                 <Box sx={{ mb: 1.5 }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                      mb: 0.5,
+                    }}
+                  >
                     Before
                   </Typography>
                   <Box
@@ -234,7 +310,13 @@ const AuditDetailDrawer: React.FC<AuditDetailDrawerProps> = ({ entry, open, onCl
 
               {entry.snapshotAfter && (
                 <Box sx={{ mb: 1.5 }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                      mb: 0.5,
+                    }}
+                  >
                     After
                   </Typography>
                   <Box

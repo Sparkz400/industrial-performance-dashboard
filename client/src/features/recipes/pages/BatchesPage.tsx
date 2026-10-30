@@ -99,10 +99,22 @@ const BatchesPage: React.FC = () => {
 
   return (
     <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 3,
+        }}
+      >
         <Box>
           <Typography variant="h5">Batch Monitoring</Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             Record production runs in this application and verify actual process values against
             specification tolerances. Start, complete and abort only change these records; they
             never control the machine.
@@ -149,7 +161,13 @@ const BatchesPage: React.FC = () => {
               batches.map((batch) => (
                 <TableRow key={batch.id} hover>
                   <TableCell>
-                    <Typography variant="body2" fontFamily="monospace" fontWeight={600}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontFamily: 'monospace',
+                        fontWeight: 600,
+                      }}
+                    >
                       {batch.batchNumber}
                     </Typography>
                   </TableCell>
@@ -218,7 +236,12 @@ const BatchesPage: React.FC = () => {
             ) : (
               <TableRow>
                 <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     No batches found.
                   </Typography>
                 </TableCell>
@@ -492,7 +515,13 @@ const BatchDetailDialog: React.FC<BatchDetailDialogProps> = ({ batchId, onClose 
             </Table>
           </TableContainer>
         ) : (
-          <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+          <Typography
+            sx={{
+              color: 'text.secondary',
+              py: 2,
+              textAlign: 'center',
+            }}
+          >
             No batch data available.
           </Typography>
         )}

@@ -147,7 +147,15 @@ export default function ImprovementActionsPanel({ machineId }: { machineId: numb
             </Typography>
           )}
           {revisions.data?.map((r) => (
-            <Stack key={r.revisionId} direction="row" alignItems="center" flexWrap="wrap" gap={1}>
+            <Stack
+              key={r.revisionId}
+              direction="row"
+              sx={{
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 1,
+              }}
+            >
               <Typography sx={{ minWidth: 260 }}>
                 {r.shiftName} · {date(r.start)}
               </Typography>

@@ -77,7 +77,14 @@ export default function Wallboard() {
       }}
     >
       <Stack spacing={2}>
-        <Stack direction="row" flexWrap="wrap" gap={2} alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            flexWrap: 'wrap',
+            gap: 2,
+            alignItems: 'center',
+          }}
+        >
           <Typography variant="h4" sx={{ flexGrow: 1 }}>
             {t('Production wallboard')}{' '}
           </Typography>
@@ -119,7 +126,14 @@ export default function Wallboard() {
             </MenuItem>
           ))}
         </TextField>
-        <Stack direction="row" flexWrap="wrap" alignItems="center" gap={2}>
+        <Stack
+          direction="row"
+          sx={{
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: 2,
+          }}
+        >
           <FormControlLabel
             control={<Checkbox checked={rotate} onChange={(e) => setRotate(e.target.checked)} />}
             label={t('Rotate every 30 seconds')}

@@ -43,7 +43,13 @@ const ReasonForChangeDialog: React.FC<ReasonForChangeDialogProps> = ({
     <Dialog open={open} onClose={handleCancel} maxWidth="sm" fullWidth>
       <DialogTitle>Reason for Change</DialogTitle>
       <DialogContent>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
+            mb: 2,
+          }}
+        >
           A reason is required for audit compliance. Please describe why this change is being made.
         </Typography>
         <TextField

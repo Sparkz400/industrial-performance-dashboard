@@ -93,12 +93,22 @@ const OperationModeWidgetView: React.FC<OperationModeWidgetViewProps> = ({
       </Box>
 
       {error && (
-        <Typography role="status" color="warning.main">
+        <Typography
+          role="status"
+          sx={{
+            color: 'warning.main',
+          }}
+        >
           {error}
         </Typography>
       )}
       {lastUpdated && (
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           Last updated: {lastUpdated.toLocaleTimeString()}
         </Typography>
       )}
@@ -163,7 +173,12 @@ const OperationModeWidgetView: React.FC<OperationModeWidgetViewProps> = ({
           <Box
             sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
           >
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               No operation mode data available
             </Typography>
           </Box>

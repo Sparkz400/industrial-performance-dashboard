@@ -121,7 +121,14 @@ const SpcProfilesPage: React.FC = () => {
 
   return (
     <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 3,
+        }}
+      >
         <Typography variant="h4">SPC Profiles</Typography>
         <Stack direction="row" spacing={1}>
           <Button variant="outlined" onClick={() => setShowAlerts(!showAlerts)}>
@@ -181,7 +188,13 @@ const SpcProfilesPage: React.FC = () => {
                   <TableCell>{profile.name}</TableCell>
                   <TableCell>{profile.machineId}</TableCell>
                   <TableCell>
-                    <Typography variant="body2" fontFamily="monospace" fontSize="0.8rem">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontFamily: 'monospace',
+                        fontSize: '0.8rem',
+                      }}
+                    >
                       {profile.nodeKey}
                     </Typography>
                   </TableCell>
@@ -191,7 +204,12 @@ const SpcProfilesPage: React.FC = () => {
                   <TableCell>{profile.sensitivity}σ</TableCell>
                   <TableCell>
                     {profile.ucl != null ? (
-                      <Typography variant="body2" fontSize="0.8rem">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontSize: '0.8rem',
+                        }}
+                      >
                         {profile.ucl.toFixed(2)} / {profile.mean?.toFixed(2)} /{' '}
                         {profile.lcl?.toFixed(2)}
                       </Typography>
@@ -241,7 +259,12 @@ const SpcProfilesPage: React.FC = () => {
             ) : (
               <TableRow>
                 <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     No SPC profiles configured. Create one to get started.
                   </Typography>
                 </TableCell>

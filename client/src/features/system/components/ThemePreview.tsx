@@ -37,7 +37,13 @@ const ThemePreview: React.FC<ThemePreviewProps> = ({ mode }) => (
       <Typography variant="body1" gutterBottom>
         Body text
       </Typography>
-      <Typography variant="caption" display="block" gutterBottom>
+      <Typography
+        variant="caption"
+        gutterBottom
+        sx={{
+          display: 'block',
+        }}
+      >
         Caption text
       </Typography>
     </Box>

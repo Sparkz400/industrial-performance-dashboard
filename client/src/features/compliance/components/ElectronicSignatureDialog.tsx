@@ -51,7 +51,13 @@ const ElectronicSignatureDialog: React.FC<ElectronicSignatureDialogProps> = ({
         <Alert severity="info" sx={{ mb: 2 }}>
           Re-enter your password to electronically sign this action.
         </Alert>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
+            mb: 2,
+          }}
+        >
           This signature will be recorded for regulatory compliance purposes.
         </Typography>
         <TextField

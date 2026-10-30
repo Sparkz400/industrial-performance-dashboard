@@ -102,7 +102,11 @@ export default function MqttSourcesPanel({
         </TextField>
         {sources.data?.map((s) => (
           <Stack key={s.id} spacing={0.5} sx={{ borderLeft: 3, borderColor: 'divider', pl: 1 }}>
-            <Typography fontWeight={700}>
+            <Typography
+              sx={{
+                fontWeight: 700,
+              }}
+            >
               {s.name} · {s.brokerUrl} ·{' '}
               {s.mappings.map((m) => `${m.topic} → ${m.nodeKey}`).join(', ')}
             </Typography>

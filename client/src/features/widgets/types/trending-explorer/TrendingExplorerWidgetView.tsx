@@ -84,7 +84,12 @@ const TrendingExplorerWidgetView: React.FC<TrendingExplorerWidgetViewProps> = ({
     <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
       {series.length > 0 && (
         <Box role="status" sx={{ px: 1 }}>
-          <Typography variant="caption" display="block">
+          <Typography
+            variant="caption"
+            sx={{
+              display: 'block',
+            }}
+          >
             Sampled observations. Continuity between samples is not verified; missing or bad values
             are gaps.
           </Typography>
@@ -92,8 +97,10 @@ const TrendingExplorerWidgetView: React.FC<TrendingExplorerWidgetViewProps> = ({
             <Typography
               key={s.id}
               variant="caption"
-              display="block"
               color={s.truncated ? 'error' : 'text.secondary'}
+              sx={{
+                display: 'block',
+              }}
             >
               {s.displayName}: {s.goodSampleCount ?? 0}/{s.sampleCount ?? 0} usable samples
               {' · '}
@@ -181,7 +188,12 @@ const TrendingExplorerWidgetView: React.FC<TrendingExplorerWidgetViewProps> = ({
           <Box
             sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
           >
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {series.length === 0 ? 'Select tags to display' : 'All series hidden'}
             </Typography>
           </Box>

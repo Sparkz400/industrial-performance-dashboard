@@ -109,10 +109,21 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
           }}
         >
           <Box>
-            <Typography variant="h6" fontWeight="medium" gutterBottom>
+            <Typography
+              variant="h6"
+              gutterBottom
+              sx={{
+                fontWeight: 'medium',
+              }}
+            >
               {label}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {description}
             </Typography>
           </Box>

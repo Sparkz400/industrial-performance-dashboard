@@ -12,11 +12,11 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
 import DownloadIcon from '@mui/icons-material/Download';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutlined';
 import PreviewIcon from '@mui/icons-material/Preview';
 import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -130,7 +130,12 @@ const AuditTrailTab: React.FC = () => {
         render: (row) => (
           <Box>
             <Typography variant="body2">{format(new Date(row.createdAt), 'PPp')}</Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {formatDistanceToNow(new Date(row.createdAt), { addSuffix: true })}
             </Typography>
           </Box>
@@ -143,7 +148,12 @@ const AuditTrailTab: React.FC = () => {
         render: (row) => (
           <Box>
             <Typography variant="body2">{row.username || 'System'}</Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {row.userRole || 'n/a'}
             </Typography>
           </Box>
@@ -169,7 +179,12 @@ const AuditTrailTab: React.FC = () => {
         render: (row) => (
           <Box>
             <Typography variant="body2">{row.entityName || row.entityType}</Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {row.entityType}
               {row.entityId ? ` #${row.entityId}` : ''}
             </Typography>
@@ -182,7 +197,12 @@ const AuditTrailTab: React.FC = () => {
         render: (row) => (
           <Box sx={{ py: 1 }}>
             <Typography variant="body2">{row.message}</Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {row.ipAddress || 'IP unavailable'}
             </Typography>
           </Box>
@@ -205,7 +225,12 @@ const AuditTrailTab: React.FC = () => {
             <CardHeader avatar={<HistoryEduIcon color="primary" />} title="Events loaded" />
             <CardContent sx={{ pt: 0 }}>
               <Typography variant="h4">{data.length}</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 Most recent audit events in the selected window
               </Typography>
             </CardContent>
@@ -216,7 +241,12 @@ const AuditTrailTab: React.FC = () => {
             <CardHeader avatar={<PersonOutlineIcon color="secondary" />} title="Actors" />
             <CardContent sx={{ pt: 0 }}>
               <Typography variant="h4">{uniqueActors}</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 Distinct users represented in this result set
               </Typography>
             </CardContent>
@@ -227,7 +257,12 @@ const AuditTrailTab: React.FC = () => {
             <CardHeader avatar={<CategoryOutlinedIcon color="action" />} title="Entities" />
             <CardContent sx={{ pt: 0 }}>
               <Typography variant="h4">{uniqueEntities}</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 Dashboards, users, auth sessions, and machines touched
               </Typography>
             </CardContent>

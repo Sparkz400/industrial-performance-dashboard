@@ -275,7 +275,12 @@ export default function ShareDialog({
             )}
             <Typography variant="subtitle2">{t('Existing links')}</Typography>
             {links.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {t('No links for this dashboard.')}
               </Typography>
             ) : (

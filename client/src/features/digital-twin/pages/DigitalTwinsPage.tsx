@@ -30,7 +30,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
+import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutlined';
 import { useNavigate } from 'react-router-dom';
 import {
   useTwinTemplates,
@@ -333,7 +333,14 @@ const DigitalTwinsPage: React.FC = () => {
 
   return (
     <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 3,
+        }}
+      >
         <Typography variant="h4">Digital Twins</Typography>
         <Button
           variant="contained"
@@ -380,7 +387,13 @@ const DigitalTwinsPage: React.FC = () => {
                   templates.map((tpl) => (
                     <TableRow key={tpl.id} hover>
                       <TableCell>
-                        <Typography fontWeight={500}>{tpl.name}</Typography>
+                        <Typography
+                          sx={{
+                            fontWeight: 500,
+                          }}
+                        >
+                          {tpl.name}
+                        </Typography>
                       </TableCell>
                       <TableCell>
                         <Chip label={tpl.category || 'general'} size="small" variant="outlined" />
@@ -388,16 +401,23 @@ const DigitalTwinsPage: React.FC = () => {
                       <TableCell>
                         <Typography
                           variant="body2"
-                          color="text.secondary"
                           noWrap
-                          sx={{ maxWidth: 300 }}
+                          sx={{
+                            color: 'text.secondary',
+                            maxWidth: 300,
+                          }}
                         >
                           {tpl.description || '-'}
                         </Typography>
                       </TableCell>
                       <TableCell>{tpl.elements?.length ?? 0}</TableCell>
                       <TableCell>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: 'text.secondary',
+                          }}
+                        >
                           {new Date(tpl.createdAt).toLocaleDateString()}
                         </Typography>
                       </TableCell>
@@ -422,7 +442,12 @@ const DigitalTwinsPage: React.FC = () => {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: 'text.secondary',
+                        }}
+                      >
                         No templates yet. Create one to get started.
                       </Typography>
                     </TableCell>
@@ -469,7 +494,13 @@ const DigitalTwinsPage: React.FC = () => {
                       onClick={() => navigate(`/digital-twins/${inst.id}`)}
                     >
                       <TableCell>
-                        <Typography fontWeight={500}>{inst.name}</Typography>
+                        <Typography
+                          sx={{
+                            fontWeight: 500,
+                          }}
+                        >
+                          {inst.name}
+                        </Typography>
                       </TableCell>
                       <TableCell>{inst.templateName || `Template #${inst.templateId}`}</TableCell>
                       <TableCell>
@@ -507,7 +538,12 @@ const DigitalTwinsPage: React.FC = () => {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: 'text.secondary',
+                        }}
+                      >
                         No instances yet. Create a template first, then create an instance.
                       </Typography>
                     </TableCell>
@@ -553,7 +589,14 @@ const DigitalTwinsPage: React.FC = () => {
 
             {/* SVG Upload */}
             <Box>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: 'center',
+                  mb: 1,
+                }}
+              >
                 <Typography variant="subtitle2">SVG Content</Typography>
                 <Button
                   size="small"
@@ -595,9 +638,11 @@ const DigitalTwinsPage: React.FC = () => {
             <Box>
               <Stack
                 direction="row"
-                justifyContent="space-between"
-                alignItems="center"
-                sx={{ mb: 1 }}
+                sx={{
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mb: 1,
+                }}
               >
                 <Typography variant="subtitle2">Element Mappings</Typography>
                 <Button size="small" startIcon={<AddIcon />} onClick={handleAddElement}>
@@ -605,7 +650,15 @@ const DigitalTwinsPage: React.FC = () => {
                 </Button>
               </Stack>
               {templateForm.elements.map((el, i) => (
-                <Stack key={i} direction="row" spacing={1} sx={{ mb: 1 }} alignItems="center">
+                <Stack
+                  key={i}
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: 'center',
+                    mb: 1,
+                  }}
+                >
                   <TextField
                     label="SVG Element ID"
                     value={el.svgElementId}
@@ -647,7 +700,12 @@ const DigitalTwinsPage: React.FC = () => {
                 </Stack>
               ))}
               {templateForm.elements.length === 0 && (
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   No elements defined. Add elements to map SVG element IDs to data points.
                 </Typography>
               )}
@@ -752,9 +810,11 @@ const DigitalTwinsPage: React.FC = () => {
             <Box>
               <Stack
                 direction="row"
-                justifyContent="space-between"
-                alignItems="center"
-                sx={{ mb: 1 }}
+                sx={{
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mb: 1,
+                }}
               >
                 <Typography variant="subtitle2">Node Bindings</Typography>
                 <Button size="small" startIcon={<AddIcon />} onClick={handleAddBinding}>
@@ -762,7 +822,15 @@ const DigitalTwinsPage: React.FC = () => {
                 </Button>
               </Stack>
               {instanceForm.bindings.map((binding, i) => (
-                <Stack key={i} direction="row" spacing={1} sx={{ mb: 1 }} alignItems="center">
+                <Stack
+                  key={i}
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: 'center',
+                    mb: 1,
+                  }}
+                >
                   <TextField
                     label="SVG Element ID"
                     value={binding.elementId}
@@ -798,7 +866,12 @@ const DigitalTwinsPage: React.FC = () => {
                 </Stack>
               ))}
               {instanceForm.bindings.length === 0 && (
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   No bindings configured. Add bindings to connect SVG elements to OPC UA nodes.
                 </Typography>
               )}

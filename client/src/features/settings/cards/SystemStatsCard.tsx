@@ -44,7 +44,13 @@ const SystemStatsCard: React.FC<SystemStatsCardProps> = ({
       </Typography>
 
       <Box sx={{ mb: 2 }}>
-        <Typography variant="body2" color="text.secondary" gutterBottom>
+        <Typography
+          variant="body2"
+          gutterBottom
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           Memory Usage
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -56,7 +62,12 @@ const SystemStatsCard: React.FC<SystemStatsCardProps> = ({
               sx={{ height: 8, borderRadius: 5 }}
             />
           </Box>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {systemStats?.memoryUsage
               ? `${systemStats.memoryUsage.used} MB / ${systemStats.memoryUsage.total} MB`
               : 'Unknown'}
@@ -65,7 +76,13 @@ const SystemStatsCard: React.FC<SystemStatsCardProps> = ({
       </Box>
 
       <Box sx={{ mb: 2 }}>
-        <Typography variant="body2" color="text.secondary" gutterBottom>
+        <Typography
+          variant="body2"
+          gutterBottom
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           CPU Usage
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -77,7 +94,12 @@ const SystemStatsCard: React.FC<SystemStatsCardProps> = ({
               sx={{ height: 8, borderRadius: 5 }}
             />
           </Box>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {systemStats?.cpuUsage ? `${systemStats.cpuUsage}%` : 'Unknown'}
           </Typography>
         </Box>
@@ -86,7 +108,12 @@ const SystemStatsCard: React.FC<SystemStatsCardProps> = ({
       <Stack spacing={1} sx={{ mt: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
           <Typography variant="body2">Uptime</Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {systemStats?.uptime !== undefined ? formatUptime(systemStats.uptime) : 'Unknown'}
           </Typography>
         </Box>
@@ -94,7 +121,12 @@ const SystemStatsCard: React.FC<SystemStatsCardProps> = ({
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
           <Typography variant="body2">CPU Cores</Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {systemStats?.cpuInfo?.cores || 'Unknown'}
           </Typography>
         </Box>
@@ -102,7 +134,12 @@ const SystemStatsCard: React.FC<SystemStatsCardProps> = ({
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
           <Typography variant="body2">Active Connections</Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {systemStats?.activeConnections !== undefined
               ? systemStats.activeConnections
               : 'Unknown'}
@@ -112,7 +149,12 @@ const SystemStatsCard: React.FC<SystemStatsCardProps> = ({
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
           <Typography variant="body2">Last Restart</Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {systemStats?.lastRestart
               ? new Date(systemStats.lastRestart).toLocaleString()
               : 'Unknown'}
@@ -127,7 +169,14 @@ const SystemStatsCard: React.FC<SystemStatsCardProps> = ({
       )}
 
       {lastStatsUpdate && (
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'text.secondary',
+            mt: 2,
+            display: 'block',
+          }}
+        >
           {`Last updated: ${lastStatsUpdate.toLocaleString()}`}
         </Typography>
       )}

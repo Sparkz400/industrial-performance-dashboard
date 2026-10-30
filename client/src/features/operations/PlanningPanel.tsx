@@ -144,7 +144,12 @@ export default function PlanningPanel({ machineId }: { machineId: number }) {
             value={config.timezone}
             onChange={(e) => change({ timezone: e.target.value })}
           />
-          <Stack direction="row" flexWrap="wrap">
+          <Stack
+            direction="row"
+            sx={{
+              flexWrap: 'wrap',
+            }}
+          >
             {[
               ['Sunday', 'Sonntag'],
               ['Monday', 'Montag'],
@@ -252,7 +257,13 @@ export default function PlanningPanel({ machineId }: { machineId: number }) {
             }
           />
           {config.breaks.map((b, i) => (
-            <Stack key={i} direction={{ xs: 'column', sm: 'row' }} gap={1}>
+            <Stack
+              key={i}
+              direction={{ xs: 'column', sm: 'row' }}
+              sx={{
+                gap: 1,
+              }}
+            >
               <TextField
                 disabled={!edit}
                 type="number"
@@ -327,7 +338,12 @@ export default function PlanningPanel({ machineId }: { machineId: number }) {
               >
                 {t('Save calendar', 'Kalender speichern')}
               </Button>
-              <Stack direction={{ xs: 'column', sm: 'row' }} gap={2}>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                sx={{
+                  gap: 2,
+                }}
+              >
                 <TextField
                   type="date"
                   label={t('First date', 'Erstes Datum')}
@@ -691,7 +707,12 @@ function ProductRuns({ machineId, editable }: { machineId: number; editable: boo
             )}
             {revisions.data?.map((r) => (
               <Stack key={r.id} spacing={1}>
-                <Stack direction={{ xs: 'column', sm: 'row' }} gap={1}>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  sx={{
+                    gap: 1,
+                  }}
+                >
                   <Typography>
                     {new Date(r.createdAt).toLocaleString(useLanguage.getState().language)} ·{' '}
                     {t('Author', 'Autor')}: {r.createdBy} · {r.digest.slice(0, 16)}

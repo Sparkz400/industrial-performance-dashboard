@@ -169,15 +169,33 @@ const SystemStatusWidget = memo<SystemStatusWidgetProps>(({ config = {} }) => {
               Current system status unknown: stale or unavailable observation.
             </Typography>
           ) : isConnected ? (
-            <Typography variant="h6" color="success.main" sx={{ mb: 2 }}>
+            <Typography
+              variant="h6"
+              sx={{
+                color: 'success.main',
+                mb: 2,
+              }}
+            >
               All systems operational
             </Typography>
           ) : hasError ? (
-            <Typography variant="h6" color="error.main" sx={{ mb: 2 }}>
+            <Typography
+              variant="h6"
+              sx={{
+                color: 'error.main',
+                mb: 2,
+              }}
+            >
               System experiencing issues
             </Typography>
           ) : (
-            <Typography variant="h6" color="warning.main" sx={{ mb: 2 }}>
+            <Typography
+              variant="h6"
+              sx={{
+                color: 'warning.main',
+                mb: 2,
+              }}
+            >
               System partially degraded
             </Typography>
           )}
@@ -191,7 +209,12 @@ const SystemStatusWidget = memo<SystemStatusWidgetProps>(({ config = {} }) => {
 
       <Divider sx={{ mt: 'auto', mb: 1 }} />
       {!fresh && Boolean(showDetails) && (
-        <Typography role="status" color="warning.main">
+        <Typography
+          role="status"
+          sx={{
+            color: 'warning.main',
+          }}
+        >
           Current system status unknown: stale or unavailable observation.
         </Typography>
       )}

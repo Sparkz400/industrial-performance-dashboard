@@ -118,7 +118,9 @@ export default function CmmsHandoffPanel({ machineId }: { machineId: number }) {
             setSource(e.target.value);
             setPreview(null);
           }}
-          inputProps={{ maxLength: 100 }}
+          slotProps={{
+            htmlInput: { maxLength: 100 },
+          }}
         />
         <TextField
           select
@@ -177,7 +179,11 @@ export default function CmmsHandoffPanel({ machineId }: { machineId: number }) {
         </Button>
         {preview && (
           <Stack spacing={1} sx={{ overflowWrap: 'anywhere' }}>
-            <Typography fontWeight="bold">
+            <Typography
+              sx={{
+                fontWeight: 'bold',
+              }}
+            >
               {preview.payload.asset.name} · {preview.payload.source} / {preview.payload.externalId}
             </Typography>
             <Typography>{preview.payload.action.description}</Typography>

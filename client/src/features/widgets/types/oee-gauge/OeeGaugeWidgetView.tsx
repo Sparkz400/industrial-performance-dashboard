@@ -104,10 +104,22 @@ const OeeGaugeWidgetView: React.FC<OeeGaugeWidgetViewProps> = ({
             alignItems: 'center',
           }}
         >
-          <Typography variant="h3" fontWeight="bold" sx={{ color: oeeColor, lineHeight: 1 }}>
+          <Typography
+            variant="h3"
+            sx={{
+              fontWeight: 'bold',
+              color: oeeColor,
+              lineHeight: 1,
+            }}
+          >
             {Math.round(oee)}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             OEE %
           </Typography>
         </Box>
@@ -118,10 +130,21 @@ const OeeGaugeWidgetView: React.FC<OeeGaugeWidgetViewProps> = ({
         {metrics.map((metric) => (
           <Box key={metric.label}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {metric.label}
               </Typography>
-              <Typography variant="body2" fontWeight="bold" sx={{ color: getColor(metric.value) }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 'bold',
+                  color: getColor(metric.value),
+                }}
+              >
                 {Math.round(metric.value)}%
               </Typography>
             </Box>

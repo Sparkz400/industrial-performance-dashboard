@@ -12,7 +12,7 @@ import {
   LinearProgress,
   Stack,
 } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import GavelIcon from '@mui/icons-material/Gavel';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
@@ -86,7 +86,9 @@ const ComplianceOverviewTab: React.FC = () => {
             <CardHeader
               avatar={<GavelIcon color="primary" />}
               title="Compliance Mode"
-              titleTypographyProps={{ variant: 'subtitle2', color: 'text.secondary' }}
+              slotProps={{
+                title: { variant: 'subtitle2', color: 'text.secondary' },
+              }}
             />
             <CardContent sx={{ pt: 0 }}>
               <Chip
@@ -104,11 +106,18 @@ const ComplianceOverviewTab: React.FC = () => {
             <CardHeader
               avatar={<TrendingUpIcon color="primary" />}
               title="Events (30d)"
-              titleTypographyProps={{ variant: 'subtitle2', color: 'text.secondary' }}
+              slotProps={{
+                title: { variant: 'subtitle2', color: 'text.secondary' },
+              }}
             />
             <CardContent sx={{ pt: 0 }}>
               <Typography variant="h4">{stats.eventsLast30Days}</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {stats.eventsLast7Days} in the last 7 days
               </Typography>
             </CardContent>
@@ -120,7 +129,9 @@ const ComplianceOverviewTab: React.FC = () => {
             <CardHeader
               avatar={<VerifiedUserIcon color={signatureCoverageColor} />}
               title="Signature Coverage"
-              titleTypographyProps={{ variant: 'subtitle2', color: 'text.secondary' }}
+              slotProps={{
+                title: { variant: 'subtitle2', color: 'text.secondary' },
+              }}
             />
             <CardContent sx={{ pt: 0 }}>
               <Typography variant="h4">{stats.signatureCoverage}%</Typography>
@@ -140,7 +151,9 @@ const ComplianceOverviewTab: React.FC = () => {
             <CardHeader
               avatar={<HistoryEduIcon color={reasonCoverageColor} />}
               title="Reason Coverage"
-              titleTypographyProps={{ variant: 'subtitle2', color: 'text.secondary' }}
+              slotProps={{
+                title: { variant: 'subtitle2', color: 'text.secondary' },
+              }}
             />
             <CardContent sx={{ pt: 0 }}>
               <Typography variant="h4">{stats.reasonCoverage}%</Typography>
@@ -167,7 +180,9 @@ const ComplianceOverviewTab: React.FC = () => {
                 />
               }
               title="Unsigned Actions (30d)"
-              titleTypographyProps={{ variant: 'subtitle2', color: 'text.secondary' }}
+              slotProps={{
+                title: { variant: 'subtitle2', color: 'text.secondary' },
+              }}
             />
             <CardContent sx={{ pt: 0 }}>
               <Typography variant="h4">{stats.unsignedEventsLast30Days}</Typography>
@@ -191,7 +206,9 @@ const ComplianceOverviewTab: React.FC = () => {
                 />
               }
               title="Missing Reasons (30d)"
-              titleTypographyProps={{ variant: 'subtitle2', color: 'text.secondary' }}
+              slotProps={{
+                title: { variant: 'subtitle2', color: 'text.secondary' },
+              }}
             />
             <CardContent sx={{ pt: 0 }}>
               <Typography variant="h4">{stats.eventsWithoutReasonLast30Days}</Typography>
@@ -219,9 +236,13 @@ const ComplianceOverviewTab: React.FC = () => {
                     <Stack
                       key={entry.action}
                       direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                      sx={{ py: 0.5, borderBottom: '1px solid', borderColor: 'divider' }}
+                      sx={{
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        py: 0.5,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                      }}
                     >
                       <Chip
                         label={entry.action}
@@ -229,14 +250,24 @@ const ComplianceOverviewTab: React.FC = () => {
                         size="small"
                         variant="outlined"
                       />
-                      <Typography variant="body2" fontWeight="bold">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 'bold',
+                        }}
+                      >
                         {entry.count}
                       </Typography>
                     </Stack>
                   ))}
                 </Stack>
               ) : (
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   No events recorded.
                 </Typography>
               )}
@@ -254,19 +285,33 @@ const ComplianceOverviewTab: React.FC = () => {
                     <Stack
                       key={entry.entityType}
                       direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                      sx={{ py: 0.5, borderBottom: '1px solid', borderColor: 'divider' }}
+                      sx={{
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        py: 0.5,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                      }}
                     >
                       <Typography variant="body2">{entry.entityType}</Typography>
-                      <Typography variant="body2" fontWeight="bold">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 'bold',
+                        }}
+                      >
                         {entry.count}
                       </Typography>
                     </Stack>
                   ))}
                 </Stack>
               ) : (
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   No events recorded.
                 </Typography>
               )}
@@ -313,8 +358,8 @@ const ComplianceOverviewTab: React.FC = () => {
                       key={event.id}
                       direction="row"
                       spacing={2}
-                      alignItems="center"
                       sx={{
+                        alignItems: 'center',
                         py: 1,
                         px: 1,
                         borderBottom: '1px solid',
@@ -344,7 +389,12 @@ const ComplianceOverviewTab: React.FC = () => {
                   ))}
                 </Stack>
               ) : (
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   No recent events.
                 </Typography>
               )}

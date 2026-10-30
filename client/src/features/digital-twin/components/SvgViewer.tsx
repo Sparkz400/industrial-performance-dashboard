@@ -179,18 +179,32 @@ const SvgViewer: React.FC<SvgViewerProps> = ({
               opacity: 0.9,
             }}
           >
-            <Typography variant="caption" display="block" fontWeight={600} fontSize="0.65rem">
+            <Typography
+              variant="caption"
+              sx={{
+                display: 'block',
+                fontWeight: 600,
+                fontSize: '0.65rem',
+              }}
+            >
               {overlay.binding.label}
             </Typography>
             <Typography
               variant="caption"
-              fontSize="0.7rem"
               color={data ? 'text.primary' : 'text.disabled'}
+              sx={{
+                fontSize: '0.7rem',
+              }}
             >
               {formatValue(overlay.binding, data)}
             </Typography>
             {data && data.freshness !== 'fresh' && (
-              <Typography variant="caption" display="block">
+              <Typography
+                variant="caption"
+                sx={{
+                  display: 'block',
+                }}
+              >
                 {t('Not current', 'Nicht aktuell')}
               </Typography>
             )}

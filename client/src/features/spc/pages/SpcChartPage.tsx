@@ -140,7 +140,14 @@ const SpcChartPage: React.FC = () => {
 
   return (
     <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
-      <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{
+          alignItems: 'center',
+          mb: 3,
+        }}
+      >
         <IconButton onClick={() => navigate('/spc')}>
           <ArrowBackIcon />
         </IconButton>
@@ -187,14 +194,36 @@ const SpcChartPage: React.FC = () => {
             slotProps={{ inputLabel: { shrink: true } }}
           />
           {profile && (
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ ml: 'auto' }}>
-              <Typography variant="body2" color="text.secondary">
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{
+                alignItems: 'center',
+                ml: 'auto',
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 UCL: {profile.ucl?.toFixed(2) ?? '–'}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 Mean: {profile.mean?.toFixed(2) ?? '–'}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 LCL: {profile.lcl?.toFixed(2) ?? '–'}
               </Typography>
             </Stack>
@@ -263,10 +292,20 @@ const SpcChartPage: React.FC = () => {
                     boxShadow: 1,
                   }}
                 >
-                  <Typography variant="caption" display="block">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: 'block',
+                    }}
+                  >
                     {String(point.data.xFormatted)}
                   </Typography>
-                  <Typography variant="body2" fontWeight="bold">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 'bold',
+                    }}
+                  >
                     Value: {Number(point.data.y).toFixed(3)}
                   </Typography>
                 </Box>
@@ -277,7 +316,12 @@ const SpcChartPage: React.FC = () => {
           </Box>
         ) : (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               No data points available for the selected time range.
             </Typography>
           </Box>
@@ -290,7 +334,13 @@ const SpcChartPage: React.FC = () => {
           Declared control chart
         </Typography>
         {controlChart.error ? (
-          <Typography color="text.secondary">{(controlChart.error as Error).message}</Typography>
+          <Typography
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
+            {(controlChart.error as Error).message}
+          </Typography>
         ) : controlChart.data?.primary ? (
           <Stack spacing={1}>
             <Typography>
@@ -329,7 +379,12 @@ const SpcChartPage: React.FC = () => {
               {controlChart.data.points.filter((p) => p.outOfControl).length} out of control
               {controlChart.data.truncated ? ' (window truncated)' : ''}.
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {controlChart.data.assumptions} {controlChart.data.specificationLimits}
             </Typography>
           </Stack>

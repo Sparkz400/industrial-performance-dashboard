@@ -10,9 +10,9 @@ import {
   Avatar,
   MenuItem,
 } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import DnsIcon from '@mui/icons-material/Dns';
-import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutlined';
 import StopCircleIcon from '@mui/icons-material/StopCircle';
 import { ButtonLoader } from '@/shared/components/loading/index';
 
@@ -151,7 +151,12 @@ const OpcUaConnectionCard: React.FC<OpcUaConnectionCardProps> = ({
         </Grid>
 
         <Grid size={{ xs: 12 }}>
-          <Box display="flex" justifyContent="space-between">
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+            }}
+          >
             <Box>
               <ButtonLoader
                 variant="contained"

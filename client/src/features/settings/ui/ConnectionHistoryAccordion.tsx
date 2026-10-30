@@ -27,7 +27,13 @@ const ConnectionHistoryAccordion: React.FC<ConnectionHistoryAccordionProps> = ({
     </AccordionSummary>
     <AccordionDetails>
       {connectionHistory.length === 0 ? (
-        <Typography variant="body2" color="text.secondary" align="center">
+        <Typography
+          variant="body2"
+          align="center"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           No connection history available
         </Typography>
       ) : (
@@ -46,7 +52,12 @@ const ConnectionHistoryAccordion: React.FC<ConnectionHistoryAccordionProps> = ({
                 <Typography variant="subtitle2">{entry.event}</Typography>
                 <Typography variant="caption">{formatDate(entry.timestamp)}</Typography>
               </Box>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {entry.details}
               </Typography>
             </Box>

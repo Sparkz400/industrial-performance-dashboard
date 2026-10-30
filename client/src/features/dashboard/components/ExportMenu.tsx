@@ -256,7 +256,15 @@ const ExportMenu: React.FC<ExportMenuProps> = ({
         </Typography>
         <MenuItem onClick={handleCopyLink}>
           <ListItemIcon>
-            {hasDashboard ? <LinkIcon fontSize="small" /> : <ContentCopyIcon fontSize="small" />}
+            {hasDashboard ? (
+              <LinkIcon
+                sx={{
+                  fontSize: 'small',
+                }}
+              />
+            ) : (
+              <ContentCopyIcon fontSize="small" />
+            )}
           </ListItemIcon>
           <ListItemText>{hasDashboard ? 'Copy share link' : 'Copy page link'}</ListItemText>
         </MenuItem>

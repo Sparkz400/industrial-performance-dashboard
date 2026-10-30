@@ -1,6 +1,6 @@
 import React from 'react';
 import { TextField, Card, CardHeader, CardContent, Divider, Chip, Avatar } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import StorageIcon from '@mui/icons-material/Storage';
 import CachedIcon from '@mui/icons-material/Cached';
 import { ButtonLoader } from '@/shared/components/loading/index';

@@ -22,7 +22,7 @@ import {
   MenuItem,
   TextField,
 } from '@mui/material';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PageSkeleton from '@/shared/components/loading/PageSkeleton';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -143,10 +143,20 @@ const AlertHistoryPage: React.FC = () => {
     <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h4" fontWeight="bold">
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 'bold',
+            }}
+          >
             {t('Alert History')}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {t(
               'Acknowledge incidents here. Only good measurements can confirm recovery; unknown quality never clears an alarm.',
             )}
@@ -208,7 +218,9 @@ const AlertHistoryPage: React.FC = () => {
             setDateFrom(e.target.value);
             setPage(0);
           }}
-          InputLabelProps={{ shrink: true }}
+          slotProps={{
+            inputLabel: { shrink: true },
+          }}
         />
         <TextField
           label={t('To')}
@@ -219,7 +231,9 @@ const AlertHistoryPage: React.FC = () => {
             setDateTo(e.target.value);
             setPage(0);
           }}
-          InputLabelProps={{ shrink: true }}
+          slotProps={{
+            inputLabel: { shrink: true },
+          }}
         />
       </Paper>
 
@@ -245,7 +259,12 @@ const AlertHistoryPage: React.FC = () => {
                 {items.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: 'text.secondary',
+                        }}
+                      >
                         {t('No alert history found')}
                       </Typography>
                     </TableCell>
@@ -264,7 +283,12 @@ const AlertHistoryPage: React.FC = () => {
                         />
                       </TableCell>
                       <TableCell>
-                        <Typography variant="body2" fontFamily="monospace">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontFamily: 'monospace',
+                          }}
+                        >
                           {item.nodeKey}
                         </Typography>
                       </TableCell>

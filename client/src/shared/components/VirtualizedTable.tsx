@@ -136,7 +136,12 @@ function VirtualizedTableInner<T>({
       <TableContainer component={Paper} variant="outlined">
         <Table component="div">{headerRow}</Table>
         <Box sx={{ py: 4, textAlign: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {emptyMessage}
           </Typography>
         </Box>

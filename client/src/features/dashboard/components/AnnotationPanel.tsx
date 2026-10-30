@@ -83,7 +83,12 @@ const AnnotationPanel: React.FC<AnnotationPanelProps> = ({ widgetId }) => {
               justifyContent: 'space-between',
             }}
           >
-            <Typography variant="caption" fontWeight={600}>
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               Notes ({annotations.length})
             </Typography>
             <IconButton size="small" onClick={() => setExpanded(false)}>
@@ -95,7 +100,12 @@ const AnnotationPanel: React.FC<AnnotationPanelProps> = ({ widgetId }) => {
           <Box sx={{ flexGrow: 1, overflowY: 'auto', maxHeight: 180 }}>
             {annotations.length === 0 ? (
               <Box sx={{ p: 2, textAlign: 'center' }}>
-                <Typography variant="caption" color="text.disabled">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'text.disabled',
+                  }}
+                >
                   No notes yet
                 </Typography>
               </Box>
@@ -134,8 +144,10 @@ const AnnotationPanel: React.FC<AnnotationPanelProps> = ({ widgetId }) => {
                     </Typography>
                     <Typography
                       variant="caption"
-                      color="text.disabled"
-                      sx={{ fontSize: '0.65rem' }}
+                      sx={{
+                        color: 'text.disabled',
+                        fontSize: '0.65rem',
+                      }}
                     >
                       {new Date(ann.createdAt).toLocaleString()}
                     </Typography>

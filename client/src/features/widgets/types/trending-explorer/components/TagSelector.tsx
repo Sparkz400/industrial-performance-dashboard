@@ -29,14 +29,17 @@ const TagSelector: React.FC<TagSelectorProps> = ({ machineId, selectedTags, onTa
           {...params}
           label="Select Tags"
           placeholder={machineId ? 'Search tags...' : 'Select a machine first'}
-          InputProps={{
-            ...params.InputProps,
-            endAdornment: (
-              <>
-                {isLoading ? <CircularProgress size={16} /> : null}
-                {params.InputProps.endAdornment}
-              </>
-            ),
+          slotProps={{
+            ...params.slotProps,
+            input: {
+              ...params.slotProps.input,
+              endAdornment: (
+                <>
+                  {isLoading ? <CircularProgress size={16} /> : null}
+                  {params.slotProps.input.endAdornment}
+                </>
+              ),
+            },
           }}
         />
       )}

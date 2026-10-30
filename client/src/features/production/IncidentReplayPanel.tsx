@@ -93,7 +93,13 @@ export default function IncidentReplayPanel() {
           'Review recorded observations, alarm transitions and operator history together. Nearby events are investigation leads; they do not establish a cause.',
         )}{' '}
       </Typography>
-      <Stack direction="row" flexWrap="wrap" gap={2}>
+      <Stack
+        direction="row"
+        sx={{
+          flexWrap: 'wrap',
+          gap: 2,
+        }}
+      >
         <TextField
           select
           label={t('Replay machine')}
@@ -203,7 +209,14 @@ export default function IncidentReplayPanel() {
             <Box sx={{ height: 370, minWidth: 0 }}>
               <TrendingExplorerWidgetView series={series} isLoading={false} />
             </Box>
-            <Stack direction="row" gap={1} flexWrap="wrap" alignItems="center">
+            <Stack
+              direction="row"
+              sx={{
+                gap: 1,
+                flexWrap: 'wrap',
+                alignItems: 'center',
+              }}
+            >
               <Button
                 onClick={() => {
                   if (cursor >= Date.parse(data.end)) setCursor(Date.parse(data.start));
@@ -234,7 +247,13 @@ export default function IncidentReplayPanel() {
             />
           </Paper>
           <Typography variant="h6">{t('Observations at cursor')} </Typography>
-          <Stack direction="row" flexWrap="wrap" gap={2}>
+          <Stack
+            direction="row"
+            sx={{
+              flexWrap: 'wrap',
+              gap: 2,
+            }}
+          >
             {data.signals.map((signal) => {
               const observation = replayObservation(signal.samples, cursor, data.maxGapSeconds),
                 sample = observation.sample;
@@ -273,7 +292,11 @@ export default function IncidentReplayPanel() {
                     </Typography>
                   )}
                   {sample?.rawTruncated && (
-                    <Typography color="warning.main">
+                    <Typography
+                      sx={{
+                        color: 'warning.main',
+                      }}
+                    >
                       {t('Raw text shortened to 512 characters.')}{' '}
                     </Typography>
                   )}
@@ -304,7 +327,14 @@ export default function IncidentReplayPanel() {
           )}
           {data.events.slice(eventPage * 50, (eventPage + 1) * 50).map((event) => (
             <Paper key={event.id} sx={{ p: 2, overflowWrap: 'anywhere' }}>
-              <Stack direction="row" gap={1} flexWrap="wrap" alignItems="center">
+              <Stack
+                direction="row"
+                sx={{
+                  gap: 1,
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                }}
+              >
                 <Chip size="small" label={event.kind} />
                 <Button onClick={() => seek(event.at)} aria-label={`Review event ${event.id}`}>
                   {event.at}
@@ -331,7 +361,12 @@ export default function IncidentReplayPanel() {
             </Paper>
           ))}
           {data.events.length > 50 && (
-            <Stack direction="row" gap={1}>
+            <Stack
+              direction="row"
+              sx={{
+                gap: 1,
+              }}
+            >
               <Button disabled={eventPage === 0} onClick={() => setEventPage(eventPage - 1)}>
                 {t('Previous events')}{' '}
               </Button>

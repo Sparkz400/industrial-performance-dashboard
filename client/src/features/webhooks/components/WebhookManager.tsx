@@ -204,7 +204,13 @@ export default function WebhookManager() {
         </Button>
       </Box>
 
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: 'text.secondary',
+          mb: 3,
+        }}
+      >
         Deliver persisted alarm events with a signed payload. Receivers must deduplicate the
         delivery ID (body id and X-Webhook-Delivery-Id header). Failed deliveries retry with
         increasing delay for about a day, then stop and can be requeued here; the test button is a
@@ -225,7 +231,13 @@ export default function WebhookManager() {
       {deliveries.error && <Alert severity="error">{String(deliveries.error)}</Alert>}
       {deliveries.data && deliveries.data.length > 0 && (
         <Box sx={{ mb: 2 }}>
-          <Typography fontWeight="bold">Delivery attempts (up to 100, pending first)</Typography>
+          <Typography
+            sx={{
+              fontWeight: 'bold',
+            }}
+          >
+            Delivery attempts (up to 100, pending first)
+          </Typography>
           {deliveries.data.map((delivery) => (
             <Typography
               variant="body2"
@@ -268,7 +280,11 @@ export default function WebhookManager() {
       {webhooks.length === 0 ? (
         <Paper sx={{ p: 4, textAlign: 'center' }}>
           <WebhookIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
-          <Typography color="text.secondary">
+          <Typography
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             No webhooks configured. Add one to start sending event notifications.
           </Typography>
         </Paper>
@@ -289,7 +305,13 @@ export default function WebhookManager() {
                 <ListItemText
                   primary={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography fontWeight={600}>{webhook.name}</Typography>
+                      <Typography
+                        sx={{
+                          fontWeight: 600,
+                        }}
+                      >
+                        {webhook.name}
+                      </Typography>
                       <Chip
                         label={webhook.isActive ? 'Active' : 'Inactive'}
                         size="small"
@@ -313,8 +335,10 @@ export default function WebhookManager() {
                     <Box sx={{ mt: 0.5 }}>
                       <Typography
                         variant="caption"
-                        color="text.secondary"
-                        sx={{ display: 'block' }}
+                        sx={{
+                          color: 'text.secondary',
+                          display: 'block',
+                        }}
                       >
                         {webhook.kind === 'email'
                           ? `Email to ${(webhook.recipients ?? []).join(', ')}`

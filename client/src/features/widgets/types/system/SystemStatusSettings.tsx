@@ -42,7 +42,13 @@ const SystemStatusSettings = memo<SystemStatusSettingsProps>(({ config = {}, onC
           }
           label="Auto-refresh status"
         />
-        <Typography variant="caption" color="textSecondary" display="block">
+        <Typography
+          variant="caption"
+          color="textSecondary"
+          sx={{
+            display: 'block',
+          }}
+        >
           When enabled, status will automatically refresh based on the interval setting
         </Typography>
       </Box>
@@ -79,7 +85,13 @@ const SystemStatusSettings = memo<SystemStatusSettingsProps>(({ config = {}, onC
           }
           label="Show detailed information"
         />
-        <Typography variant="caption" color="textSecondary" display="block">
+        <Typography
+          variant="caption"
+          color="textSecondary"
+          sx={{
+            display: 'block',
+          }}
+        >
           Display additional system status details
         </Typography>
       </Box>
