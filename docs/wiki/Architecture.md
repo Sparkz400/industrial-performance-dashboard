@@ -18,6 +18,10 @@ The React client connects to the Node.js server through authenticated REST/tRPC
 and live socket updates. The collector buffers samples on local disk before
 writing PostgreSQL history. Shared TypeScript contracts connect the workspaces.
 
+A [guarded OPC UA dependency patch](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DEPENDENCY_REVIEW.md#opc-ua-overflow-patch)
+preserves non-Good quality during server notification queue overflow; changed
+dependency code requires review before installation can continue.
+
 The interface, charts and wallboards use locally bundled Figtree fonts with
 tabular numerals; technical identifiers retain monospace. Regular and italic
 fonts and their stylesheet are precached for offline use without an external font

@@ -205,3 +205,12 @@ The compiled-frontend smoke completed four recovery cycles over 0.0437 workload 
 with zero missing provenance and every checkpoint event replayed exactly once. This
 short evidence is not a 72-hour pass. A replacement run must start from the final
 committed revision; historical failed duration must not be carried forward.
+
+A subsequent clean-revision smoke failed after two cycles inside node-opcua-server's
+notification queue: its overflow handler asserted that every value had Good quality.
+An isolated regression reproduces this for Uncertain and Bad values. The guarded
+installation patch removes those two invalid assertions while retaining the original
+quality, metadata, overflow bits and diagnostic counters. Both queue discard policies
+are checked locally and in the packaged runtime. Dependency source changes require
+explicit patch review; see [dependency maintenance](DEPENDENCY_REVIEW.md#opc-ua-overflow-patch).
+The failed attempt contributes no accepted endurance duration.

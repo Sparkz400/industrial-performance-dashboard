@@ -140,6 +140,9 @@ npm run build:server
 docker compose -f compose.local.yml up -d --wait db
 ```
 
+The install applies a guarded OPC UA queue-overflow fix; script-disabled installs
+must run it explicitly. See [dependency maintenance](docs/DEPENDENCY_REVIEW.md#opc-ua-overflow-patch).
+
 Copy `server/.env.example` to `server/.env`. Set unique `COOKIE_SECRET`,
 `SESSION_SECRET` and `SEED_ADMIN_PASSWORD` values; the admin password must contain
 at least 12 characters. Keep this file private.

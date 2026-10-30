@@ -203,3 +203,21 @@ had 413 findings: 1 critical, 66 high, 157 medium, 183 low and 6 unknown, withou
 available fixed packages. A full Wolfi image with Chromium 149 had 1,655 findings
 and was rejected. Those results remain historical evidence; they do not describe
 the migrated browser-free runtime. None was dismissed to obtain the new result.
+
+## OPC UA overflow patch
+
+`node-opcua-server` 2.187.16 asserts that notification queue overflow only occurs
+for Good values. Uncertain/Bad quality (or existing status metadata) instead crashes
+the server. The same assertions are present in the inspected 2.187.18 package.
+`node scripts/patch-opcua.mjs` removes only the two invalid Good-only assertions;
+the upstream status-bit handling and overflow diagnostic counter remain intact.
+
+Root `npm ci` applies the patch through `postinstall`. Both Docker dependency
+stages apply it explicitly after their script-disabled installs. For any other
+`--ignore-scripts` install, run the patch explicitly. It accepts only the recorded
+original or patched source digest, so an upstream change fails installation until
+reviewed. Remove it when the upstream implementation passes
+`node scripts/test-opcua-overflow.mjs` unmodified. That regression exercises both
+discard policies, quality, metadata, timestamps and source-value preservation,
+and also runs inside the production image's runtime smoke. This changes no
+collector acceptance rule and does not turn missing notifications into measurements.

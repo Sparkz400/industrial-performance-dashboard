@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { runInNewContext } from 'node:vm';
+import './test-opcua-overflow.mjs';
 
 const require = createRequire(import.meta.url);
 // Exercise the legacy Drizzle loader against its scoped esbuild security override.
