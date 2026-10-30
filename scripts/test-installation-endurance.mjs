@@ -520,6 +520,24 @@ try {
   browser = await chromium.launch({ headless: true });
   const sessions = [];
   const login = async (session) => {
+    if (session.lastLogin) {
+      const [loggedOut] = await Promise.all([
+        session.page.waitForResponse(
+          (response) =>
+            response.url() === api + "/api/v1/auth/logout" &&
+            response.request().method() === "POST" &&
+            response.status() === 200,
+        ),
+        session.page
+          .getByRole("button", { name: "Sign Out", exact: true })
+          .click(),
+      ]);
+      assert.equal(
+        loggedOut.status(),
+        200,
+        "Session renewal must revoke the previous session",
+      );
+    }
     const response = await session.page.goto(frontend + "/login");
     assert.equal(
       response.status(),
@@ -536,6 +554,7 @@ try {
     await session.page.getByRole("button", { name: /sign in|log in/i }).click();
     await session.page.waitForURL((url) => !url.pathname.includes("login"));
     session.lastLogin = Date.now();
+    session.loginCount = (session.loginCount ?? 0) + 1;
   };
   for (let i = 0; i < settings.users; i++) {
     const context = await browser.newContext({
@@ -582,6 +601,8 @@ try {
       username: users[i === 0 ? 0 : 1].username,
     };
     sessions.push(session);
+    await login(session);
+    // Exercise the hourly renewal path even in the short CI smoke.
     await login(session);
   }
   const jsonGet = async (session, path) =>
@@ -909,6 +930,10 @@ try {
       harnessResidentBytes: process.memoryUsage().rss,
       queryP95Ms: sorted[Math.floor((sorted.length - 1) * 0.95)],
       querySamples: sorted.length,
+      sessionRenewals: sessions.reduce(
+        (count, session) => count + session.loginCount - 1,
+        0,
+      ),
       completedReportId: report.id,
       resolvedAlarmId,
       reportSha256: createHash("sha256").update(pdf).digest("hex"),

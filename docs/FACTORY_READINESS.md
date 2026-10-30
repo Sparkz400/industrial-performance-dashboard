@@ -214,3 +214,17 @@ quality, metadata, overflow bits and diagnostic counters. Both queue discard pol
 are checked locally and in the packaged runtime. Dependency source changes require
 explicit patch review; see [dependency maintenance](DEPENDENCY_REVIEW.md#opc-ua-overflow-patch).
 The failed attempt contributes no accepted endurance duration.
+
+### Hourly session renewal follow-up — 2026-10-30
+
+The clean run on `1a5abff7` stopped after 11 successful recovery cycles (0.9622
+completed workload hours). At the hourly login refresh, all three browsers correctly
+redirected their still-authenticated `/login` visits to the dashboard. The harness
+then timed out waiting for the absent Username field; there were no page errors.
+
+Renewal now uses the visible Sign Out control, requires a successful server logout,
+then signs in through the normal form. Every run exercises this same renewal path
+once during startup, so the short CI smoke covers it without waiting an hour.
+Cycle receipts include `sessionRenewals`. Authentication and expiry rules are
+unchanged. The failed run is retained separately and contributes no passing duration
+to its fresh 72-hour replacement.

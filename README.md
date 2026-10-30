@@ -105,7 +105,8 @@ with attributable, versioned maintenance corrections and English/German screens.
 Saved shift revisions can be compared with explicit coverage, product-mix and
 definition checks; differences are withheld when evidence is not comparable.
 Installation endurance serves the compiled frontend and exercises the real collector,
-alarms, scheduled reports and signed-in browser sessions. A short run does not qualify
+alarms, scheduled reports and signed-in browser sessions with confirmed logout/login
+renewal. A short run does not qualify
 72-hour operation. Edge cursors wait for open measurement transactions; PLC alarm
 events remain in a durable local spool until PostgreSQL confirms storage.
 

@@ -86,6 +86,9 @@ forced-disconnect regression; replacement full-application acceptance is pending
 The 2026-10-30 follow-through in [PR #81](https://github.com/Sparkz400/performance_dashboard/pull/81)
 serves the compiled frontend during endurance and passes a four-cycle local recovery
 smoke. A new complete 72-hour receipt is still required; no failed duration is reused.
+The replacement on `1a5abff7` failed at hourly session renewal after 11 recovery
+cycles; the harness now confirms logout before login and exercises renewal in its
+short smoke. The full acceptance gate remains open.
 
 ### Daily factory workflows — current implementation
 
