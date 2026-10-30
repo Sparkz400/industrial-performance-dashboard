@@ -6,7 +6,7 @@ import { useSnackbar } from 'notistack';
 import api from '@/utils/api';
 import { widgetRegistry } from '../../widgets/registry/WidgetRegistry';
 import { useWidgetStore } from '@/stores/useWidgetStore';
-import { ActionTypes, useDebounce } from './useDashboardState';
+import { ActionTypes, isSameDashboardContent, useDebounce } from './useDashboardState';
 
 import type { Dashboard, DashboardTemplate, WidgetMeta, LayoutItem } from '@/types';
 import type { DashboardState, DashboardAction } from './useDashboardState';
@@ -439,18 +439,12 @@ export function useDashboardOperations({ state, dispatch }: UseDashboardOperatio
     const currentDashboard = state.dashboards.find((d) => d.id === state.selectedDashboardId);
     if (!currentDashboard) return;
 
-    const stateWidgetsStr = JSON.stringify(currentDashboard.widgets || []);
-    const contextWidgetsStr = JSON.stringify(debouncedWidgets);
-    const positions = (items: LayoutItem[]) =>
-      JSON.stringify(
-        items
-          .map(({ i, x, y, w, h }) => ({ i, x, y, w, h }))
-          .sort((a, b) => a.i.localeCompare(b.i)),
-      );
-    const stateLayoutStr = positions(currentDashboard.layout || []);
-    const contextLayoutStr = positions(debouncedLayout);
-
-    if (stateWidgetsStr !== contextWidgetsStr || stateLayoutStr !== contextLayoutStr) {
+    if (
+      !isSameDashboardContent(currentDashboard, {
+        widgets: debouncedWidgets,
+        layout: debouncedLayout,
+      })
+    ) {
       dispatch({
         type: ActionTypes.UPDATE_DASHBOARD_CONTENT,
         payload: {
