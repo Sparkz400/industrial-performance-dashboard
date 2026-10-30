@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { createServer } from "node:net";
 import { once } from "node:events";
 import { randomUUID } from "node:crypto";
+import "./test-opcua-overflow.mjs";
 
 const require = createRequire(
   new URL("../server/package.json", import.meta.url),

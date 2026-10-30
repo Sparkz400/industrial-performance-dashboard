@@ -83,6 +83,9 @@ including the isolated supervisor/comparison browser fixtures. FR01's harness an
 short-run recovery checks pass, but later sustained/CI failures keep its 72-hour
 gate open. A reproduced checked-out database-client crash has a focused fix and
 forced-disconnect regression; replacement full-application acceptance is pending.
+The 2026-10-30 follow-through in [PR #81](https://github.com/Sparkz400/performance_dashboard/pull/81)
+serves the compiled frontend during endurance and passes a four-cycle local recovery
+smoke. A new complete 72-hour receipt is still required; no failed duration is reused.
 
 ### Daily factory workflows — current implementation
 
@@ -213,8 +216,10 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Progress: [dependency review](docs/DEPENDENCY_REVIEW.md), clean root install and
   peer validation; full runtime/development npm audit zero. Scoped UUID/esbuild fixes,
   Storybook builds, Drizzle transforms/generation and CSRF/socket-origin regressions pass.
-  Follow-up: qualify coordinated MUI, Storybook/Vite, lint, Vitest 5, virtualization,
-  grid-layout and Node major migrations. The full boundary audit remains open.
+  Follow-up: Vitest 5, Storybook 10/Vite 8, MUI 9, react-window 2 and react-grid-layout 2
+  are migrated in [PR #81](https://github.com/Sparkz400/performance_dashboard/pull/81) ([decisions](docs/DEPENDENCY_REVIEW.md#coordinated-major-migrations--2026-10-30)).
+  ESLint stays on 9 until eslint-plugin-react supports 10; Node 26 needs its own support
+  decision. The full boundary audit remains open.
   Image remediation complete: Node 24/Wolfi with direct PDF rendering removes the
   Debian/Chromium runtime. Full Trivy scan: zero findings across 28 OS and 557 Node
   packages. CI blocks all high/critical findings, including unfixed ones. Actual-image

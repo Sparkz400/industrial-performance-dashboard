@@ -14,7 +14,7 @@ import {
   Stack,
   Chip,
 } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -106,16 +106,38 @@ const ComplianceReportsTab: React.FC = () => {
         <CardContent>
           <Stack spacing={2}>
             {report.totalRecords !== undefined && (
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Typography variant="body2" color="text.secondary">
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   Total Records:
                 </Typography>
                 <Chip label={String(report.totalRecords)} size="small" color="primary" />
               </Stack>
             )}
             {report.signatureCoverage !== undefined && (
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Typography variant="body2" color="text.secondary">
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   Signature Coverage:
                 </Typography>
                 <Chip
@@ -126,8 +148,19 @@ const ComplianceReportsTab: React.FC = () => {
               </Stack>
             )}
             {report.reasonCoverage !== undefined && (
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Typography variant="body2" color="text.secondary">
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   Reason Coverage:
                 </Typography>
                 <Chip
@@ -138,8 +171,19 @@ const ComplianceReportsTab: React.FC = () => {
               </Stack>
             )}
             {report.valid !== undefined && (
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Typography variant="body2" color="text.secondary">
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   Integrity Valid:
                 </Typography>
                 <Chip
@@ -206,7 +250,12 @@ const ComplianceReportsTab: React.FC = () => {
                 <Typography variant="subtitle1" gutterBottom>
                   {rt.title}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {rt.description}
                 </Typography>
               </CardContent>
@@ -220,7 +269,15 @@ const ComplianceReportsTab: React.FC = () => {
         <Typography variant="h6" gutterBottom>
           Report Filters
         </Typography>
-        <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap alignItems="flex-end">
+        <Stack
+          direction="row"
+          spacing={2}
+          useFlexGap
+          sx={{
+            flexWrap: 'wrap',
+            alignItems: 'flex-end',
+          }}
+        >
           <TextField
             label="Date From"
             type="date"

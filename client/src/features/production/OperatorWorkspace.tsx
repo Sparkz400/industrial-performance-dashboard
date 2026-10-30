@@ -327,7 +327,11 @@ export default function OperatorWorkspace() {
   return (
     <Stack spacing={2}>
       <Typography variant="h5">{t('Operator handover')} </Typography>
-      <Typography color="text.secondary">
+      <Typography
+        sx={{
+          color: 'text.secondary',
+        }}
+      >
         {t(
           'Record observations, assign follow-up actions and review the next shift’s outstanding work. Manual counts stay separate from measured production.',
         )}{' '}
@@ -389,7 +393,7 @@ export default function OperatorWorkspace() {
           setHistory(null);
         }}
       >
-        {assets.data?.map((asset) => (
+        {(assets.data ?? []).map((asset) => (
           <MenuItem key={asset.id} value={asset.id}>
             {asset.name}
           </MenuItem>
@@ -458,7 +462,11 @@ export default function OperatorWorkspace() {
                 borderLeftColor: entry.priority === 'high' ? 'warning.main' : 'divider',
               }}
             >
-              <Typography fontWeight={700}>
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                }}
+              >
                 {entry.kind} · {entry.priority} {t('priority ·')} {entry.status}
               </Typography>
               <Typography sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
@@ -756,7 +764,12 @@ export default function OperatorWorkspace() {
                     {t('Keep draft on this device', 'Entwurf auf diesem Gerät speichern')}
                   </Button>
                 </Stack>
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {t(
                     'Device drafts expire after 24 hours. Sign out to erase them on shared devices. Offline reloads require sign-in verification before drafts can be opened.',
                     'Geräteentwürfe verfallen nach 24 Stunden. Auf gemeinsam genutzten Geräten zum Löschen abmelden. Nach Offline-Neuladen muss die Anmeldung vor dem Öffnen bestätigt werden.',

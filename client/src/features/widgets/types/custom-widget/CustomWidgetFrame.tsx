@@ -124,7 +124,12 @@ export default function CustomWidgetFrame({ config }: WidgetComponentProps) {
         referrerPolicy="no-referrer"
         sx={{ border: 0, flex: 1, minHeight: 0, width: '100%' }}
       />
-      <Typography variant="caption" color="text.secondary">
+      <Typography
+        variant="caption"
+        sx={{
+          color: 'text.secondary',
+        }}
+      >
         Sandboxed third-party widget {registration.manifest.name} v{version};{' '}
         {readSeries ? `receives ${nodeKeys.join(', ')} only` : 'receives no data'}.
         {ignored ? ` Ignored ${ignored} message(s) it sent.` : ''}

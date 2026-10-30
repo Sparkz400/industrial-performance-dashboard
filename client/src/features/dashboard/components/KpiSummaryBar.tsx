@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography, alpha, useTheme } from '@mui/material';
 import { motion } from 'framer-motion';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
 import SpeedIcon from '@mui/icons-material/Speed';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { useStatusStore } from '@/stores/useStatusStore';

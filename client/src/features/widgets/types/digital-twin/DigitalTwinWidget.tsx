@@ -54,7 +54,12 @@ const DigitalTwinWidget: React.FC<DigitalTwinWidgetProps> = ({ config = {}, onEr
           p: 2,
         }}
       >
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           Select a Digital Twin instance in widget settings
         </Typography>
       </Box>
@@ -89,7 +94,12 @@ const DigitalTwinWidget: React.FC<DigitalTwinWidgetProps> = ({ config = {}, onEr
           p: 2,
         }}
       >
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           Digital Twin instance not found.
         </Typography>
       </Box>
@@ -116,7 +126,13 @@ const DigitalTwinWidget: React.FC<DigitalTwinWidgetProps> = ({ config = {}, onEr
         <DialogContent>
           {selectedBinding && (
             <Box>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
+              <Typography
+                variant="body2"
+                gutterBottom
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 Node Key: {selectedBinding.nodeKey}
               </Typography>
               {liveData[selectedBinding.nodeKey] ? (
@@ -131,20 +147,33 @@ const DigitalTwinWidget: React.FC<DigitalTwinWidgetProps> = ({ config = {}, onEr
                       <Typography
                         component="span"
                         variant="h6"
-                        color="text.secondary"
-                        sx={{ ml: 1 }}
+                        sx={{
+                          color: 'text.secondary',
+                          ml: 1,
+                        }}
                       >
                         {selectedBinding.unit}
                       </Typography>
                     )}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     Last updated:{' '}
                     {new Date(liveData[selectedBinding.nodeKey].timestamp).toLocaleString()}
                   </Typography>
                 </>
               ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                    mt: 2,
+                  }}
+                >
                   No live data available.
                 </Typography>
               )}

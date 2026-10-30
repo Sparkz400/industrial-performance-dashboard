@@ -175,7 +175,12 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
       <DialogTitle>
         Node Mappings — {machine.name}
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           {machine.endpointUrl}
         </Typography>
       </DialogTitle>
@@ -222,7 +227,13 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
                   {mappings.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} align="center">
-                        <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: 'text.secondary',
+                            py: 2,
+                          }}
+                        >
                           No mappings yet. Browse nodes or add manually.
                         </Typography>
                       </TableCell>
@@ -293,7 +304,9 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
                             }
                             size="small"
                             variant="standard"
-                            inputProps={{ min: 100, step: 100 }}
+                            slotProps={{
+                              htmlInput: { min: 100, step: 100 },
+                            }}
                           />
                         </TableCell>
                         <TableCell>

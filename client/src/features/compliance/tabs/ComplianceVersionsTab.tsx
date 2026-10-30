@@ -73,7 +73,14 @@ const ComplianceVersionsTab: React.FC = () => {
         {selectedDashboard && <DashboardVersionHistory dashboardId={selectedDashboard} />}
 
         {!selectedDashboard && !isLoading && (
-          <Typography variant="body2" color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+              py: 4,
+              textAlign: 'center',
+            }}
+          >
             Select a dashboard above to view its version history.
           </Typography>
         )}

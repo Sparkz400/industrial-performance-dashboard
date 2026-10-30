@@ -242,7 +242,14 @@ export default function ProductionPage() {
                 : t('Unreceived intervals remain unknown.')}
             </Alert>
           )}
-          <Stack direction="row" flexWrap="wrap" gap={2} data-print-hide>
+          <Stack
+            direction="row"
+            data-print-hide
+            sx={{
+              flexWrap: 'wrap',
+              gap: 2,
+            }}
+          >
             <TextField
               select
               label={t('Select shift')}
@@ -275,7 +282,13 @@ export default function ProductionPage() {
                   'Commission the machine first. Each shift preserves its mapping and cycle standard. Include an explicit offset for overnight shifts and daylight-saving changes.',
                 )}{' '}
               </Typography>
-              <Stack direction="row" flexWrap="wrap" gap={2}>
+              <Stack
+                direction="row"
+                sx={{
+                  flexWrap: 'wrap',
+                  gap: 2,
+                }}
+              >
                 <TextField
                   select
                   label={t('Shift machine')}
@@ -283,7 +296,7 @@ export default function ProductionPage() {
                   onChange={(e) => setDraft((d) => ({ ...d, machineId: e.target.value }))}
                   sx={{ minWidth: 220 }}
                 >
-                  {assets.data?.map((asset) => (
+                  {(assets.data ?? []).map((asset) => (
                     <MenuItem key={asset.id} value={asset.id}>
                       {asset.name}
                     </MenuItem>
@@ -394,7 +407,13 @@ export default function ProductionPage() {
                   ? t('Reconciled against recorded independent counts')
                   : t('Incomplete — review the issues below. This report is not verified.')}
               </Alert>
-              <Stack direction="row" flexWrap="wrap" gap={1}>
+              <Stack
+                direction="row"
+                sx={{
+                  flexWrap: 'wrap',
+                  gap: 1,
+                }}
+              >
                 {Object.entries(data.oee).map(([key, value]) => (
                   <Chip key={key} label={`${key}: ${percent(value)}`} />
                 ))}
@@ -603,7 +622,14 @@ export default function ProductionPage() {
                   'Record the original shift-sheet or source-system totals and its reference. Evidence is preserved once saved; mismatches remain visible.',
                 )}{' '}
               </Typography>
-              <Stack direction="row" flexWrap="wrap" gap={2} sx={{ mt: 2 }}>
+              <Stack
+                direction="row"
+                sx={{
+                  flexWrap: 'wrap',
+                  gap: 2,
+                  mt: 2,
+                }}
+              >
                 {(['total', 'good', 'reject', 'reference'] as const).map((key) => (
                   <TextField
                     key={key}

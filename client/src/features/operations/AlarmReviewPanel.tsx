@@ -106,7 +106,11 @@ export default function AlarmReviewPanel({ machineId }: { machineId: number }) {
             {t('Peak starts in ten minutes', 'Maximale Starts in zehn Minuten')}:{' '}
             {report.peakTenMinuteStarts}
           </Typography>
-          <Typography color="text.secondary">
+          <Typography
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {t(
               'Acknowledgements and delivery outcomes are read now, including outcomes after the selected window. Delivery delay starts when an event is queued. Deferred notifications describe current maintenance suppression or UTC quiet hours, not historical suppression.',
               'Quittierungen und Zustellergebnisse werden jetzt gelesen, auch nach dem gewählten Zeitraum. Die Zustellverzögerung beginnt mit dem Einreihen eines Ereignisses. Zurückgestellte Benachrichtigungen beschreiben aktuelle Wartungsunterdrückung oder UTC-Ruhezeiten, keine historische Unterdrückung.',

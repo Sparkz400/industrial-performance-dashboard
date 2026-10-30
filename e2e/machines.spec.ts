@@ -18,7 +18,7 @@ test("machine settings survive create, edit and reload, and can be deleted", asy
   await form.getByLabel("IP Address").fill("localhost");
   await form.getByLabel(/^Port/).fill("4841");
   await form.getByLabel("Resource Path").fill("/UA/Test");
-  await form.getByRole("checkbox", { name: "Active" }).uncheck();
+  await form.getByRole("switch", { name: "Active" }).uncheck();
   await form.getByRole("button", { name: "Add", exact: true }).click();
   await expect(form).not.toBeVisible();
   await page.reload();
@@ -30,7 +30,7 @@ test("machine settings survive create, edit and reload, and can be deleted", asy
   await card.getByRole("button", { name: "Edit", exact: true }).click();
   await expect(form.getByLabel(/^Port/)).toHaveValue("4841");
   await expect(
-    form.getByRole("checkbox", { name: "Active" }),
+    form.getByRole("switch", { name: "Active" }),
   ).not.toBeChecked();
   await form.getByLabel("Resource Path").fill("/UA/Updated");
   await form.getByRole("button", { name: "Update", exact: true }).click();

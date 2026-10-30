@@ -85,7 +85,14 @@ const ComplianceAuditPage: React.FC = () => {
 
   return (
     <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 3,
+        }}
+      >
         <Typography variant="h4">Compliance Audit Trail</Typography>
         <Stack direction="row" spacing={1}>
           <Button
@@ -118,7 +125,14 @@ const ComplianceAuditPage: React.FC = () => {
 
       {/* Filters */}
       <Paper sx={{ p: 2, mb: 2 }}>
-        <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+        <Stack
+          direction="row"
+          spacing={2}
+          useFlexGap
+          sx={{
+            flexWrap: 'wrap',
+          }}
+        >
           <TextField
             select
             label="Action"
@@ -219,7 +233,13 @@ const ComplianceAuditPage: React.FC = () => {
                   </TableCell>
                   <TableCell>{entry.entityType}</TableCell>
                   <TableCell>
-                    <Typography variant="body2" fontFamily="monospace" fontSize="0.8rem">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontFamily: 'monospace',
+                        fontSize: '0.8rem',
+                      }}
+                    >
                       {entry.entityId}
                     </Typography>
                   </TableCell>
@@ -255,7 +275,12 @@ const ComplianceAuditPage: React.FC = () => {
             ) : (
               <TableRow>
                 <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     No compliance logs found.
                   </Typography>
                 </TableCell>

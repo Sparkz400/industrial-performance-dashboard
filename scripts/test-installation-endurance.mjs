@@ -11,6 +11,7 @@ import {
   appendFile,
   statfs,
   copyFile,
+  cp,
 } from "node:fs/promises";
 import { resolve, join, dirname } from "node:path";
 import { cpus, totalmem, platform, arch } from "node:os";
@@ -114,7 +115,7 @@ const state = {
   passed: false,
   full72Hours: false,
   scope:
-    "Owned OPC UA simulator, production application bootstrap/collector/alarms/report scheduler, PostgreSQL, browser sessions, Vite frontend and loopback SMTP",
+    "Owned OPC UA simulator, production application bootstrap/collector/alarms/report scheduler, PostgreSQL, browser sessions, compiled frontend and loopback SMTP",
   exclusions: [
     "Physical-machine qualification",
     "Production image/deployment qualification",
@@ -126,7 +127,6 @@ const state = {
 let app,
   pool,
   browser,
-  vite,
   ua,
   smtp,
   generator,
@@ -252,6 +252,9 @@ try {
       .digest("hex"),
     applicationEntrySha256: createHash("sha256")
       .update(await readFile(join(root, "server/dist/app.js")))
+      .digest("hex"),
+    frontendEntrySha256: createHash("sha256")
+      .update(await readFile(join(root, "client/dist/index.html")))
       .digest("hex"),
   });
   pool = new pg.Pool({
@@ -433,18 +436,11 @@ try {
   ).rows[0].id;
 
   const api = `http://127.0.0.1:${apiPort}`;
-  process.env.VITE_API_BASE_URL = api + "/api/v1";
-  process.env.VITE_WEBSOCKET_ADDR = api;
-  const { createServer: createVite } = await import("vite");
-  vite = await createVite({
-    configFile: join(root, "client/vite.config.ts"),
-    root: join(root, "client"),
-    cacheDir: join(directory, "vite-cache"),
-    server: { host: "127.0.0.1", port: 0, strictPort: false },
-    logLevel: "error",
+  // Freeze the built frontend and exercise the application's real static-file path.
+  await cp(join(root, "client/dist"), join(directory, "public"), {
+    recursive: true,
   });
-  await vite.listen();
-  const frontend = `http://127.0.0.1:${vite.httpServer.address().port}`;
+  const frontend = api;
   const env = {
     ...process.env,
     NODE_ENV: "production",
@@ -524,7 +520,17 @@ try {
   browser = await chromium.launch({ headless: true });
   const sessions = [];
   const login = async (session) => {
-    await session.page.goto(frontend + "/login");
+    const response = await session.page.goto(frontend + "/login");
+    assert.equal(
+      response.status(),
+      200,
+      "The compiled login route must be served",
+    );
+    assert.match(
+      await response.text(),
+      /\/assets\//,
+      "Expected the built frontend",
+    );
     await session.page.getByLabel("Username").fill(session.username);
     await session.page.getByLabel(/^password/i).fill(password);
     await session.page.getByRole("button", { name: /sign in|log in/i }).click();
@@ -967,7 +973,6 @@ try {
   clearInterval(generator);
   await killApp();
   await browser?.close();
-  await vite?.close();
   await smtp?.close();
   await ua?.shutdown(0);
   await (await import("node-opcua")).OPCUACertificateManager.disposeAll();

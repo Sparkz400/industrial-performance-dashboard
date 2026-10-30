@@ -10,7 +10,7 @@ import {
   IconButton,
   CircularProgress,
 } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import LanguageIcon from '@mui/icons-material/Language';
 import PaletteIcon from '@mui/icons-material/Palette';
@@ -188,7 +188,14 @@ const SettingsPage: React.FC = () => {
       {/* Status overview */}
       <Typography variant="h6" gutterBottom>
         {t('System Status')}
-        <Typography variant="body2" color="text.secondary" component="span" sx={{ ml: 2 }}>
+        <Typography
+          variant="body2"
+          component="span"
+          sx={{
+            color: 'text.secondary',
+            ml: 2,
+          }}
+        >
           {t('Last updated:')} {formatDate(lastChecked)}
         </Typography>
       </Typography>

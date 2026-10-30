@@ -118,7 +118,13 @@ const SpcAlertsList: React.FC<SpcAlertsListProps> = ({ profileId, machineId }) =
                   <TableCell>{new Date(alert.createdAt).toLocaleString()}</TableCell>
                   <TableCell>{alert.profileName ?? `Profile #${alert.profileId}`}</TableCell>
                   <TableCell>
-                    <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontFamily: 'monospace',
+                        fontSize: '0.75rem',
+                      }}
+                    >
                       {alert.nodeKey}
                     </Typography>
                   </TableCell>
@@ -156,7 +162,12 @@ const SpcAlertsList: React.FC<SpcAlertsListProps> = ({ profileId, machineId }) =
             ) : (
               <TableRow>
                 <TableCell colSpan={9} align="center" sx={{ py: 3 }}>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     No SPC alerts found.
                   </Typography>
                 </TableCell>

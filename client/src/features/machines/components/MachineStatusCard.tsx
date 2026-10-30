@@ -65,7 +65,13 @@ const MachineStatusCard: React.FC<MachineStatusCardProps> = ({
           />
         </Box>
 
-        <Typography variant="body2" color="text.secondary" gutterBottom>
+        <Typography
+          variant="body2"
+          gutterBottom
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           {machine.endpointUrl}
         </Typography>
 

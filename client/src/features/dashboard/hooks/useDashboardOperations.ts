@@ -6,9 +6,9 @@ import { useSnackbar } from 'notistack';
 import api from '@/utils/api';
 import { widgetRegistry } from '../../widgets/registry/WidgetRegistry';
 import { useWidgetStore } from '@/stores/useWidgetStore';
-import { ActionTypes, useDebounce } from './useDashboardState';
+import { ActionTypes, isSameDashboardContent, useDebounce } from './useDashboardState';
 
-import type { Dashboard, DashboardTemplate, WidgetMeta } from '@/types';
+import type { Dashboard, DashboardTemplate, WidgetMeta, LayoutItem } from '@/types';
 import type { DashboardState, DashboardAction } from './useDashboardState';
 
 interface UseDashboardOperationsParams {
@@ -434,15 +434,17 @@ export function useDashboardOperations({ state, dispatch }: UseDashboardOperatio
 
   useEffect(() => {
     if (!state.initialized || !state.selectedDashboardId) return;
+    // A load or dashboard switch must not write the previous debounced snapshot back.
+    if (debouncedWidgets !== widgets || debouncedLayout !== layout) return;
     const currentDashboard = state.dashboards.find((d) => d.id === state.selectedDashboardId);
     if (!currentDashboard) return;
 
-    const stateWidgetsStr = JSON.stringify(currentDashboard.widgets || []);
-    const contextWidgetsStr = JSON.stringify(debouncedWidgets);
-    const stateLayoutStr = JSON.stringify(currentDashboard.layout || []);
-    const contextLayoutStr = JSON.stringify(debouncedLayout);
-
-    if (stateWidgetsStr !== contextWidgetsStr || stateLayoutStr !== contextLayoutStr) {
+    if (
+      !isSameDashboardContent(currentDashboard, {
+        widgets: debouncedWidgets,
+        layout: debouncedLayout,
+      })
+    ) {
       dispatch({
         type: ActionTypes.UPDATE_DASHBOARD_CONTENT,
         payload: {
@@ -455,6 +457,8 @@ export function useDashboardOperations({ state, dispatch }: UseDashboardOperatio
   }, [
     debouncedWidgets,
     debouncedLayout,
+    widgets,
+    layout,
     state.selectedDashboardId,
     state.initialized,
     state.dashboards,

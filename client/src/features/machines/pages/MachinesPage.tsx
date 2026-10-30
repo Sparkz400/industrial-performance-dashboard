@@ -109,10 +109,20 @@ const MachinesPage: React.FC = () => {
     <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h4" fontWeight="bold">
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 'bold',
+            }}
+          >
             Machines
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             Manage OPC-UA server connections and node mappings
           </Typography>
         </Box>
@@ -145,10 +155,22 @@ const MachinesPage: React.FC = () => {
         </Box>
       ) : machines.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
-          <Typography variant="h6" color="text.secondary" gutterBottom>
+          <Typography
+            variant="h6"
+            gutterBottom
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             No machines configured
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+              mb: 3,
+            }}
+          >
             Add an OPC-UA server to start monitoring. You can browse its nodes and map them to
             widgets.
           </Typography>
@@ -159,7 +181,14 @@ const MachinesPage: React.FC = () => {
       ) : (
         <Grid container spacing={2}>
           {machines.map((machine) => (
-            <Grid item xs={12} sm={6} md={4} key={machine.id}>
+            <Grid
+              key={machine.id}
+              size={{
+                xs: 12,
+                sm: 6,
+                md: 4,
+              }}
+            >
               <MachineStatusCard
                 machine={machine}
                 onEdit={(m) => {

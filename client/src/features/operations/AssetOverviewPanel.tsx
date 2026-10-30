@@ -160,9 +160,11 @@ export default function AssetOverviewPanel({
           <Stack
             direction="row"
             useFlexGap
-            flexWrap="wrap"
             spacing={1}
             aria-label={t('Asset elements', 'Anlagenelemente')}
+            sx={{
+              flexWrap: 'wrap',
+            }}
           >
             {asset.bindings.map((item) => (
               <Button
@@ -200,7 +202,14 @@ export default function AssetOverviewPanel({
                     ? new Date(reading.receivedAt).toLocaleString(language)
                     : t('Unknown')}
                 </Typography>
-                <Stack direction="row" useFlexGap flexWrap="wrap" spacing={1}>
+                <Stack
+                  direction="row"
+                  useFlexGap
+                  spacing={1}
+                  sx={{
+                    flexWrap: 'wrap',
+                  }}
+                >
                   <Button onClick={() => setView('history')}>
                     {t('Open signal history', 'Signalverlauf öffnen')}
                   </Button>

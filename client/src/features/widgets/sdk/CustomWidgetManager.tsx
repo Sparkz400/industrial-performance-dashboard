@@ -108,7 +108,13 @@ export default function CustomWidgetManager() {
         </Button>
       </Box>
 
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: 'text.secondary',
+          mb: 3,
+        }}
+      >
         Register a widget manifest, then add a Custom Widget to a dashboard and choose the machine
         signals it receives. Widgets run in a sandbox with their own opaque origin: they cannot read
         this page, your session, storage or the API, and they receive series only when their
@@ -118,7 +124,11 @@ export default function CustomWidgetManager() {
       {widgets.length === 0 ? (
         <Paper sx={{ p: 4, textAlign: 'center' }}>
           <ExtensionIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
-          <Typography color="text.secondary">
+          <Typography
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             No custom widgets installed. Install one by providing a manifest URL.
           </Typography>
         </Paper>
@@ -135,7 +145,13 @@ export default function CustomWidgetManager() {
                   <ListItemText
                     primary={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography fontWeight={600}>{manifest.name}</Typography>
+                        <Typography
+                          sx={{
+                            fontWeight: 600,
+                          }}
+                        >
+                          {manifest.name}
+                        </Typography>
                         <Chip label={`v${manifest.version}`} size="small" variant="outlined" />
                         <Chip
                           label={widget.isActive ? 'Active' : 'Inactive'}
@@ -146,10 +162,20 @@ export default function CustomWidgetManager() {
                     }
                     secondary={
                       <Box sx={{ mt: 0.5 }}>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: 'text.secondary',
+                          }}
+                        >
                           {manifest.description}
                         </Typography>
-                        <Typography variant="caption" color="text.disabled">
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: 'text.disabled',
+                          }}
+                        >
                           By {manifest.author} &middot; {manifest.category}
                         </Typography>
                       </Box>

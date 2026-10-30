@@ -13,7 +13,7 @@ import {
   AccordionSummary,
   AccordionDetails,
 } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import PaletteIcon from '@mui/icons-material/Palette';
 import BrowserUpdatedIcon from '@mui/icons-material/BrowserUpdated';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -66,7 +66,9 @@ const AppearanceTab: React.FC = () => {
                 >
                   <Typography
                     variant="body2"
-                    fontWeight={themeMode === 'light' && !useSystemTheme ? 'bold' : 'normal'}
+                    sx={{
+                      fontWeight: themeMode === 'light' && !useSystemTheme ? 'bold' : 'normal',
+                    }}
                   >
                     Light
                   </Typography>
@@ -93,7 +95,9 @@ const AppearanceTab: React.FC = () => {
                 >
                   <Typography
                     variant="body2"
-                    fontWeight={themeMode === 'dark' && !useSystemTheme ? 'bold' : 'normal'}
+                    sx={{
+                      fontWeight: themeMode === 'dark' && !useSystemTheme ? 'bold' : 'normal',
+                    }}
                   >
                     Dark
                   </Typography>
@@ -119,7 +123,12 @@ const AppearanceTab: React.FC = () => {
                     borderColor: useSystemTheme ? 'primary.main' : 'divider',
                   }}
                 >
-                  <Typography variant="body2" fontWeight={useSystemTheme ? 'bold' : 'normal'}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: useSystemTheme ? 'bold' : 'normal',
+                    }}
+                  >
                     System
                   </Typography>
                 </Card>

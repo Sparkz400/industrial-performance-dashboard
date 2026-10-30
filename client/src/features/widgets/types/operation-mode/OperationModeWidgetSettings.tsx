@@ -71,7 +71,13 @@ const OperationModeWidgetSettings: React.FC<OperationModeWidgetSettingsProps> = 
       <Typography variant="subtitle1" gutterBottom>
         Data Points
       </Typography>
-      <Typography variant="body2" color="text.secondary" gutterBottom>
+      <Typography
+        variant="body2"
+        gutterBottom
+        sx={{
+          color: 'text.secondary',
+        }}
+      >
         Maximum number of data points to display: {maxPoints}
       </Typography>
       <Slider

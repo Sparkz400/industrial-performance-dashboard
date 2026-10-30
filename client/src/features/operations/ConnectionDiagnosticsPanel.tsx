@@ -122,7 +122,11 @@ export default function ConnectionDiagnosticsPanel({ machineId }: { machineId: n
                 {t('Last refused write', 'Letzte abgewiesene Speicherung')}:{' '}
                 {date(data.ingestion?.lastRejectedAt)}
               </Typography>
-              <Typography color="text.secondary">
+              <Typography
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {t(
                   'Pending values may already be stored while alarm evaluation catches up. Revised queue sizes are server limits, not observed queue occupancy.',
                   'Ausstehende Werte können bereits gespeichert sein, während die Alarmauswertung aufholt. Bestätigte Puffergrößen sind Servergrenzen und keine gemessene Pufferbelegung.',

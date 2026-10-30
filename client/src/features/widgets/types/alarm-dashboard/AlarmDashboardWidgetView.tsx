@@ -14,7 +14,7 @@ import {
   IconButton,
 } from '@mui/material';
 import WidgetSkeleton from '@/shared/components/loading/WidgetSkeleton';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined';
 import { SEVERITY_LEVELS, ALARM_STATUS } from './useAlarmData';
 import type { Alarm, SeverityLevel, AlarmStatus } from './useAlarmData';
 

@@ -212,7 +212,7 @@ export default function BatchQualityPanel({ batchId }: { batchId: number }) {
         value={owner}
         onChange={(e) => setOwner(e.target.value)}
       >
-        {owners.data?.map((o) => (
+        {(owners.data ?? []).map((o) => (
           <MenuItem key={o.id} value={o.id}>
             {o.username}
           </MenuItem>

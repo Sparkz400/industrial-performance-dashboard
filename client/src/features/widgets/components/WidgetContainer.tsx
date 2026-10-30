@@ -442,7 +442,13 @@ const WidgetContainer = memo<WidgetContainerProps>(
                   height: '100%',
                 }}
               >
-                <Typography color="text.disabled">Viewing in fullscreen</Typography>
+                <Typography
+                  sx={{
+                    color: 'text.disabled',
+                  }}
+                >
+                  Viewing in fullscreen
+                </Typography>
               </Box>
             </Paper>
           </Box>
@@ -450,8 +456,10 @@ const WidgetContainer = memo<WidgetContainerProps>(
             open={true}
             onClose={toggleFullscreen}
             fullScreen
-            PaperProps={{
-              sx: { background: (theme) => theme.palette.background.default },
+            slotProps={{
+              paper: {
+                sx: { background: (theme) => theme.palette.background.default },
+              },
             }}
           >
             <Box

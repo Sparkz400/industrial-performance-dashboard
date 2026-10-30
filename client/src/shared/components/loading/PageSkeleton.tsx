@@ -11,7 +11,14 @@ interface PageSkeletonProps {
 const CardsSkeleton: React.FC<{ count: number }> = ({ count }) => (
   <Grid container spacing={2}>
     {Array.from({ length: count }, (_, i) => (
-      <Grid item xs={12} sm={6} md={4} key={i}>
+      <Grid
+        key={i}
+        size={{
+          xs: 12,
+          sm: 6,
+          md: 4,
+        }}
+      >
         <Skeleton
           variant="rectangular"
           height={180}

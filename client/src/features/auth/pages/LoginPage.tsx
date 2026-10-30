@@ -104,10 +104,21 @@ export default function LoginPage() {
               >
                 <Lock sx={{ color: 'primary.contrastText', fontSize: 28 }} />
               </Box>
-              <Typography variant="h5" fontWeight={700}>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                }}
+              >
                 {t('Performance Dashboard')}{' '}
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                  mt: 0.5,
+                }}
+              >
                 {t('Sign in to continue')}{' '}
               </Typography>
             </Box>
@@ -137,8 +148,12 @@ export default function LoginPage() {
                 </Button>
                 <Typography
                   variant="body2"
-                  color="text.secondary"
-                  sx={{ mt: 2, mb: 1, textAlign: 'center' }}
+                  sx={{
+                    color: 'text.secondary',
+                    mt: 2,
+                    mb: 1,
+                    textAlign: 'center',
+                  }}
                 >
                   {t(
                     'Local sign-in is for recovery accounts only.',

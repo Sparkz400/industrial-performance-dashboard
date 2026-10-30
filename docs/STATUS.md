@@ -1,5 +1,14 @@
 # Current status
 
+## Recovery follow-through — 2026-10-30
+
+Installation endurance now serves the compiled frontend through the real application,
+including page routes beneath hidden installation directories. Edge synchronization
+waits for pending measurement writers before capturing its cursor horizon. PLC alarm
+transitions are durably spooled and retried after database failures, with a visible
+pending count. A guarded dependency patch preserves non-Good OPC UA quality during
+server notification queue overflow. These regressions do not close the separate 72-hour or physical-pilot gates.
+
 Performance Dashboard is development software. Its intended starting point is an
 owned simulator or an isolated test installation using OPC UA scalar signals.
 
@@ -265,7 +274,7 @@ simulator evidence do not establish physical-machine acceptance or release readi
 - Separate companies must use separate installations. Tenant isolation is unqualified.
 - The full npm audit reports zero vulnerabilities, including development tools.
   Security CI now blocks advisories at every severity and preserves the full audit.
-  Scoped UUID/esbuild overrides and their compatibility checks are documented in
+  The scoped esbuild override and its compatibility check are documented in
   [the review](DEPENDENCY_REVIEW.md). CSRF and cross-origin socket regression checks pass.
 - The Node 24/Wolfi image renders scheduled PDFs without Chromium and has zero
   findings in the pilot image's full scan (28 OS and 556 Node packages). Actual-image collection,

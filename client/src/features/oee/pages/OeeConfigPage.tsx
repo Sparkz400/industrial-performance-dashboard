@@ -203,10 +203,20 @@ const OeeConfigPage: React.FC = () => {
     <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h4" fontWeight="bold">
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 'bold',
+            }}
+          >
             OEE Configuration
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             Configure OEE calculation parameters per machine
           </Typography>
         </Box>
@@ -254,7 +264,12 @@ const OeeConfigPage: React.FC = () => {
 
       {!selectedMachineId ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
-          <Typography variant="h6" color="text.secondary">
+          <Typography
+            variant="h6"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             Select a machine to configure OEE parameters
           </Typography>
         </Box>
@@ -367,7 +382,9 @@ const OeeConfigPage: React.FC = () => {
                   }))
                 }
                 fullWidth
-                inputProps={{ min: 1, max: 24 }}
+                slotProps={{
+                  htmlInput: { min: 1, max: 24 },
+                }}
               />
               <FormControlLabel
                 control={
@@ -417,7 +434,9 @@ const OeeConfigPage: React.FC = () => {
                   value={manualEntry.date}
                   onChange={(e) => setManualEntry((prev) => ({ ...prev, date: e.target.value }))}
                   fullWidth
-                  InputLabelProps={{ shrink: true }}
+                  slotProps={{
+                    inputLabel: { shrink: true },
+                  }}
                 />
                 <TextField
                   label="Production Count"

@@ -175,9 +175,12 @@ to read-only operation. It never acknowledges, confirms or comments. Events are 
 append-only with the source EventId, condition, source, times, PLC severity (also shown
 on the application scale), message and active/acknowledged state; a re-sent EventId is
 stored once. Events replayed by a refresh are marked as resent, since they are current
-state, not new transitions. Granted accounts see the latest 200. An event that fails to
-store is counted, not retried: current conditions return with the next refresh, but
-transitions during a database outage are lost (`test-plc-alarms.mjs`). These PLC alarms
+state, not new transitions. Granted accounts see the latest 200. Received events are
+durably spooled beside `OPCUA_SPOOL_PATH` in a `.plc-alarms.sqlite` file and retried
+until PostgreSQL confirms the insert. The pending count is visible. The spool uses
+the configured entry limit and free-space reserve; local storage failure stops the
+observer and reports unknown unreceived transitions. PostgreSQL rejection, observer
+restart and duplicate replay are tested (`test-plc-alarms.mjs`). These PLC alarms
 are separate from the dashboard's own threshold alarms.
 
 ## Completion forecast

@@ -68,7 +68,12 @@ const BatchMonitorWidget: React.FC<BatchMonitorWidgetProps> = ({ config = {}, on
           p: 2,
         }}
       >
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           Select a machine in widget settings
         </Typography>
       </Box>
@@ -110,7 +115,12 @@ const BatchMonitorWidget: React.FC<BatchMonitorWidgetProps> = ({ config = {}, on
           p: 2,
         }}
       >
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           No active batch on this machine.
         </Typography>
       </Box>
@@ -121,16 +131,37 @@ const BatchMonitorWidget: React.FC<BatchMonitorWidgetProps> = ({ config = {}, on
     <Box sx={{ p: 1.5, width: '100%', height: '100%', overflow: 'auto' }}>
       {/* Header info */}
       <Stack spacing={0.5} sx={{ mb: 1.5 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Typography variant="subtitle2" fontWeight={700}>
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Typography
+            variant="subtitle2"
+            sx={{
+              fontWeight: 700,
+            }}
+          >
             {activeBatch.batchNumber}
           </Typography>
           <Chip label={activeBatch.status} size="small" color="warning" />
         </Stack>
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           Recipe: {activeBatch.recipeName ?? '-'} (v{activeBatch.recipeVersion ?? '?'})
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           Elapsed: {elapsedTime}
         </Typography>
       </Stack>
@@ -186,7 +217,12 @@ const BatchMonitorWidget: React.FC<BatchMonitorWidgetProps> = ({ config = {}, on
                   <TableRow key={series.nodeKey}>
                     <TableCell sx={{ py: 0.3, fontSize: '0.75rem' }}>
                       {series.displayName}
-                      <Typography variant="caption" display="block">
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: 'block',
+                        }}
+                      >
                         {quality}
                       </Typography>
                       <WidgetReadingEvidence rows={readings} />
@@ -219,8 +255,11 @@ const BatchMonitorWidget: React.FC<BatchMonitorWidgetProps> = ({ config = {}, on
       ) : (
         <Typography
           variant="caption"
-          color="text.secondary"
-          sx={{ display: 'block', textAlign: 'center' }}
+          sx={{
+            color: 'text.secondary',
+            display: 'block',
+            textAlign: 'center',
+          }}
         >
           No parameter data available.
         </Typography>

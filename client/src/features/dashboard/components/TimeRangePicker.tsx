@@ -123,7 +123,9 @@ const TimeRangePicker: React.FC = () => {
             size="small"
             value={customStart}
             onChange={(e) => setCustomStart(e.target.value)}
-            InputLabelProps={{ shrink: true }}
+            slotProps={{
+              inputLabel: { shrink: true },
+            }}
           />
           <TextField
             label={t('End')}
@@ -131,7 +133,9 @@ const TimeRangePicker: React.FC = () => {
             size="small"
             value={customEnd}
             onChange={(e) => setCustomEnd(e.target.value)}
-            InputLabelProps={{ shrink: true }}
+            slotProps={{
+              inputLabel: { shrink: true },
+            }}
           />
           <Button variant="contained" size="small" onClick={handleCustomApply}>
             {t('Apply')}

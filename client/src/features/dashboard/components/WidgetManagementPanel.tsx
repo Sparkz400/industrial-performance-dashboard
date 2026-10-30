@@ -59,10 +59,23 @@ const WidgetManagementPanel: React.FC<WidgetManagementPanelProps> = ({
               p: 4,
             }}
           >
-            <Typography variant="h6" color="text.disabled" gutterBottom>
+            <Typography
+              variant="h6"
+              gutterBottom
+              sx={{
+                color: 'text.disabled',
+              }}
+            >
               {t('No widgets yet')}
             </Typography>
-            <Typography variant="body2" color="text.disabled" sx={{ mb: 2, textAlign: 'center' }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.disabled',
+                mb: 2,
+                textAlign: 'center',
+              }}
+            >
               {t('Click the + button to browse widgets, or try a template')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1 }}>

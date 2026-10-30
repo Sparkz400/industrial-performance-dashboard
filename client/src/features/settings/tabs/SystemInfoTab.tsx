@@ -12,7 +12,7 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import MemoryIcon from '@mui/icons-material/Memory';
 import CodeIcon from '@mui/icons-material/Code';
 import DnsIcon from '@mui/icons-material/Dns';
@@ -65,7 +65,12 @@ const SystemInfoTab: React.FC = () => {
                   <MemoryIcon />
                 </Avatar>
                 <Box>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     Node.js Version
                   </Typography>
                   <Typography variant="body1">{systemStats?.nodeVersion || 'Unknown'}</Typography>
@@ -77,7 +82,12 @@ const SystemInfoTab: React.FC = () => {
                   <CodeIcon />
                 </Avatar>
                 <Box>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     Platform
                   </Typography>
                   <Typography variant="body1">
@@ -93,7 +103,12 @@ const SystemInfoTab: React.FC = () => {
                   <DnsIcon />
                 </Avatar>
                 <Box>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     Process Memory
                   </Typography>
                   <Typography variant="body1">
@@ -147,18 +162,34 @@ const SystemInfoTab: React.FC = () => {
                         <Typography variant="body2" component="div">
                           <strong>ID:</strong> {client.id.substring(0, 8)}...
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: 'text.secondary',
+                          }}
+                        >
                           <strong>Connected:</strong>{' '}
                           {new Date(client.connectedAt).toLocaleString()}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: 'text.secondary',
+                          }}
+                        >
                           {client.ip} | {client.userAgent?.substring(0, 50)}...
                         </Typography>
                       </Box>
                     ))}
                   </Box>
                 ) : (
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                      mt: 2,
+                    }}
+                  >
                     No active connections
                   </Typography>
                 )}
@@ -201,7 +232,13 @@ const SystemInfoTab: React.FC = () => {
                     ))}
                   </Box>
                 ) : (
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                      mt: 2,
+                    }}
+                  >
                     No connection history
                   </Typography>
                 )}

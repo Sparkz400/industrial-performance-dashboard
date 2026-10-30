@@ -200,6 +200,34 @@ export function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
+const sortKeys = (_key: string, value: unknown) =>
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)))
+    : value;
+
+type DashboardContent = Pick<Dashboard, 'widgets' | 'layout'>;
+
+const contentKey = ({ widgets, layout }: DashboardContent) =>
+  JSON.stringify(
+    {
+      widgets: widgets || [],
+      layout: (layout || [])
+        .map(({ i, x, y, w, h }) => ({ i, x, y, w, h }))
+        .sort((a, b) => a.i.localeCompare(b.i)),
+    },
+    sortKeys,
+  );
+
+/**
+ * Compares what a user can edit. JSONB reorders keys, and the widget store and grid add
+ * registry minW/minH and their own bookkeeping, none of which is an unsaved change.
+ * @param a
+ * @param b
+ */
+export function isSameDashboardContent(a: DashboardContent, b: DashboardContent): boolean {
+  return contentKey(a) === contentKey(b);
+}
+
 const initialState: DashboardState = {
   dashboards: [],
   selectedDashboardId: null,

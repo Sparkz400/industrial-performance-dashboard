@@ -82,7 +82,14 @@ const DashboardVersionHistory: React.FC<DashboardVersionHistoryProps> = ({ dashb
 
   return (
     <Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 2,
+        }}
+      >
         <Typography variant="h6">Version History</Typography>
         <Button
           variant="outlined"
@@ -113,7 +120,14 @@ const DashboardVersionHistory: React.FC<DashboardVersionHistoryProps> = ({ dashb
                     </Button>
                   }
                 >
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mr: 2 }}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems: 'center',
+                      mr: 2,
+                    }}
+                  >
                     <Radio
                       size="small"
                       checked={selectedA === version.version}
@@ -128,7 +142,13 @@ const DashboardVersionHistory: React.FC<DashboardVersionHistoryProps> = ({ dashb
                   </Stack>
                   <ListItemText
                     primary={
-                      <Stack direction="row" spacing={1} alignItems="center">
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{
+                          alignItems: 'center',
+                        }}
+                      >
                         <Chip
                           label={`v${version.version}`}
                           size="small"
@@ -148,7 +168,9 @@ const DashboardVersionHistory: React.FC<DashboardVersionHistoryProps> = ({ dashb
             <ListItem>
               <ListItemText
                 primary="No version history available."
-                primaryTypographyProps={{ color: 'text.secondary', textAlign: 'center' }}
+                slotProps={{
+                  primary: { color: 'text.secondary', sx: { textAlign: 'center' } },
+                }}
               />
             </ListItem>
           )}
@@ -171,7 +193,13 @@ const DashboardVersionHistory: React.FC<DashboardVersionHistoryProps> = ({ dashb
                 <ListItem key={i}>
                   <ListItemText
                     primary={
-                      <Stack direction="row" spacing={1} alignItems="center">
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{
+                          alignItems: 'center',
+                        }}
+                      >
                         <Chip
                           label={change.type}
                           size="small"
@@ -183,7 +211,12 @@ const DashboardVersionHistory: React.FC<DashboardVersionHistoryProps> = ({ dashb
                                 : 'warning'
                           }
                         />
-                        <Typography variant="body2" fontFamily="monospace">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontFamily: 'monospace',
+                          }}
+                        >
                           {change.path}
                         </Typography>
                       </Stack>
@@ -198,7 +231,13 @@ const DashboardVersionHistory: React.FC<DashboardVersionHistoryProps> = ({ dashb
               ))}
             </List>
           ) : (
-            <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+            <Typography
+              sx={{
+                color: 'text.secondary',
+                py: 2,
+                textAlign: 'center',
+              }}
+            >
               No differences found.
             </Typography>
           )}

@@ -120,10 +120,20 @@ const ReportHistoryPage: React.FC = () => {
     <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h4" fontWeight="bold">
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 'bold',
+            }}
+          >
             Report History
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             View generated reports and download completed ones
           </Typography>
         </Box>
@@ -180,7 +190,12 @@ const ReportHistoryPage: React.FC = () => {
                 {items.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: 'text.secondary',
+                        }}
+                      >
                         No report history found
                       </Typography>
                     </TableCell>
@@ -197,7 +212,12 @@ const ReportHistoryPage: React.FC = () => {
                           size="small"
                           sx={{ textTransform: 'capitalize' }}
                         />
-                        <Typography variant="caption" display="block">
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            display: 'block',
+                          }}
+                        >
                           Attempts: {item.attempts}
                           {item.scheduledFor
                             ? ` · Period ends ${formatDate(item.scheduledFor)}`
@@ -216,7 +236,12 @@ const ReportHistoryPage: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <Typography>{item.emailStatus}</Typography>
-                        <Typography variant="caption" display="block">
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            display: 'block',
+                          }}
+                        >
                           Attempts: {item.emailAttempts}
                         </Typography>
                         {item.emailError && (

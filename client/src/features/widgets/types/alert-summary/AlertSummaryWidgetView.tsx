@@ -105,7 +105,12 @@ const AlertSummaryWidgetView = memo(function AlertSummaryWidgetView({
       <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
         {recentAlerts.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 3 }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               No active alerts
             </Typography>
           </Box>
@@ -128,7 +133,12 @@ const AlertSummaryWidgetView = memo(function AlertSummaryWidgetView({
                     </Box>
                   }
                   secondary={
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: 'text.secondary',
+                      }}
+                    >
                       {alert.nodeKey} - {formatDate(alert.createdAt ?? alert.triggeredAt)}
                     </Typography>
                   }

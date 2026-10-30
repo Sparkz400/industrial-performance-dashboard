@@ -25,7 +25,8 @@
     "test:e2e": "npx playwright test",
     "test:coverage": "npm run build:shared && concurrently \"npm run test:coverage -w client\" \"npm run test:coverage -w server\"",
     "lint": "npm run lint -w client",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "node scripts/patch-opcua.mjs"
   },
   "lint-staged": {
     "client/src/**/*.{js,jsx,ts,tsx}": [
@@ -49,9 +50,6 @@
   },
   "license": "Apache-2.0",
   "overrides": {
-    "@storybook/addon-actions": {
-      "uuid": "^11.1.1"
-    },
     "@esbuild-kit/core-utils": {
       "esbuild": "^0.25.12"
     }

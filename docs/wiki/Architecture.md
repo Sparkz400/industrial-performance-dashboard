@@ -18,6 +18,10 @@ The React client connects to the Node.js server through authenticated REST/tRPC
 and live socket updates. The collector buffers samples on local disk before
 writing PostgreSQL history. Shared TypeScript contracts connect the workspaces.
 
+A [guarded OPC UA dependency patch](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DEPENDENCY_REVIEW.md#opc-ua-overflow-patch)
+preserves non-Good quality during server notification queue overflow; changed
+dependency code requires review before installation can continue.
+
 The interface, charts and wallboards use locally bundled Figtree fonts with
 tabular numerals; technical identifiers retain monospace. Regular and italic
 fonts and their stylesheet are precached for offline use without an external font
@@ -81,6 +85,6 @@ separates software checks from physical S7-1500 and operator acceptance.
 adds frozen batch recipes, inspection/rework/lot evidence, reviewed SPC reference
 periods, production-line analysis and alarm-linked maintenance actions. It also
 covers measured disk runway, exact reviewed retention schedules, offline image
-bundles and configurable synthetic endurance workloads. Scoped supervisor access
+bundles and configurable synthetic endurance workloads using the compiled frontend. Scoped supervisor access
 now extends line investigations and alarm actions. These workflows do not establish
 multi-day reliability or supported hardware capacity.

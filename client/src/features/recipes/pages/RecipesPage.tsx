@@ -108,10 +108,22 @@ const RecipesPage: React.FC = () => {
 
   return (
     <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 3,
+        }}
+      >
         <Box>
           <Typography variant="h5">Process Specifications</Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             Define reference parameters and tolerances for compliance monitoring during batch runs.
           </Typography>
         </Box>
@@ -150,11 +162,21 @@ const RecipesPage: React.FC = () => {
               recipes.map((recipe) => (
                 <TableRow key={recipe.id} hover>
                   <TableCell>
-                    <Typography variant="body2" fontWeight={500}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                      }}
+                    >
                       {recipe.name}
                     </Typography>
                     {recipe.description && (
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: 'text.secondary',
+                        }}
+                      >
                         {recipe.description}
                       </Typography>
                     )}
@@ -214,7 +236,12 @@ const RecipesPage: React.FC = () => {
             ) : (
               <TableRow>
                 <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     No process specifications found. Create one to define compliance reference
                     values.
                   </Typography>
@@ -256,7 +283,12 @@ const RecipesPage: React.FC = () => {
               multiline
               minRows={2}
             />
-            <Typography variant="subtitle2" color="text.secondary">
+            <Typography
+              variant="subtitle2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               Parameters and tolerances can be configured after creation.
             </Typography>
           </Stack>

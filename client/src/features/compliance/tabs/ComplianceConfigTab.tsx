@@ -18,7 +18,7 @@ import {
   Divider,
   CircularProgress,
 } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DrawIcon from '@mui/icons-material/Draw';
 import EditNoteIcon from '@mui/icons-material/EditNote';
@@ -105,7 +105,13 @@ const ComplianceConfigTab: React.FC = () => {
                 </ListItem>
               ))}
               {(!config?.requireSignatureFor || config.requireSignatureFor.length === 0) && (
-                <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                    py: 1,
+                  }}
+                >
                   No actions configured.
                 </Typography>
               )}
@@ -138,7 +144,13 @@ const ComplianceConfigTab: React.FC = () => {
                 </ListItem>
               ))}
               {(!config?.requireReasonFor || config.requireReasonFor.length === 0) && (
-                <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                    py: 1,
+                  }}
+                >
                   No actions configured.
                 </Typography>
               )}

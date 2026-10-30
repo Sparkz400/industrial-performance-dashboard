@@ -5,14 +5,14 @@ React 19 + TypeScript frontend for the Performance Dashboard, built with Vite.
 ## Stack
 
 - **React 19** with React Router v7
-- **Vite** (SWC plugin) for dev server and builds
-- **MUI v6** for component library
+- **Vite 8** (SWC plugin) for dev server and builds
+- **MUI v9** for component library
 - **Zustand** for client/UI state
 - **React Query (TanStack)** for server state
 - **Nivo** for charts (bar, line, pie)
 - **Socket.IO** for real-time updates
-- **Vitest + Testing Library** for tests
-- **Storybook** for component development
+- **Vitest 5 + Testing Library** for tests
+- **Storybook 10** for component development
 
 ## Scripts
 

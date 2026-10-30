@@ -176,6 +176,17 @@ const DashboardTabs: React.FC<DashboardTabsProps> = ({
   const tabElements = dashboards.map((dashboard, index) => (
     <Tab
       key={dashboard.id}
+      aria-keyshortcuts="Delete"
+      onKeyDown={(event) => {
+        if (
+          event.key === 'Delete' &&
+          event.target === event.currentTarget &&
+          editingDashboardId !== dashboard.id
+        ) {
+          event.preventDefault();
+          onDeleteDashboard(dashboard.id);
+        }
+      }}
       label={
         <DashboardTabLabel
           dashboard={dashboard}

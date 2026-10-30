@@ -96,7 +96,12 @@ export default function IdentityPanel({
           <Typography variant="h6" component="h2">
             {t('Single sign-on group mappings', 'Gruppenzuordnung für Single Sign-on')}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {t(
               'An identity-provider group grants a role and sites at each sign-in; the highest role applies. Administrator rights are never granted by a group. An account without a mapped group cannot sign in.',
               'Eine Gruppe des Identitätsanbieters gewährt bei jeder Anmeldung eine Rolle und Standorte; die höchste Rolle gilt. Administratorrechte werden nie über eine Gruppe vergeben. Ein Konto ohne zugeordnete Gruppe kann sich nicht anmelden.',
@@ -167,7 +172,12 @@ export default function IdentityPanel({
           <Typography variant="h6" component="h2">
             {t('Service accounts', 'Dienstkonten')}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {t(
               "A service account reads the integration API's read endpoints for its machines with an expiring token. It cannot sign in or change anything. The token is shown once.",
               'Ein Dienstkonto liest mit einem ablaufenden Token die Lese-Endpunkte der Integrations-API für seine Maschinen. Es kann sich nicht anmelden und nichts ändern. Das Token wird einmal angezeigt.',
@@ -245,7 +255,11 @@ export default function IdentityPanel({
           </Button>
           {accounts.data?.map((service) => (
             <Box key={service.id} sx={{ borderTop: 1, borderColor: 'divider', pt: 1 }}>
-              <Typography fontWeight={600}>
+              <Typography
+                sx={{
+                  fontWeight: 600,
+                }}
+              >
                 {service.username} · {service.role}
                 {!service.isActive && ` · ${t('deactivated', 'deaktiviert')}`}
               </Typography>
@@ -253,7 +267,14 @@ export default function IdentityPanel({
                 {service.machines.map((machine) => machine.name).join(', ')}
               </Typography>
               {service.tokens.map((token) => (
-                <Stack key={token.id} direction="row" spacing={1} alignItems="center">
+                <Stack
+                  key={token.id}
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: 'center',
+                  }}
+                >
                   <Typography variant="body2">
                     {t('Token', 'Token')} {token.id} · {tokenState(token)} ·{' '}
                     {t('expires', 'läuft ab')}{' '}

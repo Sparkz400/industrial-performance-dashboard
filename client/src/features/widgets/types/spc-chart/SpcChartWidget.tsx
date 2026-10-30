@@ -114,7 +114,12 @@ const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError })
           p: 2,
         }}
       >
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           Select an SPC profile in widget settings
         </Typography>
       </Box>
@@ -156,7 +161,12 @@ const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError })
           p: 2,
         }}
       >
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           No SPC data available for this profile.
         </Typography>
       </Box>
@@ -177,7 +187,12 @@ const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError })
         seconds remain unknown.{' '}
         {data.truncated ? 'Truncated at 5000 observations; narrow the requested window.' : ''}
       </Typography>
-      <Typography variant="caption" display="block">
+      <Typography
+        variant="caption"
+        sx={{
+          display: 'block',
+        }}
+      >
         Window: {data.start ?? 'Unknown'} — {data.end ?? 'Unknown'}. Current projected measurements
         against stored limits; corrections do not rewrite recorded alert decisions.
       </Typography>
@@ -227,10 +242,20 @@ const SpcChartWidget: React.FC<SpcChartWidgetProps> = ({ config = {}, onError })
                 boxShadow: 1,
               }}
             >
-              <Typography variant="caption" display="block">
+              <Typography
+                variant="caption"
+                sx={{
+                  display: 'block',
+                }}
+              >
                 {String(point.data.xFormatted)}
               </Typography>
-              <Typography variant="body2" fontWeight="bold">
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 'bold',
+                }}
+              >
                 Value: {Number(point.data.y).toFixed(3)}
               </Typography>
             </Box>

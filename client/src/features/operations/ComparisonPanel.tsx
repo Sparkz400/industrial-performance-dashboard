@@ -272,7 +272,7 @@ export default function ComparisonPanel({ machineId }: { machineId: number }) {
               disabled={!choice.shift || choice.query.isLoading}
               onChange={(e) => choice.setRevision(e.target.value)}
             >
-              {choice.query.data?.map((revision) => (
+              {(choice.query.data ?? []).map((revision) => (
                 <MenuItem key={revision.id} value={revision.id}>
                   #{revision.id} · {date(revision.createdAt)}
                 </MenuItem>

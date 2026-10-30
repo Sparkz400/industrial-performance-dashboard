@@ -104,8 +104,10 @@ multi-day reliability and supported capacity remain unqualified.
 with attributable, versioned maintenance corrections and English/German screens.
 Saved shift revisions can be compared with explicit coverage, product-mix and
 definition checks; differences are withheld when evidence is not comparable.
-Installation endurance exercises the real collector, alarms, scheduled reports
-and signed-in browser sessions. A short run does not qualify 72-hour operation.
+Installation endurance serves the compiled frontend and exercises the real collector,
+alarms, scheduled reports and signed-in browser sessions. A short run does not qualify
+72-hour operation. Edge cursors wait for open measurement transactions; PLC alarm
+events remain in a durable local spool until PostgreSQL confirms storage.
 
 [Data integrity and reviewed operations](docs/DATA_INTEGRITY.md) adds observed-data
 widgets, attributable measurement corrections, bounded calculated signals, explicit
@@ -137,6 +139,9 @@ npm ci
 npm run build:server
 docker compose -f compose.local.yml up -d --wait db
 ```
+
+The install applies a guarded OPC UA queue-overflow fix; script-disabled installs
+must run it explicitly. See [dependency maintenance](docs/DEPENDENCY_REVIEW.md#opc-ua-overflow-patch).
 
 Copy `server/.env.example` to `server/.env`. Set unique `COOKIE_SECRET`,
 `SESSION_SECRET` and `SEED_ADMIN_PASSWORD` values; the admin password must contain

@@ -92,9 +92,9 @@ await dailyFixture(async ({ pool, call, expect, actors, frontend }) => {
     await form.getByLabel("IP Address").fill("localhost");
     await form.getByLabel(/^Port/).fill(String(port));
     await form.getByLabel("Resource Path").fill("/UA/Browser");
-    await form.getByRole("checkbox", { name: "Active" }).uncheck();
+    await form.getByRole("switch", { name: "Active" }).uncheck();
     await form
-      .getByRole("checkbox", { name: "Custom subscription limits for this endpoint" })
+      .getByRole("switch", { name: "Custom subscription limits for this endpoint" })
       .check();
     await form.getByLabel("Publishing interval (ms)").fill("1500");
     await form.getByLabel("Queue size per signal").fill("4");

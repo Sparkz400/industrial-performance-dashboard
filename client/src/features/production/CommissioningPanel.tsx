@@ -249,7 +249,14 @@ export default function CommissioningPanel() {
       </Alert>
       {error && <Alert severity="error">{error}</Alert>}
       <Typography variant="h6">{t('1. Select and check the endpoint')} </Typography>
-      <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+      <Stack
+        direction="row"
+        spacing={2}
+        useFlexGap
+        sx={{
+          flexWrap: 'wrap',
+        }}
+      >
         <TextField
           select
           label={t('Machine to commission')}
@@ -301,9 +308,11 @@ export default function CommissioningPanel() {
               <Stack
                 key={`${s.role}:${s.namespaceUri}:${s.identifier}`}
                 direction="row"
-                alignItems="center"
-                flexWrap="wrap"
-                gap={1}
+                sx={{
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: 1,
+                }}
               >
                 <Typography sx={{ overflowWrap: 'anywhere' }}>
                   {s.role} ← {s.browsePath} · {s.dataType} ·{' '}
@@ -385,7 +394,14 @@ export default function CommissioningPanel() {
         </>
       )}
       <Typography variant="h6">{t('2. Map the signals and their meaning')} </Typography>
-      <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+      <Stack
+        direction="row"
+        spacing={2}
+        useFlexGap
+        sx={{
+          flexWrap: 'wrap',
+        }}
+      >
         <TextField
           label={t('Profile name')}
           value={profile.name}
@@ -434,7 +450,13 @@ export default function CommissioningPanel() {
         {preview?.namespaces.join(' · ') ?? 'Check the connection first'}
         {t('. Importing a profile previews fields here; it does not change the machine.')}{' '}
       </Typography>
-      <Stack direction="row" flexWrap="wrap" gap={2}>
+      <Stack
+        direction="row"
+        sx={{
+          flexWrap: 'wrap',
+          gap: 2,
+        }}
+      >
         <FormControlLabel
           control={
             <Checkbox
@@ -474,10 +496,21 @@ export default function CommissioningPanel() {
             key={role}
             sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}
           >
-            <Typography fontWeight="bold" sx={{ mb: 1 }}>
+            <Typography
+              sx={{
+                fontWeight: 'bold',
+                mb: 1,
+              }}
+            >
               {role === 'state' ? t('Machine state') : `${role} counter`}
             </Typography>
-            <Stack direction="row" flexWrap="wrap" gap={1}>
+            <Stack
+              direction="row"
+              sx={{
+                flexWrap: 'wrap',
+                gap: 1,
+              }}
+            >
               <TextField
                 size="small"
                 label={`${role} key`}
@@ -519,7 +552,13 @@ export default function CommissioningPanel() {
             </Stack>
           </Box>
         ))}
-      <Stack direction="row" flexWrap="wrap" gap={2}>
+      <Stack
+        direction="row"
+        sx={{
+          flexWrap: 'wrap',
+          gap: 2,
+        }}
+      >
         {(manualState ? [] : (['running', 'idle', 'fault', 'planned'] as const)).map((state) => (
           <TextField
             key={state}

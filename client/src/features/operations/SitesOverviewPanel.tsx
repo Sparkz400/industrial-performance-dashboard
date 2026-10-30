@@ -70,7 +70,14 @@ export default function SitesOverviewPanel() {
           aria-label={`${site.site} · ${site.name}`}
           sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2 }}
         >
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+              mb: 1,
+            }}
+          >
             <Typography variant="h6" component="h3">
               {site.site} · {site.name}
             </Typography>

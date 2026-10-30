@@ -99,6 +99,10 @@ await dailyFixture(async ({ pool, users, browser, actors, frontend, password, ex
   }
   // WCAG 2.2 SC 2.5.7: widgets move and resize without dragging, by keyboard.
   await admin.goto(`${frontend}/dashboard/a11y`);
+  await expect(admin.getByRole("button", { name: "Move or resize widget" })).toBeVisible();
+  // Let the dashboard's debounced store synchronization run before checking hydration.
+  await admin.waitForTimeout(700);
+  await expect(admin.getByText("Unsaved changes", { exact: true })).toHaveCount(0);
   await admin.getByRole("button", { name: "Move or resize widget" }).focus();
   await admin.keyboard.press("Enter");
   await admin.getByRole("menuitem", { name: "Wider" }).press("Enter");
@@ -106,6 +110,7 @@ await dailyFixture(async ({ pool, users, browser, actors, frontend, password, ex
   await admin.keyboard.press("Escape");
   await admin.locator(".react-grid-item").first().hover();
   await expect(admin.getByText("5 x 6")).toBeVisible();
+  await expect(admin.getByText("Unsaved changes", { exact: true })).toBeVisible();
 
   await admin.goto(`${frontend}/production`);
   await admin.getByRole("tab", { name: "Commission machine" }).click();

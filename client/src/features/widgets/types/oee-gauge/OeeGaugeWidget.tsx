@@ -38,7 +38,12 @@ const OeeGaugeWidget: React.FC<OeeGaugeWidgetProps> = ({ config = {}, onError })
           p: 2,
         }}
       >
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
           Select a machine in widget settings
         </Typography>
       </Box>

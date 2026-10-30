@@ -1,6 +1,6 @@
 import React from 'react';
 import { Typography, Card, CardHeader, CardContent, Divider, Avatar, Alert } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import Grid from '@mui/material/Grid';
 import SettingsBackupRestoreIcon from '@mui/icons-material/SettingsBackupRestore';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -41,7 +41,13 @@ const BackupRestoreTab: React.FC = () => {
                   {' '}
                   Export Dashboards{' '}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" paragraph>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                    marginBottom: '16px',
+                  }}
+                >
                   Download a configuration file containing your dashboards, widgets, and layouts
                 </Typography>
                 <ButtonLoader
@@ -63,7 +69,13 @@ const BackupRestoreTab: React.FC = () => {
                   {' '}
                   Import Dashboards{' '}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" paragraph>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                    marginBottom: '16px',
+                  }}
+                >
                   Restore dashboards from a previously exported backup file
                 </Typography>
                 <input

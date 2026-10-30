@@ -230,7 +230,7 @@ export default function MaintenanceActionsPanel({ machineId }: { machineId: numb
           value={alarm}
           onChange={(e) => setAlarm(e.target.value)}
         >
-          {alarms.data?.map((a) => (
+          {(alarms.data ?? []).map((a) => (
             <MenuItem key={a.id} value={a.id}>
               {a.message}
             </MenuItem>
@@ -243,7 +243,7 @@ export default function MaintenanceActionsPanel({ machineId }: { machineId: numb
         value={owner}
         onChange={(e) => setOwner(e.target.value)}
       >
-        {owners.data?.map((o) => (
+        {(owners.data ?? []).map((o) => (
           <MenuItem key={o.id} value={o.id}>
             {o.username}
           </MenuItem>
@@ -255,7 +255,7 @@ export default function MaintenanceActionsPanel({ machineId }: { machineId: numb
         value={escalation}
         onChange={(e) => setEscalation(e.target.value)}
       >
-        {owners.data?.map((o) => (
+        {(owners.data ?? []).map((o) => (
           <MenuItem key={o.id} value={o.id}>
             {o.username}
           </MenuItem>
