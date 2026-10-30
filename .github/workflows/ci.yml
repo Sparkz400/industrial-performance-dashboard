@@ -86,7 +86,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: cp server/.env.example server/.env
-      - run: npm run build:server
+      - run: npm run build
       - run: npm run db:migrate -w server
       - run: npm run db:seed -w server
       - run: node scripts/test-database-client-errors.mjs

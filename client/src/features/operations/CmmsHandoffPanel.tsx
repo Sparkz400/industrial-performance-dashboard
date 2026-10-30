@@ -131,7 +131,7 @@ export default function CmmsHandoffPanel({ machineId }: { machineId: number }) {
             setPreview(null);
           }}
         >
-          {actions.data?.map((a) => (
+          {(actions.data ?? []).map((a) => (
             <MenuItem key={a.id} value={a.id}>
               #{a.id} · {a.action}
             </MenuItem>

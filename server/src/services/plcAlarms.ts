@@ -9,6 +9,8 @@ import {
 import { certificateManager } from "../opc-ua/opcuaClient.js";
 import { createMachineSession } from "./machineIdentity.js";
 import logger from "../utils/logger.js";
+import config from "../config/config.js";
+import { PlcAlarmSpool } from "../queue/plcAlarmSpool.js";
 
 /** Selected event fields, in the order the server returns them. */
 export const EVENT_FIELDS = [
@@ -105,10 +107,23 @@ interface Observation {
  */
 class PlcAlarmService {
   private observations = new Map<number, Observation>();
+  private spool?: PlcAlarmSpool;
+  private retry?: ReturnType<typeof setInterval>;
+  private flushing?: Promise<void>;
   running = false;
 
   async startAll() {
+    if (this.running) return;
+    this.spool = new PlcAlarmSpool(
+      config.OPCUA_SPOOL_PATH + ".plc-alarms.sqlite",
+      {
+        maxEntries: config.OPCUA_SPOOL_MAX_ENTRIES,
+        minFreeBytes: config.OPCUA_SPOOL_RESERVE_MB * 1024 * 1024,
+      },
+    );
     this.running = true;
+    this.retry = setInterval(() => void this.flush(), 1000);
+    this.retry.unref();
     const rows = await db
       .select({ machineId: plcAlarmSubscriptions.machineId })
       .from(plcAlarmSubscriptions)
@@ -228,15 +243,41 @@ class PlcAlarmService {
     const row = eventRow(machineId, values, observation.refreshing);
     if (!row) return;
     try {
-      // shortcut: an event that fails to store is counted, not retried; current
-      // conditions return with the next refresh, transitions during an outage do not.
-      await db.insert(plcAlarmEvents).values(row).onConflictDoNothing();
+      this.spool!.enqueue(row);
       observation.status.received++;
       observation.status.lastEventAt = new Date().toISOString();
+      void this.flush();
     } catch (error) {
       observation.status.lastError =
         error instanceof Error ? error.message : String(error);
+      observation.status.state = "error";
+      // Stop this source when local durability fails; already spooled events remain.
+      await observation.client.disconnect().catch(() => {});
     }
+  }
+
+  private flush() {
+    if (!this.spool || this.flushing) return this.flushing;
+    this.flushing = this.spool
+      .flush(async (rows) => {
+        await db.insert(plcAlarmEvents).values(rows).onConflictDoNothing();
+      })
+      .then(() => {
+        for (const [machineId, { status }] of this.observations)
+          if (
+            !this.spool!.count(machineId) &&
+            status.lastError?.startsWith("PLC alarm storage pending:")
+          )
+            status.lastError = null;
+      })
+      .catch((error) => {
+        for (const { status } of this.observations.values())
+          status.lastError = `PLC alarm storage pending: ${String(error)}`;
+      })
+      .finally(() => {
+        this.flushing = undefined;
+      });
+    return this.flushing;
   }
 
   async stop(machineId: number) {
@@ -253,11 +294,18 @@ class PlcAlarmService {
 
   async stopAll() {
     this.running = false;
+    clearInterval(this.retry);
     for (const id of [...this.observations.keys()]) await this.stop(id);
+    await this.flushing;
+    this.spool?.close();
+    this.spool = undefined;
   }
 
   status(machineId: number) {
-    return this.observations.get(machineId)?.status ?? null;
+    const status = this.observations.get(machineId)?.status;
+    return status
+      ? { ...status, pending: this.spool?.count(machineId) ?? 0 }
+      : null;
   }
 }
 

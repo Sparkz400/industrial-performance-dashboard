@@ -11,6 +11,7 @@ import {
   isNotNull,
   lte,
   max,
+  sql,
 } from "drizzle-orm";
 import config from "../config/config.js";
 import db from "../database/db.js";
@@ -30,9 +31,6 @@ import logger from "../utils/logger.js";
 // its cursor only when the central installation acknowledges a committed batch.
 const SCHEMA_VERSION = 1;
 const SETTINGS_SCHEMA_VERSIONS = [1];
-// shortcut: rows are shipped only up to an id recorded EDGE_SETTLE_MS earlier, so writes still
-// open at that moment can commit first; a measurement transaction open longer than that
-// would be skipped. Upgrade to a commit-ordered outbox if such writers appear.
 const MAX_BACKOFF_MS = 300_000;
 const settingsSchema = Joi.object({
   syncIntervalSeconds: Joi.number().integer().min(5).max(3600),
@@ -178,9 +176,15 @@ export const edgeSync = {
     ) {
       if (row.horizonId != null && row.horizonAt)
         settled = Math.max(settled, row.horizonId);
-      const [{ newest }] = await db
-        .select({ newest: max(opcuaData.id) })
-        .from(opcuaData);
+      const newest = await db.transaction(async (tx) => {
+        // Drain existing writers before capturing an id that the cursor may pass.
+        await tx.execute(sql`SET LOCAL lock_timeout = '1s'`);
+        await tx.execute(sql`LOCK TABLE opcua_data IN SHARE MODE`);
+        const [latest] = await tx
+          .select({ newest: max(opcuaData.id) })
+          .from(opcuaData);
+        return latest.newest;
+      });
       await db
         .update(edgeLink)
         .set({ horizonId: newest ?? 0, horizonAt: new Date(now) })

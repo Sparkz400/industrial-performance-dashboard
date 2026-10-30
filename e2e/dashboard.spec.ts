@@ -24,7 +24,8 @@ test("creates a dashboard that survives reload", async ({ page }) => {
   await page
     .getByRole("button", { name: "close widget library", exact: true })
     .click();
-  await created.locator('[data-testid="CloseIcon"]').click();
+  await created.focus();
+  await page.keyboard.press("Delete");
   await page
     .getByRole("dialog")
     .getByRole("button", { name: /delete/i })

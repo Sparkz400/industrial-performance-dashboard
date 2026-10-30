@@ -296,7 +296,7 @@ export default function ProductionPage() {
                   onChange={(e) => setDraft((d) => ({ ...d, machineId: e.target.value }))}
                   sx={{ minWidth: 220 }}
                 >
-                  {assets.data?.map((asset) => (
+                  {(assets.data ?? []).map((asset) => (
                     <MenuItem key={asset.id} value={asset.id}>
                       {asset.name}
                     </MenuItem>

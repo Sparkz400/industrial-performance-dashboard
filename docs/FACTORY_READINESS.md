@@ -86,8 +86,9 @@ Database interruptions occur every cycle. Process-age and memory receipts theref
 describe roughly day-long application lifetimes within the 72-hour workload,
 not one uninterrupted 72-hour process. The simulator explicitly closes abandoned
 sessions after forced client termination; vendor session-timeout behavior is not
-qualified. The frontend runs through Vite, so this is not production-image or
-reverse-proxy qualification. SMTP is a local fixture.
+qualified. The compiled frontend is copied into the run's isolated public directory
+and served by the application, including across restarts. Its entry digest is in the
+receipt. This is not production-image or reverse-proxy qualification. SMTP is a local fixture.
 Suspension or clock discontinuities over 30 seconds during collection fail the
 run; time while the host sleeps cannot be counted as sustained operation.
 
@@ -190,3 +191,17 @@ stopped during startup because Docker Desktop's engine was unavailable, before
 the application workload began. Further full-application smoke, exact-head CI and
 a new complete 72-hour run are required; the earlier heading failure remains
 unresolved and physical-machine qualification remains open.
+
+### Compiled frontend follow-up — 2026-10-30
+
+The latest main/PR #81 failures captured one blank operations page with an aborted
+development-module request while other sessions continued. Endurance now copies the
+compiled frontend into its isolated public directory and uses the application's own
+static server, keeping the existing visibility, freshness and recovery assertions.
+This also exposed and fixed SPA routes returning 404 beneath hidden installation
+directories: the index is now resolved relative to the explicit public root.
+
+The compiled-frontend smoke completed four recovery cycles over 0.0437 workload hours,
+with zero missing provenance and every checkpoint event replayed exactly once. This
+short evidence is not a 72-hour pass. A replacement run must start from the final
+committed revision; historical failed duration must not be carried forward.

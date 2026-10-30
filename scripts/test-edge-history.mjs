@@ -212,6 +212,22 @@ await dailyFixture(async ({ pool, call, actors, users, frontend, api, expect }) 
     assert.equal(bad, 24, "Bad-quality samples arrive as bad quality without values");
     assert.equal((await central(north)).software_version, "edge-test-1");
 
+    // A lower id can commit after a higher id, beyond the old settling interval.
+    const delayed = await north.db.connect();
+    try {
+      await delayed.query("BEGIN");
+      await delayed.query("INSERT INTO opcua_data(machine_id,node_key,timestamp,value,event_id) VALUES($1,'Pressure',now(),42,'delayed-commit')", [north.machine]);
+      await record(north, 1);
+      await waitFor(async () => /LOCK TABLE/.test((await link(north)).last_error ?? ""), "An open writer did not hold the sync horizon");
+      await delayed.query("COMMIT");
+      north.readings++;
+      await allShipped(north);
+      assert.equal((await pool.query("SELECT count(*)::int n FROM opcua_data WHERE event_id=$1", [`edge${north.centralId}:delayed-commit`])).rows[0].n, 1);
+    } finally {
+      await delayed.query("ROLLBACK");
+      delayed.release();
+    }
+
     // A lost acknowledgment: the edge resends what the central installation already stored.
     await north.db.query("UPDATE edge_link SET cursor=0");
     await waitFor(async () => (await link(north)).cursor > 0 && (await central(north)).acknowledged_cursor > 0, "north did not resend");

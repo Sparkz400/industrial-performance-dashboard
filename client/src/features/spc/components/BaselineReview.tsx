@@ -83,7 +83,7 @@ export default function BaselineReview() {
           setResult(null);
         }}
       >
-        {profiles.data?.map((p) => (
+        {(profiles.data ?? []).map((p) => (
           <MenuItem key={p.id} value={p.id}>
             {p.name}
           </MenuItem>
@@ -128,7 +128,7 @@ export default function BaselineReview() {
           setReview('');
         }}
       >
-        {baselines.data?.map((b) => (
+        {(baselines.data ?? []).map((b) => (
           <MenuItem key={b.id} value={b.id}>
             {b.id} · {b.approved_at ? 'approved' : 'pending review'} · {b.evidence.sampleCount}{' '}
             readings · {b.evidence.violations.length} signals

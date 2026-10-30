@@ -111,7 +111,7 @@ export default function IncidentReplayPanel() {
             setMachine(event.target.value);
           }}
         >
-          {assets.data?.map((asset) => (
+          {(assets.data ?? []).map((asset) => (
             <MenuItem key={asset.id} value={asset.id}>
               {asset.name}
             </MenuItem>

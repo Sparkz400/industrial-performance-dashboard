@@ -1,5 +1,13 @@
 # Current status
 
+## Recovery follow-through — 2026-10-30
+
+Installation endurance now serves the compiled frontend through the real application,
+including page routes beneath hidden installation directories. Edge synchronization
+waits for pending measurement writers before capturing its cursor horizon. PLC alarm
+transitions are durably spooled and retried after database failures, with a visible
+pending count. These regressions do not close the separate 72-hour or physical-pilot gates.
+
 Performance Dashboard is development software. Its intended starting point is an
 owned simulator or an isolated test installation using OPC UA scalar signals.
 

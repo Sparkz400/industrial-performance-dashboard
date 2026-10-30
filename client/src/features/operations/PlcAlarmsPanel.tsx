@@ -12,6 +12,7 @@ interface PlcAlarms {
     received?: number;
     refreshCalls?: number;
     lastError?: string | null;
+    pending?: number;
   } | null;
   events: {
     id: number;
@@ -61,6 +62,8 @@ export default function PlcAlarmsPanel({ machineId }: { machineId: number }) {
         <Typography role="status">
           {data.enabled ? t('Observed', 'Beobachtet') : t('Not observed', 'Nicht beobachtet')}
           {data.status?.state ? ` · ${data.status.state}` : ''}
+          {!!data.status?.pending &&
+            ` · ${data.status.pending} ${t('pending storage', 'Speicherung ausstehend')}`}
           {data.status?.lastError ? ` · ${data.status.lastError}` : ''}
         </Typography>
       )}

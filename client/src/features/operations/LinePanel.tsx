@@ -141,7 +141,7 @@ export default function LinePanel() {
           setReport(null);
         }}
       >
-        {lines.data?.map((l) => (
+        {(lines.data ?? []).map((l) => (
           <MenuItem key={l.id} value={l.id}>
             {l.config.name}
           </MenuItem>
@@ -351,7 +351,7 @@ export default function LinePanel() {
               value={s.machineId || ''}
               onChange={(e) => update(i, { machineId: Number(e.target.value) })}
             >
-              {assets.data?.map((a) => (
+              {(assets.data ?? []).map((a) => (
                 <MenuItem key={a.id} value={a.id}>
                   {a.name}
                 </MenuItem>

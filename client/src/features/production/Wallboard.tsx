@@ -120,7 +120,7 @@ export default function Wallboard() {
             setPage(0);
           }}
         >
-          {assets.data?.map((asset) => (
+          {(assets.data ?? []).map((asset) => (
             <MenuItem key={asset.id} value={asset.id}>
               {asset.name}
             </MenuItem>

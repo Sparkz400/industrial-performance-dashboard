@@ -24,10 +24,10 @@ The central installation stores only its hash. Enrollment is audited on both sid
   batches of `batchSize` rows (default `EDGE_SYNC_BATCH_SIZE`). It sends one batch every
   `EDGE_SYNC_INTERVAL_MS`, and the next one at once while more are waiting.
 - **Settle horizon:** a row is sent only once its id is at or below an id recorded at
-  least `EDGE_SETTLE_MS` earlier (default 30 s). Writes still open at that moment can
-  commit first.
-  - *Limit:* a measurement transaction open longer than the horizon could be skipped.
-    The collector's writes take milliseconds.
+  least `EDGE_SETTLE_MS` earlier (default 30 s). Capturing that id takes a brief shared
+  table lock, so earlier measurement inserts must commit or roll back first. A writer
+  still open after one second postpones synchronization with a visible lock-timeout
+  error and retry; its lower id cannot be skipped behind a later committed id.
 - **What stays local:** rows without a machine (the single `.env` connection).
 - **Not sent:** corrections, reports, configuration and operator records.
 - **Central side:** the central installation checks the token and the schema version
@@ -112,4 +112,5 @@ Not covered:
 - high availability of the central installation (D08);
 - automatic fleet upgrades.
 
-The settle horizon is a documented shortcut.
+The delayed-commit regression holds a lower-id insert beyond the settling interval,
+commits a later insert first, and verifies that both arrive exactly once.

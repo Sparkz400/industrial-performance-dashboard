@@ -83,6 +83,9 @@ including the isolated supervisor/comparison browser fixtures. FR01's harness an
 short-run recovery checks pass, but later sustained/CI failures keep its 72-hour
 gate open. A reproduced checked-out database-client crash has a focused fix and
 forced-disconnect regression; replacement full-application acceptance is pending.
+The 2026-10-30 follow-through in [PR #81](https://github.com/Sparkz400/performance_dashboard/pull/81)
+serves the compiled frontend during endurance and passes a four-cycle local recovery
+smoke. A new complete 72-hour receipt is still required; no failed duration is reused.
 
 ### Daily factory workflows — current implementation
 

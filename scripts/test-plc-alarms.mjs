@@ -129,9 +129,21 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
     await expect(page.getByRole("button", { name: /PLC alarms/ })).toHaveCount(0);
     await page.screenshot({ path: ".local/daily-evidence/plc-alarms.png", fullPage: true });
     await page.close();
+    // PostgreSQL can reject a received transition; it survives observer restart locally.
+    await pool.query(`CREATE FUNCTION reject_owned_alarm() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+      IF NEW.message='Owned storage interruption' THEN RAISE EXCEPTION 'owned alarm storage outage'; END IF;
+      RETURN NEW; END $$;
+      CREATE TRIGGER reject_owned_alarm BEFORE INSERT ON plc_alarm_events FOR EACH ROW EXECUTE FUNCTION reject_owned_alarm()`);
+    fixture.alarm.raiseNewCondition({ message: "Owned storage interruption", severity: 700, retain: true, quality: opcua.StatusCodes.Good });
+    await expect.poll(async () => (await view()).status?.pending ?? 0, { timeout: 15000 }).toBeGreaterThan(0);
+    await plcAlarms.stopAll();
+    await plcAlarms.startAll();
+    await pool.query("DROP TRIGGER reject_owned_alarm ON plc_alarm_events; DROP FUNCTION reject_owned_alarm()");
+    await expect.poll(async () => (await find("Owned storage interruption")).length, { timeout: 15000 }).toBe(1);
+    await expect.poll(async () => (await view()).status?.pending ?? -1, { timeout: 15000 }).toBe(0);
     await ok("admin", "PUT", `/plc-alarms/machines/${machine}/subscription`, { enabled: false });
     assert.equal((await view()).status, null, "Observation stops when disabled");
-    console.log(JSON.stringify({ plcAlarms: "passed", events: after.events.length }));
+    console.log(JSON.stringify({ plcAlarms: "passed", events: after.events.length, durableReplay: true }));
   } finally {
     await plcAlarms.stopAll();
     await fixture.server.shutdown();

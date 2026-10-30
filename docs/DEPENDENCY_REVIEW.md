@@ -91,12 +91,22 @@ restored after reload. It stores the same layout as react-grid-layout 1.5.4 for 
 same actions. All database checks used throwaway databases on the owned test
 container. No production endpoint was used.
 
-Unchanged findings, observed identically before the migration:
-- An untouched dashboard shows "Unsaved changes" after loading (same with 1.5.4).
-- `TextField select` without children logs a warning (same check in MUI 6.5).
-- Wallboard renders a list without keys.
-- `e2e/dashboard.spec.ts` finds the tab close button by its icon's `data-testid`,
-  which MUI only emits in development builds.
+Follow-through on findings observed before the migration:
+- Dashboard hydration no longer writes an old debounced snapshot back over the loaded
+  dashboard, and comparison ignores generated layout constraints. The browser test
+  checks that loading stays clean and moving/resizing still marks real edits unsaved.
+- Selectors render an empty list while their options load, avoiding missing-children
+  warnings without inventing an option or selected value.
+- Dashboard tabs support Delete by keyboard; the regression no longer depends on
+  MUI's development-only icon test identifier.
+- The earlier wallboard key warning is not reproduced by inspection: machine, option
+  and issue lists all use their persisted IDs. Keep browser qualification separate.
+
+Recovery follow-through adds a committed-writer boundary to edge cursors and a durable
+PLC alarm spool. Their isolated regressions cover late commits, database rejection,
+observer restart and exactly-once replay. The updated unit suite has 110 client and
+319 server tests; [endurance evidence](FACTORY_READINESS.md#compiled-frontend-follow-up--2026-10-30)
+records the compiled-frontend smoke separately from 72-hour acceptance.
 
 Vite 8 also recommends `@vitejs/plugin-react` over `plugin-react-swc` when no SWC
 plugins are used; that optional switch is not part of this migration.

@@ -258,7 +258,7 @@ export function createApp() {
     app.use(express.static(publicDir));
     app.get("/{*path}", (req, res, next) => {
       if (req.path.startsWith("/api/")) return next();
-      res.sendFile(path.join(publicDir, "index.html"));
+      res.sendFile("index.html", { root: publicDir });
     });
   }
 

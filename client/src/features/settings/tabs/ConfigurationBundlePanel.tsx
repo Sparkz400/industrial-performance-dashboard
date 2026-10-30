@@ -91,7 +91,7 @@ export default function ConfigurationBundlePanel() {
           setMessage('');
         }}
       >
-        {assets.data?.map((a) => (
+        {(assets.data ?? []).map((a) => (
           <MenuItem key={a.id} value={a.id}>
             {a.name}
           </MenuItem>
