@@ -160,7 +160,9 @@ is made to fail health after its verified backup and is rolled back into a fresh
 project; that installation is then upgraded from the second package alone. The test
 checks the pre-upgrade backup, that the applied migrations extend the earlier list
 without removing a column, and that measurements and report files are unchanged.
-It needs Docker and builds both revisions, so it is not part of CI.
+It needs Docker and builds both revisions, so it is not part of CI. It passed from
+`02d4a60f` (wave 11, 38 migrations) to `718d776f` (40 migrations) in about five minutes;
+its `validation.json` receipt records both revisions and image IDs.
 
 ## Validation
 
