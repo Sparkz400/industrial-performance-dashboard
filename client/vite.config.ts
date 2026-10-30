@@ -11,7 +11,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
+      '@': path.resolve(import.meta.dirname, 'src'),
     },
     dedupe: ['react', 'react-dom', 'react-router', 'react-router-dom', '@emotion/react', '@emotion/styled'],
   },
