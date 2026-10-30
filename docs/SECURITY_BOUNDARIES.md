@@ -112,8 +112,8 @@ Accepted residual risks (owner: repository maintainer; revisit before each relea
   private-address checks; enable it only with a network policy that limits the app's
   outbound destinations.
 - SMTP delivery is at least once and can duplicate after an ambiguous failure.
-- Coordinated major upgrades (MUI, Storybook/Vite, lint, Vitest 5, virtualization,
-  grid layout, Node 26) remain deferred; see [dependency review](DEPENDENCY_REVIEW.md).
+- ESLint 10 (blocked by eslint-plugin-react) and Node 26 remain deferred; the other
+  coordinated majors are migrated. See [dependency review](DEPENDENCY_REVIEW.md).
 
 ## OT deployment boundary (D01)
 

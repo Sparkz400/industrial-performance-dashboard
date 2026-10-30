@@ -60,6 +60,46 @@ current toolchain. Reopen a migration when its callers and checks can move toget
 | [#54](https://github.com/Sparkz400/performance_dashboard/pull/54) | ESLint 10 fails on both operating systems: `react/display-name` calls removed `contextOrFilename.getFilename`. Installed eslint-plugin-react supports ESLint through 9, so the plugin/config migration remains required. |
 | [#55](https://github.com/Sparkz400/performance_dashboard/pull/55) | Vitest/coverage 5 are grouped correctly, but both type checks fail because Testing Library matcher declarations no longer augment the new assertion type (`toHaveValue`, `toBeVisible`, `toBeInTheDocument`). Keep the tested v4 pair until the test-type migration is qualified. |
 
+## Coordinated major migrations — 2026-10-30
+
+The families deferred above migrate one per commit, so each can be reverted alone.
+Every family's peers were checked against the registry first. ESLint is the only
+family whose peers are still incompatible, and it was not forced.
+
+| Family | Result | Decision and changes |
+| --- | --- | --- |
+| Vitest + coverage | `vitest`/`@vitest/coverage-v8` 5.0.5, `@testing-library/jest-dom` 7.0.1 | Migrated. The #55 type failure came from Vitest 4's `JestAssertion` extending the global `jest.Matchers`, which Vitest 5 dropped. The client setup now imports `@testing-library/jest-dom/vitest`, which augments Vitest's `Assertion`. Vitest stays at the workspace root so those types resolve. Vitest 5 also reported an intermittent `EnvironmentTeardownError`: 15 server unit files imported the real database manager, which starts a PostgreSQL login to `DB_PORT` 5432 on import and could log after teardown. A shared stub in the server test setup keeps unit tests off real PostgreSQL. |
+| Storybook + Vite | `storybook`, `@storybook/react`, `@storybook/react-vite` 10.6.5; `vite` 8.3.5 | Migrated. Controls, actions, backgrounds, viewport and toolbars are in Storybook 10 core. `addon-essentials` (#53's blocker) and `blocks` are removed because no story uses docs or MDX. Storybook loads `main.ts` as native ESM, so both configs use `import.meta.dirname`, and the Vitest config imports `vite.config.ts` with its extension for Vite 8's native config loader. `addon-actions` is no longer installed, so its scoped UUID override and check are removed. |
+| MUI | `@mui/material`, `@mui/icons-material`, `@mui/system` 9.5.0 | Migrated. There is no v8; the official v9 guide covers 7 → 9. The official `@mui/codemod` 9.5.0 transforms `v7.0.0/grid-props`, `v9.0.0/system-props` and `deprecations/all` were applied. `Grid2` imports become `@mui/material/Grid`. The six removed `*Outline` icons, including #52's unresolved `HelpOutline`, use their `*Outlined` names, and four `slotProps` entries move system props into `sx`. MUI 9 `Switch` exposes role `switch`, so two browser checks query that role. Runtime-only changes were reviewed: link, label and anchor buttons infer `nativeButton=false`; no `MenuItem` or `Tab` renders outside its container; no `Grid` uses a column direction. |
+| ESLint | `eslint` 9 (unchanged) | Kept on 9. `eslint-plugin-react` 7.37.5, still the latest release (2025-04-03), declares ESLint `^3 … ^9.7`, and #54 showed `react/display-name` calling the removed `getFilename` under ESLint 10. Revisit when the plugin supports ESLint 10, or when the lint config replaces it. |
+| Virtualization | `react-window` 2.5.1 | Migrated. `VirtualizedTable` uses the v2 `List`, which sizes itself to its parent, so `react-virtualized-auto-sizer` and `@types/react-window` are removed (#13 and #21 are superseded). AutoSizer 1.x remains only as `@nivo/core`'s own dependency. The list keeps react-window 1's role-less container because its rows are MUI table rows. The unused `VirtualizeGrid` is deleted rather than migrated. |
+| Grid layout | `react-grid-layout` 2.3.0 | Migrated through the v2 `react-grid-layout/legacy` entry, which keeps the v1 props and the persisted layout contract. v2 ships its own types, so `@types/react-grid-layout` is removed. v2 passes read-only layouts to callbacks, so the dashboard copies the array before storing it. `react-resizable` stays on 3 because react-grid-layout 2.3 depends on `^3.2` and the dashboard imports its stylesheet. |
+| Node runtime | Node 24 (unchanged) | Out of scope. Node 26 still needs the separate support decision recorded for #29. |
+
+Validation on Windows with Node 24.22: clean root `npm ci`; `npm ls --all` with no
+invalid or missing peers; full `npm audit` at zero; both builds; client, Vite-config
+and server type checks; lint (no errors, the seven earlier warnings remain), Prettier,
+the dev-dependency check and 110 client and 318 server unit tests with coverage
+(eight repeated server runs). The Storybook build renders all 21 stories in a browser,
+including the theme toolbar, controls and the scrolled 1,000-row virtualized table.
+The isolated Playwright suite passes 15 of 15. The accessibility check finds no WCAG
+2.2 A/AA violations on 7 screens and moves and resizes a widget by keyboard. The
+subscription-limit and daily-workflow browser flows pass. A real mouse drag and
+handle resize of dashboard widgets is saved to an owned PostgreSQL database and
+restored after reload. It stores the same layout as react-grid-layout 1.5.4 for the
+same actions. All database checks used throwaway databases on the owned test
+container. No production endpoint was used.
+
+Unchanged findings, observed identically before the migration:
+- An untouched dashboard shows "Unsaved changes" after loading (same with 1.5.4).
+- `TextField select` without children logs a warning (same check in MUI 6.5).
+- Wallboard renders a list without keys.
+- `e2e/dashboard.spec.ts` finds the tab close button by its icon's `data-testid`,
+  which MUI only emits in development builds.
+
+Vite 8 also recommends `@vitejs/plugin-react` over `plugin-react-swc` when no SWC
+plugins are used; that optional switch is not part of this migration.
+
 ## Consolidation details
 
 - PR 32 is subsumed by the newer PostgreSQL instrumentation in PR 34. OpenTelemetry API 1.10/resources and metrics SDK 3 are aligned with SDK Node/exporters 0.300, removing invalid peer dependencies. A real loopback span export verifies startup and shutdown.
@@ -77,7 +117,9 @@ esbuild 0.25.12 only to the deprecated Drizzle loader. This fixes
 [GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq) and
 [GHSA-67mh-4wv8-2f99](https://github.com/advisories/GHSA-67mh-4wv8-2f99) without
 changing the retained Storybook/Vite or Drizzle APIs. Remove these overrides when
-upstream toolchain migrations supply compatible patched dependencies.
+upstream toolchain migrations supply compatible patched dependencies. The UUID
+override was removed with the Storybook 10 migration, which no longer installs
+addon-actions.
 
 Validation includes clean install/peer validation, both builds, Storybook build,
 Drizzle generation with no schema changes, the real loader's sync/async TypeScript

@@ -255,7 +255,7 @@ simulator evidence do not establish physical-machine acceptance or release readi
 - Separate companies must use separate installations. Tenant isolation is unqualified.
 - The full npm audit reports zero vulnerabilities, including development tools.
   Security CI now blocks advisories at every severity and preserves the full audit.
-  Scoped UUID/esbuild overrides and their compatibility checks are documented in
+  The scoped esbuild override and its compatibility check are documented in
   [the review](DEPENDENCY_REVIEW.md). CSRF and cross-origin socket regression checks pass.
 - The Node 24/Wolfi image renders scheduled PDFs without Chromium and has zero
   findings in the pilot image's full scan (28 OS and 556 Node packages). Actual-image collection,
