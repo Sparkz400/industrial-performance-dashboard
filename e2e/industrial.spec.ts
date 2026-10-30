@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import type { MachineLiveSummary } from "@performance-dashboard/shared";
 
 // Render the real application with owned fixtures; no machine or database is contacted.
 test.use({ serviceWorkers: "block" });
@@ -103,8 +104,7 @@ async function fixtures(page: Page) {
         error: "Declare the data assumption before using a control chart",
         code: "VALIDATION_ERROR",
       };
-    }
-    else if (path === "/production/assets")
+    } else if (path === "/production/assets")
       json = [{ id: 1, name: "Fixture machine" }];
     else if (path === "/production/operator/live")
       json = {
@@ -117,6 +117,7 @@ async function fixtures(page: Page) {
             freshness: "missing",
             connection: "disconnected",
             lastMeasurement: null,
+            receivedAt: null,
             shift: null,
             production: {
               observed: null,
@@ -124,8 +125,16 @@ async function fixtures(page: Page) {
               truncated: false,
               asOf: null,
             },
-            issues: ["No measurements"],
-          },
+            issues: [
+              {
+                id: 1,
+                text: "No measurements",
+                priority: "normal",
+                dueAt: null,
+                kind: "note",
+              },
+            ],
+          } satisfies MachineLiveSummary,
         ],
       };
     await route.fulfill({ status, json });
@@ -205,6 +214,12 @@ for (const mode of ["light", "dark"] as const) {
       .getByRole("button", { name: "Exit fullscreen", exact: true })
       .click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Save", exact: true }),
+    ).toBeDisabled();
+    await page.getByRole("button", { name: "Move or resize widget" }).click();
+    await page.getByRole("menuitem", { name: "Taller" }).click();
+    await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(
       page.getByText("Dashboard saved successfully", { exact: true }),

@@ -99,8 +99,8 @@ Follow-through on findings observed before the migration:
   warnings without inventing an option or selected value.
 - Dashboard tabs support Delete by keyboard; the regression no longer depends on
   MUI's development-only icon test identifier.
-- The earlier wallboard key warning is not reproduced by inspection: machine, option
-  and issue lists all use their persisted IDs. Keep browser qualification separate.
+- The wallboard warning came from a browser fixture supplying strings where typed
+  issue records were required. The fixture now supplies IDs and checks the shared type.
 
 Recovery follow-through adds a committed-writer boundary to edge cursors and a durable
 PLC alarm spool. Their isolated regressions cover late commits, database rejection,
