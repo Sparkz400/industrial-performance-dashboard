@@ -1,10 +1,11 @@
 import React, { Suspense } from 'react';
-import { Alert, Box, Stack, Tab, Tabs, Typography } from '@mui/material';
+import { Alert, Box, Stack, Typography, TextField, MenuItem } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useT } from '@/i18n';
 import { operationRequest } from './api';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useSavedFilter } from '@/hooks/useSavedFilter';
+import SectionNavigation from '@/shared/components/SectionNavigation';
 import MachinePicker from '@/shared/components/MachinePicker';
 const LinePanel = React.lazy(() => import('./LinePanel'));
 const MaintenanceActionsPanel = React.lazy(() => import('./MaintenanceActionsPanel'));
@@ -111,7 +112,37 @@ export default function OperationsPage() {
     { name: 'Sites', de: 'Standorte', content: <SitesOverviewPanel /> },
   ];
   // Role changes can shorten the tab list since the tab was remembered.
-  const tab = savedTab < panels.length ? savedTab : 0;
+  const tab =
+    Number.isInteger(savedTab) && savedTab >= 0 && savedTab < panels.length ? savedTab : 0;
+  const groups = [
+    {
+      label: t('Planning'),
+      names: ['Planning', 'Work orders', 'Changeovers', 'Completion forecast'],
+    },
+    {
+      label: t('Maintenance'),
+      names: [
+        'Maintenance',
+        'Alarm actions',
+        'Alarm usefulness',
+        'Improvement actions',
+        'Recommendations',
+      ],
+    },
+    {
+      label: t('Analysis', 'Analyse'),
+      names: ['Energy and losses', 'Comparisons', 'Calculated signals'],
+    },
+    { label: t('History'), names: ['History'] },
+    { label: t('Connections'), names: ['Connection diagnostics', 'PLC alarms'] },
+    { label: t('Assets', 'Anlagen'), names: ['Production line', 'Asset overview', 'Sites'] },
+  ];
+  const group = groups.findIndex((item) => item.names.includes(panels.at(tab)!.name));
+  const sections = panels.flatMap((panel, index) =>
+    groups.at(group)!.names.includes(panel.name)
+      ? [{ label: t(panel.name, panel.de), value: index }]
+      : [],
+  );
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1250, width: '100%', mx: 'auto' }}>
       <Stack spacing={3}>
@@ -128,28 +159,37 @@ export default function OperationsPage() {
             )}
           </Alert>
         )}
-        <Tabs
-          value={tab}
-          onChange={(_, v) => setTab(v)}
-          variant="scrollable"
-          scrollButtons="auto"
-          aria-label={t('Daily operations')}
+        <TextField
+          select
+          label={t('Work area', 'Arbeitsbereich')}
+          value={group}
+          onChange={(event) =>
+            setTab(
+              panels.findIndex((panel) =>
+                groups.at(Number(event.target.value))!.names.includes(panel.name),
+              ),
+            )
+          }
+          sx={{ maxWidth: { md: 360 } }}
         >
-          {panels.map(({ name, de }, i) => (
-            <Tab
-              id={`operations-tab-${i}`}
-              aria-controls={`operations-panel-${i}`}
-              key={name}
-              label={t(name, de)}
-            />
+          {groups.map((item, index) => (
+            <MenuItem key={item.label} value={index}>
+              {item.label}
+            </MenuItem>
           ))}
-        </Tabs>
+        </TextField>
+        <SectionNavigation
+          label={t('Daily operations')}
+          value={tab}
+          onChange={setTab}
+          sections={sections}
+        />
         {/* The site overview spans machines; every other panel needs a selected machine. */}
         {(machine || panels.at(tab)?.name === 'Sites') && (
           <Box
             role="tabpanel"
             id={`operations-panel-${tab}`}
-            aria-labelledby={`operations-tab-${tab}`}
+            aria-label={t(panels.at(tab)!.name, panels.at(tab)!.de)}
             key={`${machine}:${tab}`}
           >
             <Suspense fallback={<Typography role="status">{t('Loading…')}</Typography>}>

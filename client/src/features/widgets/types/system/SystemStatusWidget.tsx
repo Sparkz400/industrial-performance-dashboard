@@ -1,3 +1,4 @@
+import { statusColor, systemObservation } from '@/utils/serviceStatus';
 import React, { memo, useCallback, useMemo } from 'react';
 import {
   Typography,
@@ -41,11 +42,15 @@ const SystemStatusWidget = memo<SystemStatusWidgetProps>(({ config = {} }) => {
     return () => clearInterval(timer);
   }, []);
   const age = lastChecked ? now - lastChecked.getTime() : NaN;
-  const fresh = Number.isFinite(age) && age >= -5000 && age <= 90000 && !isError;
+  const fresh =
+    Number.isFinite(age) &&
+    age >= -5000 &&
+    age <= 90000 &&
+    !(isError && recordedStatus.overall.status === 'UNKNOWN');
   const status = fresh ? recordedStatus : undefined;
   const isConnected = fresh && recordedConnected;
 
-  const overallStatus = status?.overall?.status?.toLowerCase() || 'unknown';
+  const overallStatus = status ? systemObservation(status).status : 'UNKNOWN';
   const loading = false; // Store handles async internally
   const hasError = isError;
   const lastUpdated = lastChecked;
@@ -87,18 +92,10 @@ const SystemStatusWidget = memo<SystemStatusWidgetProps>(({ config = {} }) => {
     [],
   );
 
-  // Get appropriate icon color based on status
-  const getIconColor = useCallback(
-    (statusValue: ServiceStatus | string | undefined): 'success' | 'error' => {
-      if (!statusValue) return 'error';
-      const s =
-        typeof statusValue === 'object'
-          ? statusValue.status?.toLowerCase()
-          : statusValue.toLowerCase();
-      return s === 'ok' || s === 'connected' ? 'success' : 'error';
-    },
-    [],
-  );
+  const getIconColor = (service: ServiceStatus | undefined) => {
+    const color = statusColor(service?.status);
+    return color === 'default' ? ('action' as const) : color;
+  };
 
   // Memoize derived status text
   const dbStatusText = useMemo(
@@ -150,7 +147,7 @@ const SystemStatusWidget = memo<SystemStatusWidgetProps>(({ config = {} }) => {
             <ListItemIcon>
               <DnsIcon color={getIconColor(status?.opcua)} />
             </ListItemIcon>
-            <ListItemText primary="OPC UA Server" secondary={opcuaStatusText} />
+            <ListItemText primary="OPC UA gateway" secondary={opcuaStatusText} />
             <StatusIndicator status={status?.opcua} />
           </ListItem>
         </List>
@@ -164,7 +161,7 @@ const SystemStatusWidget = memo<SystemStatusWidgetProps>(({ config = {} }) => {
             flexGrow: 1,
           }}
         >
-          {!fresh ? (
+          {!fresh || overallStatus === 'UNKNOWN' ? (
             <Typography role="status">
               Current system status unknown: stale or unavailable observation.
             </Typography>

@@ -87,12 +87,13 @@ await dailyFixture(async ({ pool, call, expect, actors, frontend }) => {
     const page = await actors.admin.newPage();
     await page.goto(`${frontend}/machines`);
     await page.getByRole("button", { name: "Add Machine", exact: true }).click();
-    const form = page.getByRole("dialog");
+    const form = page.getByRole("form");
     await form.getByLabel("Machine Name").fill("Browser limited");
     await form.getByLabel("IP Address").fill("localhost");
     await form.getByLabel(/^Port/).fill(String(port));
     await form.getByLabel("Resource Path").fill("/UA/Browser");
     await form.getByRole("switch", { name: "Active" }).uncheck();
+    await form.getByRole("button", { name: "Subscription limits", exact: true }).click();
     await form
       .getByRole("switch", { name: "Custom subscription limits for this endpoint" })
       .check();
@@ -109,7 +110,7 @@ await dailyFixture(async ({ pool, call, expect, actors, frontend }) => {
     await page.reload();
     await page
       .locator(".MuiCard-root", { hasText: "Browser limited" })
-      .getByRole("button", { name: "Edit", exact: true })
+      .getByRole("button", { name: /^Edit:/ })
       .click();
     await expect(form.getByLabel("Publishing interval (ms)")).toHaveValue("1500");
     await form.getByRole("button", { name: "Cancel" }).click();

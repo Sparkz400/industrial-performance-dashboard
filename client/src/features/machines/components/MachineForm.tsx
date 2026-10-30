@@ -1,9 +1,12 @@
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import PageHeader from '@/shared/components/PageHeader';
+import { useT } from '@/i18n';
 import React, { useState, useEffect } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Typography,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
   Button,
   TextField,
   FormControl,
@@ -43,6 +46,7 @@ const defaultFormData: MachineFormData = {
 };
 
 const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, machine }) => {
+  const t = useT();
   const [formData, setFormData] = useState<MachineFormData>(defaultFormData);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -78,6 +82,12 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
       setError('Name and IP are required');
       return;
     }
+    if (!Number.isInteger(formData.port) || formData.port < 1 || formData.port > 65535) {
+      setError(
+        t('Port must be between 1 and 65535.', 'Der Port muss zwischen 1 und 65535 liegen.'),
+      );
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -90,15 +100,34 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
     }
   };
 
+  if (!open) return null;
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{machine ? 'Edit Machine' : 'Add Machine'}</DialogTitle>
-      <DialogContent>
+    <Box
+      component="form"
+      aria-label={t(machine ? 'Edit Machine' : 'Add Machine')}
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault();
+        void handleSubmit();
+      }}
+      sx={{
+        p: { xs: 2, md: 3 },
+        maxWidth: 960,
+        width: '100%',
+        mx: 'auto',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
+      }}
+    >
+      <PageHeader title={t(machine ? 'Edit Machine' : 'Add Machine')} description={machine?.name} />
+      <Box sx={{ minHeight: 0, overflowY: 'auto', flex: 1, p: 0.5 }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
           {error && <Alert severity="error">{error}</Alert>}
 
           <TextField
-            label="Machine Name"
+            label={t('Machine Name')}
             value={formData.name}
             onChange={(e) => handleChange('name', e.target.value)}
             fullWidth
@@ -106,9 +135,9 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
             placeholder="e.g. Production Line 1"
           />
 
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
             <TextField
-              label="IP Address"
+              label={t('IP Address')}
               value={formData.ip}
               onChange={(e) => handleChange('ip', e.target.value)}
               fullWidth
@@ -116,30 +145,31 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
               placeholder="e.g. 192.168.1.100"
             />
             <TextField
-              label="Port"
+              label={t('Port')}
               type="number"
               value={formData.port}
               onChange={(e) => handleChange('port', parseInt(e.target.value, 10))}
-              sx={{ width: 120 }}
+              sx={{ width: { xs: '100%', sm: 140 }, flexShrink: 0 }}
+              slotProps={{ htmlInput: { min: 1, max: 65535 } }}
               required
             />
           </Box>
 
           <TextField
-            label="Resource Path"
+            label={t('Resource Path')}
             value={formData.resourcePath}
             onChange={(e) => handleChange('resourcePath', e.target.value)}
             fullWidth
             placeholder="e.g. /OPCUA/SimulationServer"
           />
 
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
             <FormControl fullWidth>
-              <InputLabel id="machine-security-mode">Security Mode</InputLabel>
+              <InputLabel id="machine-security-mode">{t('Security Mode')}</InputLabel>
               <Select
                 labelId="machine-security-mode"
                 value={formData.securityMode}
-                label="Security Mode"
+                label={t('Security Mode')}
                 onChange={(e) => handleChange('securityMode', e.target.value)}
               >
                 <MenuItem value="None">None</MenuItem>
@@ -149,11 +179,11 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
             </FormControl>
 
             <FormControl fullWidth>
-              <InputLabel id="machine-security-policy">Security Policy</InputLabel>
+              <InputLabel id="machine-security-policy">{t('Security Policy')}</InputLabel>
               <Select
                 labelId="machine-security-policy"
                 value={formData.securityPolicy}
-                label="Security Policy"
+                label={t('Security Policy')}
                 onChange={(e) => handleChange('securityPolicy', e.target.value)}
               >
                 <MenuItem value="None">None</MenuItem>
@@ -164,10 +194,10 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
           </Box>
 
           <FormControl fullWidth>
-            <InputLabel id="machine-authentication">Machine authentication</InputLabel>
+            <InputLabel id="machine-authentication">{t('Machine authentication')}</InputLabel>
             <Select
               labelId="machine-authentication"
-              label="Machine authentication"
+              label={t('Machine authentication')}
               value={formData.authentication?.mode ?? 'anonymous'}
               onChange={(event) =>
                 setFormData((previous) => ({
@@ -195,7 +225,7 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
           {formData.authentication?.mode === 'username' && (
             <>
               <TextField
-                label="Machine username"
+                label={t('Machine username')}
                 autoComplete="off"
                 value={formData.authentication.username ?? ''}
                 onChange={(event) =>
@@ -206,7 +236,7 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
                 }
               />
               <TextField
-                label="Machine password"
+                label={t('Machine password')}
                 type="password"
                 autoComplete="new-password"
                 value={formData.authentication.password ?? ''}
@@ -231,7 +261,7 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
                 CPU and firmware. This is separate from the application certificate under Settings.
               </Alert>
               <TextField
-                label="User certificate (PEM)"
+                label={t('User certificate (PEM)')}
                 multiline
                 minRows={3}
                 value={formData.authentication.certificatePem ?? ''}
@@ -249,7 +279,7 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
                 <input
                   type="file"
                   accept=".pem,.key"
-                  aria-label="User private key (PEM)"
+                  aria-label={t('User private key (PEM)')}
                   hidden
                   onChange={async (event) => {
                     const file = event.target.files?.[0];
@@ -295,52 +325,61 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
             </Alert>
           )}
 
-          <FormControlLabel
-            control={
-              <Switch
-                checked={!!formData.subscription}
-                onChange={(e) =>
-                  setFormData((previous) => ({
-                    ...previous,
-                    subscription: e.target.checked ? { ...DEFAULT_LIMITS } : null,
-                  }))
+          <Accordion defaultExpanded={Boolean(machine?.subscription)} disableGutters>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography>{t('Subscription limits', 'Abonnementgrenzen')}</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={!!formData.subscription}
+                    onChange={(e) =>
+                      setFormData((previous) => ({
+                        ...previous,
+                        subscription: e.target.checked ? { ...DEFAULT_LIMITS } : null,
+                      }))
+                    }
+                  />
                 }
+                label={t('Custom subscription limits for this endpoint')}
               />
-            }
-            label="Custom subscription limits for this endpoint"
-          />
-          {formData.subscription && (
-            <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { sm: '1fr 1fr 1fr' } }}>
-              {(
-                [
-                  ['publishingIntervalMs', 'Publishing interval (ms)', 50, 60000],
-                  ['queueSize', 'Queue size per signal', 1, 1000],
-                  [
-                    'maxNotificationsPerPublish',
-                    'Max notifications per publish (0 = server limit)',
-                    0,
-                    10000,
-                  ],
-                ] as const
-              ).map(([key, label, min, max]) => (
-                <TextField
-                  key={key}
-                  type="number"
-                  label={label}
-                  // eslint-disable-next-line security/detect-object-injection -- key comes from the fixed list above
-                  value={formData.subscription![key]}
-                  slotProps={{ htmlInput: { min, max } }}
-                  onChange={(e) =>
-                    setFormData((previous) => ({
-                      ...previous,
-                      subscription: { ...previous.subscription!, [key]: Number(e.target.value) },
-                    }))
-                  }
-                />
-              ))}
-            </Box>
-          )}
-
+              {formData.subscription && (
+                <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { sm: '1fr 1fr 1fr' } }}>
+                  {(
+                    [
+                      ['publishingIntervalMs', 'Publishing interval (ms)', 50, 60000],
+                      ['queueSize', 'Queue size per signal', 1, 1000],
+                      [
+                        'maxNotificationsPerPublish',
+                        'Max notifications per publish (0 = server limit)',
+                        0,
+                        10000,
+                      ],
+                    ] as const
+                  ).map(([key, label, min, max]) => (
+                    <TextField
+                      key={key}
+                      type="number"
+                      label={label}
+                      // eslint-disable-next-line security/detect-object-injection -- key comes from the fixed list above
+                      value={formData.subscription![key]}
+                      slotProps={{ htmlInput: { min, max } }}
+                      onChange={(e) =>
+                        setFormData((previous) => ({
+                          ...previous,
+                          subscription: {
+                            ...previous.subscription!,
+                            [key]: Number(e.target.value),
+                          },
+                        }))
+                      }
+                    />
+                  ))}
+                </Box>
+              )}
+            </AccordionDetails>
+          </Accordion>
           <FormControlLabel
             control={
               <Switch
@@ -348,17 +387,32 @@ const MachineForm: React.FC<MachineFormProps> = ({ open, onClose, onSubmit, mach
                 onChange={(e) => handleChange('isActive', e.target.checked)}
               />
             }
-            label="Active"
+            label={t('Active')}
           />
         </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" disabled={submitting}>
-          {submitting ? 'Saving...' : machine ? 'Update' : 'Add'}
+      </Box>
+      <Box
+        sx={{
+          flexShrink: 0,
+          bgcolor: 'background.default',
+          borderTop: 1,
+          borderColor: 'divider',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: 1,
+          py: 2,
+          mt: 3,
+          zIndex: 1,
+        }}
+      >
+        <Button onClick={onClose} disabled={submitting}>
+          {t('Cancel')}
         </Button>
-      </DialogActions>
-    </Dialog>
+        <Button type="submit" variant="contained" disabled={submitting}>
+          {t(submitting ? 'Saving...' : machine ? 'Update' : 'Add')}
+        </Button>
+      </Box>
+    </Box>
   );
 };
 

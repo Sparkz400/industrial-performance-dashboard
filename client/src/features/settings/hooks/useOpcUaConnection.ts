@@ -32,7 +32,7 @@ interface OpcUaStatusResponse {
 interface OpcUaConnectionReturn {
   loading: boolean;
   setLoading: React.Dispatch<React.SetStateAction<boolean>>;
-  opcuaConnected: boolean;
+  opcuaConnected: boolean | null;
   connectedAddress: string;
   connectionHistory: ConnectionHistoryEntry[];
   configChanged: boolean;
@@ -54,7 +54,7 @@ interface OpcUaConnectionReturn {
 
 export const useOpcUaConnection = (): OpcUaConnectionReturn => {
   const [loading, setLoading] = useState<boolean>(false);
-  const [opcuaConnected, setOpcuaConnected] = useState<boolean>(false);
+  const [opcuaConnected, setOpcuaConnected] = useState<boolean | null>(null);
   const [connectedAddress, setConnectedAddress] = useState<string>('');
   const [connectionHistory, setConnectionHistory] = useState<ConnectionHistoryEntry[]>([]);
   const [configChanged, setConfigChanged] = useState<boolean>(false);
@@ -199,6 +199,7 @@ export const useOpcUaConnection = (): OpcUaConnectionReturn => {
           setConnectedAddress('');
         }
       } else {
+        setOpcuaConnected(null);
         console.error('Error fetching status:', data.error);
         // Add notification for failure
         enqueueSnackbar(`Failed to fetch OPC UA status: ${data.error || 'Unknown'}`, {
@@ -206,6 +207,7 @@ export const useOpcUaConnection = (): OpcUaConnectionReturn => {
         });
       }
     } catch (err) {
+      setOpcuaConnected(null);
       console.error('Error fetching connection status:', err);
       // Add notification for failure
       enqueueSnackbar(`Error fetching OPC UA status: ${(err as Error).message}`, {

@@ -1,3 +1,4 @@
+import { selectOperation } from "./browser-navigation.mjs";
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
@@ -135,7 +136,7 @@ await dailyFixture(async ({ pool, call, users, actors, api, frontend, expect }) 
       await picker.fill("Service");
       await page.getByRole("option", { name: "Service press", exact: true }).click();
     }
-    await page.getByRole("tab", { name: "Maintenance" }).click();
+    await selectOperation(page, "Maintenance");
   };
   await openMaintenance();
   await expect(page.getByRole("button", { name: "belt_.._photo.png" })).toBeVisible();

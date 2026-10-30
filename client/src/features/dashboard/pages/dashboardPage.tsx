@@ -12,6 +12,7 @@ import {
   DialogTitle,
   Button,
   alpha,
+  useMediaQuery,
 } from '@mui/material';
 import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 import 'react-grid-layout/css/styles.css';
@@ -97,6 +98,7 @@ class GridErrorBoundary extends React.Component<GridErrorBoundaryProps, GridErro
 function DashboardPageInternal(): React.JSX.Element {
   const t = useT();
 
+  const compact = useMediaQuery('(max-width:1099px)');
   const editable = useAuthStore((s) => s.user?.role === 'admin');
   const { state, dispatch } = useDashboardState();
   const {
@@ -177,6 +179,29 @@ function DashboardPageInternal(): React.JSX.Element {
     [state.dashboards, state.dashboardToDeleteId],
   );
 
+  const widgetItems = (widgets || []).map((widget) => {
+    const layoutItem = layoutMap.get(widget.id);
+    return (
+      <div
+        key={widget.id}
+        style={
+          compact
+            ? { height: Math.max(280, (layoutItem?.h ?? 6) * 51 - 16), minWidth: 0 }
+            : undefined
+        }
+      >
+        <WidgetContainer
+          readOnly={!editable}
+          widget={widget}
+          onDelete={handleRemoveWidget}
+          onNudge={handleNudge}
+          layoutItem={layoutItem}
+          commonData={commonWidgetData}
+        />
+      </div>
+    );
+  });
+
   // Loading state
   if (!state.initialized && state.isLoading) {
     return (
@@ -243,56 +268,66 @@ function DashboardPageInternal(): React.JSX.Element {
       >
         {state.dashboards.length > 0 && state.selectedDashboardId && (
           <GridErrorBoundary>
-            <ResponsiveGridLayout
-              isDraggable={editable}
-              isResizable={editable}
-              draggableCancel=".MuiIconButton-root, .no-drag"
-              className="layout"
-              layouts={{ lg: layout, md: layout, sm: layout, xs: layout, xxs: layout }}
-              breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-              cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
-              rowHeight={35}
-              onLayoutChange={(currentLayout: readonly LayoutItem[]) => {
-                if (!editable) return;
-                const normalize = (items: readonly LayoutItem[]) =>
-                  items
-                    .map(({ i, x, y, w, h, minW, minH, maxW, maxH }) => ({
-                      i,
-                      x,
-                      y,
-                      w,
-                      h,
-                      minW,
-                      minH,
-                      maxW,
-                      maxH,
-                    }))
-                    .sort((a, b) => a.i.localeCompare(b.i));
-                const oldStr = JSON.stringify(normalize(layout));
-                const newStr = JSON.stringify(normalize(currentLayout));
-                if (oldStr !== newStr) {
-                  updateLayout([...currentLayout]);
-                }
-              }}
-              margin={[16, 16]}
-              containerPadding={[0, 0]}
+            {/* Keep widget instances mounted when the viewport changes; only their placement changes. */}
+            <Box
+              sx={
+                compact
+                  ? {
+                      '& .react-grid-layout': {
+                        height: 'auto !important',
+                        display: 'grid',
+                        gridTemplateColumns: 'minmax(0, 1fr)',
+                        gap: 2,
+                      },
+                      '& .react-grid-item': {
+                        position: 'relative !important',
+                        transform: 'none !important',
+                        width: '100% !important',
+                        minHeight: 280,
+                        left: 'auto !important',
+                        top: 'auto !important',
+                      },
+                    }
+                  : undefined
+              }
             >
-              {(widgets || []).map((widget) => {
-                const layoutItem = layoutMap.get(widget.id);
-                return (
-                  <div key={widget.id}>
-                    <WidgetContainer
-                      readOnly={!editable}
-                      widget={widget}
-                      onDelete={handleRemoveWidget}
-                      onNudge={handleNudge}
-                      layoutItem={layoutItem}
-                      commonData={commonWidgetData}
-                    />
-                  </div>
-                );
-              })}
-            </ResponsiveGridLayout>
+              <ResponsiveGridLayout
+                isDraggable={editable && !compact}
+                isResizable={editable && !compact}
+                draggableCancel=".MuiIconButton-root, .no-drag"
+                className="layout"
+                layouts={{ lg: layout, md: layout, sm: layout, xs: layout, xxs: layout }}
+                breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+                cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
+                rowHeight={35}
+                onLayoutChange={(currentLayout: readonly LayoutItem[]) => {
+                  if (!editable || compact) return;
+                  const normalize = (items: readonly LayoutItem[]) =>
+                    items
+                      .map(({ i, x, y, w, h, minW, minH, maxW, maxH }) => ({
+                        i,
+                        x,
+                        y,
+                        w,
+                        h,
+                        minW,
+                        minH,
+                        maxW,
+                        maxH,
+                      }))
+                      .sort((a, b) => a.i.localeCompare(b.i));
+                  const oldStr = JSON.stringify(normalize(layout));
+                  const newStr = JSON.stringify(normalize(currentLayout));
+                  if (oldStr !== newStr) {
+                    updateLayout([...currentLayout]);
+                  }
+                }}
+                margin={[16, 16]}
+                containerPadding={[0, 0]}
+              >
+                {widgetItems}
+              </ResponsiveGridLayout>
+            </Box>
           </GridErrorBoundary>
         )}
 
@@ -337,7 +372,8 @@ function DashboardPageInternal(): React.JSX.Element {
             style={{ x: '-50%' }}
             sx={{
               position: 'fixed',
-              bottom: { xs: 80, sm: 20 },
+              bottom: 20,
+              '@media (max-width:1099px)': { bottom: 'calc(144px + env(safe-area-inset-bottom))' },
               left: '50%',
               width: 'max-content',
               maxWidth: 'calc(100vw - 32px)',

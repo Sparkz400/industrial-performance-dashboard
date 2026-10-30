@@ -1,3 +1,4 @@
+import ResponsiveTable from '@/shared/components/ResponsiveTable';
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   Box,
@@ -9,7 +10,6 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  Table,
   TableBody,
   TableCell,
   TableContainer,
@@ -292,8 +292,17 @@ const ReportSchedulesPage: React.FC = () => {
     createMutation.error || updateMutation.error || deleteMutation.error || runNowMutation.error;
 
   return (
-    <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+    <Box sx={{ p: { xs: 2, md: 3 }, minWidth: 0, width: '100%' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 2,
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 3,
+        }}
+      >
         <Box>
           <Typography
             variant="h4"
@@ -356,7 +365,17 @@ const ReportSchedulesPage: React.FC = () => {
         </Box>
       ) : (
         <TableContainer component={Paper}>
-          <Table>
+          <ResponsiveTable
+            labels={[
+              'Name',
+              'Template',
+              'Schedule',
+              'Next Run',
+              'Last Status',
+              'Active',
+              'Actions',
+            ]}
+          >
             <TableHead>
               <TableRow>
                 <TableCell>Name</TableCell>
@@ -441,7 +460,7 @@ const ReportSchedulesPage: React.FC = () => {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+          </ResponsiveTable>
         </TableContainer>
       )}
 

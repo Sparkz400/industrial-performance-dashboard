@@ -1,3 +1,4 @@
+import { selectSettings } from "./browser-navigation.mjs";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import { dailyFixture } from "./daily-fixture.mjs";
@@ -328,9 +329,7 @@ await dailyFixture(async ({ pool, call, actors, frontend, expect }) => {
   );
   const page = await actors.admin.newPage();
   await page.goto(frontend + "/settings");
-  await page
-    .getByRole("tab", { name: "Backup & Restore", exact: true })
-    .click();
+  await selectSettings(page, "Backup & Restore");
   await page
     .getByRole("combobox", { name: "Source or target machine" })
     .click();
@@ -364,7 +363,7 @@ await dailyFixture(async ({ pool, call, actors, frontend, expect }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await expect
     .poll(async () => Math.round((await page.locator("main").boundingBox()).x))
-    .toBe(56);
+    .toBe(0);
   await page
     .getByRole("heading", { name: "Machine setup bundles", exact: true })
     .scrollIntoViewIfNeeded();
@@ -402,9 +401,7 @@ await dailyFixture(async ({ pool, call, actors, frontend, expect }) => {
   ).toBeVisible();
   await page.evaluate(() => localStorage.setItem("language", "de"));
   await page.reload();
-  await page
-    .getByRole("tab", { name: "Sicherung und Wiederherstellung", exact: true })
-    .click();
+  await selectSettings(page, "Sicherung und Wiederherstellung");
   await expect(
     page.getByRole("heading", {
       name: "Maschinenkonfiguration übertragen",

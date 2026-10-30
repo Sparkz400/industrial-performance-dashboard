@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Box, Typography, LinearProgress, CircularProgress, useTheme } from '@mui/material';
 
 interface OeeGaugeWidgetViewProps {
@@ -8,16 +8,6 @@ interface OeeGaugeWidgetViewProps {
   quality: number;
   isLoading: boolean;
 }
-
-/**
- * Returns a color based on percentage thresholds.
- * @param value
- */
-const getColor = (value: number): string => {
-  if (value >= 85) return '#4caf50';
-  if (value >= 60) return '#ff9800';
-  return '#f44336';
-};
 
 const OeeGaugeWidgetView: React.FC<OeeGaugeWidgetViewProps> = ({
   oee,
@@ -29,7 +19,13 @@ const OeeGaugeWidgetView: React.FC<OeeGaugeWidgetViewProps> = ({
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
-  const oeeColor = useMemo(() => getColor(oee), [oee]);
+  const getColor = (value: number) =>
+    value >= 85
+      ? theme.palette.success.main
+      : value >= 60
+        ? theme.palette.warning.main
+        : theme.palette.error.main;
+  const oeeColor = getColor(oee);
 
   if (isLoading) {
     return (

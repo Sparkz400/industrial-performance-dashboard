@@ -1,9 +1,9 @@
+import ResponsiveTable from '@/shared/components/ResponsiveTable';
 import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
   Paper,
-  Table,
   TableBody,
   TableCell,
   TableContainer,
@@ -157,7 +157,18 @@ const SpcProfilesPage: React.FC = () => {
       )}
 
       <TableContainer component={Paper}>
-        <Table>
+        <ResponsiveTable
+          labels={[
+            'Name',
+            'Machine ID',
+            'Node Key',
+            'Method',
+            'Sensitivity',
+            'UCL / Mean / LCL',
+            'Baseline',
+            'Actions',
+          ]}
+        >
           <TableHead>
             <TableRow>
               <TableCell>Name</TableCell>
@@ -271,7 +282,7 @@ const SpcProfilesPage: React.FC = () => {
               </TableRow>
             )}
           </TableBody>
-        </Table>
+        </ResponsiveTable>
       </TableContainer>
 
       {/* Create / Edit Dialog */}

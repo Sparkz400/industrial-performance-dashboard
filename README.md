@@ -48,6 +48,13 @@ raised controls, recessed charts and orange accents. Status indicators retain
 their distinct colors and labels. Keyboard focus and reduced-motion preferences
 are supported; the style does not change measurement or quality semantics.
 
+The shift overview shows scoped machine observations and shift timelines. Custom
+Dashboards retain their saved layouts. Phones provide full administration through
+bottom navigation and the More menu, with page-sized machine editors, grouped
+Operations, Settings selectors and labelled administration rows. See the
+[interface guide](DESIGN.md) for navigation, state semantics and validation scope.
+
+
 Sites can run their own installation and send committed history to a central one, which
 shows each site's availability and data coverage ([edge sites](docs/MULTI_SITE.md)).
 Single sign-on through OIDC and read-only service tokens are available

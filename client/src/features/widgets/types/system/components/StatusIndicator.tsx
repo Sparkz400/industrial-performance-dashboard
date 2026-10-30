@@ -41,7 +41,7 @@ const StatusIndicator = memo<StatusIndicatorProps>(
       case 'ok':
         icon = <CheckCircleIcon fontSize={size === 'small' ? 'small' : 'medium'} />;
         color = 'success';
-        label = 'Online';
+        label = 'Connected';
         break;
       case 'warning':
       case 'degraded':
@@ -54,7 +54,7 @@ const StatusIndicator = memo<StatusIndicatorProps>(
       case 'disconnected':
         icon = <ErrorIcon fontSize={size === 'small' ? 'small' : 'medium'} />;
         color = 'error';
-        label = 'Offline';
+        label = statusStr === 'error' ? 'Error' : 'Disconnected';
         break;
       default:
         icon = <HelpOutlineIcon fontSize={size === 'small' ? 'small' : 'medium'} />;

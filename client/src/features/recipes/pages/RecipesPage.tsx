@@ -1,9 +1,9 @@
+import ResponsiveTable from '@/shared/components/ResponsiveTable';
 import React, { useState } from 'react';
 import {
   Box,
   Typography,
   Paper,
-  Table,
   TableBody,
   TableCell,
   TableContainer,
@@ -107,17 +107,21 @@ const RecipesPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
+    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1400, width: '100%', mx: 'auto' }}>
       <Stack
         direction="row"
         sx={{
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 2,
           alignItems: 'center',
           mb: 3,
         }}
       >
         <Box>
-          <Typography variant="h5">Process Specifications</Typography>
+          <Typography variant="h4" component="h1">
+            Process Specifications
+          </Typography>
           <Typography
             variant="body2"
             sx={{
@@ -139,7 +143,9 @@ const RecipesPage: React.FC = () => {
       )}
 
       <TableContainer component={Paper}>
-        <Table>
+        <ResponsiveTable
+          labels={['Name', 'Version', 'Status', 'Machine ID', 'Parameters', 'Created', 'Actions']}
+        >
           <TableHead>
             <TableRow>
               <TableCell>Name</TableCell>
@@ -249,7 +255,7 @@ const RecipesPage: React.FC = () => {
               </TableRow>
             )}
           </TableBody>
-        </Table>
+        </ResponsiveTable>
       </TableContainer>
 
       {/* Create / Edit Dialog */}

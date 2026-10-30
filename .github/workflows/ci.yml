@@ -109,6 +109,7 @@ jobs:
       - run: node scripts/test-compliance-audit.mjs
       - run: node scripts/test-spc-live.mjs
       - run: node scripts/test-accessibility.mjs
+      - run: node scripts/test-responsive-ui.mjs
       - run: node scripts/test-line-analysis.mjs
       - run: node scripts/test-examples.mjs
       - run: node scripts/test-offline-destinations.mjs
@@ -161,6 +162,7 @@ jobs:
             test-results/
             .local/production-evidence/
             .local/daily-evidence/
+            .local/ui-rework-evidence/
             .local/pd-installation-*/status.json
             .local/pd-installation-*/cycles.jsonl
             .local/pd-installation-*/browser-*.png

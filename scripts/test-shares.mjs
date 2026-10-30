@@ -150,7 +150,7 @@ await dailyFixture(async ({ pool, call, api, frontend, actors, browser, expect, 
 
   // Administrator dialog in the real browser.
   const adminPage = await actors.admin.newPage();
-  await adminPage.goto(frontend + "/");
+  await adminPage.goto(frontend + "/dashboards");
   await adminPage.getByRole("tab", { name: "Share source" }).click();
   await adminPage.getByRole("button", { name: "Share Dashboard" }).click();
   const dialog = adminPage.getByRole("dialog");

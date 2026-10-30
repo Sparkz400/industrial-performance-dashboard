@@ -59,3 +59,9 @@
 .BtnAddWidget:active {
   transform: translate(2px, 2px);
 }
+
+@media (max-width: 1099px) {
+  .BtnAddWidget {
+    bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+}

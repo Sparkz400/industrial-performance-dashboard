@@ -1,5 +1,17 @@
 # Current status
 
+## Desktop and phone interface — 2026-10-30
+
+The home page now uses existing scoped production observations and shift reports.
+Custom dashboards remain separate and keep their desktop layout when viewed on a
+phone. Navigation, machine editing, grouped Operations and Settings support full
+phone administration without changing role permissions. Administration lists
+reflow into labelled rows. Service observations, database test results, unknown
+states and semantic chart colors follow the same vocabulary in both themes.
+See the [interface guide](../DESIGN.md) and isolated responsive browser checks.
+This UI change does not close endurance, physical-machine or human review gates.
+
+
 ## Recovery follow-through — 2026-10-30
 
 Installation endurance now serves the compiled frontend through the real application,

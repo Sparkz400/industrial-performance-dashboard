@@ -1,3 +1,4 @@
+import { selectOperation } from "./browser-navigation.mjs";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { dailyFixture } from "./daily-fixture.mjs";
@@ -319,7 +320,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   await page.goto(frontend + "/operations");
   await page.getByRole("combobox", { name: "Machine", exact: true }).click();
   await page.getByRole("option", { name: "Supervisor A", exact: true }).click();
-  await page.getByRole("tab", { name: "Production line", exact: true }).click();
+  await selectOperation(page, "Production line");
   await page
     .getByRole("combobox", { name: "Production line", exact: true })
     .click();
@@ -330,7 +331,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   await expect(
     page.getByText("No candidate has sufficient supporting data."),
   ).toBeVisible();
-  await page.getByRole("tab", { name: "Alarm actions", exact: true }).click();
+  await selectOperation(page, "Alarm actions");
   await expect(
     page.getByRole("heading", { name: "Alarm maintenance actions" }),
   ).toBeVisible();
@@ -439,7 +440,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   await page.reload();
   await page.getByRole("combobox", { name: "Maschine", exact: true }).click();
   await page.getByRole("option", { name: "Supervisor A", exact: true }).click();
-  await page.getByRole("tab", { name: "Alarmmaßnahmen", exact: true }).click();
+  await selectOperation(page, "Alarmmaßnahmen");
   await expect(
     page.getByRole("heading", { name: "Alarmbezogene Instandhaltung" }),
   ).toBeVisible();
@@ -528,9 +529,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   await page.screenshot({
     path: ".local/daily-evidence/supervisor-maintenance-mobile-bottom-de.png",
   });
-  await page
-    .getByRole("tab", { name: "Produktionslinie", exact: true })
-    .click();
+  await selectOperation(page, "Produktionslinie");
   await page
     .getByRole("combobox", { name: "Produktionslinie", exact: true })
     .click();

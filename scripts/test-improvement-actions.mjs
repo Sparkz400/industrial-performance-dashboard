@@ -1,3 +1,4 @@
+import { selectOperation } from "./browser-navigation.mjs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { dailyFixture } from "./daily-fixture.mjs";
@@ -109,7 +110,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   await page.goto(`${frontend}/operations`);
   await page.getByRole("combobox", { name: "Machine", exact: true }).fill("Kaizen");
   await page.getByRole("option", { name: "Kaizen press", exact: true }).click();
-  await page.getByRole("tab", { name: "Improvement actions" }).click();
+  await selectOperation(page, "Improvement actions");
   await page.getByLabel("Action title").fill("Infeed sensor moved");
   await page.getByLabel("What changed and the expected effect").fill("Fewer false stops");
   await page.getByLabel("Implemented at").fill(local("2026-05-10T00:00:00Z"));

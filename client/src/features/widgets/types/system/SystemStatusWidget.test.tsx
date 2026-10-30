@@ -62,3 +62,22 @@ it('does not republish a pending administrator response after cleanup', async ()
   expect(useStatusStore.getState().isConnected).toBe(false);
   expect(useStatusStore.getState().status.overall.status).toBe('UNKNOWN');
 });
+
+it('keeps a fresh known service failure distinct from missing observation', () => {
+  useStatusStore.setState({
+    status: { ...healthy, database: { status: 'ERROR' }, overall: { status: 'ERROR' } } as never,
+    isError: true,
+    isConnected: false,
+  });
+  render(<SystemStatusWidget config={{ showDetails: false }} />);
+  expect(screen.getByText('System experiencing issues')).toBeVisible();
+  expect(screen.queryByText(/Current system status unknown/)).toBeNull();
+});
+it('does not present an unobserved collector as a connected system', () => {
+  useStatusStore.setState({
+    status: { ...healthy, opcua: { status: 'UNKNOWN' } } as never,
+    isConnected: false,
+  });
+  render(<SystemStatusWidget config={{ showDetails: false }} />);
+  expect(screen.getByRole('status')).toHaveTextContent('unknown');
+});

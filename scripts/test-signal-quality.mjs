@@ -1,3 +1,4 @@
+import { selectOperation } from "./browser-navigation.mjs";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import { dailyFixture } from "./daily-fixture.mjs";
@@ -451,9 +452,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   await page.goto(frontend + "/operations");
   await page.getByLabel("Machine", { exact: true }).click();
   await page.getByRole("option", { name: "Signal line", exact: true }).click();
-  await page
-    .getByRole("tab", { name: "Calculated signals", exact: true })
-    .click();
+  await selectOperation(page, "Calculated signals");
   await page
     .getByLabel("Calculation name", { exact: true })
     .fill("Browser calculation");
@@ -525,11 +524,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
     ),
   );
   await page.setViewportSize({ width: 1440, height: 1000 });
-  const expand = page.getByRole("button", {
-    name: "Expand navigation",
-    exact: true,
-  });
-  if (await expand.isVisible()) await expand.click();
+  await expect(page.getByLabel("Language / Sprache")).toBeVisible();
   await page.getByLabel("Language / Sprache").click();
   await page.getByRole("option", { name: "Deutsch", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });

@@ -1,3 +1,4 @@
+import { selectOperation } from "./browser-navigation.mjs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { dailyFixture } from "./daily-fixture.mjs";
@@ -90,7 +91,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   await page.getByRole("combobox", { name: "Machine", exact: true }).fill("Forecast");
   await page.getByRole("option", { name: "Forecast press", exact: true }).click();
   const products = page.waitForResponse((r) => r.url().includes("/completion") && r.ok());
-  await page.getByRole("tab", { name: "Completion forecast" }).click();
+  await selectOperation(page, "Completion forecast");
   await products; // the product list comes with the first forecast response
   await page.getByRole("combobox", { name: "Product", exact: true }).click();
   await page.getByRole("option", { name: "Bracket" }).click();
@@ -112,7 +113,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   assert.equal(withheld.excluded.beforeProcessChange, 3);
   assert.deepEqual(withheld.estimate, { status: "withheld", reason: "9 comparable verified run(s); at least 10 are needed" });
   await page.reload();
-  await page.getByRole("tab", { name: "Completion forecast" }).click();
+  await selectOperation(page, "Completion forecast");
   // Shown once the forecast data has loaded, so the product list is filled.
   await expect(page.getByText(/Comparable since the process change “New feeder”/)).toBeVisible();
   await page.getByRole("combobox", { name: "Product", exact: true }).click();
@@ -147,7 +148,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   await ok("operator", "POST", `${base}/decisions`, { key: topLoss.key, decision: "dismissed", reason: "Operators cannot" }, 403);
 
   // In the browser: the evidence and assumptions are shown; a recommendation is dismissed.
-  await page.getByRole("tab", { name: "Recommendations" }).click();
+  await selectOperation(page, "Recommendations");
   const section = page.getByRole("region", { name: topLoss.title });
   await expect(section.getByText(/Evidence: report revisions/)).toBeVisible();
   await expect(section.getByText(/Assumptions: Largest classified loss/)).toBeVisible();

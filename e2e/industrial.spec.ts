@@ -1,3 +1,4 @@
+import { selectSettings } from "../scripts/browser-navigation.mjs";
 import { test, expect, type Page } from "@playwright/test";
 import type { MachineLiveSummary } from "@performance-dashboard/shared";
 
@@ -149,6 +150,8 @@ async function signIn(page: Page) {
     .first()
     .fill("fixture-only");
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.goto("/dashboards");
   await expect(
     page.getByRole("checkbox", { name: "Pressure [Pressure]" }),
   ).toBeVisible();
@@ -265,7 +268,7 @@ for (const mode of ["light", "dark"] as const) {
     );
     await page.screenshot({ path: testInfo.outputPath(`spc-${mode}.png`) });
     await page.goto("/settings");
-    await page.getByRole("tab", { name: "Appearance" }).click();
+    await selectSettings(page, "Appearance");
     await expect(
       page.getByRole("button", {
         name: mode === "dark" ? "Dark" : "Light",
@@ -276,7 +279,7 @@ for (const mode of ["light", "dark"] as const) {
       path: testInfo.outputPath(`settings-${mode}.png`),
     });
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/");
+    await page.goto("/dashboards");
     await expect(
       page.getByRole("checkbox", { name: "Pressure [Pressure]" }),
     ).toBeVisible();
@@ -324,7 +327,7 @@ test("theme selection works by keyboard, persists and follows system appearance"
   await fixtures(page);
   await signIn(page);
   await page.goto("/settings");
-  await page.getByRole("tab", { name: "Appearance" }).click();
+  await selectSettings(page, "Appearance");
   const light = page.getByRole("button", { name: "Light", exact: true });
   await light.focus();
   await page.keyboard.press("Enter");
@@ -340,7 +343,7 @@ test("theme selection works by keyboard, persists and follows system appearance"
     "background-color",
     "rgb(215, 220, 222)",
   );
-  await page.getByRole("tab", { name: "Appearance" }).click();
+  await selectSettings(page, "Appearance");
   await page.getByRole("button", { name: "Dark", exact: true }).click();
   await expect(page.locator("body")).toHaveCSS(
     "background-color",

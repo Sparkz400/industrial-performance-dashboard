@@ -83,9 +83,9 @@ const SpcChartPage: React.FC = () => {
 
     const ControlLimitsLayer = ({ yScale, innerWidth }: LineCustomSvgLayerProps<LineSeries>) => {
       const lines = [
-        { value: chartData.ucl, label: 'UCL', color: '#f44336', dash: '6,3' },
-        { value: chartData.mean, label: 'CL', color: '#2196f3', dash: '4,4' },
-        { value: chartData.lcl, label: 'LCL', color: '#f44336', dash: '6,3' },
+        { value: chartData.ucl, label: 'UCL', color: theme.palette.error.main, dash: '6,3' },
+        { value: chartData.mean, label: 'CL', color: theme.palette.info.main, dash: '4,4' },
+        { value: chartData.lcl, label: 'LCL', color: theme.palette.error.main, dash: '6,3' },
       ];
 
       return (
@@ -122,7 +122,7 @@ const SpcChartPage: React.FC = () => {
     };
     ControlLimitsLayer.displayName = 'ControlLimitsLayer';
     return ControlLimitsLayer;
-  }, [chartData]);
+  }, [chartData, theme.palette.error.main, theme.palette.info.main]);
 
   const layers = controlLimitsLayer
     ? (['grid', 'axes', controlLimitsLayer, 'lines', 'points', 'mesh', 'legends'] as const)
@@ -139,21 +139,23 @@ const SpcChartPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1400, mx: 'auto' }}>
+    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1400, width: '100%', mx: 'auto' }}>
       <Stack
         direction="row"
         spacing={2}
         sx={{
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 1,
           mb: 3,
         }}
       >
-        <IconButton onClick={() => navigate('/spc')}>
+        <IconButton aria-label="Back to SPC profiles" onClick={() => navigate('/spc')}>
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h4">{profile?.name ?? 'SPC Chart'}</Typography>
         {profile && (
-          <Stack direction="row" spacing={1}>
+          <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
             <Chip
               label={METHOD_LABELS[profile.method] ?? profile.method}
               size="small"
@@ -176,7 +178,7 @@ const SpcChartPage: React.FC = () => {
       )}
 
       <Paper sx={{ p: 2, mb: 3 }}>
-        <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2, flexWrap: 'wrap' }}>
           <TextField
             label="Start"
             type="datetime-local"

@@ -1,15 +1,6 @@
 import { useT } from '@/i18n';
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  Typography,
-  Box,
-  Paper,
-  Tab,
-  Tabs,
-  Tooltip,
-  IconButton,
-  CircularProgress,
-} from '@mui/material';
+import { Typography, Box, Paper, Tooltip, IconButton, CircularProgress } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import LanguageIcon from '@mui/icons-material/Language';
@@ -24,7 +15,7 @@ import WebhookIcon from '@mui/icons-material/Webhook';
 import ExtensionIcon from '@mui/icons-material/Extension';
 
 // Import custom components
-import TabPanel from '../ui/TabPanel';
+import SectionNavigation from '@/shared/components/SectionNavigation';
 import StatusIndicator from '../ui/StatusIndicator';
 import LoadingBackdrop from '../components/LoadingBackdrop';
 
@@ -42,8 +33,6 @@ import EdgeSettingsPanel from '../../edge/components/EdgeSettingsPanel';
 
 // Import hooks
 import { useStatusStore } from '@/stores/useStatusStore';
-import { useOpcUaConnection } from '../hooks/useOpcUaConnection';
-import { useDatabaseConnection } from '../hooks/useDatabaseConnection';
 import { useSnackbar } from 'notistack';
 import { useAuthStore } from '@/stores/useAuthStore';
 
@@ -60,9 +49,6 @@ const SettingsPage: React.FC = () => {
   const status = useStatusStore((s) => s.status);
   const refreshStatus = useStatusStore((s) => s.refreshStatus);
   const lastChecked = useStatusStore((s) => s.lastChecked);
-  const { opcuaConnected, connectedAddress, securityMode, securityPolicy, fetchConnectionStatus } =
-    useOpcUaConnection();
-  const { dbOnline, dbHost, dbPort } = useDatabaseConnection();
 
   const tabs = useMemo(
     () => [
@@ -126,11 +112,6 @@ const SettingsPage: React.FC = () => {
     }
   }, [tabValue, tabs.length]);
 
-  // Handle tab change
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number): void => {
-    setTabValue(newValue);
-  };
-
   // Format date for display
   const formatDate = (date: Date | string | null | undefined): string => {
     if (!date) return 'Never';
@@ -142,7 +123,6 @@ const SettingsPage: React.FC = () => {
     setLoading(true);
     try {
       await refreshStatus();
-      await fetchConnectionStatus();
       // Add success notification
       enqueueSnackbar('System status refreshed', { variant: 'info', autoHideDuration: 2000 });
     } catch (error) {
@@ -169,11 +149,12 @@ const SettingsPage: React.FC = () => {
         flexDirection: 'column',
       }}
     >
-      <Typography variant="h4" gutterBottom sx={{ mb: 2 }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 2 }}>
         {t('Settings')}
         <Tooltip title={t('Refresh Status')}>
           <span>
             <IconButton
+              aria-label={t('Refresh Status')}
               onClick={handleRefreshStatus}
               size="small"
               sx={{ ml: 2 }}
@@ -207,7 +188,10 @@ const SettingsPage: React.FC = () => {
               status?.database?.statusText || (status?.database as unknown as string) || 'Unknown'
             }
             label={t('Database Connection')}
-            description={dbOnline ? `Connected to ${dbHost}:${dbPort}` : 'Not connected'}
+            description={t(
+              'Application database observation',
+              'Beobachtung der Anwendungsdatenbank',
+            )}
             icon={<StorageIcon />}
             loading={loading}
           />
@@ -215,44 +199,40 @@ const SettingsPage: React.FC = () => {
         <Grid size={{ xs: 12, sm: 6 }}>
           <StatusIndicator
             status={status?.opcua?.statusText || (status?.opcua as unknown as string) || 'Unknown'}
-            label={t('OPC UA Connection')}
-            description={
-              opcuaConnected
-                ? `Connected to ${connectedAddress} (${securityMode}/${securityPolicy})`
-                : 'Not connected'
-            }
+            label={t('OPC UA gateway', 'OPC-UA-Gateway')}
+            description={t(
+              'Legacy OPC UA gateway observation; machine connections are managed under Machines.',
+              'Beobachtung des OPC-UA-Gateways; Maschinenverbindungen werden unter Maschinen verwaltet.',
+            )}
             icon={<DnsIcon />}
             loading={loading}
           />
         </Grid>
       </Grid>
 
-      {/* Tab setup */}
-      <Paper sx={{ width: '100%', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-        <Tabs
+      <Paper
+        sx={{
+          width: '100%',
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: 2,
+          p: 2,
+        }}
+      >
+        <SectionNavigation
+          vertical
+          label={t('Settings section', 'Einstellungsbereich')}
           value={tabValue}
-          onChange={handleTabChange}
-          variant="scrollable"
-          scrollButtons="auto"
-          aria-label={t('settings tabs')}
-          sx={{ borderBottom: 1, borderColor: 'divider' }}
+          onChange={setTabValue}
+          sections={tabs.map((tab, index) => ({ label: t(tab.label), value: index }))}
+        />
+        <Box
+          role="region"
+          aria-label={t(tabs.at(tabValue)?.label ?? 'Settings')}
+          sx={{ minWidth: 0, flex: 1 }}
         >
-          {tabs.map((tab, index) => (
-            <Tab
-              key={tab.label}
-              label={t(tab.label)}
-              id={`settings-tab-${index}`}
-              icon={tab.icon}
-              iconPosition="start"
-            />
-          ))}
-        </Tabs>
-
-        {tabs.map((tab, index) => (
-          <TabPanel key={tab.label} value={tabValue} index={index} sx={{ flexGrow: 1 }}>
-            {tab.content}
-          </TabPanel>
-        ))}
+          {tabs.at(tabValue)?.content}
+        </Box>
       </Paper>
 
       {/* Loading overlay */}

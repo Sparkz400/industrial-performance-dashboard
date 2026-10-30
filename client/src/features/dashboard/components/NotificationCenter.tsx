@@ -14,6 +14,7 @@ import {
   Button,
   Divider,
   alpha,
+  useTheme,
   Tooltip,
 } from '@mui/material';
 import NotificationsIcon from '@mui/icons-material/Notifications';
@@ -28,16 +29,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 import { formatDistanceToNow } from 'date-fns';
 
-const severityConfig: Record<string, { icon: React.ReactNode; color: string }> = {
-  critical: { icon: <ErrorOutlineIcon />, color: '#F44336' },
-  high: { icon: <ErrorOutlineIcon />, color: '#FF5722' },
-  medium: { icon: <WarningAmberIcon />, color: '#FF9800' },
-  low: { icon: <InfoOutlinedIcon />, color: '#29B6F6' },
-  info: { icon: <CheckCircleOutlineIcon />, color: '#66BB6A' },
-};
-
 const NotificationCenter: React.FC = () => {
   const t = useT();
+  const theme = useTheme();
+  const severityConfig: Record<string, { icon: React.ReactNode; color: string }> = {
+    critical: { icon: <ErrorOutlineIcon />, color: theme.palette.error.main },
+    high: { icon: <ErrorOutlineIcon />, color: theme.palette.error.main },
+    medium: { icon: <WarningAmberIcon />, color: theme.palette.warning.main },
+    low: { icon: <InfoOutlinedIcon />, color: theme.palette.info.main },
+    info: { icon: <CheckCircleOutlineIcon />, color: theme.palette.success.main },
+  };
 
   const {
     notifications,
@@ -55,12 +56,13 @@ const NotificationCenter: React.FC = () => {
     <>
       <Tooltip title={`${unreadCount} unread notifications`}>
         <IconButton
+          aria-label={`${unreadCount} ${t('unread notifications', 'ungelesene Benachrichtigungen')}`}
           onClick={togglePanel}
           sx={{
             position: 'relative',
             border: '1px solid',
             borderColor: 'divider',
-            borderRadius: '10px',
+            borderRadius: '5px',
             width: 36,
             height: 36,
           }}

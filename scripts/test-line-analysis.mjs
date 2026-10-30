@@ -1,3 +1,4 @@
+import { selectOperation } from "./browser-navigation.mjs";
 import assert from "node:assert/strict";
 import { dailyFixture } from "./daily-fixture.mjs";
 
@@ -90,7 +91,7 @@ await dailyFixture(async ({ pool, call, actors, frontend, expect }) => {
   await page.goto(`${frontend}/operations`);
   await page.getByRole("combobox", { name: "Machine", exact: true }).fill("Fine");
   await page.getByRole("option", { name: "Fine press", exact: true }).click();
-  await page.getByRole("tab", { name: "Production line" }).click();
+  await selectOperation(page, "Production line");
   await page.getByRole("combobox", { name: "Production line" }).click();
   await page.getByRole("option", { name: "Resolution line" }).click();
   const local = (iso) => {

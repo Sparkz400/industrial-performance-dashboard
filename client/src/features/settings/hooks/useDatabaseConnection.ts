@@ -4,28 +4,11 @@ import { useStatusStore } from '@/stores/useStatusStore';
 import { useSnackbar } from 'notistack';
 import api from '@/utils/api';
 
-interface DatabaseConnectionReturn {
-  loading: boolean;
-  setLoading: React.Dispatch<React.SetStateAction<boolean>>;
-  dbOnline: boolean;
-  setDbOnline: React.Dispatch<React.SetStateAction<boolean>>;
-  dbHost: string;
-  dbPort: string;
-  dbUser: string;
-  dbName: string;
-  handleTestDbConnection: () => Promise<void>;
-}
-
-export const useDatabaseConnection = (): DatabaseConnectionReturn => {
-  const [loading, setLoading] = useState<boolean>(false);
-  const [dbOnline, setDbOnline] = useState<boolean>(false);
+export const useDatabaseConnection = () => {
+  const [loading, setLoading] = useState(false);
+  const [dbOnline, setDbOnline] = useState<boolean | null>(null);
+  const [testedAt, setTestedAt] = useState<Date | null>(null);
   const { enqueueSnackbar } = useSnackbar();
-
-  // Form states with default values
-  const [dbHost] = useState<string>('localhost');
-  const [dbPort] = useState<string>('5432');
-  const [dbUser] = useState<string>('postgres');
-  const [dbName] = useState<string>('postgres');
 
   const refreshStatus = useStatusStore((s) => s.refreshStatus);
 
@@ -45,19 +28,10 @@ export const useDatabaseConnection = (): DatabaseConnectionReturn => {
         variant: 'error',
       });
     } finally {
+      setTestedAt(new Date());
       setLoading(false);
     }
   };
 
-  return {
-    loading,
-    setLoading,
-    dbOnline,
-    setDbOnline,
-    dbHost,
-    dbPort,
-    dbUser,
-    dbName,
-    handleTestDbConnection,
-  };
+  return { loading, dbOnline, testedAt, handleTestDbConnection };
 };

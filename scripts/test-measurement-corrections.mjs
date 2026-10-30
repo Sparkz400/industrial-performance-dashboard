@@ -1,3 +1,4 @@
+import { selectOperation } from "./browser-navigation.mjs";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
@@ -393,7 +394,7 @@ await dailyFixture(
     await page
       .getByRole("option", { name: "Correction line", exact: true })
       .click();
-    await page.getByRole("tab", { name: "History", exact: true }).click();
+    await selectOperation(page, "History");
     try {
       await page
         .getByLabel("Correction signal key", { exact: true })

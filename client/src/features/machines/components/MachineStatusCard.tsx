@@ -47,15 +47,21 @@ const MachineStatusCard: React.FC<MachineStatusCardProps> = ({
     <Card
       variant="outlined"
       sx={{
-        transition: 'box-shadow 0.2s',
-        '&:hover': { boxShadow: 4 },
+        height: '100%',
       }}
     >
       <CardContent>
         <Box
-          sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            flexWrap: 'wrap',
+            gap: 1,
+            mb: 1,
+          }}
         >
-          <Typography variant="h6" component="div" noWrap sx={{ maxWidth: '70%' }}>
+          <Typography variant="h6" component="div" sx={{ minWidth: 0, overflowWrap: 'anywhere' }}>
             {machine.name}
           </Typography>
           <Chip
@@ -70,12 +76,13 @@ const MachineStatusCard: React.FC<MachineStatusCardProps> = ({
           gutterBottom
           sx={{
             color: 'text.secondary',
+            overflowWrap: 'anywhere',
           }}
         >
           {machine.endpointUrl}
         </Typography>
 
-        <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
           <Chip label={`Security: ${machine.securityMode}`} size="small" variant="outlined" />
           <Chip
             label={`${machine.mappingCount ?? 0} mappings`}
@@ -91,33 +98,57 @@ const MachineStatusCard: React.FC<MachineStatusCardProps> = ({
 
       <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>
         <Tooltip title="Manage Node Mappings">
-          <IconButton size="small" onClick={() => onManageMappings(machine)} color="primary">
+          <IconButton
+            aria-label={`Manage Node Mappings: ${machine.name}`}
+            size="small"
+            onClick={() => onManageMappings(machine)}
+            color="primary"
+          >
             <AccountTreeIcon />
           </IconButton>
         </Tooltip>
 
         {isConnected ? (
           <Tooltip title="Disconnect">
-            <IconButton size="small" onClick={() => onDisconnect(machine)} color="warning">
+            <IconButton
+              aria-label={`Disconnect: ${machine.name}`}
+              size="small"
+              onClick={() => onDisconnect(machine)}
+              color="warning"
+            >
               <LinkOffIcon />
             </IconButton>
           </Tooltip>
         ) : (
           <Tooltip title="Connect">
-            <IconButton size="small" onClick={() => onConnect(machine)} color="success">
+            <IconButton
+              aria-label={`Connect: ${machine.name}`}
+              size="small"
+              onClick={() => onConnect(machine)}
+              color="success"
+            >
               <LinkIcon />
             </IconButton>
           </Tooltip>
         )}
 
         <Tooltip title="Edit">
-          <IconButton size="small" onClick={() => onEdit(machine)}>
+          <IconButton
+            aria-label={`Edit: ${machine.name}`}
+            size="small"
+            onClick={() => onEdit(machine)}
+          >
             <EditIcon />
           </IconButton>
         </Tooltip>
 
         <Tooltip title="Delete">
-          <IconButton size="small" onClick={() => onDelete(machine)} color="error">
+          <IconButton
+            aria-label={`Delete: ${machine.name}`}
+            size="small"
+            onClick={() => onDelete(machine)}
+            color="error"
+          >
             <DeleteIcon />
           </IconButton>
         </Tooltip>

@@ -432,6 +432,8 @@ await dailyFixture(
     await page.getByLabel("Username").fill("viewer");
     await page.getByLabel(/^Password/).fill(password);
     await page.getByRole("button", { name: "Sign In", exact: true }).click();
+    await page.waitForURL(frontend + "/");
+    await page.goto(frontend + "/dashboards");
     await expect(
       page.getByRole("tab", { name: "Visible A", exact: true }),
     ).toBeVisible();

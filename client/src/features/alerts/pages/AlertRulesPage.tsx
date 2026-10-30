@@ -1,3 +1,4 @@
+import ResponsiveTable from '@/shared/components/ResponsiveTable';
 import React, { useState, useCallback } from 'react';
 import {
   Box,
@@ -9,7 +10,6 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  Table,
   TableBody,
   TableCell,
   TableContainer,
@@ -173,8 +173,17 @@ const AlertRulesPage: React.FC = () => {
     createMutation.error || updateMutation.error || deleteMutation.error || toggleMutation.error;
 
   return (
-    <Box sx={{ p: 3, height: '100%', overflow: 'auto' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+    <Box sx={{ p: { xs: 2, md: 3 }, minWidth: 0, width: '100%' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 2,
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 3,
+        }}
+      >
         <Box>
           <Typography
             variant="h4"
@@ -261,7 +270,9 @@ const AlertRulesPage: React.FC = () => {
         </Box>
       ) : (
         <TableContainer component={Paper}>
-          <Table>
+          <ResponsiveTable
+            labels={['Name', 'Node Key', 'Condition', 'Threshold', 'Severity', 'Active', 'Actions']}
+          >
             <TableHead>
               <TableRow>
                 <TableCell>Name</TableCell>
@@ -342,7 +353,7 @@ const AlertRulesPage: React.FC = () => {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+          </ResponsiveTable>
         </TableContainer>
       )}
 

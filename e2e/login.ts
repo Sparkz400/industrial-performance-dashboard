@@ -10,6 +10,7 @@ export async function login(page: Page) {
     .fill(process.env.E2E_PASSWORD);
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
+  await page.goto("/dashboards");
   await expect(
     page.getByRole("tablist", { name: "dashboard tabs" }),
   ).toBeVisible();

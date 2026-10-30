@@ -1,3 +1,4 @@
+import { selectOperation } from "./browser-navigation.mjs";
 import assert from "node:assert/strict";
 import { randomUUID, createHash } from "node:crypto";
 import { dailyFixture } from "./daily-fixture.mjs";
@@ -497,7 +498,7 @@ await dailyFixture(
       await page
         .getByRole("option", { name: "Daily Line", exact: true })
         .click();
-      await page.getByRole("tab", { name: "Maintenance", exact: true }).click();
+      await selectOperation(page, "Maintenance");
       await page.reload();
       await expect(
         page.getByRole("combobox", { name: "Machine", exact: true }),
@@ -541,7 +542,7 @@ await dailyFixture(
       });
       await page.getByLabel("Language / Sprache").click();
       await page.getByRole("option", { name: "English", exact: true }).click();
-      await page.getByRole("tab", { name: "Planning", exact: true }).click();
+      await selectOperation(page, "Planning");
       await page
         .getByLabel("Calendar name", { exact: true })
         .fill("Browser schedule");
@@ -626,9 +627,7 @@ await dailyFixture(
         path: ".local/daily-evidence/planning.png",
         fullPage: true,
       });
-      await page
-        .getByRole("tab", { name: "Energy and losses", exact: true })
-        .click();
+      await selectOperation(page, "Energy and losses");
       await page.getByLabel("Meter scale", { exact: true }).fill("2");
       await page
         .getByRole("button", { name: "Save meter", exact: true })
@@ -651,7 +650,7 @@ await dailyFixture(
         fullPage: true,
       });
       await page.setViewportSize({ width: 390, height: 844 });
-      await page.getByRole("tab", { name: "Maintenance", exact: true }).click();
+      await selectOperation(page, "Maintenance");
       assert(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= window.innerWidth + 1,
@@ -682,7 +681,7 @@ await dailyFixture(
       assert(
         await touchPage.evaluate(() => matchMedia("(pointer: coarse)").matches),
       );
-      for (const tab of await touchPage.getByRole("tab").all()) {
+      for (const tab of await touchPage.getByRole("combobox").all()) {
         const box = await tab.boundingBox();
         assert(
           box && box.height >= 44 && box.width >= 44,
@@ -696,9 +695,7 @@ await dailyFixture(
       await adminPage
         .getByRole("option", { name: "Daily Line", exact: true })
         .click();
-      await adminPage
-        .getByRole("tab", { name: "History", exact: true })
-        .click();
+      await selectOperation(adminPage, "History");
       await adminPage.getByLabel("Keep raw data for days").fill("7");
       await adminPage
         .getByRole("button", { name: "Save retention policy", exact: true })

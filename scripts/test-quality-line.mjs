@@ -1,3 +1,4 @@
+import { selectOperation } from "./browser-navigation.mjs";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
@@ -619,7 +620,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   await page
     .getByRole("option", { name: "Quality fixture", exact: true })
     .click();
-  await page.getByRole("tab", { name: "Production line", exact: true }).click();
+  await selectOperation(page, "Production line");
   await page
     .getByRole("combobox", { name: "Production line", exact: true })
     .click();
@@ -636,7 +637,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
     `UPDATE maintenance_plans SET config='{"name":"Fixture service","days":7,"runtimeHours":null,"cycles":null,"checks":["seal"],"active":false}',profile='{"signals":{}}' WHERE id=$1`,
     [plan],
   );
-  await page.getByRole("tab", { name: "Alarm actions", exact: true }).click();
+  await selectOperation(page, "Alarm actions");
   await expect(page.getByText(/Alarm recurred/)).toBeVisible();
   await page.screenshot({
     path: ".local/daily-evidence/maintenance-actions.png",

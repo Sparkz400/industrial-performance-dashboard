@@ -12,6 +12,7 @@ import { useSnackbar, closeSnackbar } from 'notistack';
 import { useStatusStore } from './stores/useStatusStore';
 import { useAuthStore } from './stores/useAuthStore';
 
+const OverviewPage = React.lazy(() => import('./features/production/OverviewPage'));
 const OperationsPage = React.lazy(() => import('./features/operations/OperationsPage'));
 const ProductionPage = React.lazy(() => import('./features/production/ProductionPage'));
 const Wallboard = React.lazy(() => import('./features/production/Wallboard'));
@@ -149,7 +150,7 @@ const PageTransition = ({ children }: PageTransitionProps) => (
 function App() {
   useLanguage((s) => s.language);
   const [sidebarOpen, setSidebarOpen] = useState(
-    window.innerWidth >= 600 && localStorage.getItem('sidebarOpen') !== 'false',
+    window.innerWidth >= 1100 && localStorage.getItem('sidebarOpen') !== 'false',
   );
   const [drawerWidth, setDrawerWidth] = useState(0);
 
@@ -177,13 +178,13 @@ function App() {
   }, [logout]);
 
   useEffect(() => {
-    localStorage.setItem('sidebarOpen', sidebarOpen.toString());
+    if (window.innerWidth >= 1100) localStorage.setItem('sidebarOpen', sidebarOpen.toString());
   }, [sidebarOpen]);
 
   useEffect(() => {
-    const screen = window.matchMedia('(max-width: 599px)');
+    const screen = window.matchMedia('(max-width: 1099px)');
     const collapse = () => {
-      if (screen.matches) setSidebarOpen(false);
+      setSidebarOpen(screen.matches ? false : localStorage.getItem('sidebarOpen') !== 'false');
     };
     screen.addEventListener('change', collapse);
     return () => screen.removeEventListener('change', collapse);
@@ -212,9 +213,11 @@ function App() {
       flexGrow: 1,
       ml: `${drawerWidth}px`,
       transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      overflowX: 'hidden' as const,
+      minWidth: 0,
+      width: `calc(100% - ${drawerWidth}px)`,
+      '@media (max-width:1099px)': { paddingBottom: 'calc(64px + env(safe-area-inset-bottom))' },
       overflowY: 'auto' as const,
-      height: '100vh',
+      height: '100dvh',
       display: 'flex',
       flexDirection: 'column' as const,
     }),
@@ -279,6 +282,7 @@ function App() {
               <Suspense fallback={<PageLoader />}>
                 <AnimatePresence mode="wait">
                   <Routes>
+                    <Route path="/dashboards" element={<DashboardPage />} />
                     <Route path="/operations" element={<OperationsPage />} />
                     <Route path="/wallboard" element={<Wallboard />} />
                     <Route
@@ -296,7 +300,7 @@ function App() {
                           {user.role === 'wallboard' ? (
                             <Navigate to="/wallboard" replace />
                           ) : (
-                            <DashboardPage />
+                            <OverviewPage />
                           )}
                         </PageTransition>
                       }

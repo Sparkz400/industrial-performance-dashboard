@@ -1,5 +1,10 @@
 # Getting started
 
+The [desktop and phone interface](https://github.com/Sparkz400/performance_dashboard/blob/main/DESIGN.md)
+opens on the shift overview. Custom dashboards stay available separately. On a phone,
+use **More** for all permitted administration, quality, reporting and asset destinations.
+Operations is grouped by work area; Settings has a labelled section selector.
+
 Use Node.js 24, npm and Docker with Compose. The local example includes a synthetic
 OPC UA simulator and a separate PostgreSQL database. No physical machine is needed.
 

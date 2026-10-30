@@ -22,7 +22,7 @@ interface SecurityOptions {
 }
 
 interface OpcUaConnectionCardProps {
-  opcuaConnected: boolean;
+  opcuaConnected: boolean | null;
   ip: string;
   setIp: (value: string) => void;
   port: string;
@@ -58,7 +58,8 @@ const OpcUaConnectionCard: React.FC<OpcUaConnectionCardProps> = ({
 }) => (
   <Card>
     <CardHeader
-      title="OPC UA Server Connection"
+      title="OPC UA gateway connection"
+      subheader="Single-endpoint gateway. Manage machine connections under Machines."
       avatar={
         <Avatar>
           <DnsIcon />
@@ -66,7 +67,11 @@ const OpcUaConnectionCard: React.FC<OpcUaConnectionCardProps> = ({
       }
       action={
         <Chip
-          label={opcuaConnected ? 'Connected' : 'Disconnected'}
+          label={
+            opcuaConnected === null
+              ? 'Unknown'
+              : `Last check: ${opcuaConnected ? 'Connected' : 'Disconnected'}`
+          }
           color={opcuaConnected ? 'success' : 'default'}
           size="small"
         />
@@ -84,7 +89,7 @@ const OpcUaConnectionCard: React.FC<OpcUaConnectionCardProps> = ({
             size="small"
             value={ip}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIp(e.target.value)}
-            disabled={opcuaConnected}
+            disabled={opcuaConnected === true}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
@@ -95,7 +100,7 @@ const OpcUaConnectionCard: React.FC<OpcUaConnectionCardProps> = ({
             size="small"
             value={port}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPort(e.target.value)}
-            disabled={opcuaConnected}
+            disabled={opcuaConnected === true}
           />
         </Grid>
         <Grid size={{ xs: 12 }}>
@@ -106,7 +111,7 @@ const OpcUaConnectionCard: React.FC<OpcUaConnectionCardProps> = ({
             size="small"
             value={resourcePath}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setResourcePath(e.target.value)}
-            disabled={opcuaConnected}
+            disabled={opcuaConnected === true}
           />
         </Grid>
 
@@ -119,7 +124,7 @@ const OpcUaConnectionCard: React.FC<OpcUaConnectionCardProps> = ({
             select
             value={securityMode}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSecurityMode(e.target.value)}
-            disabled={opcuaConnected}
+            disabled={opcuaConnected === true}
           >
             {securityOptions.modes.map((mode: string) => (
               <MenuItem key={mode} value={mode}>
@@ -139,7 +144,7 @@ const OpcUaConnectionCard: React.FC<OpcUaConnectionCardProps> = ({
             select
             value={securityPolicy}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSecurityPolicy(e.target.value)}
-            disabled={opcuaConnected}
+            disabled={opcuaConnected === true}
           >
             {securityOptions.policies.map((policy: string) => (
               <MenuItem key={policy} value={policy}>
@@ -163,7 +168,7 @@ const OpcUaConnectionCard: React.FC<OpcUaConnectionCardProps> = ({
                 color="primary"
                 onClick={handleConnect}
                 loading={loading && !opcuaConnected}
-                disabled={opcuaConnected || loading}
+                disabled={opcuaConnected === true || loading}
                 startIcon={<PlayCircleOutlineIcon />}
                 sx={{ mr: 1 }}
                 size="small"
@@ -174,7 +179,7 @@ const OpcUaConnectionCard: React.FC<OpcUaConnectionCardProps> = ({
                 variant="outlined"
                 color="secondary"
                 onClick={handleDisconnect}
-                loading={loading && opcuaConnected}
+                loading={loading && opcuaConnected === true}
                 disabled={!opcuaConnected || loading}
                 startIcon={<StopCircleIcon />}
                 size="small"

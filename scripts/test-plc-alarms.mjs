@@ -1,3 +1,4 @@
+import { selectOperation } from "./browser-navigation.mjs";
 import assert from "node:assert/strict";
 import { createServer } from "node:net";
 import { once } from "node:events";
@@ -122,7 +123,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
     await page.goto(`${frontend}/operations`);
     await page.getByRole("combobox", { name: "Machine", exact: true }).fill("Alarm");
     await page.getByRole("option", { name: "Alarm press", exact: true }).click();
-    await page.getByRole("tab", { name: "PLC alarms" }).click();
+    await selectOperation(page, "PLC alarms");
     const table = page.getByRole("table", { name: "PLC alarm events" });
     await expect(table.getByRole("row", { name: /critical \(900\) 1:Press OverPressure Pressure above 10 bar active · unacknowledged$/ })).toBeVisible();
     await expect(table.getByRole("row", { name: /info \(100\) Line information only Shift handover/ })).toBeVisible();

@@ -1,3 +1,4 @@
+import ShiftTimeline from './ShiftTimeline';
 import { formatDateTime, formatNumber, formatPercent, translate as t, useLanguage } from '@/i18n';
 /* eslint-disable security/detect-object-injection -- Dynamic keys below come from fixed field/role lists; imported profiles are validated by the API. */
 import React, { useEffect, useState } from 'react';
@@ -134,7 +135,7 @@ export default function ProductionPage() {
       supersedesId: previous?.id ?? null,
     });
   return (
-    <Box sx={{ p: { xs: 1, md: 3 }, height: '100%', overflow: 'auto' }}>
+    <Box sx={{ p: { xs: 2, md: 3 }, height: '100%', overflow: 'auto' }}>
       <style>{`@page { margin: 12mm; } @media print { main { margin-left:0!important; width:100%!important; padding:0!important } .production-report * { color:#000!important; background:transparent!important } .MuiFab-root, .MuiSnackbar-root {display:none!important} body, #root, main, main > div { height:auto!important; overflow:visible!important; } .MuiDrawer-root, [data-print-hide] {display:none!important} .production-report {color:#000!important;background:white!important} .production-report .MuiPaper-root {box-shadow:none!important;color:#000!important;background:white!important} table {break-inside:auto} tr {break-inside:avoid} }`}</style>
       <Box data-print-hide>
         <Typography variant="h4">{t('Production shift')} </Typography>
@@ -464,7 +465,7 @@ export default function ProductionPage() {
               ) : (
                 <Typography>{t('No open handover items for this shift.')}</Typography>
               )}
-              <Typography variant="h6">{t('Machine timeline')} </Typography>
+              <ShiftTimeline report={data} />
               <Box sx={{ overflowX: 'auto' }}>
                 <Table size="small">
                   <TableHead>

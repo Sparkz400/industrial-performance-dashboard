@@ -1,3 +1,4 @@
+import { selectOperation } from "./browser-navigation.mjs";
 import assert from "node:assert/strict";
 import { createServer } from "node:net";
 import { once } from "node:events";
@@ -357,9 +358,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
     await page
       .getByRole("option", { name: "Diagnostic fixture", exact: true })
       .click();
-    await page
-      .getByRole("tab", { name: "Connection diagnostics", exact: true })
-      .click();
+    await selectOperation(page, "Connection diagnostics");
     await expect(
       page.getByRole("heading", {
         name: "Connection diagnostics",
@@ -373,9 +372,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
       path: ".local/daily-evidence/connection-diagnostics-desktop.png",
       fullPage: true,
     });
-    await page
-      .getByRole("tab", { name: "Alarm usefulness", exact: true })
-      .click();
+    await selectOperation(page, "Alarm usefulness");
     const local = async (iso) =>
       page.evaluate((v) => {
         const d = new Date(v);
@@ -461,9 +458,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
     await page
       .getByRole("option", { name: "Diagnostic fixture", exact: true })
       .click();
-    await page
-      .getByRole("tab", { name: "Verbindungsdiagnose", exact: true })
-      .click();
+    await selectOperation(page, "Verbindungsdiagnose");
     await expect(
       page.getByRole("heading", { name: "Verbindungsdiagnose", exact: true }),
     ).toBeVisible();
@@ -482,9 +477,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
       path: ".local/daily-evidence/connection-diagnostics-german-mobile-signals.png",
       fullPage: true,
     });
-    await page
-      .getByRole("tab", { name: "Alarmbewertung", exact: true })
-      .click();
+    await selectOperation(page, "Alarmbewertung");
     await expect(page.getByLabel("Beginn der Auswertung")).toBeVisible();
     await page
       .getByLabel("Beginn der Auswertung", { exact: true })

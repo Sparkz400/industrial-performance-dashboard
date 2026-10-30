@@ -1,3 +1,4 @@
+import ResponsiveTable from '@/shared/components/ResponsiveTable';
 import React, { useState } from 'react';
 import BatchQualityPanel from '../components/BatchQualityPanel';
 import {
@@ -98,17 +99,21 @@ const BatchesPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
+    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1400, width: '100%', mx: 'auto' }}>
       <Stack
         direction="row"
         sx={{
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 2,
           alignItems: 'center',
           mb: 3,
         }}
       >
         <Box>
-          <Typography variant="h5">Batch Monitoring</Typography>
+          <Typography variant="h4" component="h1">
+            Batch Monitoring
+          </Typography>
           <Typography
             variant="body2"
             sx={{
@@ -137,7 +142,18 @@ const BatchesPage: React.FC = () => {
       )}
 
       <TableContainer component={Paper}>
-        <Table>
+        <ResponsiveTable
+          labels={[
+            'Batch Number',
+            'Specification',
+            'Machine ID',
+            'Status',
+            'Started',
+            'Completed',
+            'Duration',
+            'Actions',
+          ]}
+        >
           <TableHead>
             <TableRow>
               <TableCell>Batch Number</TableCell>
@@ -248,7 +264,7 @@ const BatchesPage: React.FC = () => {
               </TableRow>
             )}
           </TableBody>
-        </Table>
+        </ResponsiveTable>
       </TableContainer>
 
       {/* Create Dialog */}

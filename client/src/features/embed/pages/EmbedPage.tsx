@@ -85,7 +85,7 @@ export default function EmbedPage({ mode }: EmbedPageProps) {
     return (
       <Box sx={{ display: 'grid', placeItems: 'center', minHeight: '100vh', p: 2 }}>
         <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="h5" component="h1">
+          <Typography variant="h4" component="h1">
             This shared view is unavailable
           </Typography>
           <Typography
@@ -121,7 +121,7 @@ export default function EmbedPage({ mode }: EmbedPageProps) {
     >
       {!isEmbed && (
         <Box sx={{ mb: 2 }}>
-          <Typography variant="h5" component="h1">
+          <Typography variant="h4" component="h1">
             {view.label || 'Shared trends'}
           </Typography>
           <Typography

@@ -1,3 +1,4 @@
+import { selectOperation } from "./browser-navigation.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer as createHttps } from "node:https";
@@ -297,7 +298,7 @@ await dailyFixture(async ({ pool, call, actors, users, frontend, api, expect }) 
     assert.equal(northView.machines.length, 1);
     const page = await actors.viewer.newPage();
     await page.goto(`${frontend}/operations`);
-    await page.getByRole("tab", { name: "Sites" }).click();
+    await selectOperation(page, "Sites");
     const section = page.getByRole("region", { name: "Site North · north" });
     await expect(section.getByText("offline", { exact: true })).toBeVisible();
     await expect(section.getByText(/values after the time above are unknown here, not zero/)).toBeVisible();

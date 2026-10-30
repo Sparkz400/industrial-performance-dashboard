@@ -1,3 +1,4 @@
+import { selectOperation } from "./browser-navigation.mjs";
 import assert from "node:assert/strict";
 import { dailyFixture } from "./daily-fixture.mjs";
 
@@ -155,7 +156,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   await page.goto(`${frontend}/operations`);
   await page.getByRole("combobox", { name: "Machine", exact: true }).fill("Changeover");
   await page.getByRole("option", { name: "Changeover press", exact: true }).click();
-  await page.getByRole("tab", { name: "Changeovers" }).click();
+  await selectOperation(page, "Changeovers");
   await page.getByLabel("Changeover window start").fill(local("2026-02-02T00:00:00Z"));
   await page.getByLabel("Changeover window end").fill(local("2026-02-04T00:00:00Z"));
   await page.getByRole("button", { name: "Analyze changeovers" }).click();

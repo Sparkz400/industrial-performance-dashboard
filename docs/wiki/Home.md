@@ -1,5 +1,10 @@
 # Performance Dashboard
 
+The [desktop and phone interface](https://github.com/Sparkz400/performance_dashboard/blob/main/DESIGN.md)
+opens on the shift overview. Custom dashboards stay available separately. On a phone,
+use **More** for all permitted administration, quality, reporting and asset destinations.
+Operations is grouped by work area; Settings has a labelled section selector.
+
 [Data integrity and reviewed operations](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DATA_INTEGRITY.md)
 adds evidence-backed widgets, reviewed corrections, bounded calculated signals,
 explicit offline drafts, durable CMMS handoffs and versioned energy estimates.

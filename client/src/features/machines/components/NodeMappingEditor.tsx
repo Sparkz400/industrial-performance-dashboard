@@ -1,3 +1,4 @@
+import ResponsiveTable from '@/shared/components/ResponsiveTable';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
@@ -9,7 +10,6 @@ import {
   Typography,
   TextField,
   IconButton,
-  Table,
   TableBody,
   TableCell,
   TableContainer,
@@ -179,6 +179,7 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
           variant="body2"
           sx={{
             color: 'text.secondary',
+            overflowWrap: 'anywhere',
           }}
         >
           {machine.endpointUrl}
@@ -197,7 +198,14 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
           </Alert>
         )}
 
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
+        <Tabs
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+          value={tab}
+          onChange={(_, v) => setTab(v)}
+          sx={{ mb: 2 }}
+        >
           <Tab label={`Current Mappings (${mappings.length})`} />
           <Tab label="Browse & Add Nodes" />
         </Tabs>
@@ -211,7 +219,19 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
             </Box>
 
             <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 400 }}>
-              <Table size="small" stickyHeader>
+              <ResponsiveTable
+                labels={[
+                  'Node ID',
+                  'Key',
+                  'Display Name',
+                  'Data Type',
+                  'Interval (ms)',
+                  'Active',
+                  'Actions',
+                ]}
+                size="small"
+                stickyHeader
+              >
                 <TableHead>
                   <TableRow>
                     <TableCell>Node ID</TableCell>
@@ -231,6 +251,7 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
                           variant="body2"
                           sx={{
                             color: 'text.secondary',
+                            overflowWrap: 'anywhere',
                             py: 2,
                           }}
                         >
@@ -243,6 +264,7 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
                       <TableRow key={mapping.id || `new-${index}`}>
                         <TableCell>
                           <TextField
+                            slotProps={{ htmlInput: { 'aria-label': `Node ID ${index + 1}` } }}
                             value={mapping.nodeId}
                             onChange={(e) => handleUpdateMapping(index, 'nodeId', e.target.value)}
                             size="small"
@@ -253,6 +275,7 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
                         </TableCell>
                         <TableCell>
                           <TextField
+                            slotProps={{ htmlInput: { 'aria-label': `Key ${index + 1}` } }}
                             value={mapping.nodeKey}
                             onChange={(e) => handleUpdateMapping(index, 'nodeKey', e.target.value)}
                             size="small"
@@ -263,6 +286,7 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
                         </TableCell>
                         <TableCell>
                           <TextField
+                            slotProps={{ htmlInput: { 'aria-label': `Display Name ${index + 1}` } }}
                             value={mapping.displayName}
                             onChange={(e) =>
                               handleUpdateMapping(index, 'displayName', e.target.value)
@@ -276,6 +300,7 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
                         <TableCell>
                           <FormControl size="small" variant="standard" fullWidth>
                             <Select
+                              inputProps={{ 'aria-label': `Data Type ${index + 1}` }}
                               value={mapping.dataType}
                               onChange={(e) =>
                                 handleUpdateMapping(index, 'dataType', e.target.value)
@@ -305,12 +330,17 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
                             size="small"
                             variant="standard"
                             slotProps={{
-                              htmlInput: { min: 100, step: 100 },
+                              htmlInput: {
+                                min: 100,
+                                step: 100,
+                                'aria-label': `Interval (ms) ${index + 1}`,
+                              },
                             }}
                           />
                         </TableCell>
                         <TableCell>
                           <Switch
+                            slotProps={{ input: { 'aria-label': `Active ${index + 1}` } }}
                             checked={mapping.isActive}
                             onChange={(e) =>
                               handleUpdateMapping(index, 'isActive', e.target.checked)
@@ -333,7 +363,7 @@ const NodeMappingEditor: React.FC<NodeMappingEditorProps> = ({ open, onClose, ma
                     ))
                   )}
                 </TableBody>
-              </Table>
+              </ResponsiveTable>
             </TableContainer>
           </Box>
         )}

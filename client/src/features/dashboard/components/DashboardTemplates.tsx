@@ -171,7 +171,7 @@ const DashboardTemplates: React.FC<DashboardTemplatesProps> = ({
                 }}
                 sx={{
                   p: 2.5,
-                  borderRadius: 3,
+                  borderRadius: '7px',
                   border: '1px solid',
                   borderColor: 'divider',
                   cursor: 'pointer',

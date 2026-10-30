@@ -50,3 +50,15 @@ it('requires name and IP and reports a server save failure', async () => {
   expect(await screen.findByText('Cannot save machine')).toBeVisible();
 });
 import React from 'react';
+
+it('rejects invalid ports without submitting or discarding the draft', async () => {
+  const save = vi.fn();
+  render(<MachineForm open onClose={vi.fn()} onSubmit={save} />);
+  fireEvent.change(screen.getByLabelText(/Machine Name/), { target: { value: 'Line A' } });
+  fireEvent.change(screen.getByLabelText(/IP Address/), { target: { value: 'localhost' } });
+  fireEvent.change(screen.getByLabelText(/Port/), { target: { value: '70000' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+  expect(await screen.findByText('Port must be between 1 and 65535.')).toBeVisible();
+  expect(save).not.toHaveBeenCalled();
+  expect(screen.getByLabelText(/Machine Name/)).toHaveValue('Line A');
+});

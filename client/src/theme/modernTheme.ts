@@ -47,8 +47,8 @@ export const createModernTheme = (mode: 'dark' | 'light') => {
       h1: { fontWeight: 700 },
       h2: { fontWeight: 700 },
       h3: { fontWeight: 600 },
-      h4: { fontWeight: 700, letterSpacing: '-0.02em' },
-      h5: { fontWeight: 700, letterSpacing: '-0.01em' },
+      h4: { fontSize: '1.625rem', lineHeight: 1.25, fontWeight: 600, letterSpacing: '-0.02em' },
+      h5: { fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.01em' },
       h6: { fontWeight: 600, letterSpacing: '-0.01em', fontSize: '1.05rem' },
       subtitle1: { fontWeight: 600, fontSize: '0.95rem' },
       button: { fontWeight: 600 },
@@ -72,7 +72,16 @@ export const createModernTheme = (mode: 'dark' | 'light') => {
             scrollbarWidth: 'thin',
             scrollbarColor: `${controlEdge} ${chassis}`,
           },
-          a: { color: 'inherit' },
+          a: { color: 'inherit', textUnderlineOffset: '0.18em' },
+          '::selection': { background: alpha(accent, 0.25) },
+          'input, textarea': { caretColor: accent },
+          'td, time': { fontVariantNumeric: 'tabular-nums' },
+          '@media (pointer: coarse), (max-width:1099px)': {
+            '.MuiButton-root, .MuiIconButton-root, .MuiTab-root, .MuiMenuItem-root': {
+              minHeight: 44,
+            },
+            '.MuiIconButton-root': { minWidth: 44 },
+          },
           ':focus-visible': { outline: `3px solid ${accent}`, outlineOffset: 3 },
           '@media (prefers-reduced-motion: reduce)': {
             '*, *::before, *::after': {
@@ -128,7 +137,7 @@ export const createModernTheme = (mode: 'dark' | 'light') => {
             borderRadius: 5,
             '&.Mui-selected': {
               backgroundColor: raised,
-              boxShadow: `inset 3px 0 ${accent}, ${raisedShadow}`,
+              boxShadow: `inset 1px 0 ${accent}`,
               '&:hover': { backgroundColor: raised },
             },
           },
@@ -145,11 +154,55 @@ export const createModernTheme = (mode: 'dark' | 'light') => {
           },
         },
       },
-      MuiDialog: { styleOverrides: { paper: { borderRadius: 9, backgroundColor: raised } } },
+      MuiDialog: {
+        styleOverrides: {
+          paper: {
+            borderRadius: 7,
+            backgroundColor: raised,
+            '@media (max-width:599px)': {
+              margin: 8,
+              maxWidth: 'calc(100% - 16px)',
+              width: 'calc(100% - 16px)',
+            },
+          },
+        },
+      },
+      MuiDialogActions: { styleOverrides: { root: { flexWrap: 'wrap', gap: 8, padding: 16 } } },
       MuiOutlinedInput: {
         styleOverrides: {
           root: { borderRadius: 5, backgroundColor: field },
           notchedOutline: { borderColor: controlEdge },
+        },
+      },
+      MuiSelect: {
+        styleOverrides: {
+          select: {
+            '@media (pointer: coarse), (max-width:1099px)': {
+              minHeight: 44,
+              boxSizing: 'border-box',
+              display: 'flex',
+              alignItems: 'center',
+            },
+          },
+        },
+      },
+      MuiAutocomplete: {
+        styleOverrides: {
+          input: {
+            '@media (pointer: coarse), (max-width:1099px)': {
+              minHeight: 44,
+              boxSizing: 'border-box',
+            },
+          },
+        },
+      },
+      MuiTablePagination: {
+        styleOverrides: {
+          toolbar: { flexWrap: 'wrap', justifyContent: 'flex-end', padding: 8 },
+          spacer: { display: 'none' },
+          selectLabel: { margin: 0 },
+          displayedRows: { margin: 0 },
+          actions: { marginLeft: 8 },
         },
       },
       MuiTableContainer: { styleOverrides: { root: { backgroundColor: field } } },
@@ -161,7 +214,7 @@ export const createModernTheme = (mode: 'dark' | 'light') => {
       },
       MuiTab: { styleOverrides: { root: { textTransform: 'none', fontWeight: 600 } } },
       MuiAlert: {
-        styleOverrides: { root: { borderRadius: 5, borderLeft: '3px solid currentColor' } },
+        styleOverrides: { root: { borderRadius: 5, borderLeft: '1px solid currentColor' } },
       },
       MuiAccordion: {
         styleOverrides: { root: { backgroundColor: raised, backgroundImage: 'none' } },

@@ -2,6 +2,7 @@ import { useLanguage } from '@/i18n';
 import React, { useState } from 'react';
 import {
   Alert,
+  Box,
   Button,
   Checkbox,
   FormControlLabel,
@@ -108,7 +109,16 @@ export default function PlanningPanel({ machineId }: { machineId: number }) {
       )}
       {calendars.error && <Alert severity="error">{String(calendars.error)}</Alert>}
       <Paper sx={{ p: 2 }}>
-        <Stack spacing={2}>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(2, minmax(0, 1fr))' },
+            '& > .MuiTypography-root, & > .MuiStack-root, & > .MuiAlert-root': {
+              gridColumn: '1 / -1',
+            },
+          }}
+        >
           <Typography variant="h6">
             {t('Recurring shift calendars', 'Wiederkehrende Schichtkalender')}
           </Typography>
@@ -429,7 +439,7 @@ export default function PlanningPanel({ machineId }: { machineId: number }) {
               )}
             </>
           )}
-        </Stack>
+        </Box>
       </Paper>
       <ProductRuns machineId={machineId} editable={edit} />
     </Stack>

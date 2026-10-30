@@ -10,7 +10,7 @@ test("machine settings survive create, edit and reload, and can be deleted", asy
     page.getByRole("heading", { name: "Machines", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Add Machine", exact: true }).click();
-  const form = page.getByRole("dialog");
+  const form = page.getByRole("form");
   await form.getByRole("button", { name: "Add", exact: true }).click();
   await expect(form.getByText("Name and IP are required")).toBeVisible();
   const name = `E2E machine ${Date.now()}`;
@@ -27,7 +27,7 @@ test("machine settings survive create, edit and reload, and can be deleted", asy
     card.getByText("opc.tcp://localhost:4841/UA/Test"),
   ).toBeVisible();
   await expect(card.getByText("Inactive")).toBeVisible();
-  await card.getByRole("button", { name: "Edit", exact: true }).click();
+  await card.getByRole("button", { name: /^Edit:/ }).click();
   await expect(form.getByLabel(/^Port/)).toHaveValue("4841");
   await expect(
     form.getByRole("switch", { name: "Active" }),
@@ -39,7 +39,7 @@ test("machine settings survive create, edit and reload, and can be deleted", asy
   await expect(
     card.getByText("opc.tcp://localhost:4841/UA/Updated"),
   ).toBeVisible();
-  await card.getByRole("button", { name: "Delete", exact: true }).click();
+  await card.getByRole("button", { name: /^Delete:/ }).click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Delete", exact: true })

@@ -90,7 +90,7 @@ export async function testSecureMachine({
     await page.getByLabel("Machine password").fill(password);
     await page.getByLabel("Active", { exact: true }).uncheck();
     await page.getByRole("button", { name: "Add", exact: true }).click();
-    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    await page.getByRole("form").waitFor({ state: "hidden" });
     const response = await call("GET", "/api/v1/machines");
     const body = await response.text();
     assert.ok(!body.includes(password) && !body.includes("encryptedSecret"));
@@ -123,10 +123,10 @@ export async function testSecureMachine({
     assert.equal(inspected.identity, "username");
     assert.equal(inspected.securityMode, "SignAndEncrypt");
     assert.ok((await multiMachine.browseNodes(machineId)).length > 0);
-    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    await page.getByRole("button", { name: /^Edit:/ }).click();
     assert.equal(await page.getByLabel("Machine password").inputValue(), "");
     await page.getByRole("button", { name: "Update", exact: true }).click();
-    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    await page.getByRole("form").waitFor({ state: "hidden" });
     assert.equal(
       (await commissioningService.inspect(machineId)).identity,
       "username",
@@ -207,7 +207,7 @@ export async function testSecureMachine({
       "certificate",
     );
     await page.reload();
-    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    await page.getByRole("button", { name: /^Edit:/ }).click();
     await page.getByLabel("User certificate (PEM)").fill(certificatePem);
     await page
       .getByLabel("User private key (PEM)")
@@ -217,7 +217,7 @@ export async function testSecureMachine({
         buffer: Buffer.from(privateKeyPem),
       });
     await page.getByRole("button", { name: "Update", exact: true }).click();
-    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    await page.getByRole("form").waitFor({ state: "hidden" });
     assert.equal(
       (await commissioningService.inspect(machineId)).identity,
       "certificate",

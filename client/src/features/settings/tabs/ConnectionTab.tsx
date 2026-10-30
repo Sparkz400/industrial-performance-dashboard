@@ -30,10 +30,7 @@ const ConnectionsTab: React.FC = () => {
   const {
     loading: dbLoading,
     dbOnline,
-    dbHost,
-    dbPort,
-    dbUser,
-    dbName,
+    testedAt,
     handleTestDbConnection,
   } = useDatabaseConnection();
 
@@ -66,10 +63,7 @@ const ConnectionsTab: React.FC = () => {
       <Grid size={{ xs: 12, lg: 6 }}>
         <DatabaseConnectionCard
           dbOnline={dbOnline}
-          dbHost={dbHost}
-          dbPort={dbPort}
-          dbUser={dbUser}
-          dbName={dbName}
+          testedAt={testedAt}
           handleTestDbConnection={handleTestDbConnection}
           loading={dbLoading}
         />

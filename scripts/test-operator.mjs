@@ -213,7 +213,7 @@ export async function testOperator({
   );
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
-    page.getByRole("button", { name: "Expand navigation" }),
+    page.getByRole("button", { name: "More", exact: true }),
   ).toHaveAttribute("aria-expanded", "false");
   await expect
     .poll(async () => (await page.locator("main").boundingBox()).x)
