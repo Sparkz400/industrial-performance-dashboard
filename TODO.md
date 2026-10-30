@@ -89,6 +89,9 @@ smoke. A new complete 72-hour receipt is still required; no failed duration is r
 The replacement on `1a5abff7` failed at hourly session renewal after 11 recovery
 cycles; the harness now confirms logout before login and exercises renewal in its
 short smoke. The full acceptance gate remains open.
+FR02 follow-through removes the 100-correction ceiling with a preserving history
+migration and machine-scoped paging. Manual-state calculation now sweeps sorted
+boundaries while retaining measured-state precedence and unknown/conflict rules.
 
 ### Daily factory workflows — current implementation
 

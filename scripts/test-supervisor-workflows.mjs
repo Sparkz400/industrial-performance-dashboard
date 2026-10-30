@@ -193,8 +193,28 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
     },
   );
   assert.equal(revised.version, 2);
-  assert.equal(revised.revisions[0].previous.owner_id, users.operator.id);
-  assert.equal(revised.revisions[0].changedBy, users.supervisor.id);
+  const firstHistory = await request(
+    "supervisor",
+    "GET",
+    `/maintenance-actions/${action.id}/revisions`,
+  );
+  assert.equal(firstHistory.revisions[0].previous.owner_id, users.operator.id);
+  assert.equal(firstHistory.revisions[0].changedBy, users.supervisor.id);
+  assert.equal(firstHistory.next, null);
+  await request(
+    "operator",
+    "GET",
+    `/maintenance-actions/${action.id}/revisions`,
+    undefined,
+    403,
+  );
+  await request(
+    "supervisor",
+    "GET",
+    `/maintenance-actions/${action.id}/revisions?after=-1`,
+    undefined,
+    400,
+  );
   await request(
     "supervisor",
     "POST",
@@ -212,6 +232,13 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   await pool.query(
     "DELETE FROM machine_grants WHERE user_id=$1 AND machine_id=$2",
     [users.supervisor.id, machines[0]],
+  );
+  await request(
+    "supervisor",
+    "GET",
+    `/maintenance-actions/${action.id}/revisions`,
+    undefined,
+    403,
   );
   await request(
     "supervisor",
@@ -332,7 +359,82 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   )[0];
   assert.equal(action.version, 3);
   assert.equal(action.owner_id, users.admin.id);
-  assert.equal(action.revisions[1].reason, "Tablet reassignment");
+  assert.equal(
+    (
+      await request(
+        "supervisor",
+        "GET",
+        `/maintenance-actions/${action.id}/revisions`,
+      )
+    ).revisions[1].reason,
+    "Tablet reassignment",
+  );
+  // More than 100 accepted corrections remain available without unbounded list responses.
+  for (let i = 3; i <= 102; i++) {
+    action = await request(
+      "supervisor",
+      "POST",
+      `/maintenance-actions/${action.id}/revise`,
+      {
+        ...revise,
+        ownerId: users.admin.id,
+        version: action.version,
+        reason: `Correction ${i}`,
+      },
+    );
+  }
+  const concurrent = await Promise.all(
+    ["A", "B"].map((reason) =>
+      call(
+        "supervisor",
+        "POST",
+        `/api/v1/maintenance-actions/${action.id}/revise`,
+        {
+          ...revise,
+          ownerId: users.admin.id,
+          version: action.version,
+          reason: `Concurrent ${reason}`,
+        },
+      ),
+    ),
+  );
+  assert.deepEqual(concurrent.map((r) => r.status()).sort(), [200, 409]);
+  const history = [];
+  let after = 0;
+  do {
+    const page = await request(
+      "supervisor",
+      "GET",
+      `/maintenance-actions/${action.id}/revisions?after=${after}`,
+    );
+    assert(page.revisions.length <= 20);
+    history.push(...page.revisions);
+    after = page.next;
+  } while (after !== null);
+  assert.equal(history.length, 103);
+  assert.deepEqual(
+    history.map((r) => r.previous.version),
+    Array.from({ length: 103 }, (_, i) => i + 1),
+  );
+  assert.deepEqual(history[0], firstHistory.revisions[0]);
+  assert.match(history.at(-1).reason, /^Concurrent [AB]$/);
+  await page
+    .getByRole("button", { name: "Refresh recovery status", exact: true })
+    .click();
+  await page.getByText("Correction history", { exact: true }).click();
+  await expect(page.getByText(/Shift handover/)).toBeVisible();
+  const next = page.getByRole("button", {
+    name: "Next corrections",
+    exact: true,
+  });
+  await next.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText(/^Correction 21 ·/)).toBeVisible();
+  await expect(page.getByText(/Shift handover/)).not.toBeVisible();
+  await page
+    .getByRole("button", { name: "Previous corrections", exact: true })
+    .click();
+  await expect(page.getByText(/Shift handover/)).toBeVisible();
   await page.evaluate(() => localStorage.setItem("language", "de"));
   await page.reload();
   await page.getByRole("combobox", { name: "Maschine", exact: true }).click();
@@ -385,6 +487,12 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByText("Korrekturverlauf", { exact: true }).click();
+  await expect(page.getByText(/Shift handover/)).toBeVisible();
+  await page
+    .getByRole("button", { name: "Weitere Korrekturen", exact: true })
+    .click();
+  await expect(page.getByText(/^Correction 21 ·/)).toBeVisible();
   await expect
     .poll(async () => {
       const box = await page
@@ -446,11 +554,22 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
     path: ".local/daily-evidence/supervisor-line-mobile-de.png",
   });
   assert.deepEqual(errors, []);
+  const completed = (
+    await request(
+      "supervisor",
+      "GET",
+      `/maintenance-actions/machines/${machines[0]}`,
+    )
+  )[0];
   await request(
     "supervisor",
     "POST",
     `/maintenance-actions/${action.id}/revise`,
-    { ...revise, version: 4, reason: "Cannot alter completed evidence" },
+    {
+      ...revise,
+      version: completed.version,
+      reason: "Cannot alter completed evidence",
+    },
     409,
   );
   console.log(
@@ -460,6 +579,9 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
       scopedOwners: true,
       staleRevisionsRejected: true,
       immutableCorrectionHistory: true,
+      preservedCorrections: history.length,
+      pagedHistory: true,
+      concurrentRevisionRejected: true,
       recoveryAndRecurrence: true,
       browserLanguages: ["en", "de"],
       viewports: [768, 390],

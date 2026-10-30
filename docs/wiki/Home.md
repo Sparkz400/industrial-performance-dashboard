@@ -14,6 +14,8 @@ Physical, ERP vendor and publisher-trust acceptance remain separate gates.
 [Factory readiness](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/FACTORY_READINESS.md)
 adds scoped supervisor line/action workflows, attributable maintenance corrections,
 fair comparisons of frozen shift reports and full-application endurance testing.
+Maintenance correction history is preserved without a fixed count ceiling and
+browsed in pages; shift calculations use a boundary sweep with unchanged evidence rules.
 Short runs do not establish multi-day reliability; physical qualification remains open.
 
 Industrial monitoring with OPC UA machine connections, configurable dashboards,

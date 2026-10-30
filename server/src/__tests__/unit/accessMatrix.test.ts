@@ -132,6 +132,7 @@ describe("REST access matrix", () => {
     const supervisorChecked = [
       "GET /lines",
       "GET /lines/:id/report",
+      "GET /maintenance-actions/:id/revisions",
       "GET /maintenance-actions/machines/:id",
       "GET /maintenance-actions/machines/:id/owners",
       "POST /lines",

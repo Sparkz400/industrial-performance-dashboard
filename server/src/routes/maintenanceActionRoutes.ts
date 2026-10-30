@@ -2,7 +2,11 @@ import { Router } from "express";
 import Joi from "joi";
 import manager from "../database/dbConnection.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
-import { validateBody, validateParams } from "../middleware/validation.js";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../middleware/validation.js";
 import { requireRole } from "../middleware/auth.js";
 import { assertMachine } from "../services/accessScope.js";
 import {
@@ -39,6 +43,30 @@ async function actionRecord(id: number) {
   assertMachine(row.machine_id);
   return row as { machine_id: number; due_at: Date };
 }
+router.get(
+  "/:id/revisions",
+  validateParams(id),
+  validateQuery(
+    Joi.object({
+      after: Joi.number().integer().min(0).max(2147483647).default(0),
+    }),
+  ),
+  asyncHandler(async (req, res) => {
+    const actionId = Number(req.params.id);
+    await actionRecord(actionId);
+    const rows = (
+      await manager.pool.query(
+        `SELECT version,revision FROM maintenance_action_revisions
+       WHERE action_id=$1 AND version>$2 ORDER BY version LIMIT 21`,
+        [actionId, Number(req.query.after)],
+      )
+    ).rows;
+    res.json({
+      revisions: rows.slice(0, 20).map((r) => r.revision),
+      next: rows.length > 20 ? rows[19].version : null,
+    });
+  }),
+);
 router.get(
   "/machines/:id/owners",
   validateParams(id),
@@ -109,12 +137,18 @@ router.post(
       actionId = Number(req.params.id),
       current = await actionRecord(actionId);
     await validateMaintenanceAction(b, current.machine_id, current.due_at);
-    // shortcut: keep up to 100 corrections per action; use a history table if longer action lifecycles are needed.
-    // Retain every prior version and its correction reason in the same atomic update.
+    // Lock the prior version so concurrent corrections cannot overwrite its audit record.
     const saved = await manager.pool.query(
-      `UPDATE maintenance_actions a SET owner_id=$3,escalation_owner_id=$4,due_at=$5,action=$6,suppression_until=$7,quiet_start=$8,quiet_end=$9,
-       version=a.version+1,revisions=revisions || jsonb_build_array(jsonb_build_object('previous',to_jsonb(a)-'revisions','changedBy',$10::int,'changedAt',now(),'reason',$11::text))
-       WHERE a.id=$1 AND a.version=$2 AND a.completed_at IS NULL AND jsonb_array_length(a.revisions)<100 RETURNING a.*`,
+      `WITH previous AS MATERIALIZED (
+         SELECT * FROM maintenance_actions WHERE id=$1 AND version=$2 AND completed_at IS NULL FOR UPDATE
+       ), saved AS (
+         UPDATE maintenance_actions a SET owner_id=$3,escalation_owner_id=$4,due_at=$5,action=$6,suppression_until=$7,quiet_start=$8,quiet_end=$9,
+         version=a.version+1 FROM previous p WHERE a.id=p.id RETURNING a.*
+       ), history AS (
+         INSERT INTO maintenance_action_revisions(action_id,version,revision)
+         SELECT p.id,p.version,jsonb_build_object('previous',to_jsonb(p),'changedBy',$10::int,'changedAt',now(),'reason',$11::text)
+         FROM previous p JOIN saved s ON s.id=p.id RETURNING action_id
+       ) SELECT s.* FROM saved s JOIN history h ON h.action_id=s.id`,
       [
         actionId,
         b.version,
@@ -131,7 +165,7 @@ router.post(
     );
     if (!saved.rowCount)
       throw new ConflictError(
-        "Action changed, is completed or reached 100 corrections; reload before continuing",
+        "Action changed or is completed; reload before continuing",
       );
     res.json(saved.rows[0]);
   }),

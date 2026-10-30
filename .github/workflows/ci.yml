@@ -132,6 +132,7 @@ jobs:
       - run: node scripts/test-forecasts-recommendations.mjs
       - run: node scripts/test-quality-line.mjs
       - run: node scripts/test-supervisor-workflows.mjs
+      - run: node scripts/test-maintenance-history-migration.mjs
       - run: node scripts/test-period-comparisons.mjs
       - run: node scripts/test-configuration-bundles.mjs
       - run: node scripts/test-operational-diagnostics.mjs

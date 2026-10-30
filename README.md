@@ -102,6 +102,8 @@ multi-day reliability and supported capacity remain unqualified.
 
 [Factory readiness](docs/FACTORY_READINESS.md) extends those supervisor workflows
 with attributable, versioned maintenance corrections and English/German screens.
+Correction history is preserved without a fixed count ceiling and browsed in pages;
+shift calculations merge observed and declared states with a boundary sweep.
 Saved shift revisions can be compared with explicit coverage, product-mix and
 definition checks; differences are withheld when evidence is not comparable.
 Installation endurance serves the compiled frontend and exercises the real collector,

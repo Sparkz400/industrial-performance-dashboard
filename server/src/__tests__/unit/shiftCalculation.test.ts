@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   applyManualStates,
   calculateShift,
@@ -311,6 +311,84 @@ describe("reviewed manual state declarations (O10)", () => {
     to: number,
     state: "running" | "idle" | "fault" | "planned",
   ) => ({ entryId, start: at(from), end: at(to), state });
+
+  it("matches a per-second reference with nested, duplicate, clipped and zero-length declarations", () => {
+    let seed = 731;
+    const random = (n: number) =>
+      (seed = (seed * 1664525 + 1013904223) >>> 0) % n;
+    const states = ["running", "idle", "fault", "planned"] as const;
+    for (let trial = 0; trial < 25; trial++) {
+      const observed = Array.from({ length: 12 }, (_, i) => ({
+        start: at(i * 5),
+        end: at(i * 5 + 5),
+        state: random(3) ? ("unknown" as const) : states[random(4)],
+      }));
+      const manual = Array.from({ length: 40 }, (_, i) => {
+        const from = random(80) - 10;
+        return declared(i, from, from + random(30), states[random(4)]);
+      });
+      manual.push(
+        declared(50, -10, 70, "running"),
+        declared(51, 10, 20, "running"),
+      );
+      const actual = applyManualStates(observed, manual, start, end);
+      let manualSeconds = 0,
+        conflictSeconds = 0,
+        contradictedSeconds = 0;
+      for (let second = 0; second < 60; second++) {
+        const covers = (i: { start: string; end: string }) =>
+          i.start <= at(second) && i.end >= at(second + 1);
+        const measured = observed.find(covers)!.state;
+        const declarations = new Set(manual.filter(covers).map((m) => m.state));
+        const interval = actual.intervals.find(covers)!;
+        const isManual = measured === "unknown" && declarations.size === 1;
+        expect(interval.state).toBe(isManual ? [...declarations][0] : measured);
+        expect(interval.source).toBe(isManual ? "manual" : undefined);
+        manualSeconds += Number(isManual);
+        conflictSeconds += Number(
+          measured === "unknown" && declarations.size > 1,
+        );
+        contradictedSeconds += Number(
+          measured !== "unknown" &&
+            [...declarations].some((s) => s !== measured),
+        );
+      }
+      expect(actual).toMatchObject({
+        manualSeconds,
+        conflictSeconds,
+        contradictedSeconds,
+      });
+    }
+  });
+
+  it("handles 10,000 boundaries without reparsing every interval at each boundary", () => {
+    const observed = Array.from({ length: 10000 }, (_, i) => ({
+      start: at(i),
+      end: at(i + 1),
+      state: "unknown" as const,
+    }));
+    const manual = observed.map((_, i) => declared(i, i, i + 1, "running"));
+    const parse = Date.parse;
+    let calls = 0;
+    const spy = vi.spyOn(Date, "parse").mockImplementation((value) => {
+      if (++calls > 60000) throw new Error("Repeated timeline scan");
+      return parse(value);
+    });
+    try {
+      const result = applyManualStates(
+        observed,
+        manual,
+        start,
+        new Date(at(10000)),
+      );
+      expect(result.manualSeconds).toBe(10000);
+      expect(result.intervals).toEqual([
+        { start: at(0), end: at(10000), state: "running", source: "manual" },
+      ]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
 
   it("fills only unknown time, keeps observed states and leaves disagreement unknown", () => {
     const observed = [
