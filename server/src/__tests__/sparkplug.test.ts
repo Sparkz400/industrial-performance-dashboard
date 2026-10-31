@@ -285,6 +285,31 @@ describe("Sparkplug B session state", () => {
     expect(status()["Plant/Line1"]).toBe("born");
   });
 
+  it("replays messages whose write failed from the state saved before them", () => {
+    const { state, message } = listener();
+    message("NBIRTH", nbirth());
+    const before = structuredClone(state);
+    const data = (seq: number) =>
+      message("NDATA", {
+        timestamp: T + seq * 1000,
+        seq,
+        metrics: [{ alias: 1, int: 10 + seq }],
+      });
+    data(1);
+    data(2);
+    // Both writes failed: the collector restores the saved state, then the broker redelivers.
+    state.clear();
+    for (const [key, node] of before) state.set(key, node);
+    expect([data(1).rows, data(2).rows]).toEqual([
+      [["Count", 11, "Good"]],
+      [["Count", 12, "Good"]],
+    ]);
+    // Without the restore the same redelivery would be read as a gap.
+    expect(data(1).rejected).toBe(
+      "Alias-only metric after a sequence gap: waiting for the next birth",
+    );
+  });
+
   it("stops trusting aliases after a sequence gap until the next birth", () => {
     const { message, status } = listener();
     message("NBIRTH", nbirth());
