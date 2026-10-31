@@ -278,3 +278,37 @@ browser replacement or relaxed visibility/freshness checks. A real-browser
 regression verifies that socket events survive shutdown and the fixture's
 session credential is excluded. These diagnostics are not a claimed fix or
 72-hour acceptance. A fresh clean-revision run must pass all existing gates.
+
+### Stable network during database outages — 2026-10-31
+
+Main run [41190892557](https://github.com/Sparkz400/performance_dashboard/actions/runs/41190892557)
+completed two recovery cycles, then Chromium aborted frontend assets with
+`ERR_NETWORK_CHANGED` and all three pages stayed blank. The preceding PR run on
+identical source passed. Restarting the database container also recreated its
+virtual network interface; this is an avoidable disturbance of the browser host.
+
+The harness now holds the owned container/network namespace alive and restarts
+PostgreSQL itself with `pg_ctl -m fast -w stop` and the image's normal entrypoint.
+Every cycle proves SQL is unavailable, a new PostgreSQL start time is observed,
+and the network identity stays constant. Application restarts, durable-spool
+checkpoints, exact-once replay, browser queries and failure assertions are retained.
+There is no browser retry or suppressed network failure. Container/host-network
+restart qualification remains separate from this database-process outage test.
+
+The Windows 72-hour attempt at `9e75ca68` also failed, after 11 cycles and
+0.9640052777777778 actual workload hours. Its earlier asset/resource failure is
+not proven to have this cause. Existing receipts remain preserved; neither this
+harness correction nor a short CI pass closes the 72-hour gate.
+
+Local Windows smoke passed four recovery cycles over 0.05256277777777778 workload
+hours: each database restart retained its network identity, all 291 checkpointed
+measurements replayed exactly once, and the three browser sessions completed
+queries, reports, alarm acknowledgement and login renewal. This is short recovery
+evidence, not endurance acceptance.
+
+The combined follow-up CI also exposed an independent edge-history fixture cleanup
+race: its assertions passed, then forced backend termination reached a pooled
+connection that was still closing. That fixture now waits for its owned database
+connections to disappear before dropping the database, matching the shared
+fixture's cleanup boundary. A connection that does not close fails the cleanup;
+it is not forcibly terminated or ignored.
