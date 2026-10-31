@@ -1040,7 +1040,7 @@ try {
     console.log(JSON.stringify(lastSample));
   } while (
     Date.now() - workloadBegan < settings.hours * 3600000 ||
-    cycle <
+    state.completedCycles <
       browserResourcePolicy.warmupSamples + browserResourcePolicy.windowSamples
   );
   await sessions[0].page.screenshot({
