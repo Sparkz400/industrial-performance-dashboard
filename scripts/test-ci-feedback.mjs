@@ -75,7 +75,10 @@ const directory = await mkdtemp(join(local, "ci-runner-test-"));
 try {
   const passing = join(directory, "passing.mjs"),
     failing = join(directory, "failing.mjs");
-  await writeFile(passing, 'console.log("owned fixture passed")');
+  await writeFile(
+    passing,
+    'console.log("Cookie: " + "private-truncated-secret".repeat(6000)); console.log("owned fixture passed")',
+  );
   await writeFile(
     failing,
     'console.error("password: private-runner-password\\nCookie: private-runner-cookie"); process.exitCode = 7',
@@ -92,6 +95,11 @@ try {
     ["passed", "failed", "not-run"],
   );
   assert.equal(result.tests[1].exitCode, 7);
+  assert.equal(result.tests[0].outputTruncated, true);
+  assert.equal(
+    await readFile(join(directory, "passing.log"), "utf8"),
+    "owned fixture passed\n",
+  );
   const log = await readFile(join(directory, "failing.log"), "utf8");
   assert(!log.includes("private-runner-"));
   assert.deepEqual(

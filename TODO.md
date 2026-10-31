@@ -36,6 +36,7 @@ all 61 original commands, failure/timing receipts and sustained browser resource
 diagnostics. Validation: `test-correctness-benchmark.mjs`, `test-ci-feedback.mjs`,
 `test-browser-resources.mjs` and the installation-endurance smoke with at least five
 cycles. These additions do not change the existing acceptance-item counts below.
+Delivery and hosted validation: [PR #90](https://github.com/Sparkz400/performance_dashboard/pull/90).
 
 Selected OSS points 1, 5 and 7 add a [persistent factory demo](docs/INTERACTIVE_DEMO.md),
 [validated profile catalog](profiles/README.md) and [portable shift/OEE evidence](docs/SHIFT_EVIDENCE.md).

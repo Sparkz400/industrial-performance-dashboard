@@ -227,6 +227,9 @@ await dailyFixture(async ({ pool, call, actors, api, frontend, browser, password
     // Maximum session age forces a return to the provider.
     const aged = await signIn("alice");
     assert.equal(await me(aged.context), 200);
+    // Finish bootstrap session saves before changing its timestamp out of band.
+    await aged.page.waitForLoadState("networkidle", { timeout: 10000 });
+    await aged.page.close();
     await pool.query("UPDATE session SET sess = jsonb_set(sess::jsonb, '{oidcAuthTime}', to_jsonb($1::bigint))::json WHERE sid=$2", [Date.now() - 9 * 3600_000, await sidOf(aged.context)]);
     assert.equal(await me(aged.context), 401);
 
