@@ -29,6 +29,14 @@ functionality.
 
 ## Community workflow additions — 2026-10-31
 
+Selected OSS points 6 and 8 add the [public correctness benchmark](benchmarks/correctness/README.md)
+and [engineering feedback](docs/ENGINEERING_FEEDBACK.md): 15 independently specified
+cases, a standalone external-results comparator, four isolated CI groups retaining
+all 61 original commands, failure/timing receipts and sustained browser resource
+diagnostics. Validation: `test-correctness-benchmark.mjs`, `test-ci-feedback.mjs`,
+`test-browser-resources.mjs` and the installation-endurance smoke with at least five
+cycles. These additions do not change the existing acceptance-item counts below.
+
 Selected OSS points 1, 5 and 7 add a [persistent factory demo](docs/INTERACTIVE_DEMO.md),
 [validated profile catalog](profiles/README.md) and [portable shift/OEE evidence](docs/SHIFT_EVIDENCE.md).
 Validation is in `scripts/test-community-workflows.mjs`, `scripts/test-interactive-demo.mjs`

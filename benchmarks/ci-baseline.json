@@ -1,0 +1,411 @@
+{
+  "format": "pd-ci-baseline-v1",
+  "sourceRevision": "d462e5eb9223cd5673628536cd4e478a75f1da3a",
+  "runId": 41196897696,
+  "runUrl": "https://github.com/Sparkz400/performance_dashboard/actions/runs/41196897696",
+  "jobs": [
+    {
+      "name": "Validate (ubuntu-latest)",
+      "seconds": 130.0
+    },
+    {
+      "name": "Validate (windows-latest)",
+      "seconds": 191.0
+    },
+    {
+      "name": "Browser and database",
+      "seconds": 1538.0
+    },
+    {
+      "name": "Container build",
+      "seconds": 312.0
+    }
+  ],
+  "runnerSeconds": 2171.0,
+  "wallSeconds": 1538.0,
+  "requiredBrowserTests": [
+    {
+      "script": "scripts/test-database-client-errors.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-measurements.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-p0.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-tracing.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-recovery.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-access.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-shares.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-alarm-replay.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-report-boundaries.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-oee-boundaries.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-collector-lock.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-collector-fencing.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-subscription-limits.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-integration-outbox.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-api-contract.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-spool-quarantine.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-batch-lifecycle.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-compliance-audit.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-spc-live.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-accessibility.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-responsive-ui.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-line-analysis.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-examples.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-community-workflows.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-interactive-demo.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-offline-destinations.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-control-charts.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-alarm-email.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-history.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-history-rollups.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-changeovers.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-lot-corrections.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-data-ownership.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-limited-data.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-job-inspections.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-maintenance-records.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-improvement-actions.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-mapping-suggestions.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-custom-widgets.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-mqtt-ingestion.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-plc-alarms.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-oidc.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-edge-history.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-forecasts-recommendations.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-quality-line.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-supervisor-workflows.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-maintenance-history-migration.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-period-comparisons.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-configuration-bundles.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-operational-diagnostics.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-work-orders.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-asset-overview.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-measurement-corrections.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-signal-quality.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-offline-operator.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-maintenance-costs.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-daily-workflows.mjs",
+      "args": [],
+      "env": {
+        "DAILY_BROWSER": "1"
+      }
+    },
+    {
+      "script": "scripts/test-production.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-browser-isolated.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-endurance-harness.mjs",
+      "args": [],
+      "env": {}
+    },
+    {
+      "script": "scripts/test-installation-endurance.mjs",
+      "args": [
+        "--hours",
+        "0.04",
+        "--cycle-seconds",
+        "20",
+        "--outage-seconds",
+        "3",
+        "--restart-every",
+        "2",
+        "--users",
+        "3",
+        "--tags",
+        "20"
+      ],
+      "env": {}
+    }
+  ],
+  "browserTestSeconds": {
+    "node scripts/test-database-client-errors.mjs": 1.0,
+    "node scripts/test-measurements.mjs": 2.0,
+    "node scripts/test-p0.mjs": 3.0,
+    "node scripts/test-tracing.mjs": 0.0,
+    "node scripts/test-recovery.mjs": 2.0,
+    "node scripts/test-access.mjs": 17.0,
+    "node scripts/test-shares.mjs": 25.0,
+    "node scripts/test-alarm-replay.mjs": 7.0,
+    "node scripts/test-report-boundaries.mjs": 6.0,
+    "node scripts/test-oee-boundaries.mjs": 6.0,
+    "node scripts/test-collector-lock.mjs": 7.0,
+    "node scripts/test-collector-fencing.mjs": 26.0,
+    "node scripts/test-subscription-limits.mjs": 20.0,
+    "node scripts/test-integration-outbox.mjs": 11.0,
+    "node scripts/test-api-contract.mjs": 6.0,
+    "node scripts/test-spool-quarantine.mjs": 8.0,
+    "node scripts/test-batch-lifecycle.mjs": 9.0,
+    "node scripts/test-compliance-audit.mjs": 9.0,
+    "node scripts/test-spc-live.mjs": 6.0,
+    "node scripts/test-accessibility.mjs": 28.0,
+    "node scripts/test-responsive-ui.mjs": 193.0,
+    "node scripts/test-line-analysis.mjs": 10.0,
+    "node scripts/test-examples.mjs": 6.0,
+    "node scripts/test-community-workflows.mjs": 10.0,
+    "node scripts/test-interactive-demo.mjs": 23.0,
+    "node scripts/test-offline-destinations.mjs": 6.0,
+    "node scripts/test-control-charts.mjs": 11.0,
+    "node scripts/test-alarm-email.mjs": 12.0,
+    "node scripts/test-history.mjs": 110.0,
+    "node scripts/test-history-rollups.mjs": 7.0,
+    "node scripts/test-changeovers.mjs": 10.0,
+    "node scripts/test-lot-corrections.mjs": 9.0,
+    "node scripts/test-data-ownership.mjs": 7.0,
+    "node scripts/test-limited-data.mjs": 16.0,
+    "node scripts/test-job-inspections.mjs": 11.0,
+    "node scripts/test-maintenance-records.mjs": 11.0,
+    "node scripts/test-improvement-actions.mjs": 9.0,
+    "node scripts/test-mapping-suggestions.mjs": 12.0,
+    "node scripts/test-custom-widgets.mjs": 12.0,
+    "node scripts/test-mqtt-ingestion.mjs": 20.0,
+    "node scripts/test-plc-alarms.mjs": 16.0,
+    "node scripts/test-oidc.mjs": 54.0,
+    "node scripts/test-edge-history.mjs": 46.0,
+    "node scripts/test-forecasts-recommendations.mjs": 13.0,
+    "node scripts/test-quality-line.mjs": 20.0,
+    "node scripts/test-supervisor-workflows.mjs": 21.0,
+    "node scripts/test-maintenance-history-migration.mjs": 1.0,
+    "node scripts/test-period-comparisons.mjs": 15.0,
+    "node scripts/test-configuration-bundles.mjs": 14.0,
+    "node scripts/test-operational-diagnostics.mjs": 20.0,
+    "node scripts/test-work-orders.mjs": 11.0,
+    "node scripts/test-asset-overview.mjs": 20.0,
+    "node scripts/test-measurement-corrections.mjs": 11.0,
+    "node scripts/test-signal-quality.mjs": 27.0,
+    "node scripts/test-offline-operator.mjs": 20.0,
+    "node scripts/test-maintenance-costs.mjs": 17.0,
+    "node scripts/test-daily-workflows.mjs": 22.0,
+    "node scripts/test-production.mjs": 67.0,
+    "node scripts/test-browser-isolated.mjs": 143.0,
+    "node scripts/test-endurance-harness.mjs": 1.0,
+    "node scripts/test-installation-endurance.mjs --hours 0.04 --cycle-seconds 20 --outage-seconds 3 --restart-every 2 --users 3 --tags 20": 195.0
+  }
+}

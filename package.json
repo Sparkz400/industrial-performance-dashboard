@@ -30,7 +30,9 @@
     "demo": "npm run build:server && node scripts/interactive-demo.mjs",
     "demo:reset": "node scripts/interactive-demo.mjs reset",
     "profiles:check": "node scripts/profile-catalog.mjs",
-    "evidence:verify": "node scripts/verify-shift-evidence.mjs"
+    "evidence:verify": "node scripts/verify-shift-evidence.mjs",
+    "benchmark:correctness": "node scripts/run-correctness-benchmark.mjs",
+    "ci:suite": "node scripts/run-ci-suite.mjs"
   },
   "lint-staged": {
     "client/src/**/*.{js,jsx,ts,tsx}": [

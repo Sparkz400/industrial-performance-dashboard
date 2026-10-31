@@ -68,7 +68,7 @@ export async function browserGet(page, url, timeoutMs = 15000) {
 export function safeFailure(error) {
   return String(error instanceof Error ? (error.stack ?? error.message) : error)
     .replace(
-      /\b(cookie|set-cookie|authorization|proxy-authorization|x-csrf-token)["']?\s*[:=]\s*[^\r\n]*/gi,
+      /\b(cookie|set-cookie|authorization|proxy-authorization|x-csrf-token|_?password|db_password|cookie_secret|session_secret)["']?\s*[:=]\s*[^\r\n]*/gi,
       "$1: [redacted]",
     )
     .replace(/connect\.sid=[^\s;"']+/gi, "connect.sid=[redacted]");

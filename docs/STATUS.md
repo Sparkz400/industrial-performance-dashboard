@@ -1,5 +1,15 @@
 # Current status
 
+## Correctness and engineering feedback — 2026-10-31
+
+OSS points 6 and 8 add a [15-case public benchmark](../benchmarks/correctness/README.md),
+an external-results comparator, four isolated CI browser/database groups with the
+existing required aggregate check, per-command failure/timing receipts, and bounded
+browser resource sampling during endurance. The original 61 regressions remain,
+with an additional resource test and Windows/Linux benchmark validation.
+See [the baseline and diagnostic limits](ENGINEERING_FEEDBACK.md). Synthetic
+correctness and resource budgets do not close the 72-hour or physical-pilot gates.
+
 ## Endurance transport investigation — 2026-10-31
 
 The full runs on `3385acb0` and `9e75ca68` failed after 179 and 11 completed

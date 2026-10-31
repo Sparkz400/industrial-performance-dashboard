@@ -1,0 +1,487 @@
+{
+  "format": "pd-correctness-expected-v1",
+  "suite": "shift-v1",
+  "absoluteTolerance": 1e-9,
+  "cases": {
+    "known-shift": {
+      "reasoning": "30/60 running; 15*2/30 performance; 13/15 quality; OEE=13/30. The independently counted 15 parts reconcile.",
+      "result": {
+        "deliveredEvents": 20,
+        "uniqueEvents": 20,
+        "seconds": {
+          "running": 30,
+          "idle": 0,
+          "fault": 30,
+          "planned": 0,
+          "unknown": 0
+        },
+        "plannedSeconds": 0,
+        "scheduledSeconds": 60,
+        "observedSeconds": 60,
+        "quantities": {
+          "total": 15,
+          "good": 13,
+          "reject": 2
+        },
+        "quantitySource": "measured",
+        "stateSource": "measured",
+        "manualStateSeconds": 0,
+        "oee": {
+          "availability": 0.5,
+          "performance": 1,
+          "quality": 0.8666666666666667,
+          "overall": 0.43333333333333335
+        },
+        "verified": true
+      }
+    },
+    "unapproved-reset": {
+      "reasoning": "Discard each decrease: observed total=7+3+4=14, good=6+2+3=11, reject=1+1+1=3. Incomplete counters withhold performance, quality and OEE.",
+      "result": {
+        "deliveredEvents": 20,
+        "uniqueEvents": 20,
+        "seconds": {
+          "running": 60,
+          "idle": 0,
+          "fault": 0,
+          "planned": 0,
+          "unknown": 0
+        },
+        "plannedSeconds": 0,
+        "scheduledSeconds": 60,
+        "observedSeconds": 60,
+        "quantities": {
+          "total": 14,
+          "good": 11,
+          "reject": 3
+        },
+        "quantitySource": "measured",
+        "stateSource": "measured",
+        "manualStateSeconds": 0,
+        "oee": {
+          "availability": 1,
+          "performance": null,
+          "quality": null,
+          "overall": null
+        },
+        "verified": false
+      }
+    },
+    "approved-reset": {
+      "reasoning": "Count the post-reset value: total=7+2+3+4=16; good=6+1+2+3=12; reject=1+1+1+1=4. Performance=32/60, quality=12/16, OEE=24/60.",
+      "result": {
+        "deliveredEvents": 20,
+        "uniqueEvents": 20,
+        "seconds": {
+          "running": 60,
+          "idle": 0,
+          "fault": 0,
+          "planned": 0,
+          "unknown": 0
+        },
+        "plannedSeconds": 0,
+        "scheduledSeconds": 60,
+        "observedSeconds": 60,
+        "quantities": {
+          "total": 16,
+          "good": 12,
+          "reject": 4
+        },
+        "quantitySource": "measured",
+        "stateSource": "measured",
+        "manualStateSeconds": 0,
+        "oee": {
+          "availability": 1,
+          "performance": 0.5333333333333333,
+          "quality": 0.75,
+          "overall": 0.4
+        },
+        "verified": true
+      }
+    },
+    "rollover": {
+      "reasoning": "Modulus 100: total=(100-95+2)+4+2+2=15; good=(100-94+0)+3+2+2=13; reject=1+1=2. OEE=26/60.",
+      "result": {
+        "deliveredEvents": 20,
+        "uniqueEvents": 20,
+        "seconds": {
+          "running": 60,
+          "idle": 0,
+          "fault": 0,
+          "planned": 0,
+          "unknown": 0
+        },
+        "plannedSeconds": 0,
+        "scheduledSeconds": 60,
+        "observedSeconds": 60,
+        "quantities": {
+          "total": 15,
+          "good": 13,
+          "reject": 2
+        },
+        "quantitySource": "measured",
+        "stateSource": "measured",
+        "manualStateSeconds": 0,
+        "oee": {
+          "availability": 1,
+          "performance": 0.5,
+          "quality": 0.8666666666666667,
+          "overall": 0.43333333333333335
+        },
+        "verified": true
+      }
+    },
+    "missing-counter-reading": {
+      "reasoning": "The 30-second total-counter gap exceeds the 20-second limit. Only 0->7 and 15->15 are observed: total=7. Good/reject stay 13/2; OEE and counter factors stay unknown.",
+      "result": {
+        "deliveredEvents": 19,
+        "uniqueEvents": 19,
+        "seconds": {
+          "running": 30,
+          "idle": 0,
+          "fault": 30,
+          "planned": 0,
+          "unknown": 0
+        },
+        "plannedSeconds": 0,
+        "scheduledSeconds": 60,
+        "observedSeconds": 60,
+        "quantities": {
+          "total": 7,
+          "good": 13,
+          "reject": 2
+        },
+        "quantitySource": "measured",
+        "stateSource": "measured",
+        "manualStateSeconds": 0,
+        "oee": {
+          "availability": 0.5,
+          "performance": null,
+          "quality": null,
+          "overall": null
+        },
+        "verified": false
+      }
+    },
+    "stale-state": {
+      "reasoning": "The initial running observation expires after 20 seconds. The other 40 seconds are unknown, not stopped. Observed-runtime performance=30/20=1.5 is retained, but availability and OEE are unknown.",
+      "result": {
+        "deliveredEvents": 17,
+        "uniqueEvents": 17,
+        "seconds": {
+          "running": 20,
+          "idle": 0,
+          "fault": 0,
+          "planned": 0,
+          "unknown": 40
+        },
+        "plannedSeconds": 0,
+        "scheduledSeconds": 60,
+        "observedSeconds": 20,
+        "quantities": {
+          "total": 15,
+          "good": 13,
+          "reject": 2
+        },
+        "quantitySource": "measured",
+        "stateSource": "measured",
+        "manualStateSeconds": 0,
+        "oee": {
+          "availability": null,
+          "performance": 1.5,
+          "quality": 0.8666666666666667,
+          "overall": null
+        },
+        "verified": false
+      }
+    },
+    "bad-quality": {
+      "reasoning": "Each counter loses its pairs around the bad sample, leaving only two zero deltas. State has 15 seconds running, 15 unknown and 30 fault. Zero observed increments do not imply complete zero production.",
+      "result": {
+        "deliveredEvents": 20,
+        "uniqueEvents": 20,
+        "seconds": {
+          "running": 15,
+          "idle": 0,
+          "fault": 30,
+          "planned": 0,
+          "unknown": 15
+        },
+        "plannedSeconds": 0,
+        "scheduledSeconds": 60,
+        "observedSeconds": 45,
+        "quantities": {
+          "total": 0,
+          "good": 0,
+          "reject": 0
+        },
+        "quantitySource": "measured",
+        "stateSource": "measured",
+        "manualStateSeconds": 0,
+        "oee": {
+          "availability": null,
+          "performance": null,
+          "quality": null,
+          "overall": null
+        },
+        "verified": false
+      }
+    },
+    "duplicate-pending-delivery": {
+      "reasoning": "The same 20 source-event identities arrive twice, in different orders. The pending spool retains 20 events and the original known-shift answer. This case does not model acknowledgement after a PostgreSQL commit.",
+      "result": {
+        "deliveredEvents": 40,
+        "uniqueEvents": 20,
+        "seconds": {
+          "running": 30,
+          "idle": 0,
+          "fault": 30,
+          "planned": 0,
+          "unknown": 0
+        },
+        "plannedSeconds": 0,
+        "scheduledSeconds": 60,
+        "observedSeconds": 60,
+        "quantities": {
+          "total": 15,
+          "good": 13,
+          "reject": 2
+        },
+        "quantitySource": "measured",
+        "stateSource": "measured",
+        "manualStateSeconds": 0,
+        "oee": {
+          "availability": 0.5,
+          "performance": 1,
+          "quality": 0.8666666666666667,
+          "overall": 0.43333333333333335
+        },
+        "verified": true
+      }
+    },
+    "dst-spring": {
+      "reasoning": "Local 00:00-08:00 spans 7 elapsed UTC hours (25200 seconds). One good part every five elapsed minutes yields 84 parts; every factor is 1. Samples meet the 300-second freshness limit.",
+      "result": {
+        "deliveredEvents": 340,
+        "uniqueEvents": 340,
+        "seconds": {
+          "running": 25200,
+          "idle": 0,
+          "fault": 0,
+          "planned": 0,
+          "unknown": 0
+        },
+        "plannedSeconds": 0,
+        "scheduledSeconds": 25200,
+        "observedSeconds": 25200,
+        "quantities": {
+          "total": 84,
+          "good": 84,
+          "reject": 0
+        },
+        "quantitySource": "measured",
+        "stateSource": "measured",
+        "manualStateSeconds": 0,
+        "oee": {
+          "availability": 1,
+          "performance": 1,
+          "quality": 1,
+          "overall": 1
+        },
+        "verified": true
+      }
+    },
+    "dst-autumn": {
+      "reasoning": "Local 00:00-08:00 spans 9 elapsed UTC hours (32400 seconds). One good part every five elapsed minutes yields 108 parts; every factor is 1. Samples meet the 300-second freshness limit.",
+      "result": {
+        "deliveredEvents": 436,
+        "uniqueEvents": 436,
+        "seconds": {
+          "running": 32400,
+          "idle": 0,
+          "fault": 0,
+          "planned": 0,
+          "unknown": 0
+        },
+        "plannedSeconds": 0,
+        "scheduledSeconds": 32400,
+        "observedSeconds": 32400,
+        "quantities": {
+          "total": 108,
+          "good": 108,
+          "reject": 0
+        },
+        "quantitySource": "measured",
+        "stateSource": "measured",
+        "manualStateSeconds": 0,
+        "oee": {
+          "availability": 1,
+          "performance": 1,
+          "quality": 1,
+          "overall": 1
+        },
+        "verified": true
+      }
+    },
+    "conflicting-manual-states": {
+      "reasoning": "0-15 is manually running; 15-45 has conflicting declarations and remains unknown; 45-60 is manually fault. Manual known time=30 seconds, observed coverage=30, no complete OEE.",
+      "result": {
+        "deliveredEvents": 15,
+        "uniqueEvents": 15,
+        "seconds": {
+          "running": 15,
+          "idle": 0,
+          "fault": 15,
+          "planned": 0,
+          "unknown": 30
+        },
+        "plannedSeconds": 0,
+        "scheduledSeconds": 60,
+        "observedSeconds": 30,
+        "quantities": {
+          "total": 15,
+          "good": 13,
+          "reject": 2
+        },
+        "quantitySource": "measured",
+        "stateSource": "manual",
+        "manualStateSeconds": 30,
+        "oee": {
+          "availability": null,
+          "performance": 2,
+          "quality": 0.8666666666666667,
+          "overall": null
+        },
+        "verified": false
+      }
+    },
+    "manual-versus-measured-state": {
+      "reasoning": "A running declaration contradicts the measured 30-second fault. Measurements stay unchanged and reconciliation is not verified because the conflict must remain visible.",
+      "result": {
+        "deliveredEvents": 20,
+        "uniqueEvents": 20,
+        "seconds": {
+          "running": 30,
+          "idle": 0,
+          "fault": 30,
+          "planned": 0,
+          "unknown": 0
+        },
+        "plannedSeconds": 0,
+        "scheduledSeconds": 60,
+        "observedSeconds": 60,
+        "quantities": {
+          "total": 15,
+          "good": 13,
+          "reject": 2
+        },
+        "quantitySource": "measured",
+        "stateSource": "measured",
+        "manualStateSeconds": 0,
+        "oee": {
+          "availability": 0.5,
+          "performance": 1,
+          "quality": 0.8666666666666667,
+          "overall": 0.43333333333333335
+        },
+        "verified": false
+      }
+    },
+    "manual-versus-measured-quantity": {
+      "reasoning": "The reviewed 99/98/1 declaration does not replace complete measured 15/13/2 counters. Factors stay unchanged, but the conflicting declaration prevents verified=true.",
+      "result": {
+        "deliveredEvents": 20,
+        "uniqueEvents": 20,
+        "seconds": {
+          "running": 30,
+          "idle": 0,
+          "fault": 30,
+          "planned": 0,
+          "unknown": 0
+        },
+        "plannedSeconds": 0,
+        "scheduledSeconds": 60,
+        "observedSeconds": 60,
+        "quantities": {
+          "total": 15,
+          "good": 13,
+          "reject": 2
+        },
+        "quantitySource": "measured",
+        "stateSource": "measured",
+        "manualStateSeconds": 0,
+        "oee": {
+          "availability": 0.5,
+          "performance": 1,
+          "quality": 0.8666666666666667,
+          "overall": 0.43333333333333335
+        },
+        "verified": false
+      }
+    },
+    "running-during-break": {
+      "reasoning": "The 15-second break reduces scheduled time to 45 and scheduled running time to 15. Availability=1/3. Counts cannot be assigned across the excluded running interval, so performance and OEE are unknown.",
+      "result": {
+        "deliveredEvents": 20,
+        "uniqueEvents": 20,
+        "seconds": {
+          "running": 30,
+          "idle": 0,
+          "fault": 30,
+          "planned": 0,
+          "unknown": 0
+        },
+        "plannedSeconds": 15,
+        "scheduledSeconds": 45,
+        "observedSeconds": 60,
+        "quantities": {
+          "total": 15,
+          "good": 13,
+          "reject": 2
+        },
+        "quantitySource": "measured",
+        "stateSource": "measured",
+        "manualStateSeconds": 0,
+        "oee": {
+          "availability": 0.3333333333333333,
+          "performance": null,
+          "quality": 0.8666666666666667,
+          "overall": null
+        },
+        "verified": false
+      }
+    },
+    "unsampled-start-boundary": {
+      "reasoning": "The pre-shift counter to the first in-shift sample is not attributed to this shift. Observed deltas are 15-7=8 total, 13-6=7 good and 2-1=1 reject; incomplete boundaries withhold counter factors and OEE.",
+      "result": {
+        "deliveredEvents": 20,
+        "uniqueEvents": 20,
+        "seconds": {
+          "running": 30,
+          "idle": 0,
+          "fault": 30,
+          "planned": 0,
+          "unknown": 0
+        },
+        "plannedSeconds": 0,
+        "scheduledSeconds": 60,
+        "observedSeconds": 60,
+        "quantities": {
+          "total": 8,
+          "good": 7,
+          "reject": 1
+        },
+        "quantitySource": "measured",
+        "stateSource": "measured",
+        "manualStateSeconds": 0,
+        "oee": {
+          "availability": 0.5,
+          "performance": null,
+          "quality": null,
+          "overall": null
+        },
+        "verified": false
+      }
+    }
+  }
+}

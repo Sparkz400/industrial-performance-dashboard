@@ -1,4 +1,9 @@
 import { selectOperation } from "./browser-navigation.mjs";
+import {
+  captureBrowserResources,
+  createBrowserResourceTracker,
+  browserResourcePolicy,
+} from "./browser-resources.mjs";
 import assert from "node:assert/strict";
 import { spawn, execFileSync } from "node:child_process";
 import { randomBytes, randomUUID, createHash } from "node:crypto";
@@ -151,6 +156,8 @@ let appOutput = "",
   queryCount = 0,
   queryMaxMs = 0;
 const begun = Date.now();
+const trackBrowserResources = createBrowserResourceTracker(settings.users);
+let latestBrowserResources, latestResourceGrowth;
 const docker = process.env.DOCKER_BIN || "docker";
 const save = async (updates = {}) => {
   Object.assign(state, updates, {
@@ -983,8 +990,18 @@ try {
     );
     const disk = await statfs(directory);
     const sorted = latencies.sort((a, b) => a - b);
+    latestBrowserResources = await captureBrowserResources(browser);
+    latestResourceGrowth = trackBrowserResources(latestBrowserResources);
+    assert.notEqual(
+      latestResourceGrowth.status,
+      "exceeded",
+      "Sustained browser resource growth exceeded the diagnostic budget: " +
+        JSON.stringify(latestResourceGrowth.violations),
+    );
     lastSample = {
       cycle,
+      browserResources: latestBrowserResources,
+      browserResourceGrowth: latestResourceGrowth,
       at: new Date().toISOString(),
       ...counts,
       checkpointEvents: pending.length,
@@ -1021,7 +1038,11 @@ try {
       phase: "live",
     });
     console.log(JSON.stringify(lastSample));
-  } while (Date.now() - workloadBegan < settings.hours * 3600000);
+  } while (
+    Date.now() - workloadBegan < settings.hours * 3600000 ||
+    cycle <
+      browserResourcePolicy.warmupSamples + browserResourcePolicy.windowSamples
+  );
   await sessions[0].page.screenshot({
     path: join(directory, "browser-final.png"),
     fullPage: true,
@@ -1051,6 +1072,8 @@ try {
     applicationTail: safeFailure(appOutput),
     phase,
     failurePages,
+    browserResources: latestBrowserResources,
+    browserResourceGrowth: latestResourceGrowth,
     networkErrors,
     pendingRequests: failedPendingRequests,
     pageErrors: pageErrors.map((item) => ({

@@ -17,6 +17,9 @@ npx tsc --noEmit -p client/tsconfig.json
 npm run lint
 npm run format:check -w client
 npm run test:coverage
+npm run benchmark:correctness
+node scripts/test-correctness-benchmark.mjs
+node scripts/test-ci-feedback.mjs
 npx playwright install chromium
 npm run test:e2e
 ```
@@ -95,3 +98,9 @@ Run `npm run build:server && npm run profiles:check`; include owned simulator te
 and precise qualification limits. The [interactive demo](docs/INTERACTIVE_DEMO.md)
 and [offline evidence checker](docs/SHIFT_EVIDENCE.md) help contributors reproduce
 state, counter and OEE behavior without physical equipment.
+
+Calculation changes must also pass the [public correctness benchmark](benchmarks/correctness/README.md).
+Its expected answers are independently specified; do not regenerate them from the
+implementation under test. Follow [engineering feedback](docs/ENGINEERING_FEEDBACK.md)
+to reproduce a CI group, find retained logs, compare run durations or investigate
+browser resource growth. Preserve every required regression when rebalancing groups.
