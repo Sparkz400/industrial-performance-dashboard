@@ -1,4 +1,5 @@
-FROM node:24-trixie-slim AS build
+# JavaScript output and npm prebuilds are portable, so only the runtime stage runs per target architecture.
+FROM --platform=$BUILDPLATFORM node:24-trixie-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY shared/package.json shared/package.json
@@ -11,7 +12,7 @@ COPY client/ client/
 COPY server/ server/
 RUN npm run build
 
-FROM node:24-trixie-slim AS dependencies
+FROM --platform=$BUILDPLATFORM node:24-trixie-slim AS dependencies
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json ./
