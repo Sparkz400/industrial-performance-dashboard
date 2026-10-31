@@ -34,6 +34,10 @@ Looking for a first contribution? The [contributor backlog](docs/CONTRIBUTOR_BAC
 links small documentation, translation, example and test tasks with explicit completion
 criteria. The [maintainer handbook](MAINTAINERS.md) explains review and handover.
 
+The [dependency review](docs/DEPENDENCY_REVIEW.md) records the removal of the
+development-dependency exception and the upstream OPC UA overflow report.
+Dependency checks reject all advisories; the guarded OPC UA workaround remains.
+
 ## What it does
 
 - Browse OPC UA nodes and configure per-machine tag mappings.

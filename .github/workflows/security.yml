@@ -33,7 +33,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: Record all advisories
         run: npm audit --json > dependency-audit.json || test -s dependency-audit.json
-      - name: Block applicable advisories in runtime and development dependencies
+      - name: Block all advisories in runtime and development dependencies
         run: node scripts/check-dependency-audit.mjs dependency-audit.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()

@@ -1,42 +1,69 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { checkAudit } from "./check-dependency-audit.mjs";
 
-const node = "node_modules/minimatch";
-const sources = { [node]: await readFile(`${node}/minimatch.js`) };
-const lock = JSON.parse(await readFile("package-lock.json", "utf8"));
-const report = {
+const clean = {
   auditReportVersion: 2,
-  metadata: { vulnerabilities: { total: 2 } },
-  vulnerabilities: {
-    minimatch: {
-      nodes: [node],
-      via: [{ url: "https://github.com/advisories/GHSA-g3hv-75wg-m249" }],
+  vulnerabilities: {},
+  metadata: {
+    vulnerabilities: {
+      info: 0,
+      low: 0,
+      moderate: 0,
+      high: 0,
+      critical: 0,
+      total: 0,
     },
-    eslint: { via: ["minimatch"] },
   },
 };
-const check = (
-  r = report,
-  l = lock,
-  s = sources,
-  date = new Date("2026-10-31"),
-) => checkAudit(r, l, s, date);
-assert.equal(check().passed, true);
-assert.throws(() =>
-  check(report, { packages: { [node]: { version: "10.2.6", dev: true } } }),
-);
-assert.throws(() =>
-  check(report, { packages: { [node]: { version: "3.1.5", dev: false } } }),
-);
-assert.throws(() => check(report, lock, { [node]: "changed" }));
-assert.throws(() => check(report, lock, sources, new Date("2026-12-01")));
-const novel = structuredClone(report);
-novel.vulnerabilities.minimatch.via.push({
-  url: "https://github.com/advisories/new",
-});
-assert.throws(() => check(novel));
-assert.throws(() => check({ ...report, error: { code: "network" } }));
+assert.equal(checkAudit(clean).passed, true);
+for (const severity of Object.keys(clean.metadata.vulnerabilities)) {
+  const finding = structuredClone(clean);
+  finding.metadata.vulnerabilities[severity] = 1;
+  assert.throws(() => checkAudit(finding));
+  delete finding.metadata.vulnerabilities[severity];
+  assert.throws(() => checkAudit(finding));
+}
+const legacy = structuredClone(clean);
+legacy.vulnerabilities.minimatch = {
+  via: [{ url: "https://github.com/advisories/GHSA-g3hv-75wg-m249" }],
+};
+assert.throws(() => checkAudit(legacy));
+for (const invalid of [
+  null,
+  {},
+  { ...clean, error: { code: "network" } },
+  { ...clean, auditReportVersion: 1 },
+  { ...clean, vulnerabilities: [] },
+]) {
+  assert.throws(() => checkAudit(invalid));
+}
+
+const directory = await mkdtemp(join(tmpdir(), "dependency-audit-"));
+try {
+  const path = join(directory, "report.json");
+  const script = fileURLToPath(
+    new URL("./check-dependency-audit.mjs", import.meta.url),
+  );
+  for (const [report, passes] of [
+    [JSON.stringify(clean), true],
+    [JSON.stringify(legacy), false],
+    ["{broken", false],
+  ]) {
+    await writeFile(path, report);
+    const result = spawnSync(process.execPath, [script, path], {
+      encoding: "utf8",
+    });
+    assert.equal(result.error, undefined);
+    assert.equal(result.status === 0, passes, result.stderr);
+  }
+} finally {
+  await rm(directory, { recursive: true, force: true });
+}
 console.log(
-  "PASS: audit review rejects new advisories, changed sources, runtime copies, modern vulnerable versions and expired review",
+  "PASS: dependency audit accepts only complete zero-advisory reports, including through the CLI",
 );

@@ -8,6 +8,11 @@ Start contributing through the [curated issue index](https://github.com/Sparkz40
 documentation, translations, simulator examples and focused tests, each with starting
 files and completion criteria. GitHub issues carry current availability and status.
 
+The [dependency review](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DEPENDENCY_REVIEW.md)
+records the lint migration that removes the development-dependency exception.
+All npm advisories block CI. The guarded OPC UA overflow patch remains pending
+[upstream resolution](https://github.com/node-opcua/node-opcua/issues/1849).
+
 The [public correctness benchmark](https://github.com/Sparkz400/performance_dashboard/blob/main/benchmarks/correctness/README.md)
 publishes 15 synthetic shift/OEE cases and independently specified answers, with a
 comparison runner for other implementations.
