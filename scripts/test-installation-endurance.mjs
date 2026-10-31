@@ -233,15 +233,34 @@ try {
     "-e",
     "POSTGRES_DB=pd_endurance",
     "-e",
+    "PGDATA=/var/lib/postgresql/data",
+    "-e",
     "POSTGRES_USER=dashboard",
     "-e",
     `POSTGRES_PASSWORD=${databasePassword}`,
     "-p",
     `127.0.0.1:${databasePort}:5432`,
+    "--entrypoint",
+    "sleep",
     "postgres:16-alpine",
+    "infinity",
   ]);
   created = true;
+  // Container restarts recreate network adapters and can abort unrelated Chromium asset loads.
+  const startDatabase = () =>
+    run(docker, ["exec", "-d", container, "docker-entrypoint.sh", "postgres"]);
+  const databaseNetwork = () =>
+    run(docker, [
+      "inspect",
+      "--format",
+      "{{.NetworkSettings.SandboxID}}",
+      container,
+    ]);
+  const networkIdentity = await databaseNetwork();
+  assert(networkIdentity, "Missing owned database network identity");
+  await startDatabase();
   await save({
+    databaseRestartMethod: "pg-ctl-fast-with-stable-network",
     databaseImage: await run(docker, [
       "inspect",
       "--format",
@@ -274,6 +293,11 @@ try {
       "Owned database unavailable",
     );
   await databaseReady();
+  const databaseStarted = async () =>
+    (
+      await pool.query("SELECT pg_postmaster_start_time() AS started")
+    ).rows[0].started.toISOString();
+  let databaseStartedAt = await databaseStarted();
   await migrate(drizzle(pool), {
     migrationsFolder: join(root, "server/drizzle"),
   });
@@ -523,7 +547,9 @@ try {
   const login = async (session) => {
     if (session.lastLogin) {
       if (session.page.viewportSize().width < 1100)
-        await session.page.getByRole("button", { name: "More", exact: true }).click();
+        await session.page
+          .getByRole("button", { name: "More", exact: true })
+          .click();
       const [loggedOut] = await Promise.all([
         session.page.waitForResponse(
           (response) =>
@@ -778,7 +804,25 @@ try {
 
     phase = "database-outage";
     await save({ phase });
-    await run(docker, ["stop", "-t", "1", container]);
+    await run(docker, [
+      "exec",
+      "--user",
+      "postgres",
+      container,
+      "pg_ctl",
+      "-D",
+      "/var/lib/postgresql/data",
+      "-m",
+      "fast",
+      "-w",
+      "-t",
+      "15",
+      "stop",
+    ]);
+    await assert.rejects(
+      () => pool.query("SELECT 1"),
+      "PostgreSQL must be unavailable during the outage",
+    );
     await delay(settings.outageSeconds * 1000);
     // Read only: identities already durably accepted by the real production collector.
     const readPending = () => {
@@ -824,8 +868,20 @@ try {
       JSON.stringify(pending),
     );
     await delay(1000);
-    await run(docker, ["start", container]);
+    await startDatabase();
     await databaseReady();
+    const nextDatabaseStart = await databaseStarted();
+    assert.notEqual(
+      nextDatabaseStart,
+      databaseStartedAt,
+      "PostgreSQL did not restart",
+    );
+    databaseStartedAt = nextDatabaseStart;
+    assert.equal(
+      await databaseNetwork(),
+      networkIdentity,
+      "Database restart changed the host network topology",
+    );
     phase = "recovery";
     if (restarted) await startApp();
     await wait(
@@ -928,6 +984,8 @@ try {
       applicationResidentBytes: residentBytes,
       processAgeSeconds,
       restarted,
+      databaseStartedAt,
+      databaseNetworkStable: true,
       harnessResidentBytes: process.memoryUsage().rss,
       queryP95Ms: sorted[Math.floor((sorted.length - 1) * 0.95)],
       querySamples: sorted.length,
