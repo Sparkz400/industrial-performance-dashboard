@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { fork, spawn } from "node:child_process";
 import { once } from "node:events";
+import http from "node:http";
 import {
   readFile,
   access,
@@ -24,9 +25,25 @@ await mkdir(".local/community-evidence", { recursive: true });
 let child, browser, admin;
 let log = "",
   passed = false;
-const launch = async () => {
+// Simulates a codespace: each port is forwarded as https://demo-<port>.localhost.
+const codespace = {
+  CODESPACES: "true",
+  CODESPACE_NAME: "demo",
+  GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN: "localhost",
+};
+const status = (url, headers) =>
+  new Promise((done, fail) =>
+    http
+      .get(url, { headers }, (response) => {
+        response.resume();
+        done(response.statusCode);
+      })
+      .on("error", fail),
+  );
+const launch = async (env = {}) => {
   child = fork("scripts/interactive-demo.mjs", [], {
     stdio: ["ignore", "pipe", "pipe", "ipc"],
+    env: { ...process.env, ...env },
   });
   child.stdout.on("data", (data) => {
     log += data;
@@ -78,7 +95,20 @@ const reset = async () => {
   return { code, output };
 };
 try {
-  const first = await launch();
+  const first = await launch(codespace);
+  const forwarded = (url) => `demo-${new URL(url).port}.localhost`;
+  assert.equal(await status(first.url, { host: forwarded(first.url) }), 200);
+  assert.equal(await status(first.url, { host: "other.localhost" }), 403);
+  // The socket handshake goes through the demo's single origin.
+  const handshake = first.frontend + "/socket.io/?EIO=4&transport=polling";
+  assert.equal(
+    await status(handshake, { origin: "https://" + forwarded(first.frontend) }),
+    200,
+  );
+  assert.equal(
+    await status(handshake, { origin: "https://untrusted.invalid" }),
+    403,
+  );
   browser = await chromium.launch();
   const page = await browser.newPage();
   await page.goto(first.url);
@@ -99,6 +129,7 @@ try {
   const link = await page
     .getByRole("link", { name: "Review the current demo shift" })
     .getAttribute("href");
+  assert.equal(new URL(link).host, forwarded(first.frontend));
   const latest = new URL(link).searchParams.get("shift");
   assert.notEqual(latest, String(first.shiftId));
   await page.screenshot({
@@ -111,7 +142,9 @@ try {
   await page.getByLabel(/^password/i).fill(owner.password);
   await page.getByRole("button", { name: /sign in|log in/i }).click();
   await page.waitForURL((url) => !url.pathname.includes("login"));
-  await page.goto(link);
+  await page.goto(
+    first.frontend + new URL(link).pathname + new URL(link).search,
+  );
   await page
     .getByRole("button", { name: "Export reproducible evidence", exact: true })
     .waitFor();
@@ -175,6 +208,7 @@ try {
       persistence: true,
       resetOwnership: true,
       crossOriginRefused: true,
+      codespacesForwarding: true,
     }),
   );
 } finally {

@@ -1,0 +1,14 @@
+{
+  "name": "Performance Dashboard demo",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:24-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "postCreateCommand": "npm ci",
+  "postStartCommand": "docker compose -f compose.local.yml up -d --wait",
+  "postAttachCommand": "npm run demo",
+  "otherPortsAttributes": { "onAutoForward": "silent" },
+  "customizations": {
+    "codespaces": { "openFiles": ["docs/INTERACTIVE_DEMO.md"] }
+  }
+}

@@ -12,6 +12,17 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { chromium, expect } from "@playwright/test";
 
+const codespacesDomain =
+  process.env.CODESPACES === "true" && process.env.CODESPACE_NAME
+    ? process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN
+    : undefined;
+
+/** The browser address of a local URL: Codespaces forwards each private port on its own host. */
+export const publicUrl = (url) =>
+  codespacesDomain
+    ? `https://${process.env.CODESPACE_NAME}-${new URL(url).port}.${codespacesDomain}`
+    : url;
+
 export async function dailyFixture(test, demo) {
   dotenv.config({ path: "server/.env", quiet: true });
   dotenv.config({ path: "server/.env.example", quiet: true });
@@ -97,14 +108,41 @@ export async function dailyFixture(test, demo) {
     server = createServer().listen(0, "127.0.0.1");
     await once(server, "listening");
     const api = `http://127.0.0.1:${server.address().port}`;
-    process.env.VITE_API_BASE_URL = api + "/api/v1";
-    process.env.VITE_WEBSOCKET_ADDR = api;
+    // The demo gives the browser one origin (Vite proxies the API), so one forwarded port suffices.
+    process.env.VITE_API_BASE_URL = demo ? "/api/v1" : api + "/api/v1";
+    process.env.VITE_WEBSOCKET_ADDR = demo ? "/" : api;
+    const local = () => `http://127.0.0.1:${vite.httpServer.address().port}`;
+    // Only the demo's own forwarded origin is presented to the API as the local client origin.
+    const sameOrigin = (proxy) => {
+      const rewrite = (request) => {
+        if (request.getHeader("origin") === publicUrl(local()))
+          request.setHeader("origin", local());
+      };
+      proxy.on("proxyReq", rewrite);
+      proxy.on("proxyReqWs", rewrite);
+    };
     const { createServer: createVite } = await import("vite");
     vite = await createVite({
       configFile: resolve("client/vite.config.ts"),
       root: resolve("client"),
       cacheDir: join(directory, "vite"),
-      server: { host: "127.0.0.1", port: 0, strictPort: false },
+      server: {
+        host: "127.0.0.1",
+        port: 0,
+        strictPort: false,
+        ...(demo && {
+          allowedHosts: codespacesDomain ? [`.${codespacesDomain}`] : [],
+          proxy: {
+            "/api": { target: api, changeOrigin: true, configure: sameOrigin },
+            "/socket.io": {
+              target: api,
+              changeOrigin: true,
+              ws: true,
+              configure: sameOrigin,
+            },
+          },
+        }),
+      },
       logLevel: "error",
     });
     await vite.listen();

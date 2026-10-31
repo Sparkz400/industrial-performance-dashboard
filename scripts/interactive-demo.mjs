@@ -13,7 +13,7 @@ import { createServer } from "node:http";
 import { once } from "node:events";
 import dotenv from "dotenv";
 import pg from "pg";
-import { dailyFixture } from "./daily-fixture.mjs";
+import { dailyFixture, publicUrl } from "./daily-fixture.mjs";
 import { factoryScenario, scenarios } from "./factory-scenario.mjs";
 
 const directory = resolve(".local/interactive-demo");
@@ -127,7 +127,11 @@ try {
         let busy = false;
         const guide = createServer(async (req, res) => {
           try {
-            if (req.headers.host !== new URL(url).host) {
+            if (
+              ![url, publicUrl(url)]
+                .map((address) => new URL(address).host)
+                .includes(req.headers.host)
+            ) {
               res.writeHead(403).end();
               return;
             }
@@ -138,7 +142,7 @@ try {
             );
             if (req.method === "POST") {
               if (
-                req.headers.origin !== url ||
+                ![url, publicUrl(url)].includes(req.headers.origin) ||
                 req.url !== "/scenario" ||
                 busy
               ) {
@@ -179,7 +183,7 @@ try {
             }
             res.setHeader("Content-Type", "text/html; charset=utf-8");
             res.end(
-              `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Factory demo</title><style>body{font:18px/1.6 system-ui;margin:3rem auto;padding:0 1rem;max-width:48rem;color:#172b35;background:#f4f7f8}a{color:#075984}button{font:inherit;padding:.5rem 1rem;margin:.25rem;border:1px solid #617680;border-radius:.3rem;cursor:pointer}code{overflow-wrap:anywhere}h1{line-height:1.1}section{margin:2rem 0}a:focus-visible,button:focus-visible{outline:3px solid #075984;outline-offset:3px}</style><body><main><h1>Your factory demo</h1><p><strong>Synthetic data · local computer only</strong></p><p>Explore a known shift, change its stop reason, and export evidence you can reproduce offline. Your changes remain after restarting.</p><ol><li><a href="${frontend}/login" target="_blank" rel="noopener">Open the dashboard</a>. Sign in as <code>admin</code> with password <code>${password}</code>.</li><li><a href="${frontend}/production?shift=${current.shiftId}" target="_blank" rel="noopener">Review the current demo shift</a>. The known scenario has 30 seconds running, 30 seconds stopped, 15 total parts, 13 good and 2 rejected. OEE is 43.33%.</li><li>Classify a stop, export reproducible evidence, and follow <code>docs/SHIFT_EVIDENCE.md</code> to check it offline.</li></ol><section><h2>Try a different situation</h2><p>Each button adds a fresh shift. Earlier edits remain available in the shift selector. Gaps, bad quality and counter resets must make affected totals or OEE unknown.</p><form method="post" action="/scenario"><input type="hidden" name="csrf" value="${csrf}">${scenarios.map((s) => `<button name="scenario" value="${s}">${{ known: "Known shift", gap: "Missing measurements", "bad-quality": "Bad signal quality", "counter-reset": "Counter reset" }[s]}</button>`).join("")}</form></section><section><h2>Stop or start again</h2><p>Press Ctrl+C in the demo terminal to stop. Run <code>npm run demo</code> to resume. To erase only this demo, stop it and run <code>npm run demo:reset</code>.</p><p>This replay does not connect to a machine or qualify a physical device. Production names and quantities shown here are invented.</p></section></main></body></html>`,
+              `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Factory demo</title><style>body{font:18px/1.6 system-ui;margin:3rem auto;padding:0 1rem;max-width:48rem;color:#172b35;background:#f4f7f8}a{color:#075984}button{font:inherit;padding:.5rem 1rem;margin:.25rem;border:1px solid #617680;border-radius:.3rem;cursor:pointer}code{overflow-wrap:anywhere}h1{line-height:1.1}section{margin:2rem 0}a:focus-visible,button:focus-visible{outline:3px solid #075984;outline-offset:3px}</style><body><main><h1>Your factory demo</h1><p><strong>Synthetic data · local computer only</strong></p><p>Explore a known shift, change its stop reason, and export evidence you can reproduce offline. Your changes remain after restarting.</p><ol><li><a href="${publicUrl(frontend)}/login" target="_blank" rel="noopener">Open the dashboard</a>. Sign in as <code>admin</code> with password <code>${password}</code>.</li><li><a href="${publicUrl(frontend)}/production?shift=${current.shiftId}" target="_blank" rel="noopener">Review the current demo shift</a>. The known scenario has 30 seconds running, 30 seconds stopped, 15 total parts, 13 good and 2 rejected. OEE is 43.33%.</li><li>Classify a stop, export reproducible evidence, and follow <code>docs/SHIFT_EVIDENCE.md</code> to check it offline.</li></ol><section><h2>Try a different situation</h2><p>Each button adds a fresh shift. Earlier edits remain available in the shift selector. Gaps, bad quality and counter resets must make affected totals or OEE unknown.</p><form method="post" action="/scenario"><input type="hidden" name="csrf" value="${csrf}">${scenarios.map((s) => `<button name="scenario" value="${s}">${{ known: "Known shift", gap: "Missing measurements", "bad-quality": "Bad signal quality", "counter-reset": "Counter reset" }[s]}</button>`).join("")}</form></section><section><h2>Stop or start again</h2><p>Press Ctrl+C in the demo terminal to stop. Run <code>npm run demo</code> to resume. To erase only this demo, stop it and run <code>npm run demo:reset</code>.</p><p>This replay does not connect to a machine or qualify a physical device. Production names and quantities shown here are invented.</p></section></main></body></html>`,
             );
           } catch (error) {
             console.error(error.message);
@@ -195,7 +199,7 @@ try {
           JSON.stringify({ url, frontend, pid: process.pid, ...current }),
         );
         console.log(
-          `Factory demo: ${url}\nOpen this address for login and guided scenarios. Ctrl+C stops; data is preserved.`,
+          `Factory demo: ${publicUrl(url)}\nOpen this address for login and guided scenarios. Ctrl+C stops; data is preserved.`,
         );
         try {
           await new Promise((done) => {
