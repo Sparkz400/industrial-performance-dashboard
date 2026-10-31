@@ -2,7 +2,8 @@
 
 Created **2026-10-26** from a code review of `6b5556493e7c48687a43cc9d90df3aba0be1374e`
 and [primary-source research](docs/RESEARCH.md). Read the [roadmap](docs/ROADMAP.md)
-for product direction, milestones and the first execution sequence.
+for product direction, milestones and the first execution sequence. Dated progress
+notes and wave summaries are in the [changelog](CHANGELOG.md).
 
 This is the **single task-status checklist**. Existing features are not represented
 as newly completed work. Items marked Improve
@@ -27,93 +28,42 @@ all 14 workstreams simultaneously. Optional modules can remain disabled where a
 boundary task explicitly permits that; a hidden incomplete feature is not completed
 functionality.
 
-## Community workflow additions — 2026-10-31
+## Current status
 
-OSS point 10 removes the dated development-dependency exception through the
-[coordinated lint migration](docs/DEPENDENCY_REVIEW.md#exception-removed-and-upstream-follow-through--2026-10-31).
-Strict audit and lint-policy regressions preserve the checks. The latest OPC UA
-package still reproduces the overflow defect; [upstream issue #1849](https://github.com/node-opcua/node-opcua/issues/1849)
-contains the tested proposed fix. Upstream acceptance and a patched official release
-remain external follow-through; the local hash-guarded patch stays in place.
+Reconciled 2026-10-31: **95 acceptance items checked and 22 open**; I06 is withdrawn.
+Almost every open item waits on evidence that code alone cannot produce: a pilot site
+and its device inventory (P01), physical machines, supervised users, an ordinary
+operator device, the publisher signing key (P04) or a complete 72-hour endurance run
+(FR01). The [acceptance execution record](docs/ACCEPTANCE_EXECUTION.md) lists the
+evidence each one needs. The owner confirmed simulator-only work and an unsigned
+release candidate; physical pilot details and publisher key custody are not yet available.
 
-OSS point 9 adds the [maintainer handbook](MAINTAINERS.md): named current responsibility,
-scope decisions, review/merge and release procedures, triage, incident handling and
-a bounded onboarding/handover rehearsal. Appointing another maintainer and completing
-their independent rehearsal remain human milestones. Existing acceptance counts and
-publisher-key custody are unchanged.
+External follow-through outside this checklist:
 
-OSS point 4 publishes an initial [12 contributor issues](docs/CONTRIBUTOR_BACKLOG.md),
-linked to existing TODO IDs with observed gaps, starting files, bounded completion
-criteria and validation. These are contribution slices and follow-ups to their parent
-areas. Their live state belongs in GitHub; closing one does not automatically satisfy
-the parent acceptance item. The 95 checked / 22 open acceptance count is unchanged.
+- The latest OPC UA package still reproduces the notification-overflow defect;
+  [upstream issue #1849](https://github.com/node-opcua/node-opcua/issues/1849) has the
+  tested fix. The local hash-guarded patch stays until a patched official release.
+- Appointing a second maintainer and completing their independent handover rehearsal
+  ([maintainer handbook](MAINTAINERS.md)).
 
-Selected OSS points 6 and 8 add the [public correctness benchmark](benchmarks/correctness/README.md)
-and [engineering feedback](docs/ENGINEERING_FEEDBACK.md): 15 independently specified
-cases, a standalone external-results comparator, four isolated CI groups retaining
-all 61 original commands, failure/timing receipts and sustained browser resource
-diagnostics. Validation: `test-correctness-benchmark.mjs`, `test-ci-feedback.mjs`,
-`test-browser-resources.mjs` and the installation-endurance smoke with at least five
-cycles. These additions do not change the existing acceptance-item counts below.
-Delivery and hosted validation: [PR #90](https://github.com/Sparkz400/performance_dashboard/pull/90).
+Looking for something smaller? The [contributor backlog](docs/CONTRIBUTOR_BACKLOG.md)
+links bounded documentation, translation, example and test tasks to these IDs.
 
-Selected OSS points 1, 5 and 7 add a [persistent factory demo](docs/INTERACTIVE_DEMO.md),
-[validated profile catalog](profiles/README.md) and [portable shift/OEE evidence](docs/SHIFT_EVIDENCE.md).
-Validation is in `scripts/test-community-workflows.mjs`, `scripts/test-interactive-demo.mjs`
-and the shift-calculation unit tests. These additions do not close the existing
-physical, operator, publisher-key or 72-hour qualification items below.
+## Workflow gates
 
-## Execution update — 2026-10-26
+### Factory readiness
 
-### Backlog reconciliation — 2026-10-29
-
-The checklist below lagged behind PRs #57, #59, #62, #63 and #64, whose acceptance
-documents did not name backlog IDs. Each item was compared with its Done text and the
-merged evidence: 23 items whose software criteria are covered by named tests were
-checked with links, and stale progress notes now state the concrete remaining gap.
-Items waiting for hardware, customers, supervised users or experimental-module
-qualification stay open. The same day closed the remaining P0 software items F01,
-F07, F08, F09, F10 and D01. A following P1 gap wave closed R04, O05, H05, D05 and U07;
-backlog wave 1 closed E01, R05, R02 and A08, and recorded research decisions
-([decisions](docs/RESEARCH_DECISIONS.md)): I08, E06 and X02 closed as rejected; the rest
-stay open with explicit triggers.
-Backlog status as reconciled 2026-10-31: 95 checked and 22 open; I06 is withdrawn.
-The [acceptance execution record](docs/ACCEPTANCE_EXECUTION.md) accounts for the original
-20 open items and reopens U06/X04 because their manual/pilot Done criteria remain unmet.
-The owner confirmed simulator-only work and preparation of an unsigned release
-candidate; physical pilot details and publisher key custody are not yet available.
-
-### Data integrity and reviewed operations — 2026-10-28
-
-The authorized implementation wave covers H03/H07/H10/U09/I04/M05: honest widgets,
-reviewed measurement corrections, bounded calculated signals, explicit offline
-drafts, reviewed CMMS handoffs and versioned energy estimates. See
-[contracts, verification and remaining boundaries](docs/DATA_INTEGRITY.md).
-This work is isolated from PR #63's endurance checkout. Physical-machine and CMMS
-vendor acceptance remain separate; new software does not close the 72-hour gate.
-### Factory operations expansion — 2026-10-28
-
-The user authorized all six next steps: portable setup bundles (I05), connection
-diagnostics (C09), alarm usefulness (A06), reviewed work-order exchange (I03),
-practical asset overview (U08), and repeatable demonstration/release packaging
-(P02/P04). See [implementation, usage and limits](docs/FACTORY_OPERATIONS.md).
-This is a separate wave from PR #63 and does not close its 72-hour gate. Broader
-backlog acceptance remains open where vendor, physical, trust or scale requirements
-extend beyond these bounded software workflows.
-
-### Factory readiness — 2026-10-28
-
-Priorities 1–3 from the next-wave review cover full-application endurance,
-supervisor/maintenance workflows and fair period comparisons. See
-[scope and acceptance](docs/FACTORY_READINESS.md). Physical-machine qualification
-remains separate. Completion receipts, not the existence of a test harness,
-determine whether multi-day endurance has passed.
+[Scope and acceptance](docs/FACTORY_READINESS.md). Completion receipts, not the
+existence of a test harness, determine whether multi-day endurance has passed.
+Physical-machine qualification remains separate.
 
 - [ ] **FR01 — Full-application endurance:** real OPC UA collection, durable replay,
   alarms, scheduled reports and browser sessions through owned interruptions;
   short smoke plus a separately recorded 72-hour run.
   The 2026-10-31 browser transport failures remain unresolved; bounded network
   diagnostics support investigation without accepting any failed duration.
+  Remaining: a complete 72-hour receipt on a clean revision; no failed duration is
+  reused ([transport investigation](docs/FACTORY_READINESS.md#browser-transport-investigation--2026-10-31)).
 - [x] **FR02 — Supervisor work:** scoped line/action access, attributable maintenance
   corrections, stale-edit rejection, English/German and narrow-screen acceptance.
 - [x] **FR03 — Fair comparisons:** frozen shift evidence, explicit incomparable
@@ -121,27 +71,14 @@ determine whether multi-day endurance has passed.
 
 FR02/FR03 evidence: [PR #63](https://github.com/Sparkz400/performance_dashboard/pull/63) and
 [validation record](docs/FACTORY_READINESS.md#software-validation--2026-10-28),
-including the isolated supervisor/comparison browser fixtures. FR01's harness and
-short-run recovery checks pass, but later sustained/CI failures keep its 72-hour
-gate open. A reproduced checked-out database-client crash has a focused fix and
-forced-disconnect regression; replacement full-application acceptance is pending.
-The 2026-10-30 follow-through in [PR #81](https://github.com/Sparkz400/performance_dashboard/pull/81)
-serves the compiled frontend during endurance and passes a four-cycle local recovery
-smoke. A new complete 72-hour receipt is still required; no failed duration is reused.
-The replacement on `1a5abff7` failed at hourly session renewal after 11 recovery
-cycles; the harness now confirms logout before login and exercises renewal in its
-short smoke. The full acceptance gate remains open.
-FR02 follow-through removes the 100-correction ceiling with a preserving history
-migration and machine-scoped paging. Manual-state calculation now sweeps sorted
-boundaries while retaining measured-state precedence and unknown/conflict rules.
+including the isolated supervisor/comparison browser fixtures.
 
-### Daily factory workflows — current implementation
+### Daily factory workflows
 
-The authorized scope is priorities **1–4, 6 and 7** from the next-wave review.
-Performance Dashboard is an independent product. TIA MCP integration is excluded.
-Software implementation is complete on `codex/daily-factory-workflows`.
 [Daily workflow acceptance](docs/DAILY_OPERATIONS_ACCEPTANCE.md) records tests and
 remaining hardware/operator boundaries; [PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59) supplies integration evidence.
+All existing data must survive additive migrations. Acceptance uses isolated
+databases and owned simulators; physical S7-1500 qualification remains separate.
 
 - [x] **DF01 — Access controls:** explicit operator/supervisor roles, machine/site
   grants, consistent REST/tRPC/socket/export boundaries and immediate revocation.
@@ -156,15 +93,11 @@ remaining hardware/operator boundaries; [PR #59](https://github.com/Sparkz400/pe
 - [x] **DF07 — Energy and loss:** meter accounting, energy per good part, idle and
   changeover losses, ranked downtime with coverage and independent reconciliation.
 
-All existing data must survive additive migrations. Acceptance uses isolated
-databases and owned simulators; physical S7-1500 qualification remains separate.
+### Factory pilot software
 
-Factory-pilot software implemented and locally validated: the nominated controller family is **Siemens
-SIMATIC S7-1500**. Implementation covers secure onboarding, installation/recovery,
-operator and supervisor flows, unattended operation, a read-only gateway and
-incident replay. Exact CPU/firmware/licence and physical-machine acceptance remain
-unqualified. Each feature keeps its own acceptance gate; simulator evidence does
-not close hardware or supervised-user gates.
+The nominated controller family is **Siemens SIMATIC S7-1500**. Exact
+CPU/firmware/licence and physical-machine acceptance remain unqualified; simulator
+evidence does not close hardware or supervised-user gates.
 
 - [x] Secure onboarding software and certificate/credential recovery checks.
 - [x] Installation, complete backup/restore, actual earlier-image upgrade/rollback and capacity fixture.
@@ -174,32 +107,8 @@ not close hardware or supervised-user gates.
 - [x] Bounded incident replay with clocks, quality/gaps, events, notes and export.
 
 Evidence: [factory-pilot acceptance](docs/FACTORY_PILOT_ACCEPTANCE.md) maps each
-software milestone to commits and tests. [PR #57](https://github.com/Sparkz400/performance_dashboard/pull/57)
-tracks integration and hosted checks; broader backlog items keep their original
-physical/customer gates. Consult the checks for the exact revision being used.
-
-The read-only gateway software slice passes owned two-unit commissioning, profile
-reuse, write rejection, bad-quality persistence, reconnect and managed identity
-restart checks. See [gateway scope](docs/LEGACY_GATEWAY.md). This advances C04/C05/
-C07/C10; real-device inventories and vendor qualification remain open.
-
-The first P0 wave implements and tests F02/F04/F05/H01/H02 in
-[PR #40](https://github.com/Sparkz400/performance_dashboard/pull/40). Validation and
-scope are recorded in [P0 acceptance](docs/P0_ACCEPTANCE.md).
-The production-workflow wave completes F03/F06/A01 and the bounded stop-reason,
-explainable-OEE and reconciled-report slice O02/O03/R01. See
-[production acceptance evidence](docs/P0_ACCEPTANCE.md#production-workflow-wave).
-DF01 adds the scoped REST/tRPC/socket/export role matrix to F07; broader release
-review remains tracked separately. The remaining P0 software items were closed on
-2026-10-29; see [security and deployment boundaries](docs/SECURITY_BOUNDARIES.md).
-
-All 29 dependency PRs were reviewed. Fifteen obsolete or incompatible proposals
-were closed with reasons; fourteen compatible proposals are consolidated into this
-wave in [PR #40](https://github.com/Sparkz400/performance_dashboard/pull/40), whose
-status records integration. See [PR dispositions](docs/DEPENDENCY_REVIEW.md).
-Replacement Node 26 proposal #41 was also reviewed and closed. Docker major
-updates now require an explicit F09 support decision; minor/patch updates continue.
-New Gitleaks action PR #42 passed all required checks and was merged separately.
+software milestone to commits and tests; [gateway scope](docs/LEGACY_GATEWAY.md)
+covers the read-only gateway slice.
 
 ## Foundation
 
