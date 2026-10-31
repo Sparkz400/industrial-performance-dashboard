@@ -1,0 +1,180 @@
+{
+  "uid": "pd-machine-history",
+  "title": "Performance Dashboard — machine history",
+  "description": "Read-only view of one signal through the integration API. Non-Good samples are null and render as gaps, never as zero.",
+  "tags": ["performance-dashboard"],
+  "schemaVersion": 41,
+  "version": 1,
+  "editable": false,
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "",
+  "templating": {
+    "list": [
+      {
+        "name": "machine",
+        "label": "Machine",
+        "type": "query",
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "performance-dashboard" },
+        "query": {
+          "refId": "machines",
+          "queryType": "infinity",
+          "infinityQuery": {
+            "refId": "machines",
+            "type": "json",
+            "source": "url",
+            "parser": "backend",
+            "format": "table",
+            "url": "/api/v1/production/assets",
+            "url_options": { "method": "GET" },
+            "root_selector": "",
+            "columns": [
+              { "selector": "name", "text": "__text", "type": "string" },
+              { "selector": "id", "text": "__value", "type": "string" }
+            ]
+          }
+        },
+        "refresh": 1
+      },
+      {
+        "name": "signal",
+        "label": "Signal key",
+        "description": "The signal's node key, as shown under Machines → mappings.",
+        "type": "textbox",
+        "query": "ProductionCount",
+        "current": { "text": "ProductionCount", "value": "ProductionCount" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "${signal} — samples (non-Good and gaps over 60 s stay empty)",
+      "description": "Incident replay endpoint: at most 48 hours and 2 000 samples per request. A null value is a non-Good sample; time without samples is not filled in.",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 9 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "performance-dashboard" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "performance-dashboard" },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/production/replay/${machine}?start=${__from:date:iso}&end=${__to:date:iso}&keys=${signal:percentencode}",
+          "url_options": { "method": "GET" },
+          "root_selector": "signals[0].samples",
+          "columns": [
+            { "selector": "at", "text": "Time", "type": "timestamp" },
+            { "selector": "value", "text": "Good value", "type": "number" }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "showPoints": "always",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": 60000
+          }
+        },
+        "overrides": []
+      },
+      "options": { "legend": { "showLegend": true, "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } }
+    },
+    {
+      "id": 2,
+      "type": "table",
+      "title": "${signal} — samples with quality",
+      "description": "Every stored sample with its quality. value is empty when the sample is not Good; raw keeps what the source reported.",
+      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 8 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "performance-dashboard" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "performance-dashboard" },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/production/replay/${machine}?start=${__from:date:iso}&end=${__to:date:iso}&keys=${signal:percentencode}",
+          "url_options": { "method": "GET" },
+          "root_selector": "signals[0].samples",
+          "columns": [
+            { "selector": "at", "text": "Source time", "type": "timestamp" },
+            { "selector": "value", "text": "Good value", "type": "number" },
+            { "selector": "raw", "text": "Raw", "type": "string" },
+            { "selector": "quality", "text": "Quality", "type": "string" },
+            { "selector": "receivedAt", "text": "Received", "type": "timestamp" }
+          ]
+        }
+      ],
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "options": { "showHeader": true, "sortBy": [{ "displayName": "Source time", "desc": true }] }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "${signal} — hourly average (only hours where every sample is Good)",
+      "description": "History summaries endpoint: hourly buckets, at most 366 days. average is null unless every sample in the hour is Good with one signal identity.",
+      "gridPos": { "x": 0, "y": 17, "w": 12, "h": 8 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "performance-dashboard" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "performance-dashboard" },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/history/${machine}/summaries?nodeKey=${signal:percentencode}&start=${__from:date:iso}&end=${__to:date:iso}",
+          "url_options": { "method": "GET" },
+          "root_selector": "",
+          "columns": [
+            { "selector": "bucket", "text": "Hour", "type": "timestamp" },
+            { "selector": "average", "text": "Average", "type": "number" }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "custom": { "drawStyle": "points", "pointSize": 7, "spanNulls": false } },
+        "overrides": []
+      },
+      "options": { "legend": { "showLegend": true, "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "${signal} — hourly samples and Good samples",
+      "description": "Coverage per hour. Fewer Good samples than samples means the hour's average is withheld.",
+      "gridPos": { "x": 12, "y": 17, "w": 12, "h": 8 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "performance-dashboard" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "performance-dashboard" },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/v1/history/${machine}/summaries?nodeKey=${signal:percentencode}&start=${__from:date:iso}&end=${__to:date:iso}",
+          "url_options": { "method": "GET" },
+          "root_selector": "",
+          "columns": [
+            { "selector": "bucket", "text": "Hour", "type": "timestamp" },
+            { "selector": "samples", "text": "Samples", "type": "number" },
+            { "selector": "good", "text": "Good samples", "type": "number" }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 60, "spanNulls": false } },
+        "overrides": []
+      },
+      "options": { "legend": { "showLegend": true, "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    }
+  ]
+}

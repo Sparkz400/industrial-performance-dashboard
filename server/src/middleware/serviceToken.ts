@@ -7,7 +7,7 @@ import { ForbiddenError, UnauthorizedError } from "../utils/errors.js";
 
 // E02: a service token reads only the integration contract's endpoints, with its grants.
 const TOKEN = /^Bearer (pdsa_[A-Za-z0-9_-]{43})$/;
-const CONTRACT_READS = [
+export const CONTRACT_READS = [
   /^\/production\/assets\/?$/,
   /^\/history\/\d+\/summaries\/?$/,
   /^\/production\/replay\/\d+\/?$/,

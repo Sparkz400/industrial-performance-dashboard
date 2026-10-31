@@ -1,0 +1,17 @@
+apiVersion: 1
+datasources:
+  - name: Performance Dashboard
+    uid: performance-dashboard
+    type: yesoreyeram-infinity-datasource
+    # Base URL for the relative /api/v1 paths in the dashboard queries.
+    url: $PD_URL
+    editable: false
+    jsonData:
+      auth_method: bearerToken
+      # Infinity sends the token only to these hosts.
+      allowedHosts:
+        - $PD_URL
+      # For a private CA, set tlsAuthWithCACert: true and add
+      # tlsCACert: $__file{/etc/grafana/pd-ca.pem} under secureJsonData.
+    secureJsonData:
+      bearerToken: $PD_SERVICE_TOKEN

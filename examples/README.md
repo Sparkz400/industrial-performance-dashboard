@@ -10,6 +10,8 @@ loads each one into an owned database and checks the expected output below.
 | [`legacy-production-profile.json`](legacy-production-profile.json) | Commissioning profile for that gateway's state and counter signals | Four signals preview with units; a shift report can be reconciled |
 | [`dashboard-press-overview.json`](dashboard-press-overview.json) | **Dashboards → Import**, or `POST /api/v1/dashboards/import` | A dashboard with a production-count trend and a system status widget. Without history the trend shows no data rather than zeros |
 | [`report-template-shift-summary.json`](report-template-shift-summary.json) | **Advanced → Reports → new template**, or `POST /api/v1/reports/templates` | A schedule's **Run now** completes and produces a downloadable PDF built from the *Production count*, *Alarms* and *OEE* sections; missing values print as N/A |
+| [`grafana/`](grafana/) | `docker compose up -d` with `PD_URL`, `PD_SERVICE_TOKEN` and `GRAFANA_ADMIN_PASSWORD`; see [Grafana and Node-RED](../docs/INTEGRATIONS.md) | A provisioned *machine history* dashboard; non-Good samples and incomplete hours show as gaps, never as zero |
+| [`node-red/`](node-red/) | Node-RED **Menu → Import**; see [Grafana and Node-RED](../docs/INTEGRATIONS.md) | One flow publishes JSON readings an MQTT source accepts; the other lists hourly summaries with unknown hours as `average: null` |
 
 Replace `machineId` `1` with the ID of your machine (**Machines** lists it) before
 importing. Machine credentials are never part of these files; enter them in the machine
