@@ -305,3 +305,10 @@ hours: each database restart retained its network identity, all 291 checkpointed
 measurements replayed exactly once, and the three browser sessions completed
 queries, reports, alarm acknowledgement and login renewal. This is short recovery
 evidence, not endurance acceptance.
+
+The combined follow-up CI also exposed an independent edge-history fixture cleanup
+race: its assertions passed, then forced backend termination reached a pooled
+connection that was still closing. That fixture now waits for its owned database
+connections to disappear before dropping the database, matching the shared
+fixture's cleanup boundary. A connection that does not close fails the cleanup;
+it is not forcibly terminated or ignored.

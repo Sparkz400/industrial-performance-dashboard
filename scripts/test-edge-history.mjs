@@ -359,7 +359,12 @@ await dailyFixture(async ({ pool, call, actors, users, frontend, api, expect }) 
     for (const edge of Object.values(edges)) {
       if (edge.process) await stop(edge).catch(() => {});
       await edge.db.end();
-      await admin.query("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname=$1", [edge.database]);
+      // Pool shutdown can resolve before PostgreSQL observes its sockets closing.
+      await waitFor(
+        async () => !(await admin.query("SELECT 1 FROM pg_stat_activity WHERE datname=$1", [edge.database])).rowCount,
+        `${edge.name} database connections did not close`,
+        10_000,
+      );
       await admin.query(`DROP DATABASE IF EXISTS "${edge.database}"`);
     }
     await admin.end();
