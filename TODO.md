@@ -84,6 +84,8 @@ determine whether multi-day endurance has passed.
 - [ ] **FR01 — Full-application endurance:** real OPC UA collection, durable replay,
   alarms, scheduled reports and browser sessions through owned interruptions;
   short smoke plus a separately recorded 72-hour run.
+  The 2026-10-31 browser transport failures remain unresolved; bounded network
+  diagnostics support investigation without accepting any failed duration.
 - [x] **FR02 — Supervisor work:** scoped line/action access, attributable maintenance
   corrections, stale-edit rejection, English/German and narrow-screen acceptance.
 - [x] **FR03 — Fair comparisons:** frozen shift evidence, explicit incomparable

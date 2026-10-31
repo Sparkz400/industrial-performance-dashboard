@@ -96,7 +96,7 @@ adds frozen batch recipes, race-free batch records, inspection/rework/lot eviden
 reviewed SPC reference periods, restart-stable live SPC, a tamper-evident audit chain, production-line analysis and alarm-linked maintenance actions. It also
 covers measured disk runway, exact reviewed retention schedules, offline image
 bundles and configurable synthetic endurance workloads using the compiled frontend
-and confirmed browser session renewal. Scoped supervisor access
+and confirmed browser session renewal, with bounded network evidence for failures. Scoped supervisor access
 now extends line investigations and alarm actions. These workflows do not establish
 multi-day reliability or supported hardware capacity.
 

@@ -12,6 +12,8 @@ import {
   safeFailure,
   writeReceipt,
   captureFailurePages,
+  enduranceBrowserOptions,
+  redactBrowserNetLog,
 } from "./endurance-harness.mjs";
 
 const receiptDirectory = await mkdtemp(join(tmpdir(), "pd-endurance-receipt-"));
@@ -132,7 +134,7 @@ const url = `http://127.0.0.1:${server.address().port}`;
 const captureDirectory = await mkdtemp(join(tmpdir(), "pd-endurance-capture-"));
 let browser;
 try {
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch(enduranceBrowserOptions(captureDirectory));
   const page = await browser.newPage();
   await page.goto(url);
   const [capture] = await captureFailurePages(browser, captureDirectory);
@@ -218,12 +220,29 @@ try {
         JSON.stringify({ headers: { [name]: "private-json-header" } }),
       ).includes("private-json-header"),
     );
+  await page.evaluate(async () => {
+    await (await fetch("/good", {
+      headers: { "X-CSRF-Token": "private-csrf-fixture" },
+    })).text();
+  });
+  await browser.close();
+  browser = undefined;
+  await redactBrowserNetLog(captureDirectory);
+  const netlogText = await readFile(
+    join(captureDirectory, "chromium-netlog.json"), "utf8",
+  );
+  const netlog = JSON.parse(netlogText);
+  assert(netlog.events.length > 0, "Browser socket evidence must survive browser shutdown");
+  assert(netlogText.includes(url + "/good"), "NetLog must capture the exercised transport");
+  assert(!netlogText.includes("private-test-value"), "NetLog must exclude session credentials");
+  assert(!netlogText.includes("private-csrf-fixture"), "NetLog must redact custom credential headers");
   console.log(
     "PASS: durable receipts tolerate transient Windows reader locks and preserve evidence on persistent locks; browser GETs survive idle closure; HTTP/auth/truncated/timeout failures remain failures; credentials are redacted",
   );
 } finally {
   await browser?.close();
   await rm(join(captureDirectory, "browser-failure-0.png"), { force: true });
+  await rm(join(captureDirectory, "chromium-netlog.json"), { force: true });
   await rmdir(captureDirectory);
   server.closeAllConnections();
   await new Promise((done) => server.close(done));

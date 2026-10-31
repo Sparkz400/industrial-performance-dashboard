@@ -96,6 +96,14 @@ transitions must continue. Store failures disconnect live streams until permissi
 checks succeed again, without treating temporary storage failures as logout.
 Revoked or expired sessions remain rejected.
 
+`chromium-netlog.json` retains recent socket-level events with a 64 MB rolling
+limit and Chromium's default capture mode, which excludes cookie credentials and
+payload bytes. After the browser closes, the harness also redacts custom CSRF
+headers from the flushed JSON. Preserve it and any in-progress log fragments
+privately with failed receipts: unfinished fragments can contain custom headers,
+and request URLs and local endpoint details remain diagnostic data. Receipts record the
+Chromium version and timestamp/context for browser failures.
+
 Process restarts occur after the first cycle and every 288 cycles thereafter.
 Database interruptions occur every cycle. Process-age and memory receipts therefore
 describe roughly day-long application lifetimes within the 72-hour workload,
@@ -243,6 +251,33 @@ once during startup, so the short CI smoke covers it without waiting an hour.
 Cycle receipts include `sessionRenewals`. Authentication and expiry rules are
 unchanged. The failed run is retained separately and contributes no passing duration
 to its fresh 72-hour replacement.
+
+### Browser transport investigation — 2026-10-31
+
+The clean `3385acb0` run failed after 179 cycles and 15.6647 completed workload
+hours. Its replacement on `9e75ca68` failed at 09:28 UTC after 11 cycles and
+0.9640 completed workload hours. Both captured `ERR_NO_BUFFER_SPACE` for a
+compiled script and a Daily operations visibility timeout. The harness stopped
+the application during failure cleanup; an unexpected application exit was not
+observed. All completed recovery checkpoints retained exactly-once replay.
+
+The replacement's minute-by-minute process, socket and host-memory samples do
+not establish exhaustion: its final sample still had roughly 33 GiB of free
+physical memory and modest owned socket counts. The precise transport cause
+remains unresolved. Failed receipts, logs, screenshots, spool and immutable
+sources are preserved privately. No failed duration is reused.
+
+An isolated diagnostic on `cd739ca5` accelerated renewal to every 30 seconds. It
+passed seven recovery cycles and 21 renewals over 0.095025 workload hours, with
+no `ERR_NO_BUFFER_SPACE` event in its NetLog. Its modified harness is explicitly
+ineligible for qualification; this did not reproduce or explain the long-run
+failure and does not establish that it is fixed.
+
+Bounded Chromium NetLog capture now supplements those samples, without retries,
+browser replacement or relaxed visibility/freshness checks. A real-browser
+regression verifies that socket events survive shutdown and the fixture's
+session credential is excluded. These diagnostics are not a claimed fix or
+72-hour acceptance. A fresh clean-revision run must pass all existing gates.
 
 ### Stable network during database outages — 2026-10-31
 
