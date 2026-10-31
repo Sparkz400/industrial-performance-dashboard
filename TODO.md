@@ -260,6 +260,10 @@ below retain their unfulfilled acceptance criteria.
   sealed subscribe-only credentials and exact-topic JSON-pointer mappings; QoS 1 with acknowledgment only after the
   durable spool; deterministic reading identity so redeliveries are stored once; refused messages counted
   (`test-mqtt-ingestion.mjs` on an owned TLS broker with ACLs, [scope](docs/PRODUCTION_WORKFLOW.md#mqtt-sources)).
+  Follow-through 2026-10-31: passive Sparkplug B listener (births, data, deaths, sequence and alias
+  checks; no STATE or rebirth), `sparkplug.test.ts` and `test-mqtt-ingestion.mjs`;
+  [decision](docs/RESEARCH_DECISIONS.md#c06--add-mqtt-ingestion-and-evaluate-sparkplug).
+  A physical Sparkplug edge node remains unqualified.
   No broker delivery is advertised as end-to-end exactly-once history. A real broker remains P01.
 - [ ] **C07 — Select one brownfield protocol extension** · P2 · M2 · Research · L. Depends: C05.
   Done: rank Modbus TCP/RTU, MTConnect and vendor gateways against the pilot inventory;

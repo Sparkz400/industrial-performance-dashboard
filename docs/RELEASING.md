@@ -49,7 +49,11 @@ be regenerated with `create` after trusted key custody is established.
 6. Tag the revision `vVERSION` and create a GitHub release marked **pre-release** while
    any P0/P1 item in the notes is open. Attach `release.json`, `release.sig` and
    `RELEASE-NOTES.md`; deliver `images.tar` and the rest of the package by the site's
-   offline channel (it exceeds GitHub's per-file limit).
+   offline channel (it exceeds GitHub's per-file limit). Pushing the tag also runs the
+   [container image workflow](../.github/workflows/image.yml): a runtime smoke test on
+   native amd64 and arm64 runners, then a multi-architecture GHCR image with an SBOM and
+   a build provenance attestation. That image is a convenience for evaluation; sites
+   still verify the signed offline package.
 
 The first release has no previous tag: omit `--previous` (the notes then list the whole
 first-parent history) and use the same image for `--previous-image`.

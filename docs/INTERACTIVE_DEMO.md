@@ -19,6 +19,16 @@ demo login, a direct shift link and scenario buttons. Both the guide and applica
 listen on `127.0.0.1` using available ports. No browser driver installation is needed
 to use the demo. The first server build can take a minute.
 
+### In GitHub Codespaces
+
+[Open a codespace](https://codespaces.new/Sparkz400/performance_dashboard?quickstart=1).
+The [development container](../.devcontainer/devcontainer.json) installs dependencies,
+starts the owned database with Docker-in-Docker and runs `npm run demo` in a terminal.
+Open the printed **Factory demo** address; Codespaces forwards each port privately to
+your GitHub account. The demo serves the dashboard and its API from one forwarded
+origin, and the guide accepts only its own forwarded address. Stop the codespace
+when you are done; it uses your Codespaces quota.
+
 The existing `server/.env` takes precedence over `.env.example`. The demo refuses a
 database host other than localhost/127.0.0.1 or a port other than 55432. It creates a
 random `pd_demo_…` database, with a matching ownership marker, on that local service.
@@ -71,3 +81,6 @@ It is a separate automated evidence generator, not the persistent interactive de
 Validation: `node scripts/test-community-workflows.mjs` and
 `node scripts/test-interactive-demo.mjs` check the independent totals, failure
 cases, browser login/download, persistence, reset ownership and cross-origin refusal.
+The first launch simulates Codespaces forwarding: the guide accepts only its own
+forwarded host, and the proxied socket handshake accepts only the demo's forwarded
+origin. A real codespace has not been run as part of automated validation.

@@ -20,8 +20,18 @@ The generated release notes list every open P0/P1 item and gate at this revision
 - Container image on the GitHub Container Registry for `linux/amd64` and
   `linux/arm64`, with build provenance attestations
   ([getting started](docs/GETTING_STARTED.md#run-the-published-image)).
-- One-click demo in GitHub Codespaces through a development container.
-- This changelog; dated history moved here from the TODO checklist.
+- One-click demo in GitHub Codespaces through a development container; the demo
+  serves the browser one origin and accepts its own forwarded address.
+- Read-only Sparkplug B MQTT sources: births, data and deaths with sequence and alias
+  checks; no STATE or rebirth requests. Migration `0041` adds
+  `mqtt_sources.payload_format` (default `json`) ([MQTT sources](docs/PRODUCTION_WORKFLOW.md#mqtt-sources)).
+- The correctness benchmark is published as the `shift-v1` OEE conformance suite with
+  an informative ISO 22400-2 mapping, a claim report and an issue form
+  ([specification](benchmarks/correctness/CONFORMANCE.md)).
+- Grafana provisioning and Node-RED flows on the integration API with a read-only
+  service token ([guide](docs/INTEGRATIONS.md)).
+- README screenshots of synthetic demo shifts; this changelog, with dated history
+  moved here from the TODO checklist.
 
 ### Development history before 0.1.0
 
