@@ -89,3 +89,9 @@ and scoped series delivery. Follow [the widget contract](docs/CUSTOM_WIDGETS.md)
 
 Contributions are under Apache-2.0. Submit only code and data you have permission
 to share. Follow the [code of conduct](CODE_OF_CONDUCT.md).
+
+Machine-profile contributions follow the [catalog checklist](profiles/README.md).
+Run `npm run build:server && npm run profiles:check`; include owned simulator tests
+and precise qualification limits. The [interactive demo](docs/INTERACTIVE_DEMO.md)
+and [offline evidence checker](docs/SHIFT_EVIDENCE.md) help contributors reproduce
+state, counter and OEE behavior without physical equipment.

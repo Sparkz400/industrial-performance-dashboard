@@ -270,10 +270,12 @@ export async function authorizeAssetRequest(
     return;
   }
   if (
-    (found = match(/^\/production\/shifts\/(\d+)\/(report|reasons|reconcile)$/))
+    (found = match(
+      /^\/production\/shifts\/(\d+)\/(report|evidence|reasons|reconcile)$/,
+    ))
   ) {
     if (
-      found[2] === "report"
+      found[2] === "report" || found[2] === "evidence"
         ? !read
         : method !== "POST" ||
           !(found[2] === "reasons"

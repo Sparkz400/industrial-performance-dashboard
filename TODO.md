@@ -27,6 +27,14 @@ all 14 workstreams simultaneously. Optional modules can remain disabled where a
 boundary task explicitly permits that; a hidden incomplete feature is not completed
 functionality.
 
+## Community workflow additions — 2026-10-31
+
+Selected OSS points 1, 5 and 7 add a [persistent factory demo](docs/INTERACTIVE_DEMO.md),
+[validated profile catalog](profiles/README.md) and [portable shift/OEE evidence](docs/SHIFT_EVIDENCE.md).
+Validation is in `scripts/test-community-workflows.mjs`, `scripts/test-interactive-demo.mjs`
+and the shift-calculation unit tests. These additions do not close the existing
+physical, operator, publisher-key or 72-hour qualification items below.
+
 ## Execution update — 2026-10-26
 
 ### Backlog reconciliation — 2026-10-29

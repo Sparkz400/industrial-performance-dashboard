@@ -12,7 +12,7 @@
   "main": "dist/app.js",
   "scripts": {
     "dev": "npm run build && npm start",
-    "build": "tsc && node -e \"require('node:fs').cpSync('assets', 'dist/assets', {recursive: true})\"",
+    "build": "tsc && node -e \"require('node:fs').cpSync('assets', 'dist/assets', {recursive: true})\" && node -e \"require('node:fs').copyFileSync('src/services/shiftCalculation.ts', 'dist/assets/shiftCalculation.ts')\"",
     "start": "node dist/app.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

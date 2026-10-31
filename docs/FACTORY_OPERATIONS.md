@@ -88,6 +88,12 @@ This is an operational visualization, not a physics simulation.
 
 ## Repeatable demonstration
 
+For an interactive session that persists across restarts, use `npm run demo` and
+follow the [factory demo guide](INTERACTIVE_DEMO.md). Its scenarios use the
+[machine-profile catalog](../profiles/README.md) and support
+[portable shift evidence](SHIFT_EVIDENCE.md). The screenshot generator below
+remains a separate automated walkthrough.
+
 With Node.js 24, the installed workspace dependencies, Chromium, the owned local
 PostgreSQL fixture on port 55432, `server/.env` from the example, and a current server
 build, run:

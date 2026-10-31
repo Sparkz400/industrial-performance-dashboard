@@ -1,5 +1,13 @@
 # Current status
 
+## Community workflows — 2026-10-31
+
+The [persistent local demo](INTERACTIVE_DEMO.md), [profile catalog](../profiles/README.md)
+and [offline shift evidence](SHIFT_EVIDENCE.md) cover OSS points 1, 5 and 7. Demo/profile
+evidence is synthetic. Export reproduction is not publisher authentication or
+physical acceptance. Partial counter observations no longer produce unsupported
+performance/quality/OEE factors; reviewed declarations remain explicitly attributed.
+
 ## Audit corrections — 2026-10-31
 
 Legacy OEE now preserves stale/bad-quality time and counter gaps, and withholds

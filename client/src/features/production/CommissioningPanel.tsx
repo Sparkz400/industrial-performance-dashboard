@@ -8,6 +8,7 @@ import {
   Checkbox,
   FormControlLabel,
   MenuItem,
+  Link as MuiLink,
   Stack,
   TextField,
   Typography,
@@ -412,6 +413,13 @@ export default function CommissioningPanel() {
         {t('Available namespaces:')}{' '}
         {preview?.namespaces.join(' · ') ?? 'Check the connection first'}
         {t('. Importing a profile previews fields here; it does not change the machine.')}{' '}
+        <MuiLink
+          href="https://github.com/Sparkz400/performance_dashboard/tree/main/profiles"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {t('Browse contributed machine profiles')}
+        </MuiLink>
       </Typography>
       <Stack
         direction="row"

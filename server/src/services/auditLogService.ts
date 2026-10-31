@@ -127,10 +127,10 @@ export function auditRequest(
   return (req, res, next) => {
     const id = req.params.id,
       machineId = req.query.machineId;
-    // Validation may already have converted the query value to a number.
+    // Validation may already have converted route or query IDs to numbers.
     const entityId =
-      typeof id === "string"
-        ? id
+      typeof id === "string" || typeof id === "number"
+        ? String(id)
         : typeof machineId === "string" || typeof machineId === "number"
           ? String(machineId)
           : null;

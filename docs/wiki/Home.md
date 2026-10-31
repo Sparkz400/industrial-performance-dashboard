@@ -99,3 +99,12 @@ bundles and configurable synthetic endurance workloads using the compiled fronte
 and confirmed browser session renewal. Scoped supervisor access
 now extends line investigations and alarm actions. These workflows do not establish
 multi-day reliability or supported hardware capacity.
+
+## Evaluate, contribute and reproduce
+
+Use the [persistent interactive demo](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/INTERACTIVE_DEMO.md)
+for guided synthetic shifts, safe reset and restart persistence. The
+[machine-profile catalog](https://github.com/Sparkz400/performance_dashboard/blob/main/profiles/README.md)
+separates simulator, reported and physical qualification claims. A
+[portable shift evidence export](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/SHIFT_EVIDENCE.md)
+recalculates one shift/OEE offline with Node.js 24, without a database or installed dependencies.

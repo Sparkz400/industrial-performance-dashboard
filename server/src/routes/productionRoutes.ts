@@ -1,3 +1,4 @@
+import { shiftEvidence } from "../services/shiftEvidence.js";
 import { Router } from "express";
 import { createHash } from "node:crypto";
 import Joi from "joi";
@@ -16,6 +17,7 @@ import {
   opcuaData,
   operatorEntries,
   reportHistory,
+  shiftReportRevisions,
   users,
   webhookDeliveries,
 } from "../database/schema.js";
@@ -38,6 +40,7 @@ import {
 } from "../services/commissioningService.js";
 import {
   calculateShift,
+  applyProductRuns,
   type TimeWindow,
 } from "../services/shiftCalculation.js";
 import { NotFoundError, ValidationError } from "../utils/errors.js";
@@ -116,6 +119,7 @@ export async function report(
     idealCycleMs: number;
   },
   database: Pick<typeof db, "select"> = db,
+  captures?: Parameters<typeof calculateShift>[0][],
 ): Promise<ShiftReport> {
   const [shift] = await database
     .select()
@@ -140,6 +144,7 @@ export async function report(
       statusCode: string | null;
       correctionRevision: number;
       receivedAt: Date | null;
+      signalMetadata: (typeof opcuaData.$inferSelect)["signalMetadata"];
     }
   >();
   for (const signal of Object.values(profile.signals)) {
@@ -155,6 +160,11 @@ export async function report(
       value: opcuaData.value,
       statusCode: opcuaData.statusCode,
       signalMetadata: opcuaData.signalMetadata,
+      rawValue: opcuaData.rawValue,
+      dataType: opcuaData.dataType,
+      sourceTimestamp: opcuaData.sourceTimestamp,
+      reportedStatusCode: opcuaData.reportedStatusCode,
+      sourceClockState: opcuaData.sourceClockState,
     };
     const previous = await database
       .select(projection)
@@ -182,10 +192,19 @@ export async function report(
     const unique = new Map<number, (typeof ordered)[number]>();
     for (const row of ordered) {
       unique.set(row.timestamp.getTime(), row);
-      measurementEvidence.set(`${row.timestamp.toISOString()}:${row.id}`, row);
+      measurementEvidence.set(`${row.timestamp.toISOString()}:${row.id}`, {
+        id: row.id,
+        correctionRevision: row.correctionRevision,
+        receivedAt: row.receivedAt,
+        timestamp: row.timestamp,
+        value: row.value,
+        statusCode: row.statusCode,
+        signalMetadata: row.signalMetadata,
+      });
     }
     samples[signal.nodeKey] = [...unique.values()].map((row) => ({
       ...row,
+      recordedValue: row.value,
       value:
         row.signalMetadata?.namespaceUri === signal.namespaceUri &&
         row.signalMetadata.identifier === signal.identifier
@@ -238,8 +257,9 @@ export async function report(
         ]
       : [],
   );
-  const result = calculateShift({
+  const input: Parameters<typeof calculateShift>[0] = {
     manualStates,
+    asOf: new Date(),
     declaration: declared?.quantity
       ? {
           entryId: declared.id,
@@ -247,7 +267,12 @@ export async function report(
           reviewedAt: declared.updatedAt.toISOString(),
         }
       : null,
-    ...shift,
+    id: shift.id,
+    machineId: shift.machineId,
+    name: shift.name,
+    timezone: shift.timezone,
+    start: shift.start,
+    end: shift.end,
     profile,
     job: shift.job as ShiftReport["job"],
     breaks: shift.breaks as TimeWindow[],
@@ -260,7 +285,24 @@ export async function report(
       createdAt: reason.createdAt.toISOString(),
     })),
     samples,
-  });
+  };
+  if (captures) {
+    const count = [...captures, input].reduce(
+      (sum, calculation) =>
+        sum +
+        Object.values(calculation.samples).reduce(
+          (n, rows) => n + rows.length,
+          0,
+        ),
+      0,
+    );
+    if (count > 100000 || reasons.length > 1000 || manualStates.length > 1000)
+      throw new ValidationError(
+        "Evidence exceeds 100000 input samples or 1000 declarations/reasons; use a smaller shift",
+      );
+    captures.push(input);
+  }
+  const result = calculateShift(input);
   result.planVersion = shift.planVersion;
   if (!range) {
     const open = await database
@@ -329,54 +371,10 @@ export async function report(
             },
           },
           database,
+          captures,
         ),
       });
-    const running = result.intervals.filter((i) => i.state === "running");
-    const uncovered = running.some((interval) => {
-      const coverage = shift.runs.reduce(
-        (sum, run) =>
-          sum +
-          Math.max(
-            0,
-            Math.min(Date.parse(interval.end), Date.parse(run.end)) -
-              Math.max(Date.parse(interval.start), Date.parse(run.start)),
-          ),
-        0,
-      );
-      return coverage !== Date.parse(interval.end) - Date.parse(interval.start);
-    });
-    const complete = result.runs.every(
-      (r) =>
-        r.report.quantities.total != null &&
-        !r.report.issues.some((issue) => issue.startsWith("total counter")),
-    );
-    const milliseconds = running.reduce(
-      (sum, i) => sum + Date.parse(i.end) - Date.parse(i.start),
-      0,
-    );
-    result.oee.performance =
-      complete &&
-      !uncovered &&
-      milliseconds > 0 &&
-      !result.issues.some((issue) =>
-        issue.startsWith("Running overlaps an excluded break"),
-      )
-        ? result.runs.reduce(
-            (sum, r) => sum + r.report.quantities.total! * r.plan.idealCycleMs,
-            0,
-          ) / milliseconds
-        : null;
-    if (result.oee.performance == null)
-      result.issues.push(
-        "Product run performance is unknown: incomplete run counters, unassigned running time or running during excluded breaks.",
-      );
-    result.oee.overall =
-      result.oee.availability != null &&
-      result.oee.performance != null &&
-      result.oee.quality != null
-        ? result.oee.availability * result.oee.performance * result.oee.quality
-        : null;
-    result.verified = result.issues.length === 0;
+    applyProductRuns(result);
   }
   return result;
 }
@@ -688,6 +686,46 @@ router.get(
   asyncHandler(async (req, res) => {
     res.set("Cache-Control", "no-store");
     res.json(await report(Number(req.params.id)));
+  }),
+);
+router.get(
+  "/shifts/:id/evidence",
+  validateParams(idSchema),
+  auditRequest(
+    "export.shift_evidence",
+    "production_shift",
+    "Exported reproducible shift evidence",
+  ),
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const bundle = await db.transaction(
+      async (tx) => {
+        await tx.execute(sql`SET LOCAL statement_timeout = '15s'`);
+        const captures: Parameters<typeof calculateShift>[0][] = [];
+        const current = await report(id, undefined, tx, captures);
+        const revisions = await tx
+          .select({
+            id: shiftReportRevisions.id,
+            digest: shiftReportRevisions.digest,
+            reason: shiftReportRevisions.reason,
+            createdAt: shiftReportRevisions.createdAt,
+          })
+          .from(shiftReportRevisions)
+          .where(eq(shiftReportRevisions.shiftId, id))
+          .orderBy(asc(shiftReportRevisions.id))
+          .limit(101);
+        if (revisions.length > 100)
+          throw new ValidationError("Shift exceeds 100 revision references");
+        return shiftEvidence(current, captures, revisions);
+      },
+      { isolationLevel: "repeatable read", accessMode: "read only" },
+    );
+    res.set("Cache-Control", "no-store");
+    res.set(
+      "Content-Disposition",
+      `attachment; filename="shift-${id}-evidence.json"`,
+    );
+    res.json(bundle);
   }),
 );
 router.post(

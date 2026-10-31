@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "name": "Synthetic factory demo",
+  "endpointModel": "Owned replay simulator v1; not a vendor map",
+  "signals": {
+    "state": {
+      "nodeKey": "ProductionState",
+      "namespaceUri": "urn:performance-dashboard:factory-demo:v1",
+      "identifier": "s=ProductionState",
+      "dataType": "Int32",
+      "unit": null,
+      "scale": 1
+    },
+    "total": {
+      "nodeKey": "ProductionCount",
+      "namespaceUri": "urn:performance-dashboard:factory-demo:v1",
+      "identifier": "s=ProductionCount",
+      "dataType": "Int32",
+      "unit": "parts",
+      "scale": 1
+    },
+    "good": {
+      "nodeKey": "GoodCount",
+      "namespaceUri": "urn:performance-dashboard:factory-demo:v1",
+      "identifier": "s=GoodCount",
+      "dataType": "Int32",
+      "unit": "parts",
+      "scale": 1
+    },
+    "reject": {
+      "nodeKey": "RejectCount",
+      "namespaceUri": "urn:performance-dashboard:factory-demo:v1",
+      "identifier": "s=RejectCount",
+      "dataType": "Int32",
+      "unit": "parts",
+      "scale": 1
+    }
+  },
+  "states": {
+    "running": [
+      1
+    ],
+    "idle": [
+      0
+    ],
+    "fault": [
+      2
+    ],
+    "planned": [
+      3
+    ]
+  },
+  "idealCycleMs": 2000,
+  "maxGapSeconds": 20,
+  "counterPolicy": "reject-decrease"
+}
