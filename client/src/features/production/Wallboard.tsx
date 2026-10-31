@@ -19,7 +19,7 @@ import type { MachineLiveSummary } from '@performance-dashboard/shared';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { api } from '@/utils/api';
 import { API_BASE_URL } from '@/config/config';
-import { productionRequest } from './CommissioningPanel';
+import { productionRequest } from './productionApi';
 
 /**
  *

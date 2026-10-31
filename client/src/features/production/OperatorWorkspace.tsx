@@ -15,7 +15,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import type { OperatorEntry, MachineLiveSummary } from '@performance-dashboard/shared';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { productionRequest } from './CommissioningPanel';
+import { productionRequest } from './productionApi';
 import {
   OFFLINE_DRAFT_EVENT,
   OFFLINE_DRAFT_KEY,

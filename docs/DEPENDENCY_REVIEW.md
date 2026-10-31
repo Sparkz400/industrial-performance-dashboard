@@ -1,5 +1,32 @@
 # Dependency PR disposition — 2026-10-26
 
+## Security refresh — 2026-10-31
+
+The earlier zero-advisory receipts below are historical. The fresh audit of
+`3286ab94` reported 20 affected packages from three advisories, not 20 independent
+vulnerabilities. This wave updates Joi to 18.3.1, overrides the development glob
+to 14.0.3 and modern minimatch copies to 11.0.3. Glob's public APIs, Storybook,
+lint/type checks and builds are exercised. The JSDoc/security lint plugins now
+belong to development dependencies. The server/shared production audit is clean.
+
+The raw full audit retains 14 affected development-package rows, all flowing from
+[GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249).
+The advisory describes amplification in `firstPhasePreProcess` with
+`optimizationLevel >= 2`. The remaining minimatch 3.1.5 source has neither that
+preprocessor nor the optimization option. Its callable API is still required by
+ESLint 9 and eslint-plugin-react; replacing it with the v11 export object breaks
+those callers. This is a reviewed non-applicable finding, not a patched v3 claim.
+
+`scripts/check-dependency-audit.mjs` accepts only that advisory for development-only
+3.1.5 copies with the exact reviewed `minimatch.js` SHA-256
+`746849f267c4868a53729225bd85c7dccd387712136fb305fcc0a3eadd4a3d9d`.
+It rejects changed source/version/scope, malformed reports, any other advisory and
+use of the exception on or after **2026-12-01**. CI preserves the unfiltered report.
+`test-dependency-audit.mjs` exercises each rejection. Review the upstream migration
+or advisory range before that expiry; do not extend it without fresh evidence.
+
+The remaining sections preserve the dated dependency migrations and image receipts.
+
 All 29 open proposals were reviewed against the current root-workspace project.
 Compatible changes are consolidated in [PR #40](https://github.com/Sparkz400/performance_dashboard/pull/40) so one dependency
 set can be installed and tested together. Closed pull-request history preserves

@@ -189,6 +189,10 @@ await dailyFixture(async ({ pool, call, users, actors, api, expect }) => {
     ".local/daily-evidence/history-load.json",
     JSON.stringify(metrics, null, 2),
   );
+  // Background retention must recheck account activation, not only its saved role.
+  const { applyRetention } = await import("../server/dist/src/services/historyRetention.js");
+  await pool.query("UPDATE users SET is_active=false WHERE id=$1", [users.admin.id]);
+  await assert.rejects(applyRetention(machine, "00000000-0000-0000-0000-000000000000", 0, users.admin.id), /no longer has administrator access/);
   console.log(
     "PASS: complete streamed export, concurrent queries, policy revision guard, bounded retention, late arrivals and quality-preserving summaries",
     metrics,

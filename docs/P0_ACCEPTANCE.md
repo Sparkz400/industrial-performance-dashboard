@@ -10,7 +10,11 @@ three database/telemetry scripts passed. Lint has no errors; warnings remain,
 predominantly existing documentation/unused-symbol warnings. The client build
 still reports large bundles; performance work is tracked separately.
 
-## Feature boundaries
+## Historical feature boundaries (2026-10-26)
+
+This table preserves the first-wave result, including modules that were disabled
+then. Use the [current acceptance matrix](ACCEPTANCE_MATRIX.md) and
+[status](STATUS.md) for subsequent implementations and present support boundaries.
 
 | Feature / task | Current behavior | Evidence | Remaining boundary |
 | --- | --- | --- | --- |

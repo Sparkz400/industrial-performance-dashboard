@@ -41,7 +41,11 @@ F07, F08, F09, F10 and D01. A following P1 gap wave closed R04, O05, H05, D05 an
 backlog wave 1 closed E01, R05, R02 and A08, and recorded research decisions
 ([decisions](docs/RESEARCH_DECISIONS.md)): I08, E06 and X02 closed as rejected; the rest
 stay open with explicit triggers.
-Backlog status: 88 checked and 20 open; I06 is withdrawn.
+Backlog status as reconciled 2026-10-31: 95 checked and 22 open; I06 is withdrawn.
+The [acceptance execution record](docs/ACCEPTANCE_EXECUTION.md) accounts for the original
+20 open items and reopens U06/X04 because their manual/pilot Done criteria remain unmet.
+The owner confirmed simulator-only work and preparation of an unsigned release
+candidate; physical pilot details and publisher key custody are not yet available.
 
 ### Data integrity and reviewed operations — 2026-10-28
 
@@ -225,7 +229,8 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Follow-up: Vitest 5, Storybook 10/Vite 8, MUI 9, react-window 2 and react-grid-layout 2
   are migrated in [PR #81](https://github.com/Sparkz400/performance_dashboard/pull/81) ([decisions](docs/DEPENDENCY_REVIEW.md#coordinated-major-migrations--2026-10-30)).
   ESLint stays on 9 until eslint-plugin-react supports 10; Node 26 needs its own support
-  decision. The full boundary audit remains open.
+  decision. The boundary audit was subsequently completed in PR #66 below;
+  current dependency evidence is recorded in [dependency review](docs/DEPENDENCY_REVIEW.md).
   Image remediation complete: Node 24/Wolfi with direct PDF rendering removes the
   Debian/Chromium runtime. Full Trivy scan: zero findings across 28 OS and 557 Node
   packages. CI blocks all high/critical findings, including unfixed ones. Actual-image
@@ -578,16 +583,17 @@ below retain their unfulfilled acceptance criteria.
   Progress: Six-machine pages, selection/rotation/fullscreen, observed target progress,
   freshness/unknown states and a read-only account are browser tested. Viewing-distance
   and sustained display acceptance remain open; see [workflow](docs/OPERATOR_WORKFLOW.md).
-- [x] **U06 — Establish accessible interaction patterns** · P1 · M1 · Improve · L. Depends: none.
+- [ ] **U06 — Establish accessible interaction patterns** · P1 · M1 · Improve · L. Depends: none.
   Done: commissioning, login, dashboards and operator actions support keyboard focus,
   non-drag alternatives, semantic labels and screen-reader status; test contrast, zoom,
   reduced motion and touch targets against an explicit WCAG 2.2 acceptance checklist.
   Progress: keyboard focus, skip link, 44-pixel coarse-pointer targets and touch flows
   are browser tested ([PR #59](https://github.com/Sparkz400/performance_dashboard/pull/59)).
-  Completed ([PR #70](https://github.com/Sparkz400/performance_dashboard/pull/70)): [WCAG 2.2 checklist](docs/ACCESSIBILITY.md); `test-accessibility.mjs`: zero
+  Software implemented ([PR #70](https://github.com/Sparkz400/performance_dashboard/pull/70)): [WCAG 2.2 checklist](docs/ACCESSIBILITY.md); `test-accessibility.mjs`: zero
   axe A/AA findings on seven screens, keyboard login and widget layout menu (2.5.7), reduced motion,
   320 px reflow and live regions. Open as a separate manual step: a screen-reader walkthrough and
-  200 % text zoom on the operator device.
+  200 % text zoom and focus-obscuring checks on the operator device. Reopened 2026-10-31:
+  automated evidence does not close these remaining Done criteria.
 - [x] **U07 — Improve navigation, localization and display units** · P1 · M1 · Improve · M. Depends: U02, F07.
   Done: role-appropriate navigation, machine search and saved filters reduce clutter;
   English/German, dates, decimal formats and display units follow a declared locale.
@@ -1072,15 +1078,16 @@ below retain their unfulfilled acceptance criteria.
   bounded replay, playback cursor, raw quality/clocks, immutable operator revisions,
   later stop annotations and export in `incidentReplay.test.ts` and
   `scripts/test-incident-replay.mjs`; [contract](docs/INCIDENT_REPLAY.md).
-- [x] **X04 — Prototype bounded capacity and completion forecasts** · P3 · M5 · Research · L. Depends: O05, R06.
+- [ ] **X04 — Prototype bounded capacity and completion forecasts** · P3 · M5 · Research · L. Depends: O05, R06.
   Done: estimate using comparable jobs and recent capacity with uncertainty ranges;
   backtest against actual completion and disclose unsupported process changes. Forecasts
   are advisory and do not automatically reschedule or control machines.
   Decision 2026-10-29: DEFER until the pilot records about 20 comparable completed runs to backtest. [decision](docs/RESEARCH_DECISIONS.md#x04--prototype-bounded-capacity-and-completion-forecasts).
-  Completed ([PR #79](https://github.com/Sparkz400/performance_dashboard/pull/79)): an advisory estimate with a 10th–90th percentile range from comparable verified runs since the
+  Software implemented ([PR #79](https://github.com/Sparkz400/performance_dashboard/pull/79)): an advisory estimate with a 10th–90th percentile range from comparable verified runs since the
   latest declared process change, withheld below 10 runs, with a rolling backtest against each run's actual hours and a
   mean-rate benchmark (`test-forecasts-recommendations.mjs`, [scope](docs/DAILY_OPERATIONS.md#completion-forecast)). The
-  evidence is synthetic; the backtest on pilot runs remains.
+  evidence is synthetic; the backtest on pilot runs remains. Reopened 2026-10-31:
+  the actual-completion acceptance criterion is not established by the synthetic fixture.
 - [ ] **X06 — Test improvement recommendations with evidence** · P3 · M5 · Research · M. Depends: X03, R06, M06.
   Done: recommendations cite loss/energy/maintenance evidence and assumptions, allow
   human dismissal and link accepted actions to outcomes. Compare usefulness with a
@@ -1129,7 +1136,7 @@ below retain their unfulfilled acceptance criteria.
   boundaries and add fixtures useful to reviewers. Maintain existing public-repo policies
   instead of adding redundant workflows or unmaintained template files.
   Completed ([PR #71](https://github.com/Sparkz400/performance_dashboard/pull/71)): CONTRIBUTING maps TODO prefixes and subsystems to code paths and the
-  evidence to quote, states the owned-database rule and the unqualified widget runtime, and
+  evidence to quote, states the owned-database rule and the sandboxed widget contract, and
   points to sanitized examples; existing issue templates and workflows are reused.
 - [ ] **P06 — Review product usefulness after each pilot milestone** · P1 · M1 · Research · M. Depends: D06, P01.
   Done: compare commissioning effort, report preparation time, unresolved stop reasons

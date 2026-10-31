@@ -12,7 +12,7 @@ They follow the ROADMAP's "Decisions that remain conditional" defaults: OPC UA p
 | I08 | REJECT packaging; the extension boundary is a read-only OPC UA server | Close as rejected | Both adapters already meet at OPC UA; no need for a loader or marketplace |
 | E06 | REJECT hosted tenancy | Close as rejected | Zero demand; the authorization model is single-company by design |
 | X02 | REJECT | Close as rejected | No labeled incidents; the Done text prescribes rejection |
-| X04 | BUILT as an advisory prototype (wave 12) | Done | Withheld below 10 comparable runs; backtest on the installation's own runs, synthetic here |
+| X04 | BUILT as an advisory prototype (wave 12) | Open acceptance | Withheld below 10 comparable runs; actual pilot-run backtest still required |
 | X06 | BUILT rules and usefulness log (wave 12) | Open | The comparison with the ranked list needs P06 users |
 | C06 | BUILT plain MQTT; Sparkplug not selected (wave 10) | Done | Owner lifted the deferral; Sparkplug host duties still conflict with read-only operation |
 | H08 | BUILT (owner lifted the deferral, wave 11) | Done | Token-authenticated, site-qualified, acknowledged history; tested with owned installations |

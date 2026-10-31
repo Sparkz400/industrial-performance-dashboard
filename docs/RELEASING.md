@@ -27,6 +27,13 @@ signed with the old one.
 
 ## Each release
 
+When publisher key custody is pending, complete steps 1–3 and run
+`node scripts/release-package.mjs prepare --directory .local/candidate-VERSION --image performance-dashboard:VERSION --version VERSION --evidence .local/release-evidence.json`.
+This produces the image archive, SBOM/notices, migrations, open acceptance record
+and hashes with an explicit unsigned-candidate format and no `release.sig`.
+It is for isolated rehearsal, cannot pass signed-release verification, and must
+be regenerated with `create` after trusted key custody is established.
+
 1. Merge everything for the release into `main`, wait for CI, and check out that commit
    cleanly (`git status` must be empty).
 2. Build the candidate image with the revision label:

@@ -19,7 +19,7 @@ import {
   replayPoints,
   type IncidentReplay,
 } from '@performance-dashboard/shared';
-import { productionRequest, downloadJson } from './CommissioningPanel';
+import { productionRequest, downloadJson } from './productionApi';
 import TrendingExplorerWidgetView from '@/features/widgets/types/trending-explorer/TrendingExplorerWidgetView';
 
 /** Review a bounded historical snapshot without changing operational data. */

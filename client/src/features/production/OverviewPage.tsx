@@ -18,8 +18,8 @@ import type { MachineLiveSummary, ShiftReport } from '@performance-dashboard/sha
 import { formatNumber, useT } from '@/i18n';
 import PageHeader from '@/shared/components/PageHeader';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { productionRequest } from './CommissioningPanel';
-import { displayedState } from './LiveState';
+import { productionRequest } from './productionApi';
+import { displayedState } from './displayedState';
 import ShiftTimeline from './ShiftTimeline';
 import KpiSummaryBar from '../dashboard/components/KpiSummaryBar';
 

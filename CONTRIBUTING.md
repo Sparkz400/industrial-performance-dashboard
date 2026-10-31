@@ -83,8 +83,9 @@ Browser and database scripts create and drop their own database on the local tes
 container (port 55432) and use owned simulators; never point them at a production
 machine or database. Sanitized starting fixtures are in [examples](examples/README.md).
 
-Custom widgets: manifest registration exists, but the sandboxed widget runtime is not
-qualified (TODO I07). Do not build on it as a supported SDK yet.
+Custom widgets use the sandboxed runtime with versioned manifests, declared permissions
+and scoped series delivery. Follow [the widget contract](docs/CUSTOM_WIDGETS.md) and run
+`scripts/test-custom-widgets.mjs`; registration alone is not runtime acceptance.
 
 Contributions are under Apache-2.0. Submit only code and data you have permission
 to share. Follow the [code of conduct](CODE_OF_CONDUCT.md).

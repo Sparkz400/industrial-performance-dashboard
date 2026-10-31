@@ -80,7 +80,8 @@ it sees the selected signals until it expires or is revoked.
 
 ## Release security review (F09)
 
-Exact revision `04383caed80f694c308a889414de8fd66bbf1a74` (current `main`):
+Historical revision `04383caed80f694c308a889414de8fd66bbf1a74` (2026-10-29 snapshot;
+not current-main evidence; see [current dependency review](DEPENDENCY_REVIEW.md)):
 
 | Source | Result |
 | --- | --- |

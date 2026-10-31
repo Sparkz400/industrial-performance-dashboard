@@ -20,6 +20,10 @@ their signals, and build a shared view of a production line.
 [TODO](TODO.md) · [Research](docs/RESEARCH.md) · [Contributing](CONTRIBUTING.md) ·
 [Discussions](https://github.com/Sparkz400/performance_dashboard/discussions)
 
+The [acceptance execution record](docs/ACCEPTANCE_EXECUTION.md) lists every remaining
+pilot gate and the evidence needed to close it. Release candidates remain unsigned
+until publisher key custody is established.
+
 ## What it does
 
 - Browse OPC UA nodes and configure per-machine tag mappings.

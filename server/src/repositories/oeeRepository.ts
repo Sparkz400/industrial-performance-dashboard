@@ -138,7 +138,11 @@ export const oeeRepository = {
   ) {
     const readDb = getReadDb();
     const previous = await readDb
-      .select({ timestamp: opcuaData.timestamp, value: opcuaData.value })
+      .select({
+        timestamp: opcuaData.timestamp,
+        value: opcuaData.value,
+        statusCode: opcuaData.statusCode,
+      })
       .from(opcuaData)
       .where(
         and(
@@ -153,6 +157,7 @@ export const oeeRepository = {
       .select({
         timestamp: opcuaData.timestamp,
         value: opcuaData.value,
+        statusCode: opcuaData.statusCode,
       })
       .from(opcuaData)
       .where(

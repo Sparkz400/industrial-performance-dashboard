@@ -15,7 +15,7 @@ import MaintenancePanel from './MaintenancePanel';
 import TrendingExplorerWidgetView from '../widgets/types/trending-explorer/TrendingExplorerWidgetView';
 import { toChartSeries } from '../widgets/types/trending-explorer/useTrendingData';
 import type { TrendingSeries } from '@performance-dashboard/shared';
-import { downloadJson } from '../production/CommissioningPanel';
+import { downloadJson } from '../production/productionApi';
 
 /**
  * Read-only asset navigation using configured SVG bindings and scoped measurements.

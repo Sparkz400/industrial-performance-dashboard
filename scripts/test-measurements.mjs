@@ -44,8 +44,8 @@ try {
   await manager.pool.query("INSERT INTO oee_config(machine_id,running_mode_values,idle_mode_values) VALUES ($1,'[1]','[0]')", [machineId]);
   await manager.pool.query("INSERT INTO opcua_data(node_key,timestamp,value,machine_id) VALUES('OperationMode','2026-01-01T07:00:00Z',1,$1)", [machineId]);
   const availability = await oeeCalculationService.calculateAvailability(machineId, timestamp, new Date('2026-01-01T09:00:00Z'));
-  assert.equal(availability.runningTimeMinutes, 60);
-  assert.equal(availability.unknownTimeMinutes, 0);
+  assert.equal(availability.runningTimeMinutes, 0);
+  assert.equal(availability.unknownTimeMinutes, 60);
   await certificates.ensureInitialized();
   assert.equal(certificates.isInitialized, true);
   const loaded = await certificates.loadCertificates();

@@ -8,7 +8,7 @@ import { widgetRegistry } from '../../widgets/registry/WidgetRegistry';
 import { useWidgetStore } from '@/stores/useWidgetStore';
 import { ActionTypes, isSameDashboardContent, useDebounce } from './useDashboardState';
 
-import type { Dashboard, DashboardTemplate, WidgetMeta, LayoutItem } from '@/types';
+import type { Dashboard, DashboardTemplate, WidgetMeta } from '@/types';
 import type { DashboardState, DashboardAction } from './useDashboardState';
 
 interface UseDashboardOperationsParams {

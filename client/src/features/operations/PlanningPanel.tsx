@@ -17,7 +17,7 @@ import type { ProductRun, ReportRevisionCheck } from '@performance-dashboard/sha
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useT } from '@/i18n';
 import { operationRequest, localInput, toIso } from './api';
-import { downloadJson } from '../production/CommissioningPanel';
+import { downloadJson } from '../production/productionApi';
 interface CalendarConfig {
   name: string;
   timezone: string;
@@ -572,6 +572,9 @@ function ProductRuns({ machineId, editable }: { machineId: number; editable: boo
             setRuns(null);
           }}
         >
+          <MenuItem value="" disabled>
+            {t('Choose a shift', 'Schicht auswählen')}
+          </MenuItem>
           {shifts.data
             ?.filter((s) => s.machineId === machineId)
             .map((s) => (

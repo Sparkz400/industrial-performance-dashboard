@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useLanguage, useT } from '@/i18n';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { operationRequest, toIso } from './api';
-import { downloadJson } from '../production/CommissioningPanel';
+import { downloadJson } from '../production/productionApi';
 interface Tariff {
   id: number;
   version: number;

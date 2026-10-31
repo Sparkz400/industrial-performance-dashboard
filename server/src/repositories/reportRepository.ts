@@ -1,5 +1,6 @@
 import { eq, and, desc, gte, inArray, lte, sql } from "drizzle-orm";
 import db, { getReadDb } from "../database/db.js";
+import { ValidationError } from "../utils/errors.js";
 import {
   reportTemplates,
   reportSchedules,
@@ -93,13 +94,33 @@ export const reportRepository = {
   /** Deleting a schedule also stops its queued generation and undelivered email. */
   async deleteSchedule(id: number) {
     return db.transaction(async (tx) => {
+      const [schedule] = await tx
+        .select()
+        .from(reportSchedules)
+        .where(eq(reportSchedules.id, id))
+        .for("update");
+      if (!schedule) return null;
+      const jobs = await tx
+        .select({ id: reportHistory.id })
+        .from(reportHistory)
+        .where(eq(reportHistory.scheduleId, id));
+      for (const job of jobs) {
+        // Do not wait while holding the schedule lock: a worker also updates it.
+        const lock = await tx.execute(
+          sql`SELECT pg_try_advisory_xact_lock(8744, ${job.id}) AS locked`,
+        );
+        if (!lock.rows[0]?.locked)
+          throw new ValidationError(
+            "A report is currently running; retry deletion after it finishes",
+          );
+      }
       await tx
         .update(reportHistory)
         .set({ status: "cancelled", retryAt: null, error: "Schedule deleted" })
         .where(
           and(
             eq(reportHistory.scheduleId, id),
-            inArray(reportHistory.status, ["queued", "failed"]),
+            inArray(reportHistory.status, ["queued", "generating", "failed"]),
           ),
         );
       await tx

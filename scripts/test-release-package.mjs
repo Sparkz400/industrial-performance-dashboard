@@ -95,6 +95,12 @@ await assert.rejects(
 );
 await save({ ...manifest, physicalQualification: true });
 await assert.rejects(verifyRelease(directory, keyFile));
+// Even a test-signed unsigned-candidate manifest is not a releasable envelope.
+await save({
+  ...manifest,
+  format: "performance-dashboard-unsigned-candidate-v1",
+});
+await assert.rejects(verifyRelease(directory, keyFile));
 // A package without the compatibility list is refused.
 const { "COMPATIBILITY.md": _omitted, ...withoutCompatibility } = files;
 await save({ ...manifest, files: withoutCompatibility });
@@ -102,9 +108,17 @@ await assert.rejects(verifyRelease(directory, keyFile), /COMPATIBILITY\.md/);
 
 // Release notes: merged pull requests, new migrations and open P0/P1 items.
 const open = openAcceptanceItems(
-  "- [x] **F01 — Done item** · P0 · M1\n- [ ] **H06 — Add rollups** · P1 · M2\n- [ ] **O08 — Line topology** · P2 · M3\n",
+  "- [ ] **FR01 — Full-application endurance:** pending\n- [x] **F01 — Done item** · P0 · M1\n- [ ] **H06 — Add rollups** · P1 · M2\n- [ ] **O08 — Line topology** · P2 · M3\n",
 );
-assert.deepEqual(open, ["H06 (P1): Add rollups"]);
+assert.deepEqual(open, [
+  "FR01 (acceptance): Full-application endurance",
+  "H06 (P1): Add rollups",
+]);
+assert(
+  openAcceptanceItems(await readFile("TODO.md", "utf8")).some((item) =>
+    item.startsWith("FR01 "),
+  ),
+);
 const notes = releaseNotes({
   version: "1.1.0-rc.1",
   revision,

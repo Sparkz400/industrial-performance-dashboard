@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Alert, Box, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { translate as t } from '@/i18n';
-import { productionRequest } from './CommissioningPanel';
+import { productionRequest } from './productionApi';
 
 interface Inspection {
   id: number;

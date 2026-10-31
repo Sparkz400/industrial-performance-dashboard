@@ -194,6 +194,10 @@ await dailyFixture(async ({ pool, users, actors, frontend, call, expect }) => {
     await page.close();
   }
   const page = await actors.admin.newPage();
+  page.on("console", (message) => {
+    if (message.type() === "error" && message.text().includes("`children` must be passed"))
+      evidence.errors.push(message.text());
+  });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(frontend + "/");
   await page
