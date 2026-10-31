@@ -8,7 +8,7 @@ import type {
 } from '@performance-dashboard/shared';
 import { formatNumber, useLanguage, useT } from '@/i18n';
 import { operationRequest } from './api';
-import { downloadJson } from '../production/CommissioningPanel';
+import { downloadJson } from '../production/productionApi';
 
 interface Shift {
   id: number;

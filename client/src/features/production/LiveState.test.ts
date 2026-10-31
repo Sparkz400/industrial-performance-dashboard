@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { displayedState } from './LiveState';
+import { displayedState } from './displayedState';
 describe('live state disclosure', () => {
   it('does not show running after stale responses or bad measurements', () => {
     expect(displayedState({ state: 'running', freshness: 'fresh' }, 1000, 16001, false)).toBe(

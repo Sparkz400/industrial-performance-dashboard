@@ -23,7 +23,8 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import type { ShiftReport, DowntimeReason } from '@performance-dashboard/shared';
 import { useAuthStore } from '@/stores/useAuthStore';
-import CommissioningPanel, { productionRequest, downloadJson } from './CommissioningPanel';
+import CommissioningPanel from './CommissioningPanel';
+import { productionRequest, downloadJson } from './productionApi';
 import OperatorWorkspace from './OperatorWorkspace';
 import ShiftInspectionsPanel from './ShiftInspectionsPanel';
 import MqttSourcesPanel from './MqttSourcesPanel';

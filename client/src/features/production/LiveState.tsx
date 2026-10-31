@@ -2,23 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Stack, Typography } from '@mui/material';
 import type { MachineLiveSummary } from '@performance-dashboard/shared';
 import { useT } from '@/i18n';
-/**
- *
- * @param machine
- * @param updatedAt
- * @param now
- * @param failed
- */
-export function displayedState(
-  machine: Pick<MachineLiveSummary, 'state' | 'freshness'>,
-  updatedAt: number,
-  now: number,
-  failed: boolean,
-) {
-  return failed || now - updatedAt > 15000 || machine.freshness !== 'fresh'
-    ? 'unknown'
-    : machine.state;
-}
+import { displayedState } from './displayedState';
 /**
  *
  * @param root0

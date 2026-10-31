@@ -2,7 +2,6 @@ import React from 'react';
 import {
   Box,
   Typography,
-  Paper,
   Card,
   CardContent,
   CardHeader,
@@ -20,7 +19,7 @@ import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import { useComplianceStats, useIntegrityCheck } from '../hooks/useComplianceQueries';
+import { useComplianceStats } from '../hooks/useComplianceQueries';
 import { format } from 'date-fns';
 
 const getCoverageColor = (value: number): 'success' | 'warning' | 'error' => {
@@ -48,7 +47,6 @@ const getActionColor = (
 
 const ComplianceOverviewTab: React.FC = () => {
   const { data: stats, isLoading, error } = useComplianceStats();
-  const { data: integrityData } = useIntegrityCheck();
 
   if (isLoading) {
     return (

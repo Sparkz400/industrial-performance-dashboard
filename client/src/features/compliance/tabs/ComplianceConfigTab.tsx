@@ -2,7 +2,6 @@ import React from 'react';
 import {
   Box,
   Typography,
-  Paper,
   Card,
   CardContent,
   CardHeader,
@@ -23,11 +22,10 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import DrawIcon from '@mui/icons-material/Draw';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import GavelIcon from '@mui/icons-material/Gavel';
-import { useComplianceConfig, useUpdateComplianceConfig } from '../hooks/useComplianceQueries';
+import { useComplianceConfig } from '../hooks/useComplianceQueries';
 
 const ComplianceConfigTab: React.FC = () => {
   const { data: config, isLoading, isError, error } = useComplianceConfig();
-  const updateConfig = useUpdateComplianceConfig();
 
   if (isLoading) {
     return (
