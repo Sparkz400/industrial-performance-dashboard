@@ -1,0 +1,63 @@
+name: Conformance report
+description: Submit an OEE conformance suite result for another implementation.
+title: "[Conformance] <implementation> <version> — shift-v1"
+labels: [conformance]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read the [conformance specification](https://github.com/Sparkz400/performance_dashboard/blob/main/benchmarks/correctness/CONFORMANCE.md) first. Use only synthetic suite data; do not attach customer or machine data.
+  - type: input
+    id: implementation
+    attributes:
+      label: Implementation, version and source revision or build id
+      placeholder: Example OEE 2.3.1 (commit 1a2b3c4)
+    validations:
+      required: true
+  - type: dropdown
+    id: suite
+    attributes:
+      label: Suite
+      options:
+        - shift-v1
+    validations:
+      required: true
+  - type: input
+    id: comparator
+    attributes:
+      label: Comparator version and repository commit used to compare
+      placeholder: 1 at 64818745
+    validations:
+      required: true
+  - type: textarea
+    id: claim
+    attributes:
+      label: Claim table
+      description: Paste `claim.md` from `node scripts/run-correctness-benchmark.mjs --results your-results.json --out comparison.json --report claim.md`.
+      render: markdown
+    validations:
+      required: true
+  - type: textarea
+    id: envelope
+    attributes:
+      label: Result envelope
+      description: Paste the complete `comparison.json` (about 12 KB; it contains your results).
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: adapter
+    attributes:
+      label: How the inputs were translated
+      description: Link the adapter code or describe the configuration needed to regenerate the results. List any cases you interpret differently and why.
+    validations:
+      required: true
+  - type: checkboxes
+    id: independence
+    attributes:
+      label: Independence
+      options:
+        - label: The implementation and adapter did not read `expected.json`, copy its values or special-case case identifiers.
+          required: true
+        - label: I may publish this result and the claimant details in the claims register.
+          required: true

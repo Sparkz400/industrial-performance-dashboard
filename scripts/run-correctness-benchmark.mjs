@@ -6,6 +6,8 @@ import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { canonicalJson } from "../server/src/utils/canonicalJson.ts";
 
+// Increase when what passes or fails changes; claims cite it (CONFORMANCE.md).
+export const COMPARATOR_VERSION = "1";
 const directory = new URL("../benchmarks/correctness/v1/", import.meta.url);
 export async function loadCorrectnessSuite() {
   const inputs = JSON.parse(
@@ -107,6 +109,51 @@ export function compareCorrectness(suite, actual) {
   return { passed: failures.length === 0, cases: results.size, failures };
 }
 
+/** Markdown for a conformance claim: one row per case with its differing fields. */
+export function claimReport(suite, actual, comparison, date) {
+  assert(
+    typeof actual.implementation === "string" && actual.implementation.trim(),
+    "A claim must state the implementation and revision",
+  );
+  // Submitted text lands in a GitHub table: one line, no table or code breaks.
+  const implementation = actual.implementation
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 200)
+    .replace(/[\\|`<>]/g, (c) => `\\${c}`);
+  const leaves = (value) =>
+    value !== null && typeof value === "object"
+      ? Object.values(value).reduce((n, item) => n + leaves(item), 0)
+      : 1;
+  let passed = 0;
+  const rows = Object.entries(suite.expected.cases).map(([id, answer]) => {
+    const paths = comparison.failures
+      .map((failure) => failure.path)
+      .filter((path) => path === id || path.startsWith(`${id}.`));
+    if (!paths.length) passed++;
+    const fields = paths.map(
+      (p) => `\`${p.slice(id.length + 1) || "(field set)"}\``,
+    );
+    return `| ${id} | ${paths.length ? "FAIL" : "PASS"} | ${leaves(answer.result)} | ${fields.join(", ") || "none"} |`;
+  });
+  const total = rows.length;
+  return [
+    "## OEE conformance claim",
+    "",
+    `- Suite: \`${suite.inputs.suite}\``,
+    `- Dataset SHA-256: \`${suite.datasetSha256}\``,
+    `- Implementation: ${implementation}`,
+    `- Comparator version: ${COMPARATOR_VERSION}`,
+    `- Date: ${date}`,
+    `- Result: ${passed === total ? "PASS" : "FAIL"} — ${passed}/${total} cases`,
+    "",
+    "| Case | Result | Expected fields | Differing fields |",
+    "| --- | --- | --- | --- |",
+    ...rows,
+    "",
+  ].join("\n");
+}
+
 if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(resolve(process.argv[1])).href
@@ -116,6 +163,7 @@ if (
       options: {
         results: { type: "string" },
         out: { type: "string" },
+        report: { type: "string" },
       },
     });
     const suite = await loadCorrectnessSuite();
@@ -140,10 +188,24 @@ if (
       };
     }
     const comparison = compareCorrectness(suite, actual);
-    const report = { ...actual, comparison };
+    const report = {
+      ...actual,
+      comparatorVersion: COMPARATOR_VERSION,
+      comparison,
+    };
     if (values.out) {
       await mkdir(dirname(resolve(values.out)), { recursive: true });
       await writeFile(values.out, JSON.stringify(report, null, 2) + "\n");
+    }
+    if (values.report) {
+      const claim = claimReport(
+        suite,
+        actual,
+        comparison,
+        new Date().toISOString().slice(0, 10),
+      );
+      await mkdir(dirname(resolve(values.report)), { recursive: true });
+      await writeFile(values.report, claim);
     }
     console.log(JSON.stringify(comparison, null, 2));
     if (!comparison.passed) process.exitCode = 1;

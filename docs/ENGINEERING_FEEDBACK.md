@@ -18,7 +18,9 @@ Parallel setup uses more runner time and requires available runner concurrency.
 `test-ci-feedback.mjs` rejects missing/duplicate coverage and changed original
 arguments or environment settings. It requires the new browser resource regression,
 giving 62 commands across the four groups. Both Windows/Linux validation jobs also
-run the public correctness benchmark and comparator tests. A failed suite stops its
+run the public correctness benchmark and comparator tests; the benchmark is also an
+[OEE conformance suite](../benchmarks/correctness/CONFORMANCE.md) for other tools.
+A failed suite stops its
 remaining commands, explicitly recording them as `not-run`; the other groups keep
 running. No regression is marked successful because it was skipped.
 
