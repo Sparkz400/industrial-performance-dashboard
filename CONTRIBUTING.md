@@ -3,6 +3,13 @@
 Start with the [README](README.md) and [current status](docs/STATUS.md). Open a
 discussion before a substantial feature or architecture change. Prefer a small,
 complete change with a reproducible example over another unfinished subsystem.
+The [maintainer handbook](MAINTAINERS.md) explains scope decisions, review, release
+responsibilities and how to take on a bounded maintainer role.
+
+Choose from the [curated contributor backlog](docs/CONTRIBUTOR_BACKLOG.md), including
+documentation, translations, simulator examples and focused regression tests. Each
+issue links its starting files and a completion checklist; comment before starting
+to avoid duplicating another contributor's work.
 
 ## Setup and validation
 

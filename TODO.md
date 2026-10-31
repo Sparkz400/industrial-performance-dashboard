@@ -29,6 +29,18 @@ functionality.
 
 ## Community workflow additions — 2026-10-31
 
+OSS point 9 adds the [maintainer handbook](MAINTAINERS.md): named current responsibility,
+scope decisions, review/merge and release procedures, triage, incident handling and
+a bounded onboarding/handover rehearsal. Appointing another maintainer and completing
+their independent rehearsal remain human milestones. Existing acceptance counts and
+publisher-key custody are unchanged.
+
+OSS point 4 publishes an initial [12 contributor issues](docs/CONTRIBUTOR_BACKLOG.md),
+linked to existing TODO IDs with observed gaps, starting files, bounded completion
+criteria and validation. These are contribution slices and follow-ups to their parent
+areas. Their live state belongs in GitHub; closing one does not automatically satisfy
+the parent acceptance item. The 95 checked / 22 open acceptance count is unchanged.
+
 Selected OSS points 6 and 8 add the [public correctness benchmark](benchmarks/correctness/README.md)
 and [engineering feedback](docs/ENGINEERING_FEEDBACK.md): 15 independently specified
 cases, a standalone external-results comparator, four isolated CI groups retaining

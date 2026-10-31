@@ -18,6 +18,7 @@ their signals, and build a shared view of a production line.
 [Getting started](docs/GETTING_STARTED.md) · [Architecture](docs/ARCHITECTURE.md) ·
 [Compatibility](docs/COMPATIBILITY.md) · [Roadmap](docs/ROADMAP.md) ·
 [TODO](TODO.md) · [Research](docs/RESEARCH.md) · [Contributing](CONTRIBUTING.md) ·
+[Maintaining](MAINTAINERS.md) ·
 [Discussions](https://github.com/Sparkz400/performance_dashboard/discussions)
 
 The [acceptance execution record](docs/ACCEPTANCE_EXECUTION.md) lists every remaining
@@ -28,6 +29,10 @@ The [public correctness benchmark](benchmarks/correctness/README.md) publishes 1
 synthetic cases with independently specified shift/OEE answers and a comparison tool
 for other implementations. [Engineering feedback](docs/ENGINEERING_FEEDBACK.md)
 documents parallel CI suites, retained coverage, timings and browser resource diagnostics.
+
+Looking for a first contribution? The [contributor backlog](docs/CONTRIBUTOR_BACKLOG.md)
+links small documentation, translation, example and test tasks with explicit completion
+criteria. The [maintainer handbook](MAINTAINERS.md) explains review and handover.
 
 ## What it does
 
