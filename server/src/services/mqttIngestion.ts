@@ -6,17 +6,19 @@ import { mqttSources } from "../database/schema.js";
 import { opcuaEmitter, type OpcuaNodeData } from "../opc-ua/opcuaClient.js";
 import opcuaQueueWorker from "../queue/opcuaQueueWorker.js";
 import { openMachineSecret } from "./machineIdentity.js";
+import {
+  MQTT_DATA_TYPES,
+  createSparkplugState,
+  parseSparkplugMessage,
+  sparkplugStatus,
+  sparkplugTopics,
+  typedValue,
+  type SparkplugMapping,
+  type SparkplugState,
+} from "./sparkplug.js";
 import logger from "../utils/logger.js";
 
-export const MQTT_DATA_TYPES = [
-  "Boolean",
-  "Int16",
-  "UInt16",
-  "Int32",
-  "UInt32",
-  "Float",
-  "Double",
-] as const;
+export { MQTT_DATA_TYPES };
 export interface MqttMapping {
   topic: string;
   nodeKey: string;
@@ -25,12 +27,6 @@ export interface MqttMapping {
   dataType: (typeof MQTT_DATA_TYPES)[number];
 }
 export const MAX_PAYLOAD_BYTES = 16384;
-const INTEGER_RANGES: Record<string, [number, number]> = {
-  Int16: [-32768, 32767],
-  UInt16: [0, 65535],
-  Int32: [-2147483648, 2147483647],
-  UInt32: [0, 4294967295],
-};
 
 /** Reads an RFC 6901 JSON pointer; undefined when any step is missing. */
 export function jsonPointer(document: unknown, path: string): unknown {
@@ -47,15 +43,6 @@ export function jsonPointer(document: unknown, path: string): unknown {
     node = (node as Record<string, unknown>)[key];
   }
   return node;
-}
-
-function typedValue(raw: unknown, type: MqttMapping["dataType"]) {
-  if (type === "Boolean") return typeof raw === "boolean" ? raw : undefined;
-  if (typeof raw !== "number" || !Number.isFinite(raw)) return undefined;
-  const range = INTEGER_RANGES[type];
-  if (range && (!Number.isInteger(raw) || raw < range[0] || raw > range[1]))
-    return undefined;
-  return raw;
 }
 
 /**
@@ -141,18 +128,24 @@ export interface MqttSourceStatus {
   rejected: number;
   lastRejection: string | null;
   lastError: string | null;
+  /** Sparkplug B only: born, waiting for birth, sequence gap or offline per node/device. */
+  sparkplug?: Record<string, string>;
 }
 
 /**
- * Read-only MQTT subscribers of the collector. Only exact mapped topics are subscribed
- * (QoS 1, persistent session) and nothing is ever published. A message is acknowledged
- * to the broker only after its measurements are in the durable spool, so a storage
- * failure leaves it for redelivery.
+ * Read-only MQTT subscribers of the collector. Only exact mapped topics (and, for Sparkplug B,
+ * the device messages of mapped edge nodes) are subscribed (QoS 1, persistent session) and
+ * nothing is ever published. A message is acknowledged to the broker only after its
+ * measurements are in the durable spool, so a storage failure leaves it for redelivery.
  */
 class MqttIngestion {
   private clients = new Map<
     number,
-    { client: MqttClient | null; status: MqttSourceStatus }
+    {
+      client: MqttClient | null;
+      status: MqttSourceStatus;
+      sparkplug?: { state: SparkplugState; mappings: SparkplugMapping[] };
+    }
   >();
   running = false;
 
@@ -178,6 +171,13 @@ class MqttIngestion {
 
   async start(row: typeof mqttSources.$inferSelect) {
     const mappings = row.mappings as MqttMapping[];
+    const sparkplug =
+      row.payloadFormat === "sparkplug-b"
+        ? {
+            mappings: row.mappings as SparkplugMapping[],
+            state: createSparkplugState(row.mappings as SparkplugMapping[]),
+          }
+        : undefined;
     const status: MqttSourceStatus = {
       state: "connecting",
       lastMessageAt: null,
@@ -211,13 +211,22 @@ class MqttIngestion {
       connectTimeout: 10000,
     });
     client.handleMessage = (packet, callback) => {
-      const { measurements, rejected } = parseMessage(
-        row,
-        mappings,
-        packet.topic,
-        Buffer.from(packet.payload),
-        new Date(),
-      );
+      const { measurements, rejected } = sparkplug
+        ? parseSparkplugMessage(
+            row,
+            sparkplug.mappings,
+            sparkplug.state,
+            packet.topic,
+            Buffer.from(packet.payload),
+            new Date(),
+          )
+        : parseMessage(
+            row,
+            mappings,
+            packet.topic,
+            Buffer.from(packet.payload),
+            new Date(),
+          );
       try {
         for (const m of measurements) opcuaQueueWorker.enqueue(m);
       } catch (error) {
@@ -239,7 +248,9 @@ class MqttIngestion {
       status.state = "connected";
       status.lastError = null;
       client.subscribe(
-        [...new Set(mappings.map((m) => m.topic))],
+        sparkplug
+          ? sparkplugTopics(sparkplug.mappings)
+          : [...new Set(mappings.map((m) => m.topic))],
         { qos: 1 },
         (error, granted) => {
           const refused = granted?.filter((g) => g.qos === 128) ?? [];
@@ -259,7 +270,7 @@ class MqttIngestion {
       status.lastError = error.message;
       logger.warn(`[MQTT] Source ${row.id}: ${error.message}`);
     });
-    this.clients.set(row.id, { client, status });
+    this.clients.set(row.id, { client, status, sparkplug });
   }
 
   async stop(id: number) {
@@ -274,7 +285,15 @@ class MqttIngestion {
   }
 
   status(id: number): MqttSourceStatus | null {
-    return this.clients.get(id)?.status ?? null;
+    const entry = this.clients.get(id);
+    if (!entry?.sparkplug) return entry?.status ?? null;
+    return {
+      ...entry.status,
+      sparkplug: sparkplugStatus(
+        entry.sparkplug.state,
+        entry.sparkplug.mappings,
+      ),
+    };
   }
 }
 

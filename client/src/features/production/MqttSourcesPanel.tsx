@@ -11,7 +11,15 @@ interface Source {
   brokerUrl: string;
   username: string | null;
   clientId: string;
-  mappings: { topic: string; nodeKey: string }[];
+  payloadFormat: Format;
+  mappings: {
+    topic?: string;
+    groupId?: string;
+    edgeNodeId?: string;
+    deviceId?: string | null;
+    metric?: string;
+    nodeKey: string;
+  }[];
   isActive: boolean;
   status: {
     state: string;
@@ -20,32 +28,56 @@ interface Source {
     rejected?: number;
     lastRejection?: string | null;
     lastError?: string | null;
+    sparkplug?: Record<string, string>;
   } | null;
 }
-const example = JSON.stringify(
-  [
-    {
-      topic: 'plant/line1/press',
-      nodeKey: 'Pressure',
-      valuePointer: '/value',
-      timestampPointer: '/ts',
-      dataType: 'Double',
-    },
-  ],
-  null,
-  2,
-);
+type Format = 'json' | 'sparkplug-b';
+const examples: Record<Format, string> = {
+  json: JSON.stringify(
+    [
+      {
+        topic: 'plant/line1/press',
+        nodeKey: 'Pressure',
+        valuePointer: '/value',
+        timestampPointer: '/ts',
+        dataType: 'Double',
+      },
+    ],
+    null,
+    2,
+  ),
+  'sparkplug-b': JSON.stringify(
+    [
+      {
+        groupId: 'Plant',
+        edgeNodeId: 'Line1',
+        deviceId: 'Press',
+        metric: 'Pressure',
+        nodeKey: 'Pressure',
+        dataType: 'Double',
+      },
+    ],
+    null,
+    2,
+  ),
+};
 const empty = {
   name: '',
   brokerUrl: 'mqtts://',
   caCertificate: '',
   username: '',
   password: '',
-  mappings: example,
+  payloadFormat: 'json' as Format,
+  mappings: examples.json,
 };
+const mappingLabel = (m: Source['mappings'][number]) =>
+  m.topic !== undefined
+    ? `${m.topic} → ${m.nodeKey}`
+    : `${m.groupId}/${m.edgeNodeId}${m.deviceId ? `/${m.deviceId}` : ''}: ${m.metric} → ${m.nodeKey}`;
 
 /**
- * Read-only MQTT sources of a machine: a TLS broker, a pinned CA and exact topic mappings.
+ * Read-only MQTT sources of a machine: a TLS broker, a pinned CA and exact topic or
+ * Sparkplug B metric mappings.
  * @param root0
  * @param root0.machines
  */
@@ -107,8 +139,7 @@ export default function MqttSourcesPanel({
                 fontWeight: 700,
               }}
             >
-              {s.name} · {s.brokerUrl} ·{' '}
-              {s.mappings.map((m) => `${m.topic} → ${m.nodeKey}`).join(', ')}
+              {s.name} · {s.brokerUrl} · {s.mappings.map(mappingLabel).join(', ')}
             </Typography>
             <Typography variant="body2" role="status">
               {s.isActive ? (s.status?.state ?? t('not started')) : t('disabled')}
@@ -117,6 +148,11 @@ export default function MqttSourcesPanel({
                 : ''}
               {s.status?.lastRejection ? ` · ${t('last refusal:')} ${s.status.lastRejection}` : ''}
               {s.status?.lastError ? ` · ${t('error:')} ${s.status.lastError}` : ''}
+              {s.status?.sparkplug
+                ? Object.entries(s.status.sparkplug)
+                    .map(([scope, state]) => ` · ${scope}: ${t(state)}`)
+                    .join('')
+                : ''}
             </Typography>
             <Button
               size="small"
@@ -132,6 +168,34 @@ export default function MqttSourcesPanel({
         ))}
         {machine && (
           <Stack spacing={2}>
+            <TextField
+              select
+              label={t('Payload format')}
+              value={form.payloadFormat}
+              onChange={(e) => {
+                const payloadFormat: Format =
+                  e.target.value === 'sparkplug-b' ? 'sparkplug-b' : 'json';
+                // Swap the example only while it is untouched; typed mappings are kept.
+                const mappings =
+                  form.mappings === examples.json || form.mappings === examples['sparkplug-b']
+                    ? payloadFormat === 'json'
+                      ? examples.json
+                      : examples['sparkplug-b']
+                    : form.mappings;
+                setForm({ ...form, payloadFormat, mappings });
+              }}
+              sx={{ maxWidth: 320 }}
+            >
+              <MenuItem value="json">{t('JSON (one value per topic)')}</MenuItem>
+              <MenuItem value="sparkplug-b">{t('Sparkplug B (edge nodes and devices)')}</MenuItem>
+            </TextField>
+            {form.payloadFormat === 'sparkplug-b' && (
+              <Typography variant="body2">
+                {t(
+                  'Sparkplug B sources read the birth, data and death messages of each mapped edge node and its devices and never publish: no host state and no rebirth request. Metrics sent only by alias stay unknown until the next birth certificate, and a node or device death stores its signals as unknown.',
+                )}
+              </Typography>
+            )}
             <TextField
               label={t('Source name')}
               value={form.name}
@@ -164,7 +228,11 @@ export default function MqttSourcesPanel({
               />
             </Stack>
             <TextField
-              label={t('Topic mappings (JSON)')}
+              label={
+                form.payloadFormat === 'sparkplug-b'
+                  ? t('Metric mappings (JSON)')
+                  : t('Topic mappings (JSON)')
+              }
               multiline
               minRows={6}
               value={form.mappings}
@@ -182,6 +250,7 @@ export default function MqttSourcesPanel({
                     caCertificate: form.caCertificate,
                     username: form.username || null,
                     password: form.password || null,
+                    payloadFormat: form.payloadFormat,
                     mappings: JSON.parse(form.mappings),
                   });
                   setForm(empty);

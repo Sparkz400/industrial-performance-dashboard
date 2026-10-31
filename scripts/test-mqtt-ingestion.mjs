@@ -10,7 +10,48 @@ import { dailyFixture } from "./daily-fixture.mjs";
 
 // C06: read-only MQTT ingestion from an owned TLS broker with a subscribe-only identity:
 // mapping validation, duplicates, reordering, malformed payloads, broker restart, TLS and
-// credential failures; the collector never publishes.
+// credential failures, Sparkplug B births/data/deaths; the collector never publishes.
+
+// Minimal Protocol Buffers encoder for Sparkplug B fixtures (the collector itself never encodes).
+const varint = (value) => {
+  let n = BigInt.asUintN(64, BigInt(value));
+  const out = [];
+  do {
+    let byte = Number(n & 0x7fn);
+    n >>= 7n;
+    if (n) byte |= 0x80;
+    out.push(byte);
+  } while (n);
+  return Buffer.from(out);
+};
+const field = (no, wire, body) => Buffer.concat([varint((no << 3) | wire), body]);
+const num = (no, value) => field(no, 0, varint(value));
+const bytes = (no, body) => field(no, 2, Buffer.concat([varint(Buffer.byteLength(body)), Buffer.from(body)]));
+const float = (value) => {
+  const b = Buffer.alloc(4);
+  b.writeFloatLE(value);
+  return field(12, 5, b);
+};
+const spMetric = (m) =>
+  Buffer.concat([
+    ...(m.name === undefined ? [] : [bytes(1, m.name)]),
+    ...(m.alias === undefined ? [] : [num(2, m.alias)]),
+    ...(m.timestamp === undefined ? [] : [num(3, m.timestamp)]),
+    ...(m.datatype === undefined ? [] : [num(4, m.datatype)]),
+    ...(m.int === undefined ? [] : [num(10, m.int)]),
+    ...(m.long === undefined ? [] : [num(11, m.long)]),
+    ...(m.float === undefined ? [] : [float(m.float)]),
+  ]);
+const spPayload = ({ timestamp, seq, metrics }) =>
+  Buffer.concat([
+    ...(timestamp === undefined ? [] : [num(1, timestamp)]),
+    ...metrics.map((m) => bytes(2, spMetric(m))),
+    ...(seq === undefined ? [] : [num(3, seq)]),
+  ]);
+const sparkplugFilters = [
+  ...["NBIRTH", "NDATA", "NDEATH"].map((type) => `spBv1.0/Plant/${type}/Line1`),
+  ...["DBIRTH", "DDATA", "DDEATH"].map((type) => `spBv1.0/Plant/${type}/Line1/+`),
+];
 await dailyFixture(async ({ pool, call, sockets, actors, frontend, expect }) => {
   const directory = dirname(process.env.OPCUA_PKI_DIR);
   const certificate = async (name) => {
@@ -31,11 +72,17 @@ await dailyFixture(async ({ pool, call, sockets, actors, frontend, expect }) => 
   const tlsIdentity = await certificate("mqtt-broker");
   const strangerCa = (await certificate("mqtt-stranger")).cert;
   const passwords = { "pd-reader": "reader-fixture-secret", line: "line-fixture-secret" };
-  const readable = new Set(["line/press", "line/count"]);
+  const readable = new Set(["line/press", "line/count", ...sparkplugFilters]);
+  const subscribed = new Map();
   const publishAttempts = [];
   let broker, server, port;
   const startBroker = async () => {
     broker = await Aedes.createBroker();
+    broker.on("subscribe", (subscriptions, client) => {
+      const topics = subscribed.get(client.id) ?? new Set();
+      for (const sub of subscriptions) topics.add(sub.topic);
+      subscribed.set(client.id, topics);
+    });
     broker.authenticate = (client, username, password, done) => {
       const ok = passwords[username] && password?.toString() === passwords[username];
       if (ok) client.user = username;
@@ -143,6 +190,80 @@ await dailyFixture(async ({ pool, call, sockets, actors, frontend, expect }) => 
     await new Promise((resolve) => setTimeout(resolve, 1500));
     assert.deepEqual(await rows(), expected);
 
+    // Sparkplug B: a read-only source for one edge node and its device on a second machine.
+    const [{ id: spMachine }] = (
+      await pool.query("INSERT INTO machines(name,endpoint_url,ip,is_active) VALUES('Sparkplug line','opc.tcp://127.0.0.1:49988','127.0.0.1',false) RETURNING id")
+    ).rows;
+    const spSource = (mappings, status = 201, name = "Sparkplug edge node") =>
+      ok("admin", "POST", `/mqtt/machines/${spMachine}/sources`, {
+        name,
+        brokerUrl: url,
+        caCertificate: tlsIdentity.cert,
+        username: "pd-reader",
+        password: passwords["pd-reader"],
+        payloadFormat: "sparkplug-b",
+        mappings,
+      }, status);
+    await spSource([{ groupId: "Plant/#", edgeNodeId: "Line1", deviceId: null, metric: "Count", nodeKey: "SpBad", dataType: "UInt32" }], 400);
+    await spSource([{ topic: "line/press", nodeKey: "SpBad", valuePointer: "/p", timestampPointer: "/ts", dataType: "Double" }], 400);
+    const sp = await spSource([
+      { groupId: "Plant", edgeNodeId: "Line1", deviceId: null, metric: "Line/Count", nodeKey: "SpCount", dataType: "UInt32" },
+      { groupId: "Plant", edgeNodeId: "Line1", deviceId: "Press", metric: "Pressure", nodeKey: "SpPressure", dataType: "Float" },
+    ]);
+    assert.equal(sp.payloadFormat, "sparkplug-b");
+    const spStatus = async () =>
+      (await ok("admin", "GET", `/mqtt/machines/${spMachine}/sources`)).find((s) => s.id === sp.id).status;
+    await expect.poll(async () => (await spStatus())?.state, { timeout: 15000 }).toBe("connected");
+    await expect.poll(() => [...(subscribed.get(sp.clientId) ?? [])].sort(), { timeout: 15000 }).toEqual([...sparkplugFilters].sort());
+    assert.deepEqual((await spStatus()).sparkplug, { "Plant/Line1": "waiting for birth", "Plant/Line1/Press": "waiting for birth" });
+    const publishRaw = (topic, body) =>
+      new Promise((resolve, reject) => line.publish(topic, body, { qos: 1 }, (e) => (e ? reject(e) : resolve())));
+    const at = (minute) => Date.UTC(2026, 5, 1, 7, minute);
+    const node = (type) => `spBv1.0/Plant/${type}/Line1`;
+    const device = (type) => `spBv1.0/Plant/${type}/Line1/Press`;
+    const birth = (bdSeq, minute, count) =>
+      spPayload({ timestamp: at(minute), seq: 0, metrics: [{ name: "bdSeq", datatype: 8, long: bdSeq }, { name: "Line/Count", alias: 1, timestamp: at(minute), datatype: 7, int: count }] });
+    const countData = spPayload({ timestamp: at(2), seq: 1, metrics: [{ alias: 1, timestamp: at(2), int: 101 }] });
+    await publishRaw(node("NDATA"), spPayload({ timestamp: at(0), seq: 5, metrics: [{ alias: 1, timestamp: at(0), int: 1 }] })); // alias before any birth
+    await publishRaw(node("NBIRTH"), birth(3, 1, 100));
+    await publishRaw(node("NDATA"), countData);
+    await publishRaw(node("NDATA"), countData); // redelivered duplicate
+    await publishRaw(device("DBIRTH"), spPayload({ timestamp: at(2), seq: 2, metrics: [{ name: "Pressure", alias: 2, timestamp: at(2), datatype: 9, float: 2.5 }] }));
+    await publishRaw(device("DDATA"), spPayload({ timestamp: at(3), seq: 3, metrics: [{ alias: 2, timestamp: at(3), float: 2.75 }] }));
+    await publishRaw(node("NDEATH"), spPayload({ metrics: [{ name: "bdSeq", datatype: 8, long: 2 }] })); // will of an earlier session
+    await publishRaw(device("DDEATH"), spPayload({ timestamp: at(4), seq: 4, metrics: [] }));
+    await publishRaw(node("NDEATH"), spPayload({ metrics: [{ name: "bdSeq", datatype: 8, long: 3 }] }));
+    await publishRaw(node("NBIRTH"), birth(4, 10, 110));
+    const spRows = async () =>
+      (
+        await pool.query(
+          "SELECT node_key,timestamp,value,status_code FROM opcua_data WHERE machine_id=$1 ORDER BY node_key,timestamp",
+          [spMachine],
+        )
+      ).rows.map((r) => [r.node_key, r.timestamp < new Date(at(59)) ? r.timestamp.toISOString() : "received", r.value, r.status_code]);
+    const iso = (minute) => new Date(at(minute)).toISOString();
+    const spExpected = [
+      ["SpCount", iso(1), 100, "Good"],
+      ["SpCount", iso(2), 101, "Good"],
+      ["SpCount", iso(10), 110, "Good"],
+      ["SpCount", "received", null, "BadCommunicationError"],
+      ["SpPressure", iso(2), 2.5, "Good"],
+      ["SpPressure", iso(3), 2.75, "Good"],
+      ["SpPressure", iso(4), null, "BadCommunicationError"],
+      ["SpPressure", "received", null, "BadCommunicationError"],
+    ];
+    await expect.poll(spRows, { timeout: 15000 }).toEqual(spExpected);
+    // After the database committed them, a redelivered data message is still stored once.
+    await expect.poll(() => worker.getHealth().pendingMeasurements, { timeout: 15000 }).toBe(0);
+    await publishRaw(node("NDATA"), countData);
+    await expect.poll(async () => (await spStatus()).accepted, { timeout: 15000 }).toBe(10);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    assert.deepEqual(await spRows(), spExpected);
+    const spCounted = await spStatus();
+    assert.equal(spCounted.rejected, 1);
+    assert.equal(spCounted.lastRejection, "Alias-only metric while waiting for a birth certificate");
+    assert.deepEqual(spCounted.sparkplug, { "Plant/Line1": "born", "Plant/Line1/Press": "waiting for birth" });
+
     // Broker ACL refuses publishing for the reader identity; the collector itself never tried.
     const intruder = mqtt.connect(url, { username: "pd-reader", password: passwords["pd-reader"], ca: [tlsIdentity.cert], clientId: "reader-negative", protocolVersion: 4, reconnectPeriod: 0 });
     await once(intruder, "connect");
@@ -183,7 +304,31 @@ await dailyFixture(async ({ pool, call, sockets, actors, frontend, expect }) => 
     await page.getByRole("button", { name: "Disable source Wrong CA" }).click();
     await expect(page.getByRole("button", { name: "Enable source Wrong CA" })).toBeVisible();
     await page.screenshot({ path: ".local/daily-evidence/mqtt-sources.png", fullPage: true });
+    // The Sparkplug source shows its node and device state; a second one is added in the form.
+    await page.getByLabel("MQTT machine").click();
+    await page.getByRole("option", { name: "Sparkplug line" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "Plant/Line1: born · Plant/Line1/Press: waiting for birth" })).toBeVisible();
+    await expect(page.getByText("Plant/Line1: Line/Count → SpCount, Plant/Line1/Press: Pressure → SpPressure", { exact: false })).toBeVisible();
+    await page.getByLabel("Payload format").click();
+    await page.getByRole("option", { name: "Sparkplug B (edge nodes and devices)" }).click();
+    await expect(page.getByText(/never publish: no host state and no rebirth request/)).toBeVisible();
+    const metricMappings = page.getByLabel("Metric mappings (JSON)");
+    await expect(metricMappings).toHaveValue(/"edgeNodeId": "Line1"/);
+    await page.getByLabel("Source name").fill("Sparkplug speed");
+    await page.getByLabel("Broker URL (mqtts only)").fill(url);
+    await page.getByLabel("Broker CA certificate (PEM)").fill(tlsIdentity.cert);
+    await page.getByLabel("Subscribe-only user").fill("pd-reader");
+    await page.getByLabel("Broker password").fill(passwords["pd-reader"]);
+    await metricMappings.fill(JSON.stringify([{ groupId: "Plant", edgeNodeId: "Line1", deviceId: null, metric: "Speed", nodeKey: "SpSpeed", dataType: "Double" }]));
+    await page.getByRole("button", { name: "Add MQTT source" }).click();
+    await expect(page.getByText("Sparkplug speed · " + url + " · Plant/Line1: Speed → SpSpeed")).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Plant/Line1: waiting for birth" })).toBeVisible();
+    await page.screenshot({ path: ".local/daily-evidence/mqtt-sparkplug-sources.png", fullPage: true });
     await page.close();
+    assert.equal(
+      (await pool.query("SELECT payload_format FROM mqtt_sources WHERE name='Sparkplug speed'")).rows[0].payload_format,
+      "sparkplug-b",
+    );
     assert.equal((await pool.query("SELECT is_active FROM mqtt_sources WHERE id=$1", [stranger.id])).rows[0].is_active, false);
     console.log(JSON.stringify({ mqttIngestion: "passed", stored: expected.length + 1 }));
   } finally {
