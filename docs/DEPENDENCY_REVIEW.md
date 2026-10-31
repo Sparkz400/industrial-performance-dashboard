@@ -1,6 +1,52 @@
 # Dependency PR disposition — 2026-10-26
 
-## Security refresh — 2026-10-31
+## Exception removed and upstream follow-through — 2026-10-31
+
+The December 1 minimatch exception is removed, not extended. A clean root install
+and full `npm audit --json` report zero findings, including development packages.
+`check-dependency-audit.mjs` now accepts only a complete zero-advisory report; it
+rejects the formerly excepted advisory, malformed reports and every severity.
+CI retains the raw report. These results describe this dependency set and scan date,
+not a promise about future advisories.
+
+The registry still publishes `eslint-plugin-react` 7.37.5 with ESLint peers only
+through 9 and a callable minimatch 3 dependency. The coordinated replacement uses
+ESLint 10.14.0, `@eslint/js` 10.0.1, `@eslint-react/eslint-plugin` 5.28.8,
+React Hooks 7.1.1, JSDoc 65.4.2 and the security plugin 4.2.1. All installed matcher
+copies are minimatch 11.0.3. `npm ls --all` passes without forced/ignored peers.
+Production dependency versions are unchanged. The existing modern-matcher override
+remains because some callers still request a vulnerable v10 range.
+
+The migration follows the [ESLint 10 guide](https://eslint.org/docs/latest/use/migrate-to-10.0.0)
+and [React rule comparison](https://eslint-react.xyz/docs/migrating-from-eslint-plugin-react).
+Only the existing React/Hooks policies are enabled; unrelated compiler/style presets
+are not added. JSX keys, names, comment text, children, unsafe links/HTML, DOM
+properties, deprecated lifecycles/APIs and state mutation retain lint checks.
+Unescaped JSX text uses a core selector. Duplicate props, unknown components,
+string refs, `isMounted` and missing class-render returns are enforced by TypeScript;
+the automatic JSX runtime needs no `React` import solely to render JSX.
+`scripts/test-lint-policy.mjs` exercises rejected and safe examples against the
+actual config/compiler, including security rules and JSDoc. The JSON parse fallback
+keeps its sanitized CSRF error without retaining a parser error containing response text.
+
+Upstream OPC UA remains separate. The latest npm release is 2.187.18; master was
+[`7b9b1df`](https://github.com/node-opcua/node-opcua/commit/7b9b1df922074deb3166186d5cb7b608278e31da).
+A clean, unmodified installation still fails the overflow regression on Uncertain
+quality. The existing guarded two-assertion removal passes all eight quality/discard
+combinations against that release. [Upstream issue #1849](https://github.com/node-opcua/node-opcua/issues/1849)
+contains the self-contained reproduction, versions, sanitized stack and proposed fix.
+The upstream contribution guide asks for issue discussion before a code contribution;
+this is a report/proposal, not an accepted upstream fix or full upstream-suite result.
+Keep the pinned, hash-checked local patch until an official release passes the
+unmodified regression. A version bump to 2.187.18 alone would not remove it.
+
+Validation: clean `npm ci`, dependency-tree validation, full audit, strict audit
+regressions, lint-policy/compiler fixtures, both builds and type checks, unit coverage,
+lint/format, Storybook and the existing development/OPC UA checks. Hosted CI also
+requires Windows/Linux, browser/database, container and security checks. Simulator
+evidence does not close FR01, physical acceptance or publisher-key custody.
+
+## Earlier security refresh — 2026-10-31 (superseded)
 
 The earlier zero-advisory receipts below are historical. The fresh audit of
 `3286ab94` reported 20 affected packages from three advisories, not 20 independent
@@ -21,13 +67,12 @@ preprocessor nor the optimization option. Its callable API is still required by
 ESLint 9 and eslint-plugin-react; replacing it with the v11 export object breaks
 those callers. This is a reviewed non-applicable finding, not a patched v3 claim.
 
-`scripts/check-dependency-audit.mjs` accepts only that advisory for development-only
+At that checkpoint, `scripts/check-dependency-audit.mjs` accepted only that advisory for development-only
 3.1.5 copies with the exact reviewed `minimatch.js` SHA-256
 `746849f267c4868a53729225bd85c7dccd387712136fb305fcc0a3eadd4a3d9d`.
-It rejects changed source/version/scope, malformed reports, any other advisory and
-use of the exception on or after **2026-12-01**. CI preserves the unfiltered report.
-`test-dependency-audit.mjs` exercises each rejection. Review the upstream migration
-or advisory range before that expiry; do not extend it without fresh evidence.
+It rejected changed source/version/scope, malformed reports, any other advisory and
+use of the exception on or after **2026-12-01**. The migration above removes this
+exception and its deadline entirely; this paragraph preserves the prior decision.
 
 The remaining sections preserve the dated dependency migrations and image receipts.
 
@@ -236,6 +281,9 @@ and was rejected. Those results remain historical evidence; they do not describe
 the migrated browser-free runtime. None was dismissed to obtain the new result.
 
 ## OPC UA overflow patch
+
+Current upstream status and reproduction: see the [2026-10-31 follow-through](#exception-removed-and-upstream-follow-through--2026-10-31)
+and [upstream issue #1849](https://github.com/node-opcua/node-opcua/issues/1849).
 
 `node-opcua-server` 2.187.16 asserts that notification queue overflow only occurs
 for Good values. Uncertain/Bad quality (or existing status metadata) instead crashes

@@ -75,8 +75,8 @@ export const fetchCsrfToken = async (csrfEndpoint: string): Promise<string> => {
     try {
       // Try to parse as JSON
       data = await response.json();
-    } catch (_error) {
-      // If JSON parsing fails, try to get token from header
+    } catch {
+      // Parser errors can contain response text; expose only the sanitized failure below.
       const headerToken = response.headers.get(CSRF_HEADER_NAME);
       if (headerToken) {
         storeCsrfToken(headerToken);

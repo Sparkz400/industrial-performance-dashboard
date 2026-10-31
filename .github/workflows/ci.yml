@@ -38,6 +38,7 @@ jobs:
       - run: node scripts/test-ci-feedback.mjs
       - run: node scripts/test-dev-dependencies.mjs
       - run: node scripts/test-dependency-audit.mjs
+      - run: node scripts/test-lint-policy.mjs
       - run: node scripts/test-release-package.mjs
       - run: npm run db:generate -w server
       - name: Reject uncommitted migration changes

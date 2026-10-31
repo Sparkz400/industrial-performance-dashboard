@@ -124,9 +124,9 @@ The release coordinator follows [Releasing](docs/RELEASING.md) and
 handoff includes CI/security receipts, image identity, migration inventory,
 SBOM/notices, install/upgrade/backup/restore evidence, release notes and the
 [open acceptance record](docs/ACCEPTANCE_EXECUTION.md). Review the
-[dependency exceptions](docs/DEPENDENCY_REVIEW.md), including their expiry and scope,
-before each release and during dependency triage. An expired exception needs a
-resolution or fresh review, not an automatic deadline extension.
+[dependency review](docs/DEPENDENCY_REVIEW.md) before each release and during
+dependency triage. All npm advisories currently block CI without exceptions.
+Any proposed change to that policy needs a fresh scope and evidence review.
 
 Record the release coordinator, reviewer and key custodian, plus the exact intended
 platform/support scope. Keep candidate preparation separate from public publication:

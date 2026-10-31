@@ -1,5 +1,14 @@
 # Current status
 
+## Upstream and dependency maintenance — 2026-10-31
+
+OSS point 10 removes the December development-dependency exception through a
+coordinated lint-tool migration. The full npm audit is clean, and CI now rejects
+all advisories without exceptions. The latest OPC UA package still needs the
+guarded overflow patch; [upstream issue #1849](https://github.com/node-opcua/node-opcua/issues/1849)
+includes the reproduced failure and proposed fix. See [versions, validation and
+remaining boundaries](DEPENDENCY_REVIEW.md#exception-removed-and-upstream-follow-through--2026-10-31).
+
 ## Maintainer handover — 2026-10-31
 
 The [maintainer handbook](../MAINTAINERS.md) covers OSS point 9: decisions, review,
@@ -49,7 +58,8 @@ daily manual quantities from hourly windows. Report deletion cannot revive a
 cancelled selected job; an actively running report must finish before deletion.
 Background retention rechecks that its reviewer is still an active administrator.
 Release notes include unprioritized gates such as FR01. The dependency review
-retains raw scanner output and distinguishes a narrowly verified false positive.
+retained raw scanner output and documented a narrowly verified false positive;
+the dependency migration above has since removed that exception.
 The [execution record](ACCEPTANCE_EXECUTION.md) accounts for the original 20 open items
 and reopens U06/X04 for unmet manual-accessibility/pilot-backtest criteria (22 open);
 the owner confirmed simulator-only work and an unsigned candidate pending key custody.

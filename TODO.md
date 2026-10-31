@@ -29,6 +29,13 @@ functionality.
 
 ## Community workflow additions — 2026-10-31
 
+OSS point 10 removes the dated development-dependency exception through the
+[coordinated lint migration](docs/DEPENDENCY_REVIEW.md#exception-removed-and-upstream-follow-through--2026-10-31).
+Strict audit and lint-policy regressions preserve the checks. The latest OPC UA
+package still reproduces the overflow defect; [upstream issue #1849](https://github.com/node-opcua/node-opcua/issues/1849)
+contains the tested proposed fix. Upstream acceptance and a patched official release
+remain external follow-through; the local hash-guarded patch stays in place.
+
 OSS point 9 adds the [maintainer handbook](MAINTAINERS.md): named current responsibility,
 scope decisions, review/merge and release procedures, triage, incident handling and
 a bounded onboarding/handover rehearsal. Appointing another maintainer and completing
@@ -259,8 +266,9 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Storybook builds, Drizzle transforms/generation and CSRF/socket-origin regressions pass.
   Follow-up: Vitest 5, Storybook 10/Vite 8, MUI 9, react-window 2 and react-grid-layout 2
   are migrated in [PR #81](https://github.com/Sparkz400/performance_dashboard/pull/81) ([decisions](docs/DEPENDENCY_REVIEW.md#coordinated-major-migrations--2026-10-30)).
-  ESLint stays on 9 until eslint-plugin-react supports 10; Node 26 needs its own support
-  decision. The boundary audit was subsequently completed in PR #66 below;
+  The 2026-10-31 coordinated ESLint 10/React lint migration removes the legacy matcher
+  and its audit exception; focused lint/compiler regressions cover the replacement.
+  Node 26 still needs its own support decision. The boundary audit was completed in PR #66 below;
   current dependency evidence is recorded in [dependency review](docs/DEPENDENCY_REVIEW.md).
   Image remediation complete: Node 24/Wolfi with direct PDF rendering removes the
   Debian/Chromium runtime. Full Trivy scan: zero findings across 28 OS and 557 Node
