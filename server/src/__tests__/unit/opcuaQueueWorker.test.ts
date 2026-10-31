@@ -97,6 +97,7 @@ it("quarantines a record PostgreSQL refuses and writes the rest", async () => {
   });
   expect(worker.getHealth().writeFailure).not.toBeNull();
 });
+// 1,000 durable writes at the minimum valid capacity: ~5 s on Windows CI, 33 s on a slow runner disk.
 it("stops acquisition at the configured spool capacity", async () => {
   dir = mkdtempSync(join(tmpdir(), "dashboard-worker-"));
   config.OPCUA_SPOOL_PATH = join(dir, "queue.sqlite");
@@ -118,4 +119,4 @@ it("stops acquisition at the configured spool capacity", async () => {
   } finally {
     config.OPCUA_SPOOL_MAX_ENTRIES = 1_000_000;
   }
-});
+}, 60_000);
