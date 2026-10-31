@@ -3,6 +3,8 @@
 Start with the [README](README.md) and [current status](docs/STATUS.md). Open a
 discussion before a substantial feature or architecture change. Prefer a small,
 complete change with a reproducible example over another unfinished subsystem.
+The [maintainer handbook](MAINTAINERS.md) explains scope decisions, review, release
+responsibilities and how to take on a bounded maintainer role.
 
 ## Setup and validation
 

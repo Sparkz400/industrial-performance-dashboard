@@ -18,6 +18,7 @@ their signals, and build a shared view of a production line.
 [Getting started](docs/GETTING_STARTED.md) · [Architecture](docs/ARCHITECTURE.md) ·
 [Compatibility](docs/COMPATIBILITY.md) · [Roadmap](docs/ROADMAP.md) ·
 [TODO](TODO.md) · [Research](docs/RESEARCH.md) · [Contributing](CONTRIBUTING.md) ·
+[Maintaining](MAINTAINERS.md) ·
 [Discussions](https://github.com/Sparkz400/performance_dashboard/discussions)
 
 The [acceptance execution record](docs/ACCEPTANCE_EXECUTION.md) lists every remaining

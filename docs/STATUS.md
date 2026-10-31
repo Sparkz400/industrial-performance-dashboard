@@ -1,5 +1,12 @@
 # Current status
 
+## Maintainer handover — 2026-10-31
+
+The [maintainer handbook](../MAINTAINERS.md) covers OSS point 9: decisions, review,
+triage, release responsibility and an onboarding/handover rehearsal. The sole listed
+code owner remains @Sparkz400. An independent maintainer's actual rehearsal and
+publisher-key custody remain open; documentation does not grant access or close pilot gates.
+
 ## Correctness and engineering feedback — 2026-10-31
 
 OSS points 6 and 8 add a [15-case public benchmark](../benchmarks/correctness/README.md),

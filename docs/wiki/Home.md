@@ -1,5 +1,10 @@
 # Performance Dashboard
 
+The [maintainer handbook](https://github.com/Sparkz400/performance_dashboard/blob/main/MAINTAINERS.md)
+documents current responsibility, review and release procedures, decisions and the
+rehearsal needed before another person takes on a maintainer role. No second
+maintainer or publisher-key custodian is appointed by publishing the handbook.
+
 The [public correctness benchmark](https://github.com/Sparkz400/performance_dashboard/blob/main/benchmarks/correctness/README.md)
 publishes 15 synthetic shift/OEE cases and independently specified answers, with a
 comparison runner for other implementations.

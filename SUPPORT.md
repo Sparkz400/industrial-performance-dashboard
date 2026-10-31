@@ -10,3 +10,7 @@ Remove credentials, private addresses and customer data before sharing.
 
 This community project has no support SLA. Security reports belong in
 [private advisories](SECURITY.md), not public issues.
+
+The [maintainer handbook](MAINTAINERS.md) names current responsibilities and explains
+triage, escalation and handover. A contributor issue or maintainer nomination does
+not create a support commitment.
