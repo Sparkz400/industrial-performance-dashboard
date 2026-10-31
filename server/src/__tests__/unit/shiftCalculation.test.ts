@@ -40,6 +40,26 @@ const point = (second: number, value: number | null, statusCode = "Good") => ({
 });
 
 describe("shift calculation", () => {
+  it("replays an unfinished shift at the original calculation time", () => {
+    const report = calculateShift({
+      id: 1,
+      machineId: 2,
+      name: "As of",
+      timezone: "UTC",
+      start,
+      end,
+      profile,
+      job: { reference: "J", product: "P", target: null },
+      breaks: [],
+      reasons: [],
+      samples: {},
+      evidence: null,
+      asOf: start,
+    });
+    expect(report.generatedAt).toBe(start.toISOString());
+    expect(report.issues).toContain("Shift has not ended.");
+  });
+
   it("reconciles a known shift without clamping inputs and preserves stop reasons", () => {
     const report = calculateShift({
       id: 1,
@@ -299,6 +319,10 @@ describe("reviewed manual quantity declarations", () => {
     expect(report.quantitySource).toBe("measured");
     expect(report.declaration).toBeNull();
     expect(report.issues.join(" ")).not.toContain("declaration");
+    expect(report.quantities.total).toBe(4);
+    expect(report.oee.performance).toBeNull();
+    expect(report.oee.quality).toBeNull();
+    expect(report.oee.overall).toBeNull();
   });
 });
 

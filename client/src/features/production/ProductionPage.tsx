@@ -54,6 +54,7 @@ export default function ProductionPage() {
   // Links from service records open a shift (?shift=) or a prefilled replay (?replay=1).
   const [params] = useSearchParams();
   const [tab, setTab] = useState(params.get('replay') ? 3 : 0);
+  const [exporting, setExporting] = useState(false);
   const [selected, setSelected] = useState(params.get('shift') ?? '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -547,12 +548,42 @@ export default function ProductionPage() {
                 {new Date(data.generatedAt).toLocaleString(useLanguage.getState().language)}
                 {t('. This is application evidence, not physical-machine qualification.')}{' '}
               </Typography>
-              <Stack direction="row" spacing={2} data-print-hide>
+              <Stack
+                direction="row"
+                spacing={2}
+                useFlexGap
+                sx={{ flexWrap: 'wrap' }}
+                data-print-hide
+              >
                 <Button onClick={() => window.print()}>{t('Print shift report')} </Button>
                 <Button onClick={() => downloadJson(data, `shift-${data.id}.json`)}>
                   {t('Export report and history')}{' '}
                 </Button>
+                <Button
+                  disabled={exporting}
+                  onClick={async () => {
+                    setExporting(true);
+                    setError('');
+                    try {
+                      downloadJson(
+                        await productionRequest(`/shifts/${data.id}/evidence`),
+                        `shift-${data.id}-evidence.json`,
+                      );
+                    } catch (e) {
+                      setError(String(e));
+                    } finally {
+                      setExporting(false);
+                    }
+                  }}
+                >
+                  {exporting ? t('Preparing evidence…') : t('Export reproducible evidence')}
+                </Button>
               </Stack>
+              <Typography variant="body2" color="text.secondary" data-print-hide>
+                {t(
+                  'Evidence includes measurements, production references and reason text. Review before sharing. Hashes do not prove publisher identity.',
+                )}
+              </Typography>
             </Stack>
           )}
           {operator && selected && reason.start && (

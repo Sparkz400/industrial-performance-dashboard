@@ -26,7 +26,11 @@
     "test:coverage": "npm run build:shared && concurrently \"npm run test:coverage -w client\" \"npm run test:coverage -w server\"",
     "lint": "npm run lint -w client",
     "prepare": "husky",
-    "postinstall": "node scripts/patch-opcua.mjs"
+    "postinstall": "node scripts/patch-opcua.mjs",
+    "demo": "npm run build:server && node scripts/interactive-demo.mjs",
+    "demo:reset": "node scripts/interactive-demo.mjs reset",
+    "profiles:check": "node scripts/profile-catalog.mjs",
+    "evidence:verify": "node scripts/verify-shift-evidence.mjs"
   },
   "lint-staged": {
     "client/src/**/*.{js,jsx,ts,tsx}": [

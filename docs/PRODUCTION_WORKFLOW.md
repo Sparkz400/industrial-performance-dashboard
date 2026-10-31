@@ -225,3 +225,12 @@ OPC UA endpoint, verifies negative permissions, commissions through the UI, crea
 an alarm rule through the UI, receives signed events, retries a failed receiver,
 and reconciles a hand-calculated shift ledger. Screenshots and the printed fixture
 are retained in ignored `.local/production-evidence/`. CI publishes this evidence.
+
+## Portable calculation evidence
+
+**Export reproducible evidence** downloads the current shift's calculation inputs
+and quality metadata from one database snapshot. Follow [offline reproduction](SHIFT_EVIDENCE.md)
+for the Node.js checker, privacy review and limits. Partial observed counter deltas
+remain visible, but performance, quality and OEE require complete counters or a
+reviewed quantity declaration. See the [profile catalog](../profiles/README.md)
+for reusable mappings and the [interactive demo](INTERACTIVE_DEMO.md) to try the flow.

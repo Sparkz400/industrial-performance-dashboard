@@ -1,0 +1,45 @@
+[
+  {
+    "id": "owned-factory",
+    "title": "Synthetic factory replay",
+    "profile": "owned-factory.json",
+    "transport": "opc-ua",
+    "equipment": {
+      "model": "Synthetic four-signal replay",
+      "firmware": "Fixture format v1"
+    },
+    "qualification": {
+      "level": "simulator",
+      "scope": "Known one-minute shift, gaps, bad quality and counter resets; stored-sample replay, not live PLC qualification",
+      "evidence": [
+        "scripts/factory-scenario.mjs",
+        "scripts/test-community-workflows.mjs"
+      ]
+    },
+    "limitations": [
+      "Synthetic only; no vendor, physical device or operator acceptance.",
+      "Node identities and cycle standard must be commissioned for each real machine."
+    ]
+  },
+  {
+    "id": "owned-legacy",
+    "title": "Owned legacy gateway fixture",
+    "profile": "owned-legacy.json",
+    "transport": "legacy-gateway",
+    "equipment": {
+      "model": "Owned Modbus simulator offsets 0-6",
+      "firmware": "Fixture format v1"
+    },
+    "qualification": {
+      "level": "simulator",
+      "scope": "Legacy gateway example mapping; test uses owned Modbus simulator",
+      "evidence": [
+        "examples/legacy-gateway.json",
+        "scripts/test-gateway.mjs"
+      ]
+    },
+    "limitations": [
+      "Not a vendor register map. Check offsets, endian order and scale with the responsible engineer."
+    ]
+  }
+]

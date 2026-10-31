@@ -143,6 +143,20 @@ separates current code from proposed capabilities; the [TODO backlog](TODO.md)
 tracks priorities, dependencies and completion criteria. These are plans, not
 released features or compatibility promises.
 
+## Try it with synthetic data
+
+After `npm ci` and starting the owned local database with
+`docker compose -f compose.local.yml up -d`, run **`npm run demo`**. The local guide
+provides a generated login, a known shift and missing-data/quality/reset scenarios.
+Data survives restart; `npm run demo:reset` resets only the owned demo database.
+See the [interactive demo guide](docs/INTERACTIVE_DEMO.md).
+
+The [machine-profile catalog](profiles/README.md) provides importable mappings,
+contribution checks and explicit simulator/reported/physical qualification levels.
+On a production shift, **Export reproducible evidence** downloads measurements,
+quality, configuration and revision references for [offline OEE reproduction](docs/SHIFT_EVIDENCE.md).
+No physical qualification or publisher signature is implied.
+
 ## Quick start
 
 Install **Node.js 24**, npm and **Docker Desktop** (or Docker Engine with Compose).

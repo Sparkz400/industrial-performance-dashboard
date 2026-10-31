@@ -1,4 +1,10 @@
 export const german: Record<string, string> = {
+  'Browse contributed machine profiles': 'Beigetragene Maschinenprofile ansehen',
+  'Preparing evidence…': 'Nachweise werden vorbereitet…',
+  'Export reproducible evidence': 'Reproduzierbare Nachweise exportieren',
+  'Evidence includes measurements, production references and reason text. Review before sharing. Hashes do not prove publisher identity.':
+    'Nachweise enthalten Messwerte, Produktionsreferenzen und Begründungen. Vor dem Teilen prüfen. Hashes belegen nicht die Identität des Herausgebers.',
+
   'Process specifications': 'Prozessspezifikationen',
   Update: 'Aktualisieren',
   Add: 'Hinzufügen',

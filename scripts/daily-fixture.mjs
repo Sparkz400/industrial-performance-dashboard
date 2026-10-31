@@ -12,12 +12,16 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { chromium, expect } from "@playwright/test";
 
-export async function dailyFixture(test) {
+export async function dailyFixture(test, demo) {
   dotenv.config({ path: "server/.env", quiet: true });
+  dotenv.config({ path: "server/.env.example", quiet: true });
   assert.equal(process.env.DB_PORT, "55432");
   assert(["localhost", "127.0.0.1"].includes(process.env.DB_HOST));
-  const database = "pd_daily_" + randomUUID().replaceAll("-", "");
-  const directory = await mkdtemp(join(tmpdir(), "pd-daily-"));
+  const database =
+    demo?.database ?? "pd_daily_" + randomUUID().replaceAll("-", "");
+  if (demo) assert.equal(database, "pd_demo_" + demo.id.replaceAll("-", ""));
+  const directory =
+    demo?.directory ?? (await mkdtemp(join(tmpdir(), "pd-daily-")));
   console.log(
     JSON.stringify({ ownedDatabase: database, ownedDirectory: directory }),
   );
@@ -38,8 +42,24 @@ export async function dailyFixture(test) {
     created = false;
   try {
     await admin.connect();
-    await admin.query(`CREATE DATABASE "${database}"`);
-    created = true;
+    const existing = await admin.query(
+      "SELECT shobj_description(oid, 'pg_database') AS owner FROM pg_database WHERE datname=$1",
+      [database],
+    );
+    if (existing.rowCount) {
+      assert(
+        demo &&
+          existing.rows[0].owner === `performance-dashboard-demo:${demo.id}`,
+        "Database ownership mismatch",
+      );
+    } else {
+      await admin.query(`CREATE DATABASE "${database}"`);
+      created = true;
+      if (demo)
+        await admin.query(
+          `COMMENT ON DATABASE "${database}" IS 'performance-dashboard-demo:${demo.id}'`,
+        );
+    }
     Object.assign(process.env, {
       DB_NAME: database,
       DB_READ_REPLICA_URLS: "",
@@ -55,7 +75,7 @@ export async function dailyFixture(test) {
     });
     pool = new pg.Pool({ ...base, database });
     await migrate(drizzle(pool), { migrationsFolder: "server/drizzle" });
-    const password = randomUUID(),
+    const password = demo?.password ?? randomUUID(),
       hash = await bcrypt.hash(password, 4);
     const users = {};
     for (const role of [
@@ -65,12 +85,15 @@ export async function dailyFixture(test) {
       "viewer",
       "wallboard",
     ])
-      users[role] = (
-        await pool.query(
-          "INSERT INTO users(username,email,password_hash,role) VALUES ($1,$2,$3,$4) RETURNING *",
-          [role, `${role}@example.invalid`, hash, role],
-        )
-      ).rows[0];
+      users[role] =
+        (await pool.query("SELECT * FROM users WHERE username=$1", [role]))
+          .rows[0] ??
+        (
+          await pool.query(
+            "INSERT INTO users(username,email,password_hash,role) VALUES ($1,$2,$3,$4) RETURNING *",
+            [role, `${role}@example.invalid`, hash, role],
+          )
+        ).rows[0];
     server = createServer().listen(0, "127.0.0.1");
     await once(server, "listening");
     const api = `http://127.0.0.1:${server.address().port}`;
@@ -97,7 +120,7 @@ export async function dailyFixture(test) {
     ).createSocketServer(server, store, application.sessionMiddleware);
     manager = (await import("../server/dist/src/database/dbConnection.js"))
       .default;
-    browser = await chromium.launch({ headless: true });
+    if (!demo) browser = await chromium.launch({ headless: true });
     const actors = {};
     const call = async (role, method, path, data) => {
       const request = actors[role].request;
@@ -120,7 +143,7 @@ export async function dailyFixture(test) {
       });
       assert.equal(result.status(), 200, await result.text());
     };
-    for (const role of Object.keys(users)) await login(role);
+    if (!demo) for (const role of Object.keys(users)) await login(role);
     await mkdir(".local/daily-evidence", { recursive: true });
     await test({
       pool,
@@ -158,7 +181,7 @@ export async function dailyFixture(test) {
     }
     await manager?.end();
     await pool?.end();
-    if (created) {
+    if (created && !demo) {
       for (let i = 0; i < 100; i++) {
         if (
           !(
@@ -174,13 +197,15 @@ export async function dailyFixture(test) {
       await admin.query(`DROP DATABASE "${database}"`);
     }
     await admin.end();
-    assert.equal(dirname(directory), resolve(tmpdir()));
-    // Vite's optimizer can finish a filesystem write after its server closes on Windows.
-    await rm(directory, {
-      recursive: true,
-      force: true,
-      maxRetries: 10,
-      retryDelay: 100,
-    });
+    if (!demo) {
+      assert.equal(dirname(directory), resolve(tmpdir()));
+      // Vite's optimizer can finish a filesystem write after its server closes on Windows.
+      await rm(directory, {
+        recursive: true,
+        force: true,
+        maxRetries: 10,
+        retryDelay: 100,
+      });
+    }
   }
 }

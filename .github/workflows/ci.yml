@@ -32,6 +32,7 @@ jobs:
           python -m pip install pypdf==6.10.0
           node scripts/test-report-pdf.mjs
           python scripts/check-report-pdf.py
+      - run: npm run profiles:check
       - run: node scripts/test-dev-dependencies.mjs
       - run: node scripts/test-dependency-audit.mjs
       - run: node scripts/test-release-package.mjs
@@ -60,6 +61,7 @@ jobs:
             client/coverage/
             server/coverage/
             .local/report-evidence/
+            .local/community-evidence/
           retention-days: 7
   browser:
     name: Browser and database
@@ -114,6 +116,8 @@ jobs:
       - run: node scripts/test-responsive-ui.mjs
       - run: node scripts/test-line-analysis.mjs
       - run: node scripts/test-examples.mjs
+      - run: node scripts/test-community-workflows.mjs
+      - run: node scripts/test-interactive-demo.mjs
       - run: node scripts/test-offline-destinations.mjs
       - run: node scripts/test-control-charts.mjs
       - run: node scripts/test-alarm-email.mjs
@@ -162,6 +166,7 @@ jobs:
           path: |
             playwright-report/
             test-results/
+            .local/community-evidence/
             .local/production-evidence/
             .local/daily-evidence/
             .local/ui-rework-evidence/

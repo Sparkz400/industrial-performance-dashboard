@@ -7,7 +7,11 @@ The earlier zero-advisory receipts below are historical. The fresh audit of
 vulnerabilities. This wave updates Joi to 18.3.1, overrides the development glob
 to 14.0.3 and modern minimatch copies to 11.0.3. Glob's public APIs, Storybook,
 lint/type checks and builds are exercised. The JSDoc/security lint plugins now
-belong to development dependencies. The server/shared production audit is clean.
+belong to development dependencies. The server/shared production audit is clean. The community
+workflow change also raises the manifest's minimum from `^18.3.0` to `^18.3.1`:
+the lockfile already contained the patched 18.3.1, so the installed dependency
+set does not change. This aligns the declared range with
+[GHSA-4528-x5fx-h6hg](https://github.com/advisories/GHSA-4528-x5fx-h6hg).
 
 The raw full audit retains 14 affected development-package rows, all flowing from
 [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249).

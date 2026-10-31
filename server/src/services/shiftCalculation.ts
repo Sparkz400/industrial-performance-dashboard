@@ -242,6 +242,7 @@ export function calculateShift(input: {
   evidence: ShiftReport["evidence"];
   declaration?: ShiftReport["declaration"];
   manualStates?: ManualStateDeclaration[];
+  asOf?: Date;
 }): ShiftReport {
   const { profile, start, end } = input;
   const state = profile.signals.state;
@@ -393,13 +394,17 @@ export function calculateShift(input: {
     issues.push(
       "Running overlaps an excluded break; revise the schedule before calculating performance and OEE.",
     );
+  const quantitiesComplete =
+    measuredComplete || quantitySource === "declaration";
   const performance =
+    quantitiesComplete &&
     plannedRunningSeconds === 0 &&
     runningSeconds > 0 &&
     quantities.total != null
       ? (quantities.total * profile.idealCycleMs) / (runningSeconds * 1000)
       : null;
   const quality =
+    quantitiesComplete &&
     quantities.total != null &&
     quantities.total > 0 &&
     quantities.good != null &&
@@ -421,7 +426,8 @@ export function calculateShift(input: {
     issues.push(
       "A factor exceeds 100%; check mapping, cycle standard and counters.",
     );
-  if (Date.now() < end.getTime()) issues.push("Shift has not ended.");
+  if ((input.asOf?.getTime() ?? Date.now()) < end.getTime())
+    issues.push("Shift has not ended.");
   if (!input.evidence)
     issues.push("Independent reconciliation has not been recorded.");
   else if (
@@ -438,7 +444,7 @@ export function calculateShift(input: {
     timezone: input.timezone,
     start: start.toISOString(),
     end: end.toISOString(),
-    generatedAt: new Date().toISOString(),
+    generatedAt: (input.asOf ?? new Date()).toISOString(),
     profile,
     job: input.job,
     intervals,
@@ -473,4 +479,57 @@ export function calculateShift(input: {
     evidence: input.evidence,
     verified: issues.length === 0,
   };
+}
+
+/** Apply product-specific cycle standards to the whole shift. */
+export function applyProductRuns(result: ShiftReport): void {
+  if (!result.runs?.length) return;
+  const running = result.intervals.filter((i) => i.state === "running");
+  const uncovered = running.some((interval) => {
+    const coverage = result
+      .runs!.map((r) => r.plan)
+      .reduce(
+        (sum, run) =>
+          sum +
+          Math.max(
+            0,
+            Math.min(Date.parse(interval.end), Date.parse(run.end)) -
+              Math.max(Date.parse(interval.start), Date.parse(run.start)),
+          ),
+        0,
+      );
+    return coverage !== Date.parse(interval.end) - Date.parse(interval.start);
+  });
+  const complete = result.runs!.every(
+    (r) =>
+      r.report.quantities.total != null &&
+      !r.report.issues.some((issue) => issue.startsWith("total counter")),
+  );
+  const milliseconds = running.reduce(
+    (sum, i) => sum + Date.parse(i.end) - Date.parse(i.start),
+    0,
+  );
+  result.oee.performance =
+    complete &&
+    !uncovered &&
+    milliseconds > 0 &&
+    !result.issues.some((issue) =>
+      issue.startsWith("Running overlaps an excluded break"),
+    )
+      ? result.runs!.reduce(
+          (sum, r) => sum + r.report.quantities.total! * r.plan.idealCycleMs,
+          0,
+        ) / milliseconds
+      : null;
+  if (result.oee.performance == null)
+    result.issues.push(
+      "Product run performance is unknown: incomplete run counters, unassigned running time or running during excluded breaks.",
+    );
+  result.oee.overall =
+    result.oee.availability != null &&
+    result.oee.performance != null &&
+    result.oee.quality != null
+      ? result.oee.availability * result.oee.performance * result.oee.quality
+      : null;
+  result.verified = result.issues.length === 0;
 }
