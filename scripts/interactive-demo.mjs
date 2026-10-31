@@ -14,6 +14,7 @@ import { once } from "node:events";
 import dotenv from "dotenv";
 import pg from "pg";
 import { dailyFixture, publicUrl } from "./daily-fixture.mjs";
+import { writeReceipt } from "./endurance-harness.mjs";
 import { factoryScenario, scenarios } from "./factory-scenario.mjs";
 
 const directory = resolve(".local/interactive-demo");
@@ -194,10 +195,13 @@ try {
         }).listen(0, "127.0.0.1");
         await once(guide, "listening");
         const url = `http://127.0.0.1:${guide.address().port}`;
-        await writeFile(
-          join(directory, "ready.json"),
-          JSON.stringify({ url, frontend, pid: process.pid, ...current }),
-        );
+        // Atomic: the test and other readers poll this file while it is written.
+        await writeReceipt(join(directory, "ready.json"), {
+          url,
+          frontend,
+          pid: process.pid,
+          ...current,
+        });
         console.log(
           `Factory demo: ${publicUrl(url)}\nOpen this address for login and guided scenarios. Ctrl+C stops; data is preserved.`,
         );
