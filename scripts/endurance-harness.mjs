@@ -1,7 +1,27 @@
 import assert from "node:assert/strict";
 import { join } from "node:path";
-import { writeFile, rename } from "node:fs/promises";
+import { readFile, writeFile, rename } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
+
+export function enduranceBrowserOptions(directory) {
+  return {
+    headless: true,
+    // Bound recent socket evidence; custom credential headers are redacted after close.
+    args: [
+      `--log-net-log=${join(directory, "chromium-netlog.json")}`,
+      "--net-log-capture-mode=Default",
+      "--net-log-max-size-mb=64",
+    ],
+  };
+}
+
+export async function redactBrowserNetLog(directory) {
+  const path = join(directory, "chromium-netlog.json");
+  const log = JSON.parse(await readFile(path, "utf8"), (_key, value) =>
+    typeof value === "string" ? safeFailure(value) : value,
+  );
+  await writeReceipt(path, log);
+}
 
 export async function writeReceipt(path, value) {
   await writeFile(path + ".tmp", JSON.stringify(value, null, 2), {

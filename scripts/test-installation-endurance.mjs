@@ -29,6 +29,8 @@ import {
   safeFailure,
   writeReceipt,
   captureFailurePages,
+  enduranceBrowserOptions,
+  redactBrowserNetLog,
 } from "./endurance-harness.mjs";
 
 // This harness owns every endpoint. It never loads the installation's .env.
@@ -518,7 +520,8 @@ try {
     }, "Application did not become ready");
   };
   await startApp();
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch(enduranceBrowserOptions(directory));
+  state.runtime.chromium = browser.version();
   const sessions = [];
   const login = async (session) => {
     if (session.lastLogin) {
@@ -566,6 +569,7 @@ try {
     const page = await context.newPage();
     page.on("request", (request) => {
       pendingRequests.set(request, {
+        contextIndex: i,
         path: new URL(request.url()).pathname,
         type: request.resourceType(),
         startedAt: Date.now(),
@@ -577,6 +581,8 @@ try {
     page.on("requestfailed", (request) => {
       pendingRequests.delete(request);
       networkErrors.push({
+        at: new Date().toISOString(),
+        contextIndex: i,
         phase,
         path: new URL(request.url()).pathname,
         error: request.failure()?.errorText,
@@ -595,7 +601,12 @@ try {
     });
     page.on("pageerror", (error) => {
       pageErrorCount++;
-      pageErrors.push({ phase, message: error.message });
+      pageErrors.push({
+        at: new Date().toISOString(),
+        contextIndex: i,
+        phase,
+        message: error.message,
+      });
       pageErrors = pageErrors.slice(-20);
     });
     const session = {
@@ -1018,4 +1029,5 @@ try {
     await run(docker, ["rm", "-f", "-v", container]);
   }
   await save({ cleanedUp: true });
+  if (browser) await redactBrowserNetLog(directory);
 }

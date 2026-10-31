@@ -1,5 +1,16 @@
 # Current status
 
+## Endurance transport investigation — 2026-10-31
+
+The full runs on `3385acb0` and `9e75ca68` failed after 179 and 11 completed
+cycles respectively. Both captured a script request with `ERR_NO_BUFFER_SPACE`
+and an operations-page timeout. The latter completed 0.9640 workload hours;
+neither contributes accepted duration. Resource samples do not establish memory
+or socket exhaustion, and the transport cause remains unresolved. The harness
+now retains a bounded Chromium NetLog, browser version, and timestamped failures
+per browser context. This is diagnostic evidence, not a claimed software fix;
+FR01 remains open. See [the investigation](FACTORY_READINESS.md#browser-transport-investigation--2026-10-31).
+
 ## Community workflows — 2026-10-31
 
 The [persistent local demo](INTERACTIVE_DEMO.md), [profile catalog](../profiles/README.md)
