@@ -136,6 +136,7 @@ try {
   const page = await browser.newPage();
   await page.goto(url);
   const [capture] = await captureFailurePages(browser, captureDirectory);
+  assert.equal(capture.captureError, undefined, capture.captureError);
   assert.equal(capture.url, url + "/");
   assert(capture.text.startsWith("Owned diagnostic page"));
   assert.equal(capture.text.length, 4000);
@@ -146,6 +147,15 @@ try {
     "89504e470d0a1a0a",
   );
   assert.deepEqual(await captureFailurePages(undefined, captureDirectory), []);
+  let screenshotAfterTextFailure = false;
+  const failedTextPage = {
+    url: () => url,
+    locator: () => ({ innerText: async () => { throw new Error("Owned text timeout"); } }),
+    screenshot: async () => { screenshotAfterTextFailure = true; },
+  };
+  const [partialCapture] = await captureFailurePages({ contexts: () => [{ pages: () => [failedTextPage] }] }, captureDirectory);
+  assert.equal(screenshotAfterTextFailure, true);
+  assert.match(partialCapture.captureError, /Owned text timeout/);
   for (let i = 0; i < 3; i++) {
     assert.deepEqual(JSON.parse(await browserGet(page, url + "/good")), {
       authenticated: true,

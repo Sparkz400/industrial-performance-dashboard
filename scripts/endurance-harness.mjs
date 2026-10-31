@@ -62,17 +62,23 @@ export async function captureFailurePages(browser, directory) {
     const snapshot = { index, url: page.url() };
     try {
       snapshot.text = safeFailure(
-        (await page.locator("body").innerText({ timeout: 2000 })).slice(
+        (await page.locator("body").innerText({ timeout: 5000 })).slice(
           0,
           4000,
         ),
       );
-      await page.screenshot({
-        path: join(directory, `browser-failure-${index}.png`),
-        timeout: 3000,
-      });
     } catch (captureError) {
       snapshot.captureError = safeFailure(captureError);
+    }
+    // A stalled DOM read must not discard the independent screenshot evidence.
+    try {
+      await page.screenshot({
+        path: join(directory, `browser-failure-${index}.png`),
+        timeout: 5000,
+      });
+    } catch (captureError) {
+      snapshot.captureError = [snapshot.captureError, safeFailure(captureError)]
+        .filter(Boolean).join("\n");
     }
     failurePages.push(snapshot);
   }
