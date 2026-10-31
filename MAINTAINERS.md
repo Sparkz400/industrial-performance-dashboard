@@ -70,6 +70,9 @@ a response date unless someone has accepted that responsibility. For each public
 GitHub issues track individual contributions. `TODO.md` remains the acceptance-status
 source of truth. A small issue may improve an already implemented TODO area, or supply
 only part of an open item. Closing it does not automatically check off its parent.
+Use the [contributor backlog](docs/CONTRIBUTOR_BACKLOG.md) to find the initial bounded
+tasks, and the live issue labels for their current availability. Keep that index
+useful when adding or retiring tasks without duplicating status in two places.
 
 ## Review and merge a change
 

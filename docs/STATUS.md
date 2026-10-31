@@ -7,6 +7,12 @@ triage, release responsibility and an onboarding/handover rehearsal. The sole li
 code owner remains @Sparkz400. An independent maintainer's actual rehearsal and
 publisher-key custody remain open; documentation does not grant access or close pilot gates.
 
+OSS point 4 adds a [curated index](CONTRIBUTOR_BACKLOG.md) of 12 published contributor
+issues covering documentation, translations, examples and focused tests. Each has
+source pointers, TODO parent IDs, acceptance criteria and validation instructions.
+The issues invite contributions; their proposed changes are not implemented by
+publishing the backlog. Existing acceptance gates remain open as recorded in TODO.
+
 ## Correctness and engineering feedback — 2026-10-31
 
 OSS points 6 and 8 add a [15-case public benchmark](../benchmarks/correctness/README.md),

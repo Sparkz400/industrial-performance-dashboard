@@ -30,6 +30,10 @@ synthetic cases with independently specified shift/OEE answers and a comparison 
 for other implementations. [Engineering feedback](docs/ENGINEERING_FEEDBACK.md)
 documents parallel CI suites, retained coverage, timings and browser resource diagnostics.
 
+Looking for a first contribution? The [contributor backlog](docs/CONTRIBUTOR_BACKLOG.md)
+links small documentation, translation, example and test tasks with explicit completion
+criteria. The [maintainer handbook](MAINTAINERS.md) explains review and handover.
+
 ## What it does
 
 - Browse OPC UA nodes and configure per-machine tag mappings.
