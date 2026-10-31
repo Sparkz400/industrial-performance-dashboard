@@ -1,12 +1,12 @@
 # Remaining acceptance execution record — 2026-10-31
 
 The owner authorized owned simulators and an unsigned release candidate. Physical
-pilot details and publisher key custody are unavailable. The 20 open items in
-[TODO](../TODO.md) stay open until their required evidence exists. Software repairs
+pilot details and publisher key custody are unavailable. The original 20 open items
+and two reopened acceptance items in [TODO](../TODO.md) stay open until their required evidence exists. Software repairs
 cover OEE freshness/counter coverage, manual day boundaries, report cancellation,
 retention reviewer activation, release-note completeness, dependencies and status prose.
 
-## All 20 open items
+## Original 20 open items
 
 | Item | Available for rehearsal | Exact evidence needed to close |
 | --- | --- | --- |
@@ -65,9 +65,10 @@ The process owner records accepted scope, rejected scope, unresolved defects,
 operating limits and the next review. Attach receipts to each TODO item before
 checking it off. Browser automation cannot substitute for interviews or approval.
 
-## Gates under completed software items
+## Two reopened acceptance items and other deployment gates
 
-U06 still needs a person using NVDA/VoiceOver, text zoom and focus-obscuring checks
+U06 and X04 are reopened in TODO: their software is implemented, but their full
+Done criteria are not met. U06 needs a person using NVDA/VoiceOver, text zoom and focus-obscuring checks
 on the actual device ([checklist](ACCESSIBILITY.md)). X04 needs actual pilot-run
 forecast backtests. E02 needs the customer's identity provider; H08/E03 need the
 real site network; I03/I04 need ERP/CMMS vendor acceptance. Recipes, batches and

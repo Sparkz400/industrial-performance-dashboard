@@ -8,7 +8,8 @@ cancelled selected job; an actively running report must finish before deletion.
 Background retention rechecks that its reviewer is still an active administrator.
 Release notes include unprioritized gates such as FR01. The dependency review
 retains raw scanner output and distinguishes a narrowly verified false positive.
-The [execution record](ACCEPTANCE_EXECUTION.md) accounts for all 20 open items;
+The [execution record](ACCEPTANCE_EXECUTION.md) accounts for the original 20 open items
+and reopens U06/X04 for unmet manual-accessibility/pilot-backtest criteria (22 open);
 the owner confirmed simulator-only work and an unsigned candidate pending key custody.
 
 ## Desktop and phone interface — 2026-10-30
