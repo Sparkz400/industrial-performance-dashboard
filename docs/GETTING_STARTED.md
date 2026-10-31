@@ -73,6 +73,23 @@ database and volume paths are retained. Follow the [reporting migration guide](R
 for upgrade, rollback, SMTP and report settings. Review the exact-image
 [security evidence](DEPENDENCY_REVIEW.md) before deployment.
 
+### Run the published image
+
+Version tags publish `ghcr.io/sparkz400/performance_dashboard` for `linux/amd64`
+and `linux/arm64` (for example 64-bit Raspberry Pi OS; no specific board is
+qualified). Each architecture passes the runtime smoke test on a native runner
+before publishing. Check which workflow and commit built an image:
+
+```sh
+gh attestation verify oci://ghcr.io/sparkz400/performance_dashboard:0.1.0 --repo Sparkz400/performance_dashboard
+```
+
+To use it with the Compose setup above, add
+`APP_IMAGE=ghcr.io/sparkz400/performance_dashboard:0.1.0` to `.env` and run
+`docker compose pull app` instead of `docker compose build`. Provenance identifies
+the build; it does not replace the signed offline package sites verify with the
+publisher key ([releasing](RELEASING.md)).
+
 For nonlocal deployments, read [SECURITY.md](../SECURITY.md) and validate HTTPS,
 proxy trust, credentials, OPC UA certificate trust, backup restoration and access
 controls in your environment before exposing the service.

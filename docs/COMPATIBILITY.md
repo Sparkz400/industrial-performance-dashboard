@@ -10,7 +10,11 @@ Modbus TCP gateway (function codes 03/04) is one such bridge; see
 [legacy gateway](LEGACY_GATEWAY.md). Serial Modbus RTU devices are read through an
 RTU-to-TCP gateway addressed by unit identifier, with the same adapter. Machines
 that publish JSON over MQTT can be read through an mqtts broker with exact topic
-mappings ([MQTT sources](PRODUCTION_WORKFLOW.md#mqtt-sources)). OPC UA Alarms and
+mappings ([MQTT sources](PRODUCTION_WORKFLOW.md#mqtt-sources)). Sparkplug B edge nodes
+and devices can be read passively through the same broker connection: births, data and
+deaths with sequence and alias checks, but no `STATE` and no rebirth request, so
+alias-only metrics wait for the node's next birth
+([Sparkplug B sources](PRODUCTION_WORKFLOW.md#sparkplug-b-sources)). OPC UA Alarms and
 Conditions can be observed read-only per machine. A third-party gateway's
 compatibility and licensing remain the deployer's responsibility.
 
@@ -25,7 +29,9 @@ Not supported, by decision rather than oversight (see C07 and C06 in
   an agent and no OPC UA.
 - Direct S7 (ISO-on-TCP), EtherNet/IP, PROFINET and other vendor protocols. Use the
   machine's OPC UA server or a vendor gateway that exposes OPC UA.
-- Sparkplug B payloads, MQTT wildcard subscriptions, plain `mqtt://` and MQTT 5.
+- Acting as a Sparkplug B primary host (publishing `STATE`, sending rebirth or other
+  commands), Sparkplug datasets, templates and properties, user-defined MQTT wildcard
+  subscriptions, plain `mqtt://` and MQTT 5.
 - Acknowledging, confirming or commenting PLC alarms. ConditionRefresh is the only
   method the collector calls.
 

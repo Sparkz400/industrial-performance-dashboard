@@ -13,9 +13,15 @@ records the lint migration that removes the development-dependency exception.
 All npm advisories block CI. The guarded OPC UA overflow patch remains pending
 [upstream resolution](https://github.com/node-opcua/node-opcua/issues/1849).
 
-The [public correctness benchmark](https://github.com/Sparkz400/performance_dashboard/blob/main/benchmarks/correctness/README.md)
-publishes 15 synthetic shift/OEE cases and independently specified answers, with a
-comparison runner for other implementations.
+**OEE you can audit:** run the [OEE conformance suite](https://github.com/Sparkz400/performance_dashboard/blob/main/benchmarks/correctness/CONFORMANCE.md)
+against any OEE tool and publish the result. It builds on the
+[public correctness benchmark](https://github.com/Sparkz400/performance_dashboard/blob/main/benchmarks/correctness/README.md):
+15 synthetic shift/OEE cases with independently specified answers.
+
+Try it without installing anything in [GitHub Codespaces](https://codespaces.new/Sparkz400/performance_dashboard?quickstart=1),
+or run the [published container image](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/GETTING_STARTED.md#run-the-published-image)
+for `linux/amd64` and `linux/arm64`. Dated history is in the
+[changelog](https://github.com/Sparkz400/performance_dashboard/blob/main/CHANGELOG.md).
 [Engineering feedback](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/ENGINEERING_FEEDBACK.md)
 describes four isolated CI groups, retained required checks, timing/failure receipts
 and browser resource diagnostics. Short checks do not establish multi-day reliability.
@@ -105,6 +111,9 @@ spool capacity and quarantine, and the single-collector lock with fenced leases
 The [integration API contract](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/INTEGRATION_API.md)
 lists the supported read endpoints, error shape, rate limits, durable webhook outbox
 and version policy, with a runnable example client.
+[Grafana and Node-RED](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/INTEGRATIONS.md)
+examples read the contract with a read-only service token and feed readings through
+an MQTT source; non-Good data stays a gap.
 
 [Daily factory workflows](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DAILY_OPERATIONS.md)
 cover scoped roles, history retention, calendars/product runs, immutable reports,

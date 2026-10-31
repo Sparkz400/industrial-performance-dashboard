@@ -1,0 +1,19 @@
+# Grafana reading Performance Dashboard through a read-only service token.
+# PD_URL, PD_SERVICE_TOKEN and GRAFANA_ADMIN_PASSWORD come from the environment; see
+# docs/INTEGRATIONS.md. Nothing secret is stored in this directory.
+name: performance-dashboard-grafana
+services:
+  grafana:
+    image: grafana/grafana:13.2.5@sha256:9f7aa1e1e3246aade5792d35a738049f7f32f89cd51d1956cf426a4e86268a84
+    ports:
+      - "127.0.0.1:3300:3000"
+    environment:
+      GF_PLUGINS_PREINSTALL_SYNC: yesoreyeram-infinity-datasource@4.1.5
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD}
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      PD_URL: ${PD_URL:?set PD_URL, for example https://dashboard.example}
+      PD_SERVICE_TOKEN: ${PD_SERVICE_TOKEN:?set PD_SERVICE_TOKEN to a pdsa_ token}
+    volumes:
+      - ./provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./dashboards:/var/lib/grafana/dashboards/performance-dashboard:ro

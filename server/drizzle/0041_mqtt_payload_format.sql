@@ -1,0 +1,1 @@
+ALTER TABLE "mqtt_sources" ADD COLUMN "payload_format" varchar(20) DEFAULT 'json' NOT NULL;

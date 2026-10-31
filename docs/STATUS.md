@@ -1,5 +1,44 @@
 # Current status
 
+## Open-source launch — 2026-10-31
+
+The README now leads with screenshots of synthetic demo shifts and a quick-try section;
+pilot gates, benchmark, dependency and maintainer notes moved to this page. Dated
+history moved from the TODO checklist to the [changelog](../CHANGELOG.md). Version
+tags publish a `linux/amd64` and `linux/arm64` image to GHCR with an SBOM and build
+provenance after a runtime smoke test on a native runner for each architecture
+([published image](GETTING_STARTED.md#run-the-published-image)). A development
+container runs the [interactive demo](INTERACTIVE_DEMO.md#in-github-codespaces) in
+GitHub Codespaces; its forwarding is simulated in `test-interactive-demo.mjs`.
+`v0.1.0` is an unsigned pre-release candidate; no acceptance item closes with it.
+
+## OEE conformance suite — 2026-10-31
+
+The correctness benchmark is now an open [conformance suite](../benchmarks/correctness/CONFORMANCE.md):
+immutable suite versions with pinned input/answer hashes, required claim contents,
+a claims register, an errata process and an informative ISO 22400-2 mapping.
+`--report` writes a per-case claim table; a Conformance report issue form collects
+results. Synthetic conformance does not close physical, endurance or pilot gates.
+
+## Passive Sparkplug B — 2026-10-31
+
+MQTT sources can read Sparkplug B edge nodes and devices without acting as a host:
+births record aliases, named metrics are always read, alias-only metrics wait for a
+birth not followed by a sequence gap, and matching node/device deaths store the mapped
+signals as unknown. A refused spool write restores the session state so its redelivery
+is not mistaken for a gap. The collector still never publishes, so nodes that only send
+aliases wait for their next natural birth. No physical Sparkplug edge node has been
+qualified. See [Sparkplug B sources](PRODUCTION_WORKFLOW.md#sparkplug-b-sources).
+
+## Grafana and Node-RED — 2026-10-31
+
+Pinned Grafana (Infinity data source) provisioning and two core-node Node-RED flows
+use the integration API with a read-only service token, and an MQTT source for
+readings. Non-Good samples and incomplete hours stay null. `test-examples.mjs` checks
+every request against the service-token reads with a real token; one manual run
+against owned containers is recorded in [integrations](INTEGRATIONS.md#validation).
+No custom plugin or node; nothing writes to machines.
+
 ## Upstream and dependency maintenance — 2026-10-31
 
 OSS point 10 removes the December development-dependency exception through a
@@ -209,7 +248,7 @@ registration existed and the CSP blocked widget frames (I07,
 
 Machines that publish JSON over MQTT can be read through a TLS broker with exact topic
 mappings; a message is acknowledged only after it is stored durably and a redelivery is
-stored once (C06, plain MQTT; Sparkplug not selected). PLC alarms and conditions can be
+stored once (C06, plain MQTT; passive Sparkplug B added 2026-10-31). PLC alarms and conditions can be
 observed read-only per machine, with ConditionRefresh as the only method the collector
 calls (A07). Serial Modbus RTU devices are read through an RTU-to-TCP gateway with the
 existing adapter, and unsupported devices are listed; ranking against a real inventory

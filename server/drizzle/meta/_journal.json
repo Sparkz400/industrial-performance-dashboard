@@ -288,6 +288,13 @@
       "when": 1793376654488,
       "tag": "0040_maintenance_action_history",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793462067818,
+      "tag": "0041_mqtt_payload_format",
+      "breakpoints": true
     }
   ]
 }

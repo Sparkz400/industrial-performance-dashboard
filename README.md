@@ -5,10 +5,26 @@
 [![CI](https://github.com/Sparkz400/performance_dashboard/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Sparkz400/performance_dashboard/actions/workflows/ci.yml)
 [![Security](https://github.com/Sparkz400/performance_dashboard/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/Sparkz400/performance_dashboard/actions/workflows/security.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/Sparkz400/performance_dashboard?quickstart=1)
 
 An industrial monitoring dashboard for exploring machine data, production trends,
 alarms and overall equipment effectiveness (OEE). Connect OPC UA machines, map
 their signals, and build a shared view of a production line.
+
+**OEE you can audit.** The [OEE conformance suite](benchmarks/correctness/CONFORMANCE.md)
+publishes 15 synthetic shift inputs with independently reasoned answers mapped to
+ISO 22400-2 KPIs, and a one-command comparator. Any OEE tool can run it, publish a
+claim, and show where its interpretation of unknown, reset, duplicate or manual data
+differs. It is not an ISO certification.
+
+![A reconciled demo shift: availability 50%, performance 100%, quality 86.7%, OEE 43.3%, with its loss, timeline and stop classification](docs/assets/screenshots/shift-report.png)
+
+<sub>Synthetic demo data. Missing or bad measurements stay unknown instead of becoming
+zero or perfect production:</sub>
+
+| Missing measurements | Phone |
+| --- | --- |
+| ![A shift with a measurement gap: OEE factors are unavailable and the report is marked incomplete](docs/assets/screenshots/missing-data.png) | ![The reconciled demo shift on a phone](docs/assets/screenshots/shift-phone.png) |
 
 > **Status:** development software for evaluation with owned simulators and test
 > equipment. Local and automated tests do not establish production reliability,
@@ -17,26 +33,25 @@ their signals, and build a shared view of a production line.
 
 [Getting started](docs/GETTING_STARTED.md) · [Architecture](docs/ARCHITECTURE.md) ·
 [Compatibility](docs/COMPATIBILITY.md) · [Roadmap](docs/ROADMAP.md) ·
-[TODO](TODO.md) · [Research](docs/RESEARCH.md) · [Contributing](CONTRIBUTING.md) ·
-[Maintaining](MAINTAINERS.md) ·
+[TODO](TODO.md) · [Changelog](CHANGELOG.md) · [Research](docs/RESEARCH.md) ·
+[Contributing](CONTRIBUTING.md) · [Maintaining](MAINTAINERS.md) ·
 [Discussions](https://github.com/Sparkz400/performance_dashboard/discussions)
 
-The [acceptance execution record](docs/ACCEPTANCE_EXECUTION.md) lists every remaining
-pilot gate and the evidence needed to close it. Release candidates remain unsigned
-until publisher key custody is established.
+## Try it
 
-The [public correctness benchmark](benchmarks/correctness/README.md) publishes 15
-synthetic cases with independently specified shift/OEE answers and a comparison tool
-for other implementations. [Engineering feedback](docs/ENGINEERING_FEEDBACK.md)
-documents parallel CI suites, retained coverage, timings and browser resource diagnostics.
+- **In the browser:** [open a codespace](https://codespaces.new/Sparkz400/performance_dashboard?quickstart=1).
+  It installs dependencies, starts the owned demo database and runs `npm run demo`;
+  open the **Factory demo** address printed in the terminal.
+- **On your computer:** install Node.js 24 and Docker, then run `npm ci`,
+  `docker compose -f compose.local.yml up -d` and **`npm run demo`**.
+- **As a container:** version tags publish `ghcr.io/sparkz400/performance_dashboard`
+  for `linux/amd64` and `linux/arm64` with build provenance; see
+  [run the published image](docs/GETTING_STARTED.md#run-the-published-image).
 
-Looking for a first contribution? The [contributor backlog](docs/CONTRIBUTOR_BACKLOG.md)
-links small documentation, translation, example and test tasks with explicit completion
-criteria. The [maintainer handbook](MAINTAINERS.md) explains review and handover.
-
-The [dependency review](docs/DEPENDENCY_REVIEW.md) records the removal of the
-development-dependency exception and the upstream OPC UA overflow report.
-Dependency checks reject all advisories; the guarded OPC UA workaround remains.
+The demo guide provides a generated login, a known shift and missing-data, bad-quality
+and counter-reset scenarios. See the [interactive demo guide](docs/INTERACTIVE_DEMO.md).
+Pilot gates, benchmark, dependency and maintainer notes are in [status](docs/STATUS.md);
+first contributions start in the [contributor backlog](docs/CONTRIBUTOR_BACKLOG.md).
 
 ## What it does
 
@@ -100,10 +115,13 @@ capacity and quarantine, and the single-collector lock with fenced leases
 ([high availability](docs/HIGH_AVAILABILITY.md)).
 Integrations use the bounded [integration API contract](docs/INTEGRATION_API.md):
 four read endpoints, a durable webhook outbox and a version policy.
+Grafana provisioning and Node-RED flows that use it, with gaps kept visible, are in
+[Grafana and Node-RED](docs/INTEGRATIONS.md).
 The [legacy gateway recipe](docs/LEGACY_GATEWAY.md) includes a read-only Modbus TCP
 adapter, owned simulator and reusable production profile; serial RTU devices are read
-through an RTU-to-TCP gateway. Machines that publish JSON can be read through an MQTT
-broker over TLS ([MQTT sources](docs/PRODUCTION_WORKFLOW.md#mqtt-sources)), and PLC alarms
+through an RTU-to-TCP gateway. Machines that publish JSON, or Sparkplug B edge nodes
+read passively (births, data and deaths; no STATE or rebirth requests), can be read
+through an MQTT broker over TLS ([MQTT sources](docs/PRODUCTION_WORKFLOW.md#mqtt-sources)), and PLC alarms
 can be observed read-only ([PLC alarms](docs/DAILY_OPERATIONS.md#plc-alarms)).
 [Incident replay](docs/INCIDENT_REPLAY.md) joins bounded historical signals, alarm
 transitions, operator revisions and stop classifications with explicit clock and gap information.
@@ -157,14 +175,9 @@ separates current code from proposed capabilities; the [TODO backlog](TODO.md)
 tracks priorities, dependencies and completion criteria. These are plans, not
 released features or compatibility promises.
 
-## Try it with synthetic data
+## Synthetic data and evidence
 
-After `npm ci` and starting the owned local database with
-`docker compose -f compose.local.yml up -d`, run **`npm run demo`**. The local guide
-provides a generated login, a known shift and missing-data/quality/reset scenarios.
-Data survives restart; `npm run demo:reset` resets only the owned demo database.
-See the [interactive demo guide](docs/INTERACTIVE_DEMO.md).
-
+Demo data survives restart; `npm run demo:reset` resets only the owned demo database.
 The [machine-profile catalog](profiles/README.md) provides importable mappings,
 contribution checks and explicit simulator/reported/physical qualification levels.
 On a production shift, **Export reproducible evidence** downloads measurements,

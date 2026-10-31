@@ -13,6 +13,7 @@ import {
   mqttIngestion,
   type MqttMapping,
 } from "../services/mqttIngestion.js";
+import type { SparkplugMapping } from "../services/sparkplug.js";
 import { NotFoundError, ValidationError } from "../utils/errors.js";
 
 // C06: read-only MQTT sources. Administrator-only (mounted with requireRole("admin")).
@@ -22,6 +23,54 @@ const pointer = Joi.string()
   .max(200)
   .pattern(/^(?:\/[^/]*)*$/)
   .allow("");
+const nodeKey = Joi.string()
+  .pattern(/^[A-Za-z][A-Za-z0-9_]{0,99}$/)
+  .required();
+const dataType = Joi.string()
+  .valid(...MQTT_DATA_TYPES)
+  .required();
+const sameKey = (a: { nodeKey: string }, b: { nodeKey: string }) =>
+  a.nodeKey === b.nodeKey;
+const jsonMappings = Joi.array()
+  .items(
+    Joi.object({
+      // Exact topics only: wildcards and $-system topics would widen what is read.
+      topic: Joi.string()
+        .max(256)
+        .pattern(/^[^#+$\u0000][^#+\u0000]*$/)
+        .required(),
+      nodeKey,
+      valuePointer: pointer.required(),
+      timestampPointer: pointer.required(),
+      dataType,
+    }),
+  )
+  .min(1)
+  .max(50)
+  .unique(sameKey)
+  .required();
+// Sparkplug B topic levels: identifiers may not contain level separators or wildcards.
+const sparkplugId = Joi.string()
+  .max(100)
+  .pattern(/^[^/+#\u0000]+$/);
+const sparkplugMappings = Joi.array()
+  .items(
+    Joi.object({
+      groupId: sparkplugId.required(),
+      edgeNodeId: sparkplugId.required(),
+      deviceId: sparkplugId.allow(null).default(null),
+      metric: Joi.string()
+        .max(200)
+        .pattern(/^[^\u0000]+$/)
+        .required(),
+      nodeKey,
+      dataType,
+    }),
+  )
+  .min(1)
+  .max(50)
+  .unique(sameKey)
+  .required();
 const sourceSchema = Joi.object({
   name: Joi.string().trim().min(1).max(160).required(),
   brokerUrl: Joi.string()
@@ -35,28 +84,12 @@ const sourceSchema = Joi.object({
   username: Joi.string().max(200).allow(null).default(null),
   password: Joi.string().max(500).allow(null).default(null),
   clientId: Joi.string().pattern(/^[A-Za-z0-9_-]{1,23}$/),
-  mappings: Joi.array()
-    .items(
-      Joi.object({
-        // Exact topics only: wildcards and $-system topics would widen what is read.
-        topic: Joi.string()
-          .max(256)
-          .pattern(/^[^#+$\u0000][^#+\u0000]*$/)
-          .required(),
-        nodeKey: Joi.string()
-          .pattern(/^[A-Za-z][A-Za-z0-9_]{0,99}$/)
-          .required(),
-        valuePointer: pointer.required(),
-        timestampPointer: pointer.required(),
-        dataType: Joi.string()
-          .valid(...MQTT_DATA_TYPES)
-          .required(),
-      }),
-    )
-    .min(1)
-    .max(50)
-    .unique((a, b) => a.nodeKey === b.nodeKey)
-    .required(),
+  payloadFormat: Joi.string().valid("json", "sparkplug-b").default("json"),
+  mappings: Joi.alternatives().conditional("payloadFormat", {
+    is: "sparkplug-b",
+    then: sparkplugMappings,
+    otherwise: jsonMappings,
+  }),
 });
 const publicColumns = {
   id: mqttSources.id,
@@ -65,6 +98,7 @@ const publicColumns = {
   brokerUrl: mqttSources.brokerUrl,
   username: mqttSources.username,
   clientId: mqttSources.clientId,
+  payloadFormat: mqttSources.payloadFormat,
   mappings: mqttSources.mappings,
   isActive: mqttSources.isActive,
   createdAt: mqttSources.createdAt,
@@ -108,7 +142,8 @@ router.post(
       username: string | null;
       password: string | null;
       clientId?: string;
-      mappings: MqttMapping[];
+      payloadFormat: "json" | "sparkplug-b";
+      mappings: (MqttMapping | SparkplugMapping)[];
     };
     const [machine] = await db
       .select({ id: machines.id })
@@ -140,7 +175,9 @@ router.post(
     const taken =
       opcua?.nodeKey ??
       others
-        .flatMap((s) => (s.mappings as MqttMapping[]).map((m) => m.nodeKey))
+        .flatMap((s) =>
+          (s.mappings as { nodeKey: string }[]).map((m) => m.nodeKey),
+        )
         .find((k) => keys.includes(k));
     if (taken)
       throw new ValidationError(
@@ -159,6 +196,7 @@ router.post(
           : null,
         clientId:
           body.clientId ?? `pd-m${machineId}-${randomBytes(4).toString("hex")}`,
+        payloadFormat: body.payloadFormat,
         mappings: body.mappings,
         createdBy: req.session.userId!,
       })

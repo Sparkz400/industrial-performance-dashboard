@@ -5,6 +5,10 @@ specified answers. It is Apache-2.0 licensed with the repository. No customer or
 physical-machine data is included. The goal is a reproducible comparison of data
 interpretation, not a speed score or a claim of universal OEE semantics.
 
+Other tools can run it as an open conformance suite: the
+[conformance specification](CONFORMANCE.md) defines versioning, what a claim states,
+the claims register, errata and the mapping to ISO 22400-2 KPIs.
+
 ## Run Performance Dashboard
 
 Use Node.js 24 from the repository root:
@@ -84,15 +88,18 @@ building or installing the dashboard:
 
 ```sh
 node --input-type=module -e "import {loadCorrectnessSuite} from './scripts/run-correctness-benchmark.mjs'; console.log((await loadCorrectnessSuite()).datasetSha256)"
-node scripts/run-correctness-benchmark.mjs --results other-results.json --out comparison.json
+node scripts/run-correctness-benchmark.mjs --results other-results.json --out comparison.json --report claim.md
 ```
 
 The comparator is standalone Node.js 24 code in this checkout. It reads JSON up to
 1 MiB; it does not execute another implementation. Exit code zero means all cases
 match; differences include the case/field path and expected/actual values. An output
-report includes the submitted results and comparison. There is no automatic
-golden-answer update command. Semantic changes require a new version and reviewed
-reasoning; correct a fixture error explicitly with an explanation and new input hash.
+report includes the submitted results, the comparator version and the comparison.
+`--report` writes a Markdown claim table with one row per case and its differing
+fields; it requires the `implementation` field. There is no automatic golden-answer
+update command. Version 1 is immutable and its test pins both hashes; semantic
+changes and fixture corrections are published as a new suite version with reviewed
+reasoning ([errata](CONFORMANCE.md#disagreements-and-errata)).
 
 ## Limits
 
