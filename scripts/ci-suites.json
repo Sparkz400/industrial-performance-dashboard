@@ -1,0 +1,338 @@
+{
+  "format": "pd-ci-suites-v1",
+  "shards": {
+    "1": [
+      {
+        "script": "scripts/test-p0.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-report-boundaries.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-integration-outbox.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-api-contract.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-spool-quarantine.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-compliance-audit.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-interactive-demo.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-alarm-email.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-mqtt-ingestion.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-configuration-bundles.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-work-orders.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-signal-quality.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-offline-operator.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-installation-endurance.mjs",
+        "args": [
+          "--hours",
+          "0.04",
+          "--cycle-seconds",
+          "20",
+          "--outage-seconds",
+          "3",
+          "--restart-every",
+          "2",
+          "--users",
+          "3",
+          "--tags",
+          "20"
+        ],
+        "env": {}
+      }
+    ],
+    "2": [
+      {
+        "script": "scripts/test-measurements.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-shares.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-alarm-replay.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-spc-live.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-accessibility.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-responsive-ui.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-control-charts.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-history-rollups.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-lot-corrections.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-mapping-suggestions.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-plc-alarms.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-operational-diagnostics.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-measurement-corrections.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-maintenance-costs.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-endurance-harness.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-browser-resources.mjs",
+        "args": [],
+        "env": {}
+      }
+    ],
+    "3": [
+      {
+        "script": "scripts/test-tracing.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-recovery.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-access.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-collector-lock.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-collector-fencing.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-line-analysis.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-examples.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-changeovers.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-data-ownership.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-limited-data.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-job-inspections.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-oidc.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-forecasts-recommendations.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-quality-line.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-daily-workflows.mjs",
+        "args": [],
+        "env": {
+          "DAILY_BROWSER": "1"
+        }
+      },
+      {
+        "script": "scripts/test-browser-isolated.mjs",
+        "args": [],
+        "env": {}
+      }
+    ],
+    "4": [
+      {
+        "script": "scripts/test-database-client-errors.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-oee-boundaries.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-subscription-limits.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-batch-lifecycle.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-community-workflows.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-offline-destinations.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-history.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-maintenance-records.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-improvement-actions.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-custom-widgets.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-edge-history.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-supervisor-workflows.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-maintenance-history-migration.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-period-comparisons.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-asset-overview.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
+        "script": "scripts/test-production.mjs",
+        "args": [],
+        "env": {}
+      }
+    ]
+  }
+}

@@ -1,5 +1,12 @@
 # Performance Dashboard
 
+The [public correctness benchmark](https://github.com/Sparkz400/performance_dashboard/blob/main/benchmarks/correctness/README.md)
+publishes 15 synthetic shift/OEE cases and independently specified answers, with a
+comparison runner for other implementations.
+[Engineering feedback](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/ENGINEERING_FEEDBACK.md)
+describes four isolated CI groups, retained required checks, timing/failure receipts
+and browser resource diagnostics. Short checks do not establish multi-day reliability.
+
 See the [acceptance execution record](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/ACCEPTANCE_EXECUTION.md)
 for all remaining pilot gates and the evidence needed to close them. Unsigned
 candidates do not establish publisher trust.

@@ -24,6 +24,11 @@ The [acceptance execution record](docs/ACCEPTANCE_EXECUTION.md) lists every rema
 pilot gate and the evidence needed to close it. Release candidates remain unsigned
 until publisher key custody is established.
 
+The [public correctness benchmark](benchmarks/correctness/README.md) publishes 15
+synthetic cases with independently specified shift/OEE answers and a comparison tool
+for other implementations. [Engineering feedback](docs/ENGINEERING_FEEDBACK.md)
+documents parallel CI suites, retained coverage, timings and browser resource diagnostics.
+
 ## What it does
 
 - Browse OPC UA nodes and configure per-machine tag mappings.
