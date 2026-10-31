@@ -117,8 +117,46 @@ readings keep their source time. A message without a readable source timestamp, 
 non-JSON payload, a payload over 16 KiB or an unmapped topic is refused and counted
 (no time, no sample); a missing value or one of the wrong type is stored as a bad sample. Time without
 messages stays unknown. The status line shows connection state, readings received,
-refused messages and the last refusal. Sparkplug B is not decoded
-(`test-mqtt-ingestion.mjs`).
+refused messages and the last refusal (`test-mqtt-ingestion.mjs`).
+
+### Sparkplug B sources
+
+A source can instead use the **Sparkplug B** payload format (Eclipse Sparkplug 3.0,
+protobuf). Each mapping names a group, an edge node, an optional device and a metric
+name, and ties it to one signal key and type. Group, node and device identifiers may not
+contain `/`, `+` or `#`. The collector subscribes to the `NBIRTH`, `NDATA` and `NDEATH`
+topics of each mapped edge node and to `DBIRTH`, `DDATA` and `DDEATH` of all its devices
+(single-level wildcard): the node's 0–255 sequence number counts every device message,
+so a lost message is only detectable when all of them are read. The broker ACL should
+allow exactly these filters. The collector never publishes: it is not a Sparkplug
+primary host, sends no `STATE` and never requests a rebirth.
+
+- A birth certificate records aliases and datatypes; its metric values are stored like
+  data. Metrics that carry a name are always readable. Alias-only metrics are readable
+  only after a birth that was followed without a sequence gap. Before the first birth,
+  after a gap, or after a death they are refused and counted until the next natural birth.
+  Without a rebirth request, a node that sends only aliases stays unreadable until it
+  restarts or is rebirthed by its primary host.
+- A node death whose `bdSeq` matches the latest birth (or with no known birth) stores
+  every mapped signal of the node and its devices as `BadCommunicationError` at receipt
+  time; an older will is ignored. A device death does the same for that device at its
+  payload time. Signals stay unknown instead of holding their last value.
+- A metric's own timestamp is used, then the payload's; without either the reading is
+  refused. `is_null` is stored as `BadNoData`, never as zero. Int8 and Int16 accept both
+  the 3.0 two's-complement form and the older narrow form; 64-bit values are stored only
+  when exactly representable; a value that does not fit the mapped type is stored as
+  `BadDecodingError`. Historical metrics keep their own timestamps.
+- Payloads over 256 KiB or that are not a valid protobuf are refused. Strings, bytes,
+  datasets, templates and properties are not mapped.
+- Birth, alias and sequence state is in memory: after a collector restart every node
+  waits for its next birth. The status line shows each mapped node and device as born,
+  waiting for birth, sequence gap or offline.
+
+Edge nodes configured to wait for a primary host's `STATE` before publishing will not
+publish to this collector alone. Validation: `sparkplug.test.ts` (hand-encoded payloads,
+sequence and death rules) and `test-mqtt-ingestion.mjs` (TLS broker, births, data,
+deaths, redelivery after a committed write and the browser form). No physical Sparkplug
+edge node or commercial host has been qualified.
 
 ## Inspections of a shift's products
 

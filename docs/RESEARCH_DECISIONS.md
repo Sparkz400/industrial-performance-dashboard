@@ -14,7 +14,7 @@ They follow the ROADMAP's "Decisions that remain conditional" defaults: OPC UA p
 | X02 | REJECT | Close as rejected | No labeled incidents; the Done text prescribes rejection |
 | X04 | BUILT as an advisory prototype (wave 12) | Open acceptance | Withheld below 10 comparable runs; actual pilot-run backtest still required |
 | X06 | BUILT rules and usefulness log (wave 12) | Open | The comparison with the ranked list needs P06 users |
-| C06 | BUILT plain MQTT; Sparkplug not selected (wave 10) | Done | Owner lifted the deferral; Sparkplug host duties still conflict with read-only operation |
+| C06 | BUILT plain MQTT (wave 10); passive Sparkplug B listener (2026-10-31) | Done | Reads births, data and deaths without host duties; alias-only nodes wait for their next birth |
 | H08 | BUILT (owner lifted the deferral, wave 11) | Done | Token-authenticated, site-qualified, acknowledged history; tested with owned installations |
 | E02 | BUILT (owner lifted the deferral, wave 11) | Done | OIDC with openid-client against an owned provider; read-only service tokens; no customer IdP qualified |
 | P01 | Guide and hypotheses drafted | Open | Needs an operator, an engineer and a production lead |
@@ -373,6 +373,14 @@ Reopen trigger, all of:
 - Refused and counted: no source timestamp, non-JSON, over 16 KiB, unmapped topic. A missing or wrong-type value is stored as a bad sample.
 - `test-mqtt-ingestion.mjs`: broker ACL (publish and unmapped topic refused), duplicates, late reading, bad value, redelivery after a committed write, broker restart, wrong CA, wrong password and disabling a source in the browser.
 - Still open: a real broker and source (P01), and Sparkplug if a source ever requires it.
+
+**Outcome 2026-10-31 (passive Sparkplug B).** Built the "passive non-primary host that marks gaps unknown" option above; rebirth stays unselected, so read-only operation is unchanged.
+- No new dependency: a bounded protobuf wire-format reader decodes the scalar Payload and Metric fields (cross-checked once against protobufjs-encoded payloads with the Tahu schema). Payloads are limited to 256 KiB because a birth lists every metric of a node.
+- A source chooses `json` or `sparkplug-b` (`mqtt_sources.payload_format`, default `json`, migration 0041). Mappings name group, edge node, optional device and metric. Exact node topics plus the node's device topics through a single-level wildcard: the 0–255 sequence counts every device message, so gaps are detectable only when all are read.
+- Births record aliases and datatypes; named metrics are always read; alias-only metrics are refused before a birth and after a sequence gap or death. Without rebirth requests they wait for the next natural birth.
+- A matching node death (or a death with no known birth) stores the node's and its devices' mapped signals as `BadCommunicationError`; a will with an older `bdSeq` is ignored. Device deaths do the same per device. `is_null` is `BadNoData`; Int8/Int16 accept both the 3.0 and the older narrow encoding; unsafe 64-bit integers and mismatched types are `BadDecodingError`.
+- Event identities follow the JSON path, so redelivery is stored once. Alias and sequence state is in memory and resets on collector restart.
+- Evidence: `sparkplug.test.ts` and the Sparkplug part of `test-mqtt-ingestion.mjs` (owned TLS broker, ACL limited to the node filters, duplicate and post-commit redelivery, stale and matching deaths, the browser form). Still open: a physical Sparkplug edge node and a deployment where a primary host keeps nodes publishing.
 
 ---
 

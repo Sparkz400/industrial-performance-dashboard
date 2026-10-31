@@ -1591,7 +1591,7 @@ export const plcAlarmEvents = pgTable(
     index("plc_alarm_event_time").on(t.machineId, t.eventTime),
   ],
 );
-/** A read-only MQTT subscription for a machine: TLS broker, pinned CA and topic mappings. */
+/** A read-only MQTT subscription for a machine: TLS broker, pinned CA and JSON or Sparkplug B mappings. */
 export const mqttSources = pgTable("mqtt_sources", {
   id: serial("id").primaryKey(),
   machineId: integer("machine_id")
@@ -1604,6 +1604,11 @@ export const mqttSources = pgTable("mqtt_sources", {
   // Sealed like machine credentials: AES-256-GCM bound to the machine.
   encryptedPassword: text("encrypted_password"),
   clientId: varchar("client_id", { length: 23 }).notNull().unique(),
+  // json: JSON pointers per exact topic; sparkplug-b: Sparkplug B metrics per edge node/device.
+  payloadFormat: varchar("payload_format", { length: 20 })
+    .$type<"json" | "sparkplug-b">()
+    .notNull()
+    .default("json"),
   mappings: jsonb("mappings").notNull(),
   isActive: boolean("is_active").notNull().default(true),
   createdBy: integer("created_by")
