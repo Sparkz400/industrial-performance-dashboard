@@ -18,7 +18,7 @@ export interface TimeWindow {
 
 export function stateTimeline(
   samples: ShiftSample[],
-  profile: ProductionProfile,
+  profile: Pick<ProductionProfile, "signals" | "states" | "maxGapSeconds">,
   start: Date,
   end: Date,
 ): ProductionInterval[] {
@@ -51,7 +51,9 @@ export function stateTimeline(
         ? null
         : sample.value * (profile.signals.state?.scale ?? 1);
     const state =
-      value != null && sample.statusCode?.startsWith("Good")
+      value != null &&
+      Number.isFinite(value) &&
+      sample.statusCode?.startsWith("Good")
         ? ((Object.entries(profile.states).find(([, values]) =>
             values.includes(value),
           )?.[0] as ProductionState | undefined) ?? "unknown")
@@ -65,7 +67,10 @@ export function stateTimeline(
 
 export function counterDeltas(
   samples: ShiftSample[],
-  profile: ProductionProfile,
+  profile: Pick<
+    ProductionProfile,
+    "counterPolicy" | "counterModulus" | "maxGapSeconds"
+  >,
   scale: number,
   start: Date,
   end: Date,
@@ -80,6 +85,7 @@ export function counterDeltas(
   for (const sample of samples) {
     if (
       sample.value == null ||
+      !Number.isFinite(sample.value) ||
       sample.value < 0 ||
       (profile.counterPolicy === "rollover" &&
         (!profile.counterModulus || sample.value >= profile.counterModulus)) ||

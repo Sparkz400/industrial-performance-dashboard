@@ -29,11 +29,16 @@ import { parseArgs } from "node:util";
 
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
-/** Open P0/P1 backlog items: a release label never hides them. */
+/** Unprioritized acceptance gates and open P0/P1 items must remain visible. */
 export function openAcceptanceItems(todo) {
   return [
-    ...todo.matchAll(/^- \[ \] \*\*([A-Z]+\d+) — ([^*]+)\*\* · (P[01])\b/gm),
-  ].map(([, id, title, priority]) => `${id} (${priority}): ${title.trim()}`);
+    ...todo.matchAll(/^- \[ \] \*\*([A-Z]+\d+) — ([^*]+)\*\*(?: · (P\d)\b)?/gm),
+  ]
+    .filter(([, , , priority]) => !priority || ["P0", "P1"].includes(priority))
+    .map(
+      ([, id, title, priority]) =>
+        `${id} (${priority ?? "acceptance"}): ${title.trim().replace(/:$/, "")}`,
+    );
 }
 
 /** Merged pull requests on the first-parent history since `previous`. */
@@ -93,7 +98,7 @@ rollback (OPERATIONS.md).
 
 ## Open acceptance items
 
-These P0/P1 items were open in TODO.md at this revision. The release label does not
+These P0/P1 items and unprioritized gates were open in TODO.md at this revision. The release label does not
 close them.
 
 ${list(openItems, "None")}
@@ -234,10 +239,10 @@ async function main() {
     },
   });
   assert(
-    ["create", "verify"].includes(command),
-    "Use create|verify --directory PATH --public-key TRUSTED_KEY",
+    ["prepare", "create", "verify"].includes(command),
+    "Use prepare|create|verify --directory PATH [--public-key TRUSTED_KEY]",
   );
-  assert(o.directory && o["public-key"]);
+  assert(o.directory && (command === "prepare" || o["public-key"]));
   const directory = resolve(o.directory);
   if (command === "verify") {
     const manifest = await verifyRelease(directory, o["public-key"]);
@@ -252,8 +257,11 @@ async function main() {
     return;
   }
   assert(
-    o.image && o.version && o.evidence && o["signing-key"],
-    "Create requires image, version, evidence and signing-key",
+    o.image &&
+      o.version &&
+      o.evidence &&
+      (command === "prepare" || o["signing-key"]),
+    "Packaging requires image, version and evidence; create also requires signing-key",
   );
   assert.match(o.version, /^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/);
   const revision = execFileSync("git", ["rev-parse", "HEAD"], {
@@ -289,20 +297,23 @@ async function main() {
     image.Id,
     "Evidence must identify the tested image digest",
   );
-  const privatePath = await realpath(o["signing-key"]);
-  const privateKey = createPrivateKey(await readFile(privatePath));
-  assert.equal(privateKey.asymmetricKeyType, "ed25519");
-  const trusted = createPublicKey(await readFile(o["public-key"]));
-  assert.equal(
-    createPublicKey(privateKey).export({ type: "spki", format: "pem" }),
-    trusted.export({ type: "spki", format: "pem" }),
-    "Signing and trusted verification keys must match",
-  );
-  const keyRelative = relative(directory, privatePath);
-  assert(
-    keyRelative.startsWith("..") || isAbsolute(keyRelative),
-    "Signing key must remain outside the package",
-  );
+  let privateKey;
+  if (command === "create") {
+    const privatePath = await realpath(o["signing-key"]);
+    privateKey = createPrivateKey(await readFile(privatePath));
+    assert.equal(privateKey.asymmetricKeyType, "ed25519");
+    const trusted = createPublicKey(await readFile(o["public-key"]));
+    assert.equal(
+      createPublicKey(privateKey).export({ type: "spki", format: "pem" }),
+      trusted.export({ type: "spki", format: "pem" }),
+      "Signing and trusted verification keys must match",
+    );
+    const keyRelative = relative(directory, privatePath);
+    assert(
+      keyRelative.startsWith("..") || isAbsolute(keyRelative),
+      "Signing key must remain outside the package",
+    );
+  }
   await run(process.execPath, [
     "scripts/offline-package.mjs",
     "create",
@@ -320,13 +331,20 @@ async function main() {
   const install = await readFile(join(directory, "INSTALL.txt"), "utf8");
   await writeFile(
     join(directory, "INSTALL.txt"),
-    "SIGNED RELEASE: Before running any script from this package, use an independently trusted copy of release-package.mjs and an independently trusted publisher public key:\nnode TRUSTED_VERIFIER_PATH verify --directory PACKAGE_DIRECTORY --public-key TRUSTED_PUBLIC_KEY_PATH\nThe bundled verifier and bundled public material cannot establish their own authenticity. Hash-only verification below detects corruption but does not authenticate the publisher. After signature verification succeeds, follow the installation steps below.\n\n" +
+    (command === "prepare"
+      ? "UNSIGNED CANDIDATE: Publisher key custody and trust are pending. This package is for isolated rehearsal only, not a signed release. Hash verification does not authenticate a publisher. Regenerate with the create command and the trusted publisher key before release.\n\n"
+      : "SIGNED RELEASE: Before running any script from this package, use an independently trusted copy of release-package.mjs and an independently trusted publisher public key:\nnode TRUSTED_VERIFIER_PATH verify --directory PACKAGE_DIRECTORY --public-key TRUSTED_PUBLIC_KEY_PATH\nThe bundled verifier and bundled public material cannot establish their own authenticity. Hash-only verification below detects corruption but does not authenticate the publisher. After signature verification succeeds, follow the installation steps below.\n\n") +
       install,
   );
   await copyFile(o.evidence, join(directory, "evidence.json"));
   await copyFile("LICENSE", join(directory, "LICENSE"));
   await copyFile("docs/OPERATIONS.md", join(directory, "OPERATIONS.md"));
   await copyFile("docs/COMPATIBILITY.md", join(directory, "COMPATIBILITY.md"));
+  await copyFile(
+    "docs/ACCEPTANCE_EXECUTION.md",
+    join(directory, "ACCEPTANCE_EXECUTION.md"),
+  );
+  await copyFile("TODO.md", join(directory, "TODO.md"));
   const migrationFiles = (await readdir("server/drizzle"))
     .filter((n) => n.endsWith(".sql"))
     .sort();
@@ -406,7 +424,10 @@ async function main() {
   for (const name of (await readdir(directory)).sort())
     files[name] = await fileDigest(join(directory, name));
   const manifest = {
-    format: "performance-dashboard-release-v1",
+    format:
+      command === "prepare"
+        ? "performance-dashboard-unsigned-candidate-v1"
+        : "performance-dashboard-release-v1",
     version: o.version,
     revision,
     appImage: image.Id,
@@ -418,10 +439,11 @@ async function main() {
   };
   const bytes = Buffer.from(JSON.stringify(manifest, null, 2));
   await writeFile(join(directory, "release.json"), bytes);
-  await writeFile(
-    join(directory, "release.sig"),
-    sign(null, bytes, privateKey),
-  );
+  if (privateKey)
+    await writeFile(
+      join(directory, "release.sig"),
+      sign(null, bytes, privateKey),
+    );
   assert.equal(
     execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
     revision,
@@ -431,10 +453,18 @@ async function main() {
     "",
     "Source changed while packaging",
   );
-  await verifyRelease(directory, o["public-key"]);
+  if (command === "create") await verifyRelease(directory, o["public-key"]);
+  else
+    await run(process.execPath, [
+      "scripts/offline-package.mjs",
+      "verify",
+      "--directory",
+      directory,
+    ]);
   console.log(
     JSON.stringify({
       created: true,
+      signed: command === "create",
       directory,
       version: o.version,
       revision,

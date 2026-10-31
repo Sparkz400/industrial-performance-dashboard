@@ -26,7 +26,7 @@ export async function applyRetention(
     await connection.query("BEGIN");
     await connection.query("SET LOCAL statement_timeout='30s'");
     const actor = await connection.query(
-      "SELECT id FROM users WHERE id=$1 AND role='admin' FOR SHARE",
+      "SELECT id FROM users WHERE id=$1 AND role='admin' AND is_active=true FOR SHARE",
       [userId],
     );
     if (!actor.rowCount)

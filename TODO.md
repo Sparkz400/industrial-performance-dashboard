@@ -41,7 +41,11 @@ F07, F08, F09, F10 and D01. A following P1 gap wave closed R04, O05, H05, D05 an
 backlog wave 1 closed E01, R05, R02 and A08, and recorded research decisions
 ([decisions](docs/RESEARCH_DECISIONS.md)): I08, E06 and X02 closed as rejected; the rest
 stay open with explicit triggers.
-Backlog status: 88 checked and 20 open; I06 is withdrawn.
+Backlog status as reconciled 2026-10-31: 97 checked and 20 open; I06 is withdrawn.
+The [acceptance execution record](docs/ACCEPTANCE_EXECUTION.md) accounts for all 20
+open items and the remaining qualification work under completed software items.
+The owner confirmed simulator-only work and preparation of an unsigned release
+candidate; physical pilot details and publisher key custody are not yet available.
 
 ### Data integrity and reviewed operations — 2026-10-28
 
@@ -225,7 +229,8 @@ New Gitleaks action PR #42 passed all required checks and was merged separately.
   Follow-up: Vitest 5, Storybook 10/Vite 8, MUI 9, react-window 2 and react-grid-layout 2
   are migrated in [PR #81](https://github.com/Sparkz400/performance_dashboard/pull/81) ([decisions](docs/DEPENDENCY_REVIEW.md#coordinated-major-migrations--2026-10-30)).
   ESLint stays on 9 until eslint-plugin-react supports 10; Node 26 needs its own support
-  decision. The full boundary audit remains open.
+  decision. The boundary audit was subsequently completed in PR #66 below;
+  current dependency evidence is recorded in [dependency review](docs/DEPENDENCY_REVIEW.md).
   Image remediation complete: Node 24/Wolfi with direct PDF rendering removes the
   Debian/Chromium runtime. Full Trivy scan: zero findings across 28 OS and 557 Node
   packages. CI blocks all high/critical findings, including unfixed ones. Actual-image
@@ -1129,7 +1134,7 @@ below retain their unfulfilled acceptance criteria.
   boundaries and add fixtures useful to reviewers. Maintain existing public-repo policies
   instead of adding redundant workflows or unmaintained template files.
   Completed ([PR #71](https://github.com/Sparkz400/performance_dashboard/pull/71)): CONTRIBUTING maps TODO prefixes and subsystems to code paths and the
-  evidence to quote, states the owned-database rule and the unqualified widget runtime, and
+  evidence to quote, states the owned-database rule and the sandboxed widget contract, and
   points to sanitized examples; existing issue templates and workflows are reused.
 - [ ] **P06 — Review product usefulness after each pilot milestone** · P1 · M1 · Research · M. Depends: D06, P01.
   Done: compare commissioning effort, report preparation time, unresolved stop reasons

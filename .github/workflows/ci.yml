@@ -33,6 +33,7 @@ jobs:
           node scripts/test-report-pdf.mjs
           python scripts/check-report-pdf.py
       - run: node scripts/test-dev-dependencies.mjs
+      - run: node scripts/test-dependency-audit.mjs
       - run: node scripts/test-release-package.mjs
       - run: npm run db:generate -w server
       - name: Reject uncommitted migration changes
@@ -99,6 +100,7 @@ jobs:
       - run: node scripts/test-shares.mjs
       - run: node scripts/test-alarm-replay.mjs
       - run: node scripts/test-report-boundaries.mjs
+      - run: node scripts/test-oee-boundaries.mjs
       - run: node scripts/test-collector-lock.mjs
       - run: node scripts/test-collector-fencing.mjs
       - run: node scripts/test-subscription-limits.mjs

@@ -1,5 +1,9 @@
 # Performance Dashboard
 
+See the [acceptance execution record](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/ACCEPTANCE_EXECUTION.md)
+for all remaining pilot gates and the evidence needed to close them. Unsigned
+candidates do not establish publisher trust.
+
 The [desktop and phone interface](https://github.com/Sparkz400/performance_dashboard/blob/main/DESIGN.md)
 opens on the shift overview. Custom dashboards stay available separately. On a phone,
 use **More** for all permitted administration, quality, reporting and asset destinations.

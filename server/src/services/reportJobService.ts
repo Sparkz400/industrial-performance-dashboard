@@ -105,7 +105,8 @@ class ReportJobService {
       const [schedule] = await tx
         .select()
         .from(reportSchedules)
-        .where(eq(reportSchedules.id, scheduleId));
+        .where(eq(reportSchedules.id, scheduleId))
+        .for("update");
       if (!schedule) throw new NotFoundError("Report schedule");
       return enqueue(
         tx,
@@ -239,7 +240,12 @@ class ReportJobService {
         .select()
         .from(reportHistory)
         .where(eq(reportHistory.id, id));
-      if (!job?.snapshot || !job.scheduledFor) return;
+      if (
+        !job?.snapshot ||
+        !job.scheduledFor ||
+        !["queued", "generating", "failed", "completed"].includes(job.status)
+      )
+        return;
       if (job.status !== "completed") {
         if (
           job.status === "failed" &&

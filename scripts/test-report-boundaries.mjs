@@ -54,13 +54,48 @@ await dailyFixture(async ({ pool, call, users }) => {
     200,
   );
 
-  // Deleting the schedule cancels its queued run and undelivered email.
-  assert.equal((await call("admin", "DELETE", `/api/v1/reports/schedules/${schedule}`)).status(), 200);
-  assert.equal((await history(queued.id)).status, "cancelled");
-  assert.equal((await history(awaitingEmail)).email_status, "cancelled");
-  await reportJobService.processPending();
-  assert.equal((await history(queued.id)).status, "cancelled", "A cancelled run is never generated");
-  assert.equal((await history(queued.id)).file_path, null);
+  // A worker owns this job: deletion must refuse rather than race a render/send.
+  const worker = await pool.connect();
+  try {
+    await worker.query("SELECT pg_advisory_lock(8744, $1)", [queued.id]);
+    const busy = await call("admin", "DELETE", `/api/v1/reports/schedules/${schedule}`);
+    assert.equal(busy.status(), 400);
+    assert.match(await busy.text(), /currently running/);
+    assert.equal((await history(queued.id)).status, "queued");
+  } finally {
+    await worker.query("SELECT pg_advisory_unlock(8744, $1)", [queued.id]);
+    worker.release();
+  }
+  // Delete after selection but before the worker acquires its lock. An interrupted
+  // generating job must also be cancellable when no worker still owns it.
+  await pool.query("UPDATE report_history SET status='generating' WHERE id=$1", [queued.id]);
+  const original = reportJobService.processOne.bind(reportJobService);
+  const { reportEmailService } = await import("../server/dist/src/services/reportEmailService.js");
+  const originalSend = reportEmailService.sendReport;
+  let deliveries = 0, selected = false;
+  Object.defineProperty(reportEmailService, "configured", { configurable: true, value: true });
+  reportEmailService.sendReport = async () => { deliveries++; return []; };
+  reportJobService.processOne = async (id) => {
+    if (id === queued.id) {
+      selected = true;
+      assert.equal((await call("admin", "DELETE", `/api/v1/reports/schedules/${schedule}`)).status(), 200);
+    }
+    await original(id);
+  };
+  try {
+    await reportJobService.processPending();
+    assert.equal(selected, true, "Exercise deletion after queue selection");
+    assert.equal((await history(queued.id)).status, "cancelled", "A cancelled run is never generated");
+    assert.equal((await history(queued.id)).file_path, null);
+    assert.equal((await history(awaitingEmail)).email_status, "cancelled");
+    await original(awaitingEmail);
+    assert.equal(deliveries, 0, "No delivery after successful deletion");
+    await assert.rejects(reportJobService.enqueueManual(schedule), /not found/i);
+  } finally {
+    reportJobService.processOne = original;
+    reportEmailService.sendReport = originalSend;
+    delete reportEmailService.configured;
+  }
   owner = null;
 
   // Opt-in retention removes only old PDFs inside the reports directory.

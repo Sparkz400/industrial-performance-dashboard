@@ -1,5 +1,16 @@
 # Current status
 
+## Audit corrections — 2026-10-31
+
+Legacy OEE now preserves stale/bad-quality time and counter gaps, and withholds
+daily manual quantities from hourly windows. Report deletion cannot revive a
+cancelled selected job; an actively running report must finish before deletion.
+Background retention rechecks that its reviewer is still an active administrator.
+Release notes include unprioritized gates such as FR01. The dependency review
+retains raw scanner output and distinguishes a narrowly verified false positive.
+The [execution record](ACCEPTANCE_EXECUTION.md) accounts for all 20 open items;
+the owner confirmed simulator-only work and an unsigned candidate pending key custody.
+
 ## Desktop and phone interface — 2026-10-30
 
 The home page now uses existing scoped production observations and shift reports.
@@ -294,8 +305,11 @@ simulator evidence do not establish physical-machine acceptance or release readi
   one installation; this does not establish tenant isolation. See the
   [production workflow and evidence](PRODUCTION_WORKFLOW.md) and [TODO](../TODO.md).
 - Separate companies must use separate installations. Tenant isolation is unqualified.
-- The full npm audit reports zero vulnerabilities, including development tools.
-  Security CI now blocks advisories at every severity and preserves the full audit.
+- The 2026-10-31 dependency refresh fixes Joi, glob and modern minimatch advisories.
+  The server runtime audit has zero findings. The full raw audit retains 14 development
+  package findings from one non-applicable legacy minimatch advisory; a source-hash,
+  version, development-only and expiry checked review handles it explicitly.
+  All other advisories remain blocking. See [dependency review](DEPENDENCY_REVIEW.md).
   The scoped esbuild override and its compatibility check are documented in
   [the review](DEPENDENCY_REVIEW.md). CSRF and cross-origin socket regression checks pass.
 - The Node 24/Wolfi image renders scheduled PDFs without Chromium and has zero

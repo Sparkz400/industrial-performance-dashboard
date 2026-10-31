@@ -13,7 +13,10 @@ Startup and the one-second scheduler poll catch up retained missed slots, up to
 20 per pass, without dropping the remaining backlog. A newly created/re-enabled
 schedule starts at its next future slot. Changing cron/timezone resets that cursor;
 already queued runs retain their saved configuration. Deleting a schedule cancels
-its queued or retrying runs and emails; deleting a template does not cancel jobs
+its queued, interrupted or retrying runs and undelivered emails. If a worker is
+currently generating or delivering a report, deletion returns an explanatory error;
+retry after that run finishes. A successful deletion prevents later generation and
+delivery even when a worker selected the job earlier. Deleting a template does not cancel jobs
 already queued from it.
 
 Jobs snapshot the template, machines, recipients, timezone and period end. The

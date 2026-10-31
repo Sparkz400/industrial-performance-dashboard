@@ -1,7 +1,9 @@
+import { oeeRepository } from "../repositories/oeeRepository.js";
 import {
-  oeeRepository,
-  type ManualEntryInput,
-} from "../repositories/oeeRepository.js";
+  counterDeltas,
+  stateTimeline,
+  type ShiftSample,
+} from "./shiftCalculation.js";
 import { NotFoundError, ValidationError } from "../utils/errors.js";
 import logger from "../utils/logger.js";
 import type { OeeConfigRow } from "../database/schema.js";
@@ -60,91 +62,56 @@ function asNumberArray(value: unknown): number[] {
   return [];
 }
 
+// shortcut: legacy OEE uses a 60-second freshness limit; use a production profile for machine-specific gaps and rollover.
+const counterPolicy = {
+  maxGapSeconds: 60,
+  counterPolicy: "reset-to-zero" as const,
+};
+
 function classifyDataPoints(
-  dataPoints: { timestamp: Date; value: number | null }[],
+  dataPoints: ShiftSample[],
   config: OeeConfigRow,
   startDate: Date,
   endDate: Date,
-): {
-  runningMs: number;
-  plannedStopMs: number;
-  totalMs: number;
-  unknownMs: number;
-} {
-  const runningValues = new Set(asNumberArray(config.runningModeValues));
-  const plannedStopValues = new Set(
-    asNumberArray(config.plannedStopModeValues),
-  );
-
-  let runningMs = 0;
-  let plannedStopMs = 0;
-  const totalMs = endDate.getTime() - startDate.getTime();
-  let knownMs = 0;
-  const knownValues = new Set([
-    ...runningValues,
-    ...plannedStopValues,
-    ...asNumberArray(config.idleModeValues),
-    ...asNumberArray(config.unplannedStopModeValues),
-  ]);
-
-  for (let i = 0; i < dataPoints.length; i++) {
-    const current = dataPoints[i];
-    const next = dataPoints[i + 1];
-    const gapMs =
-      Math.min(
-        next ? new Date(next.timestamp).getTime() : endDate.getTime(),
-        endDate.getTime(),
-      ) - Math.max(new Date(current.timestamp).getTime(), startDate.getTime());
-
-    if (gapMs <= 0) continue;
-
-    const modeValue = current.value;
-    if (modeValue === null || !knownValues.has(modeValue)) continue;
-    knownMs += gapMs;
-
-    if (modeValue !== null && runningValues.has(modeValue)) {
-      runningMs += gapMs;
-    } else if (modeValue !== null && plannedStopValues.has(modeValue)) {
-      plannedStopMs += gapMs;
-    }
-    // idle and unplanned stop time is implicitly totalMs - runningMs - plannedStopMs
-  }
-
-  return { runningMs, plannedStopMs, totalMs, unknownMs: totalMs - knownMs };
-}
-
-function getCountFromDataPoints(
-  dataPoints: { timestamp: Date; value: number | null }[],
-): number {
-  let count = 0;
-  let previous: number | null = null;
-  for (const { value } of dataPoints) {
-    if (value === null || !Number.isFinite(value) || value < 0) {
-      previous = null;
-      continue;
-    }
-    if (previous !== null) {
-      // shortcut: a decrease means reset to zero; modulus rollover needs machine-specific configuration.
-      count += value >= previous ? value - previous : value;
-    }
-    previous = value;
-  }
-  return count;
-}
-
-function hasCounterCoverage(
-  data: { timestamp: Date; value: number | null }[],
-  startDate: Date,
 ) {
-  return (
-    data.length > 0 &&
-    new Date(data[0].timestamp) <= startDate &&
-    data.every(
-      (point) =>
-        point.value !== null &&
-        Number.isFinite(point.value) &&
-        point.value >= 0,
-    )
+  const timeline = stateTimeline(
+    dataPoints,
+    {
+      maxGapSeconds: counterPolicy.maxGapSeconds,
+      signals: {},
+      states: {
+        running: asNumberArray(config.runningModeValues),
+        planned: asNumberArray(config.plannedStopModeValues),
+        idle: asNumberArray(config.idleModeValues),
+        fault: asNumberArray(config.unplannedStopModeValues),
+      },
+    },
+    startDate,
+    endDate,
+  );
+  const result = {
+    runningMs: 0,
+    plannedStopMs: 0,
+    unknownMs: 0,
+    totalMs: +endDate - +startDate,
+  };
+  for (const interval of timeline) {
+    const duration = Date.parse(interval.end) - Date.parse(interval.start);
+    if (interval.state === "running") result.runningMs += duration;
+    if (interval.state === "planned") result.plannedStopMs += duration;
+    if (interval.state === "unknown") result.unknownMs += duration;
+  }
+  return result;
+}
+
+async function manualDays(machineId: number, start: Date, end: Date) {
+  const dayMs = 86_400_000;
+  // Daily declarations cannot be apportioned to an hour or a partial day.
+  if (+start % dayMs || +end % dayMs) return [];
+  return oeeRepository.getManualEntries(
+    machineId,
+    start.toISOString().slice(0, 10),
+    new Date(+end - 1).toISOString().slice(0, 10),
   );
 }
 
@@ -252,24 +219,23 @@ export const oeeCalculationService = {
         startDate,
         endDate,
       );
-      totalCount = getCountFromDataPoints(countData);
-      dataComplete = hasCounterCoverage(countData, startDate);
-    } else if (config.manualEntryEnabled) {
-      // Fall back to manual entries
-      const startStr = startDate.toISOString().split("T")[0];
-      const endStr = endDate.toISOString().split("T")[0];
-      const entries = await oeeRepository.getManualEntries(
-        machineId,
-        startStr,
-        endStr,
+      const measured = counterDeltas(
+        countData,
+        counterPolicy,
+        1,
+        startDate,
+        endDate,
       );
+      totalCount = measured.count ?? 0;
+      dataComplete = measured.complete;
+    } else if (config.manualEntryEnabled) {
+      const entries = await manualDays(machineId, startDate, endDate);
       totalCount = entries.reduce(
         (sum: number, e: { productionCount: number | null }) =>
           sum + (e.productionCount ?? 0),
         0,
       );
-      dataComplete =
-        entries.length > 0 && entries.every((e) => e.productionCount !== null);
+      // Daily declarations are provisional, not measured coverage.
     }
 
     let performance = 0;
@@ -329,19 +295,25 @@ export const oeeCalculationService = {
         ),
       ]);
 
-      goodCount = getCountFromDataPoints(goodData);
-      rejectCount = getCountFromDataPoints(rejectData);
-      dataComplete =
-        hasCounterCoverage(goodData, startDate) &&
-        hasCounterCoverage(rejectData, startDate);
-    } else if (config.manualEntryEnabled) {
-      const startStr = startDate.toISOString().split("T")[0];
-      const endStr = endDate.toISOString().split("T")[0];
-      const entries = await oeeRepository.getManualEntries(
-        machineId,
-        startStr,
-        endStr,
+      const good = counterDeltas(
+        goodData,
+        counterPolicy,
+        1,
+        startDate,
+        endDate,
       );
+      const reject = counterDeltas(
+        rejectData,
+        counterPolicy,
+        1,
+        startDate,
+        endDate,
+      );
+      goodCount = good.count ?? 0;
+      rejectCount = reject.count ?? 0;
+      dataComplete = good.complete && reject.complete;
+    } else if (config.manualEntryEnabled) {
+      const entries = await manualDays(machineId, startDate, endDate);
       goodCount = entries.reduce(
         (sum: number, e: { goodCount: number | null }) =>
           sum + (e.goodCount ?? 0),
@@ -352,9 +324,6 @@ export const oeeCalculationService = {
           sum + (e.rejectCount ?? 0),
         0,
       );
-      dataComplete =
-        entries.length > 0 &&
-        entries.every((e) => e.goodCount !== null && e.rejectCount !== null);
     }
 
     const totalCount = goodCount + rejectCount;
