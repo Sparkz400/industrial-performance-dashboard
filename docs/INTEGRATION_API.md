@@ -10,6 +10,8 @@ runs the published example client
 [`scripts/examples/integration-client.mjs`](https://github.com/Sparkz400/performance_dashboard/blob/main/scripts/examples/integration-client.mjs)
 against an owned database. Outbound events are covered by
 [`scripts/test-integration-outbox.mjs`](https://github.com/Sparkz400/performance_dashboard/blob/main/scripts/test-integration-outbox.mjs).
+Ready-made Grafana provisioning and Node-RED flows that use this contract are in
+[Grafana and Node-RED](INTEGRATIONS.md).
 
 ## Access
 

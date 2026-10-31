@@ -74,7 +74,7 @@ where marked *(local)*.
 | Release packaging | `test-release-package.mjs` (signature, tampering, generated notes, compatibility required), `offline-package.mjs verify`; `release-evidence.mjs` collects CI and image evidence; see [releasing](RELEASING.md) | D |
 | Offline package update | `test-offline-update.mjs PREVIOUS_REVISION` *(local)*: signed packages from two revisions, internal-only install, changed SBOM/license inventory/images refused, failed upgrade rolled back, upgrade from the second package with verified backup, additive migrations and preserved data | D |
 | Offline outbound destinations | `test-offline-destinations.mjs`: unresolvable SMTP and webhook hosts fail visibly; the report still completes | D |
-| Published examples | `test-examples.mjs`: no credentials; dashboard import and report template produce their documented output | D |
+| Published examples | `test-examples.mjs`: no credentials; dashboard import and report template produce their documented output; Grafana and Node-RED requests are service-token contract reads whose selected fields exist and keep non-Good data null ([integrations](INTEGRATIONS.md)) | D |
 | Data ownership and audit scope | `test-data-ownership.mjs`: failed sign-ins, an export, retention steps, refused and accepted deletion, destination changes with the secret shown only at creation, grant and account changes with previous values; see [data ownership](DATA_OWNERSHIP.md) | D |
 | Endurance | `test-installation-endurance.mjs` short run in CI; the 72-hour gate (FR01) is open | D B S |
 
