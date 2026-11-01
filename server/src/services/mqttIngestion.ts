@@ -210,7 +210,7 @@ class MqttIngestion {
       reconnectPeriod: 5000,
       connectTimeout: 10000,
     });
-    client.handleMessage = (packet, callback) => {
+    client.handleMessage = async (packet, callback) => {
       // A refused write is redelivered later; its replay must not look like a sequence gap.
       const before = sparkplug && structuredClone(sparkplug.state);
       const { measurements, rejected } = sparkplug
@@ -230,7 +230,7 @@ class MqttIngestion {
             new Date(),
           );
       try {
-        for (const m of measurements) opcuaQueueWorker.enqueue(m);
+        await Promise.all(measurements.map((m) => opcuaQueueWorker.enqueue(m)));
       } catch (error) {
         // Not acknowledged: the broker redelivers once storage recovers.
         if (sparkplug && before) sparkplug.state = before;

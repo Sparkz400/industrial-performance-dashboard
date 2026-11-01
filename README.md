@@ -154,6 +154,9 @@ alarms, scheduled reports and signed-in browser sessions with confirmed logout/l
 renewal. Bounded browser network logs support failure diagnosis; a short run does not qualify
 72-hour operation. Edge cursors wait for open measurement transactions; PLC alarm
 events remain in a durable local spool until PostgreSQL confirms storage.
+Measurement spool operations run in a dedicated storage thread. Batched writes
+retain SQLite FULL durability; live updates and MQTT acknowledgements wait for commit,
+and bounded uncommitted input stops acquisition if storage cannot keep up.
 
 [Data integrity and reviewed operations](docs/DATA_INTEGRITY.md) adds observed-data
 widgets, attributable measurement corrections, bounded calculated signals, explicit

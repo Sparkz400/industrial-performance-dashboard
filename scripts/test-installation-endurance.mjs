@@ -36,6 +36,7 @@ import {
   captureFailurePages,
   enduranceBrowserOptions,
   redactBrowserNetLog,
+  fatalTransportFailure,
 } from "./endurance-harness.mjs";
 
 // This harness owns every endpoint. It never loads the installation's .env.
@@ -621,6 +622,8 @@ try {
         error: request.failure()?.errorText,
       });
       networkErrors = networkErrors.slice(-40);
+      const transportFailure = fatalTransportFailure(request.failure()?.errorText);
+      if (transportFailure) failRun(transportFailure);
     });
     page.on("response", (response) => {
       if (response.status() >= 400 && response.url().startsWith(api))

@@ -49,7 +49,7 @@ export async function connectionDiagnostics(
   ).rows;
   let queue = null;
   try {
-    queue = worker.getMachineHealth(machineId);
+    queue = await worker.getMachineHealth(machineId);
   } catch {
     /* Storage unavailable is unknown, never an empty queue. */
   }

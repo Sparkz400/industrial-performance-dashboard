@@ -120,6 +120,16 @@ recorded elapsed time establishes its duration. A running process or successful
 short smoke test does not establish 72-hour reliability. Receipts must identify
 the tested source revision, workload, failures and excluded qualification gates.
 
+The 2026-10-31 diagnostic run based on `20986b77` exposed synchronous measurement
+spool writes blocking HTTP processing, including failed compiled-script responses.
+The spool now runs in a dedicated thread and batches at most 100 writes into each
+FULL transaction. At most 1,000 measurements await durable acceptance; overload
+stops acquisition rather than acknowledging memory-only data. Recovery, failed
+writes and quarantine retain their stable event identities. The short responsiveness
+and recovery checks do not close FR01; a fresh full 72-hour run is still required.
+The separate Windows `ERR_NO_BUFFER_SPACE` cause is not established; the harness
+stops on its first occurrence (or `ERR_NETWORK_CHANGED`) to retain network evidence.
+
 Keep the checkout and its owned resources while a long run is active. Preserve
 the final evidence outside an unused worktree before cleanup. A machine-owner
 approved physical pilot, independent full-shift reconciliation and deployment

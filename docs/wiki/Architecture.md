@@ -46,7 +46,9 @@ The AI assistant and provider integration have been removed.
 See the [architecture guide](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/ARCHITECTURE.md)
 for measurement quality, durable replay, OEE boundaries and deployment limits.
 One collector per database holds a PostgreSQL advisory lock; records PostgreSQL refuses
-are quarantined on the collector instead of blocking the spool. Outbound webhooks are a
+are quarantined on the collector instead of blocking the spool. Measurement spool
+operations run off the HTTP thread; bounded batches retain FULL durability and
+resolve acceptance only after commit. Outbound webhooks are a
 durable outbox described in the
 [integration API contract](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/INTEGRATION_API.md).
 

@@ -74,7 +74,7 @@ export async function testUnattendedAlarms({ page, frontend, call, pool, machine
   await insertState(false); await healthIncidentService.check();
   assert.ok((await healthRows(`machine-${machine.id}`)).at(-1).resolved_at);
   const originalHealth = worker.getHealth;
-  const healthy = originalHealth.call(worker);
+  const healthy = await originalHealth.call(worker);
   try {
     worker.getHealth = () => ({ ...healthy, storageFailure: { at: new Date().toISOString(), message: "Owned injected storage failure" }, pendingMeasurements: 2, oldestReceivedAgeSeconds: 120 });
     await healthIncidentService.check(); await healthIncidentService.check();

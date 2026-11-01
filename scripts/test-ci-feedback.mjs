@@ -17,7 +17,7 @@ import {
 import { safeFailure } from "./endurance-harness.mjs";
 
 const { manifest, baseline } = await loadCiSuites();
-assert.equal(validateCiSuites(manifest, baseline), 62);
+assert.equal(validateCiSuites(manifest, baseline), 63);
 const removed = structuredClone(manifest);
 removed.shards["1"].pop();
 assert.throws(
@@ -65,7 +65,7 @@ assert(
   ).includes("private-"),
 );
 console.log(
-  "PASS: all 61 original regression commands/arguments/environment retained once; extra resource test present; missing/duplicate coverage and failed timing comparisons rejected; secrets redacted",
+  "PASS: all 61 original regression commands/arguments/environment retained once; extra resource and asynchronous storage tests present; missing/duplicate coverage and failed timing comparisons rejected; secrets redacted",
 );
 
 const root = resolve(import.meta.dirname, "..");

@@ -6,7 +6,7 @@ for proposed contracts and the [research assessment](RESEARCH.md) for implementa
 ```mermaid
 flowchart LR
   Machine[OPC UA machine or simulator] --> Collector[Node.js collector]
-  Collector --> Spool[Local SQLite measurement spool]
+  Collector --> Spool[Storage thread: local SQLite measurement spool]
   Spool --> Database[(PostgreSQL history)]
   Collector --> Socket[Authenticated live updates]
   Database --> API[Express REST and tRPC]

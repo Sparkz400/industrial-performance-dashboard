@@ -14,7 +14,13 @@ import {
   captureFailurePages,
   enduranceBrowserOptions,
   redactBrowserNetLog,
+  fatalTransportFailure,
 } from "./endurance-harness.mjs";
+
+for (const error of ["net::ERR_NO_BUFFER_SPACE", "net::ERR_NETWORK_CHANGED"])
+  assert.match(fatalTransportFailure(error)?.message, /Browser transport failed/);
+for (const error of [undefined, "net::ERR_ABORTED", "net::ERR_CONNECTION_REFUSED"])
+  assert.equal(fatalTransportFailure(error), null);
 
 const receiptDirectory = await mkdtemp(join(tmpdir(), "pd-endurance-receipt-"));
 const receipt = join(receiptDirectory, "status.json");

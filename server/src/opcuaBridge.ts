@@ -82,12 +82,15 @@ export function setupOpcuaBridge({
   if (!config.RECOVERY_MODE) webhookService.start();
 
   let acquisitionStopped = false;
-  opcuaEmitter.on("nodeChanged", (data: OpcuaNodeData) => {
+  opcuaEmitter.on("nodeChanged", async (data: OpcuaNodeData) => {
     if (acquisitionStopped) return;
     if (data && data.key && data.timestamp && data.value !== undefined) {
       try {
         if (!data.alreadySpooled)
-          opcuaQueueWorker.enqueue({ ...data, machineId: data.machineId });
+          await opcuaQueueWorker.enqueue({
+            ...data,
+            machineId: data.machineId,
+          });
       } catch (error) {
         acquisitionStopped = true;
         logger.error(

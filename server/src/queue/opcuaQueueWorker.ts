@@ -1,3 +1,4 @@
+import { AsyncMeasurementSpool } from "./asyncMeasurementSpool.js";
 import { collectorDiagnostics } from "../services/collectorDiagnostics.js";
 import db from "../database/db.js";
 import { collectorEpochs, opcuaData } from "../database/schema.js";
@@ -7,7 +8,6 @@ import logger from "../utils/logger.js";
 import config from "../config/config.js";
 import alarmEvaluator from "../services/alarmService.js";
 import {
-  MeasurementSpool,
   toMeasurementRow,
   type OpcuaDataItem,
   type SpoolEntry,
@@ -23,7 +23,7 @@ function refusedRecord(error: unknown): boolean {
 }
 
 export class OpcuaQueueWorker {
-  private spool?: MeasurementSpool;
+  private spool?: AsyncMeasurementSpool;
   private timer?: ReturnType<typeof setTimeout>;
   private pending?: Promise<void>;
   private stopped = false;
@@ -32,20 +32,20 @@ export class OpcuaQueueWorker {
   private commits: { at: number; count: number }[] = [];
 
   private getSpool() {
-    return (this.spool ??= new MeasurementSpool(config.OPCUA_SPOOL_PATH, {
+    return (this.spool ??= new AsyncMeasurementSpool(config.OPCUA_SPOOL_PATH, {
       maxEntries: config.OPCUA_SPOOL_MAX_ENTRIES,
       minFreeBytes: config.OPCUA_SPOOL_RESERVE_MB * 1024 * 1024,
     }));
   }
 
-  enqueue(data: OpcuaDataItem): void {
+  async enqueue(data: OpcuaDataItem): Promise<void> {
     if (this.stopped) {
       collectorDiagnostics.rejected(data.machineId);
       throw new Error("Measurement collector is stopped");
     }
     // Fail visibly if local storage is unavailable; never acknowledge a lost sample.
     try {
-      this.getSpool().enqueue({
+      await this.getSpool().enqueue({
         ...data,
         leaseEpoch: data.leaseEpoch ?? currentLease()?.epoch,
       });
@@ -64,11 +64,11 @@ export class OpcuaQueueWorker {
     return this.getSpool().machineHealth(machineId);
   }
 
-  getHealth() {
+  async getHealth() {
     const since = Date.now() - 60000;
     this.commits = this.commits.filter((commit) => commit.at >= since);
     return {
-      ...this.getSpool().health(),
+      ...(await this.getSpool().health()),
       committedLastMinute: this.commits.reduce((sum, c) => sum + c.count, 0),
       writeFailure: this.writeFailure,
       storageFailure: this.storageFailure,
@@ -80,7 +80,7 @@ export class OpcuaQueueWorker {
     return this.getSpool().quarantined(limit);
   }
 
-  requeueQuarantine(): number {
+  requeueQuarantine(): Promise<number> {
     return this.getSpool().requeueQuarantined();
   }
 
@@ -133,7 +133,7 @@ export class OpcuaQueueWorker {
         accepted.push(entry);
         continue;
       }
-      this.getSpool().quarantine(
+      await this.getSpool().quarantine(
         entry,
         `Fenced: received after collector lease ${newer.epoch} (${newer.holder}) began; taken under lease ${own!.epoch} (${own!.holder})`,
       );
@@ -150,7 +150,9 @@ export class OpcuaQueueWorker {
   }
 
   async processBatch(): Promise<void> {
-    let batch = await this.fence(this.getSpool().peek(config.OPCUA_BATCH_SIZE));
+    let batch = await this.fence(
+      await this.getSpool().peek(config.OPCUA_BATCH_SIZE),
+    );
     if (!batch.length) return;
     try {
       await this.write(batch);
@@ -165,7 +167,7 @@ export class OpcuaQueueWorker {
         } catch (rowError) {
           if (!refusedRecord(rowError)) throw rowError;
           const cause = (rowError as { cause?: Error }).cause ?? rowError;
-          this.getSpool().quarantine(
+          await this.getSpool().quarantine(
             entry,
             cause instanceof Error ? cause.message.slice(0, 500) : "Refused",
           );
@@ -180,7 +182,7 @@ export class OpcuaQueueWorker {
       collectorDiagnostics.committed(machineId);
     for (const entry of batch) await alarmEvaluator.evaluate(entry);
     // Retrying after an ambiguous PostgreSQL commit is safe because event IDs are stable.
-    this.getSpool().acknowledge(batch);
+    await this.getSpool().acknowledge(batch);
     this.writeFailure = null;
     this.commits.push({ at: Date.now(), count: batch.length });
   }
@@ -210,7 +212,7 @@ export class OpcuaQueueWorker {
     clearTimeout(this.timer);
     this.timer = undefined;
     await this.pending;
-    this.spool?.close();
+    await this.spool?.close();
     this.spool = undefined;
   }
 }

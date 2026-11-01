@@ -39,8 +39,8 @@ new client.Gauge({
   name: "measurement_spool_pending",
   help: "Durably accepted measurements waiting for PostgreSQL",
   registers: [metricsRegistry],
-  collect() {
-    this.set(opcuaQueueWorker.getHealth().pendingMeasurements);
+  async collect() {
+    this.set((await opcuaQueueWorker.getHealth()).pendingMeasurements);
   },
 });
 
@@ -48,8 +48,8 @@ new client.Gauge({
   name: "measurement_spool_oldest_age_seconds",
   help: "Age of the oldest measurement waiting for PostgreSQL; 0 when empty, NaN when its receive time is unknown",
   registers: [metricsRegistry],
-  collect() {
-    const health = opcuaQueueWorker.getHealth();
+  async collect() {
+    const health = await opcuaQueueWorker.getHealth();
     this.set(
       health.pendingMeasurements === 0
         ? 0

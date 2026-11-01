@@ -115,6 +115,23 @@ See the [interface guide](../DESIGN.md) and isolated responsive browser checks.
 This UI change does not close endurance, physical-machine or human review gates.
 
 
+## Durable storage responsiveness — 2026-10-31
+
+The diagnostic run based on `20986b77` failed after three completed recovery cycles.
+Timing evidence isolated a 29.3-second server event-loop interval containing 27.3
+seconds of synchronous SQLite inserts; independent PostgreSQL probes remained
+below 11 ms. Session lookups then timed out and compiled script requests returned
+HTTP 500. Measurement spool operations now execute in a dedicated storage thread,
+with up to 100 measurements per FULL transaction and at most 1,000 uncommitted
+measurements in memory. Acquisition stops visibly on storage/backlog failure;
+live broadcasts and MQTT acknowledgements wait for durable acceptance.
+
+A slow-disk regression checks HTTP responsiveness while the storage thread is
+blocked and refuses early acknowledgement. The separate Windows
+`ERR_NO_BUFFER_SPACE` cause remains unresolved. Endurance stops at the first
+such transport failure to preserve its bounded network evidence. FR01 and all
+physical/human acceptance gates remain open.
+
 ## Recovery follow-through — 2026-10-30
 
 Installation endurance now serves the compiled frontend through the real application,

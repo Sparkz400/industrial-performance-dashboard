@@ -72,9 +72,9 @@ class HealthIncidentService {
       "Integration delivery stopped",
       `${deadLetters} webhook deliveries stopped retrying. Inspect and requeue them under Settings → Webhooks.`,
     );
-    let health: ReturnType<typeof worker.getHealth>;
+    let health: Awaited<ReturnType<typeof worker.getHealth>>;
     try {
-      health = worker.getHealth();
+      health = await worker.getHealth();
     } catch {
       await alarmEvaluator.observeHealth(
         "collector-storage",

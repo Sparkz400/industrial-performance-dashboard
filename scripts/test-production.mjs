@@ -1172,7 +1172,7 @@ try {
     await import("../server/dist/src/opc-ua/opcuaClient.js");
   let enqueueAttempts = 0,
     broadcasts = 0;
-  worker.enqueue = () => {
+  worker.enqueue = async () => {
     enqueueAttempts++;
     throw new Error("Owned storage-failure fixture");
   };
@@ -1180,6 +1180,7 @@ try {
     broadcasts++;
   };
   emitter.emit("nodeChanged", high.data);
+  await new Promise((resolve) => setImmediate(resolve));
   emitter.emit("nodeChanged", low.data);
   assert.equal(
     enqueueAttempts,
