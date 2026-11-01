@@ -65,7 +65,10 @@ console.log('PASS: HTTP responds during 3s of synchronous spool writes; acceptan
   const code = await new Promise((done, reject) => {
     const child = spawn(
       process.execPath,
-      ["--import", pathToFileURL(preload).href, childFile],
+      [
+        "--import", pathToFileURL(preload).href, "--input-type=module",
+        "--eval", `await import(${JSON.stringify(pathToFileURL(childFile).href)})`,
+      ],
       { windowsHide: true, stdio: "inherit", timeout: 20000 },
     );
     child.once("error", reject);

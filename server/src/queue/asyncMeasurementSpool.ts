@@ -58,7 +58,9 @@ export class AsyncMeasurementSpool {
     filename: string,
     limits: { maxEntries: number; minFreeBytes: number },
   ) {
-    this.worker = new Worker(new URL(import.meta.url), {
+    // Inline bootstrap also supports parents launched with --input-type=module.
+    this.worker = new Worker(`import(${JSON.stringify(import.meta.url)})`, {
+      eval: true,
       workerData: { measurementSpool: true, filename, limits },
     });
     this.worker.on("message", ({ id, value, error }: Reply) => {
