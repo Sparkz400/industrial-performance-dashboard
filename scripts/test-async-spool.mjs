@@ -46,6 +46,7 @@ try {
   await spool.health();
   let accepted = false;
   const durable = Promise.all(Array.from({length:10},(_,i)=>spool.enqueue({key:'Count',label:'Count',value:i,timestamp:new Date()}))).then(()=>{accepted=true;});
+  const queuedAt = Date.now();
   await delay(100);
   assert.equal(accepted,false,'Slow disk must not be acknowledged early');
   const response=await fetch('http://127.0.0.1:'+server.address().port,{signal:AbortSignal.timeout(1000)});
@@ -53,6 +54,7 @@ try {
   assert.equal(accepted,false,'HTTP must respond while durable storage is blocked');
   await durable;
   assert.equal((await spool.health()).pendingMeasurements,10);
+  assert.ok((await spool.peek(10)).every(row=>new Date(row.data.receivedAt).getTime()<=queuedAt),'Receive times must precede storage delays');
 } finally {
   await spool.close();
   await new Promise(resolve=>server.close(resolve));

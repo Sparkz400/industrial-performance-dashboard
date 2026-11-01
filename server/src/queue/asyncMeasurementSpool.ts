@@ -132,6 +132,7 @@ export class AsyncMeasurementSpool {
         "Measurement spool backlog capacity reached; collection must stop",
       );
     const item = structuredClone(data);
+    item.receivedAt ??= new Date();
     if (!this.batch) {
       let resolve!: () => void, reject!: (error: Error) => void;
       const promise = new Promise<void>((yes, no) => {
