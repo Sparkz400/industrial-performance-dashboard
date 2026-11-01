@@ -24,19 +24,19 @@ await dailyFixture(async ({ pool, expect }) => {
   ).rows;
   const t0 = Date.now();
   const at = (offset) => new Date(t0 + offset).toISOString();
-  const sample = (key, received, leaseEpoch = mine.epoch) =>
-    worker.enqueue({ key, label: key, timestamp: received, receivedAt: received, value: 1, statusCode: "Good", machineId: fenceMachine, leaseEpoch });
+  const sample = async (key, received, leaseEpoch = mine.epoch) =>
+    await worker.enqueue({ key, label: key, timestamp: received, receivedAt: received, value: 1, statusCode: "Good", machineId: fenceMachine, leaseEpoch });
   // This process retakes its own lock (for example after a database outage): its backlog stays valid.
   await pool.query("INSERT INTO collector_epochs(holder,acquired_at) VALUES($1,$2)", [mine.holder, at(0)]);
-  sample("OwnRetake", at(500));
+  await sample("OwnRetake", at(500));
   // Another collector takes over at t0+1000 while this one, cut off from the database, keeps spooling.
   await pool.query("INSERT INTO collector_epochs(holder,acquired_at) VALUES('other-host:7:feed',$1)", [at(1000)]);
-  sample("BeforeTakeover", at(900));
-  sample("AfterTakeover", at(1100));
+  await sample("BeforeTakeover", at(900));
+  await sample("AfterTakeover", at(1100));
   for (let i = 0; i < 5; i++) await worker.processBatch();
   const stored = (await pool.query("SELECT node_key FROM opcua_data WHERE machine_id=$1 ORDER BY node_key", [fenceMachine])).rows.map((r) => r.node_key);
   assert.deepEqual(stored, ["BeforeTakeover", "OwnRetake"]);
-  const quarantined = worker.getQuarantine(10);
+  const quarantined = await worker.getQuarantine(10);
   assert.equal(quarantined.length, 1);
   assert.match(quarantined[0].reason, /^Fenced: received after collector lease \d+ \(other-host:7:feed\) began; taken under lease \d+/);
   await lock.releaseCollectorLock();

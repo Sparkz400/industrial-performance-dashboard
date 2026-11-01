@@ -22,9 +22,9 @@ await dailyFixture(async ({ pool, actors, frontend, expect }) => {
     statusCode: "Good",
     machineId: machine,
   });
-  worker.enqueue(sample("Count", 7));
-  worker.enqueue(sample("Recipe", "PART-7\u0000\u0000"));
-  worker.enqueue(sample("Count", 8));
+  await worker.enqueue(sample("Count", 7));
+  await worker.enqueue(sample("Recipe", "PART-7\u0000\u0000"));
+  await worker.enqueue(sample("Count", 8));
   await worker.processBatch();
   const stored = (
     await pool.query(
@@ -40,10 +40,10 @@ await dailyFixture(async ({ pool, actors, frontend, expect }) => {
     ],
   );
   assert.deepEqual(
-    [worker.getHealth().pendingMeasurements, worker.getHealth().quarantinedMeasurements],
+    [(await worker.getHealth()).pendingMeasurements, (await worker.getHealth()).quarantinedMeasurements],
     [0, 1],
   );
-  assert.equal(worker.getHealth().writeFailure, null);
+  assert.equal((await worker.getHealth()).writeFailure, null);
 
   const { healthIncidentService } = await import(
     "../server/dist/src/services/healthIncidentService.js"
@@ -72,14 +72,14 @@ await dailyFixture(async ({ pool, actors, frontend, expect }) => {
   await page.getByRole("button", { name: "Retry quarantined" }).click();
   await expect(page.getByText(/Quarantined \(refused/)).toHaveCount(0);
   assert.deepEqual(
-    [worker.getHealth().pendingMeasurements, worker.getHealth().quarantinedMeasurements],
+    [(await worker.getHealth()).pendingMeasurements, (await worker.getHealth()).quarantinedMeasurements],
     [1, 0],
   );
   // Still refused: it returns to quarantine instead of stalling the queue.
-  worker.enqueue(sample("Count", 9));
+  await worker.enqueue(sample("Count", 9));
   await worker.processBatch();
   assert.deepEqual(
-    [worker.getHealth().pendingMeasurements, worker.getHealth().quarantinedMeasurements],
+    [(await worker.getHealth()).pendingMeasurements, (await worker.getHealth()).quarantinedMeasurements],
     [0, 1],
   );
   const actions = (
@@ -96,7 +96,7 @@ await dailyFixture(async ({ pool, actors, frontend, expect }) => {
     JSON.stringify({
       spoolQuarantine: "passed",
       stored: stored.length + 1,
-      quarantined: worker.getHealth().quarantinedMeasurements,
+      quarantined: (await worker.getHealth()).quarantinedMeasurements,
     }),
   );
 });

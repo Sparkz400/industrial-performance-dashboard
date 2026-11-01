@@ -156,7 +156,7 @@ try {
   const replay = join(directory, "replay.mjs");
   await writeFile(
     replay,
-    `import { MeasurementSpool } from ${JSON.stringify(spoolUrl)};\nMeasurementSpool.prototype.acknowledge=function(){process.send({committed:true});Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,30000);};\nconst { OpcuaQueueWorker }=await import(${JSON.stringify(workerUrl)});await new OpcuaQueueWorker().processBatch();`,
+    `import { AsyncMeasurementSpool } from ${JSON.stringify(spoolUrl.replace("measurementSpool.js", "asyncMeasurementSpool.js"))};\nAsyncMeasurementSpool.prototype.acknowledge=function(){process.send({committed:true});Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,30000);};\nconst { OpcuaQueueWorker }=await import(${JSON.stringify(workerUrl)});await new OpcuaQueueWorker().processBatch();`,
   );
   child = fork(replay, [], {
     execArgv: [],

@@ -3,6 +3,12 @@ import { join } from "node:path";
 import { readFile, writeFile, rename } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
 
+export function fatalTransportFailure(errorText) {
+  return /ERR_NO_BUFFER_SPACE|ERR_NETWORK_CHANGED/.test(errorText ?? "")
+    ? new Error(`Browser transport failed: ${errorText}`)
+    : null;
+}
+
 export function enduranceBrowserOptions(directory) {
   return {
     headless: true,

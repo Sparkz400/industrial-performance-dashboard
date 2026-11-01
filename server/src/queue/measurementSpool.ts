@@ -29,11 +29,15 @@ export interface SpoolEntry {
 /** Acknowledged measurements survive process restarts and database outages. */
 export class MeasurementSpool {
   private database: DatabaseSync;
+  private filename: string;
+  private limits: { maxEntries: number; minFreeBytes: number };
 
   constructor(
-    private filename: string,
-    private limits = { maxEntries: 1_000_000, minFreeBytes: 64 * 1024 * 1024 },
+    filename: string,
+    limits = { maxEntries: 1_000_000, minFreeBytes: 64 * 1024 * 1024 },
   ) {
+    this.filename = filename;
+    this.limits = limits;
     mkdirSync(dirname(filename), { recursive: true });
     this.database = new DatabaseSync(filename);
     this.database.exec(`
@@ -103,6 +107,12 @@ export class MeasurementSpool {
       this.database.exec("DELETE FROM quarantine");
     });
     return moved;
+  }
+
+  enqueueBatch(items: OpcuaDataItem[]): void {
+    this.transaction(() => {
+      for (const item of items) this.enqueue(item);
+    });
   }
 
   enqueue(data: OpcuaDataItem): void {

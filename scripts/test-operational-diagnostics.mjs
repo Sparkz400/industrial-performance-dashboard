@@ -110,8 +110,8 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
     ).default;
     emitter = collector.opcuaEmitter;
     let recoveredValueReceived = false;
-    listener = (data) => {
-      worker.enqueue(data);
+    listener = async (data) => {
+      await worker.enqueue(data);
       if (
         data.machineId === machine &&
         data.key === "Pressure" &&

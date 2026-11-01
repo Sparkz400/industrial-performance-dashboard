@@ -398,7 +398,7 @@ router.get(
   "/health",
   requireRole("admin"),
   asyncHandler(async (_req, res) => {
-    res.json(opcuaQueueWorker.getHealth());
+    res.json(await opcuaQueueWorker.getHealth());
   }),
 );
 // Records PostgreSQL refused stay in the local spool until exported or requeued.
@@ -406,7 +406,7 @@ router.get(
   "/quarantine",
   requireRole("admin"),
   asyncHandler(async (req, res) => {
-    const entries = opcuaQueueWorker.getQuarantine(1001);
+    const entries = await opcuaQueueWorker.getQuarantine(1001);
     await auditLogService.recordEvent(
       {
         action: "collector.quarantine.exported",
@@ -428,7 +428,7 @@ router.post(
   "/quarantine/requeue",
   requireRole("admin"),
   asyncHandler(async (req, res) => {
-    const requeued = opcuaQueueWorker.requeueQuarantine();
+    const requeued = await opcuaQueueWorker.requeueQuarantine();
     await auditLogService.recordEvent(
       {
         action: "collector.quarantine.requeued",
@@ -488,7 +488,7 @@ router.get(
         .limit(200);
       return { machineStates, reports, deliveries };
     });
-    const health = opcuaQueueWorker.getHealth();
+    const health = await opcuaQueueWorker.getHealth();
     res.json({
       format: "support-diagnostics-v1",
       generatedAt: new Date().toISOString(),

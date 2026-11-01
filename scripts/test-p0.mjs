@@ -70,7 +70,7 @@ try {
   assert.ok(long.series[0].data.some(point => point.statusCode === 'Missing' && point.value === null));
   const signalMetadata = measurementIdentity('opc.tcp://owned-a:4841', a, 'Identity', { nodeId: 'ns=1;s=Identity', dataType: 'Double', label: 'Identity' }, ['core', 'urn:owned'], 'kW');
   worker = new OpcuaQueueWorker();
-  worker.enqueue({ key: 'Identity', label: 'Identity', timestamp: startDate, receivedAt: endDate, value: 0, statusCode: 'Good', machineId: a, signalMetadata });
+  await worker.enqueue({ key: 'Identity', label: 'Identity', timestamp: startDate, receivedAt: endDate, value: 0, statusCode: 'Good', machineId: a, signalMetadata });
   await worker.stop();
   worker = new OpcuaQueueWorker();
   await worker.processBatch();

@@ -24,10 +24,10 @@ try {
   machineId = created.rows[0].id;
   const timestamp = new Date('2026-01-01T08:00:00Z');
   const sample = { key: 'Running', label: 'Running', timestamp, value: true, statusCode: 'Good', dataType: 'Boolean', machineId };
-  worker.enqueue(sample);
-  worker.enqueue({ ...sample, key: 'Message', value: 'Fault 42', dataType: 'String' });
-  worker.enqueue({ ...sample, key: 'BadValue', value: 123, statusCode: 'BadNoCommunication' });
-  worker.enqueue({ ...sample, key: 'Counter', value: 16777217, dataType: 'UInt32' });
+  await worker.enqueue(sample);
+  await worker.enqueue({ ...sample, key: 'Message', value: 'Fault 42', dataType: 'String' });
+  await worker.enqueue({ ...sample, key: 'BadValue', value: 123, statusCode: 'BadNoCommunication' });
+  await worker.enqueue({ ...sample, key: 'Counter', value: 16777217, dataType: 'UInt32' });
   await worker.stop();
   worker = new OpcuaQueueWorker();
   await worker.processBatch();

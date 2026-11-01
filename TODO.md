@@ -62,6 +62,9 @@ Physical-machine qualification remains separate.
   short smoke plus a separately recorded 72-hour run.
   The 2026-10-31 browser transport failures remain unresolved; bounded network
   diagnostics support investigation without accepting any failed duration.
+  A diagnostic run isolated synchronous spool writes blocking the HTTP thread;
+  storage now runs in a dedicated thread with bounded durable batches. This fix
+  does not establish a 72-hour pass or resolve the separate Windows socket error.
   Remaining: a complete 72-hour receipt on a clean revision; no failed duration is
   reused ([transport investigation](docs/FACTORY_READINESS.md#browser-transport-investigation--2026-10-31)).
 - [x] **FR02 — Supervisor work:** scoped line/action access, attributable maintenance

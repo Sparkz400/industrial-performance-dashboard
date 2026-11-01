@@ -185,7 +185,7 @@ await dailyFixture(async ({ pool, call, sockets, actors, frontend, expect }) => 
     assert.equal(counted.lastRejection, "Payload is not JSON");
 
     // A redelivery after the database committed the reading is still stored once.
-    await expect.poll(() => worker.getHealth().pendingMeasurements, { timeout: 15000 }).toBe(0);
+    await expect.poll(async () => (await worker.getHealth()).pendingMeasurements, { timeout: 15000 }).toBe(0);
     await publish("line/press", { ts: t(10), p: 1.5 });
     await new Promise((resolve) => setTimeout(resolve, 1500));
     assert.deepEqual(await rows(), expected);
@@ -254,7 +254,7 @@ await dailyFixture(async ({ pool, call, sockets, actors, frontend, expect }) => 
     ];
     await expect.poll(spRows, { timeout: 15000 }).toEqual(spExpected);
     // After the database committed them, a redelivered data message is still stored once.
-    await expect.poll(() => worker.getHealth().pendingMeasurements, { timeout: 15000 }).toBe(0);
+    await expect.poll(async () => (await worker.getHealth()).pendingMeasurements, { timeout: 15000 }).toBe(0);
     await publishRaw(node("NDATA"), countData);
     await expect.poll(async () => (await spStatus()).accepted, { timeout: 15000 }).toBe(10);
     await new Promise((resolve) => setTimeout(resolve, 1000));
