@@ -287,15 +287,15 @@ try {
       .update(await readFile(join(root, "client/dist/index.html")))
       .digest("hex"),
   });
-  pool = new pg.Pool({
+  const databaseConnection = {
     host: "127.0.0.1",
     port: databasePort,
-    user: "dashboard",
     password: databasePassword,
     database: "pd_endurance",
     connectionTimeoutMillis: 1500,
     max: 3,
-  });
+  };
+  pool = new pg.Pool({ ...databaseConnection, user: "dashboard" });
   pool.on("error", () => {});
   const databaseReady = () =>
     wait(
@@ -308,9 +308,26 @@ try {
       await pool.query("SELECT pg_postmaster_start_time() AS started")
     ).rows[0].started.toISOString();
   let databaseStartedAt = await databaseStarted();
-  await migrate(drizzle(pool), {
-    migrationsFolder: join(root, "server/drizzle"),
+  const roleSql = await pool.query(
+    "SELECT format('CREATE ROLE dashboard_app LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD %L', $1::text) AS sql",
+    [databasePassword],
+  );
+  await pool.query(roleSql.rows[0].sql);
+  await pool.query("ALTER DATABASE pd_endurance OWNER TO dashboard_app");
+  const migrationPool = new pg.Pool({
+    ...databaseConnection,
+    user: "dashboard_app",
   });
+  const { installQueryScope } =
+    await import("../server/dist/src/database/queryScope.js");
+  migrationPool.on("connect", installQueryScope);
+  try {
+    await migrate(drizzle(migrationPool), {
+      migrationsFolder: join(root, "server/drizzle"),
+    });
+  } finally {
+    await migrationPool.end();
+  }
   const password = randomBytes(18).toString("hex"),
     hash = await bcrypt.hash(password, 4);
   const users = (
@@ -484,7 +501,7 @@ try {
     CLIENT_URL: frontend,
     DB_HOST: "127.0.0.1",
     DB_PORT: String(databasePort),
-    DB_USER: "dashboard",
+    DB_USER: "dashboard_app",
     DB_PASSWORD: databasePassword,
     DB_NAME: "pd_endurance",
     DB_READ_REPLICA_URLS: "",
@@ -622,7 +639,9 @@ try {
         error: request.failure()?.errorText,
       });
       networkErrors = networkErrors.slice(-40);
-      const transportFailure = fatalTransportFailure(request.failure()?.errorText);
+      const transportFailure = fatalTransportFailure(
+        request.failure()?.errorText,
+      );
       if (transportFailure) failRun(transportFailure);
     });
     page.on("response", (response) => {

@@ -6,6 +6,7 @@ import {
   fromDatabaseError,
 } from "../utils/errors.js";
 import { CSRF_HEADER_NAME } from "../utils/csrf.js";
+import { redactRequestUrl } from "../utils/requestLog.js";
 
 interface ErrorResponse {
   status: "error";
@@ -41,7 +42,7 @@ export function errorHandler(invalidCsrfTokenError: unknown) {
       logger.error({
         message: "Invalid CSRF token",
         requestId,
-        url: req.originalUrl,
+        url: redactRequestUrl(req.originalUrl),
         method: req.method,
         ip: req.ip,
         receivedTokenHeader: req.headers[CSRF_HEADER_NAME]

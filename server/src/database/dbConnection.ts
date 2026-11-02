@@ -7,6 +7,8 @@ import logger from "../utils/logger.js";
 import statusManager from "../utils/status.js";
 import StatusConstants from "../utils/statusConstants.js";
 import DatabaseQueryMonitor from "./queryMonitor.js";
+import { installQueryScope } from "./queryScope.js";
+import { databaseTls } from "./tls.js";
 
 const { Pool } = pg;
 
@@ -33,15 +35,18 @@ interface MonitoredPool {
 
 const isRetryableError = (error: unknown): boolean => {
   const code = (error as { code?: string })?.code;
-  return code != null && [
-    "ECONNRESET",
-    "ETIMEDOUT",
-    "57P01",
-    "57P03",
-    "08003",
-    "08006",
-    "40001",
-  ].includes(code);
+  return (
+    code != null &&
+    [
+      "ECONNRESET",
+      "ETIMEDOUT",
+      "57P01",
+      "57P03",
+      "08003",
+      "08006",
+      "40001",
+    ].includes(code)
+  );
 };
 
 const formatQueryPreview = (text: string): string => {
@@ -85,15 +90,29 @@ class DatabaseManager {
       user: config.DB_USER,
       password: config.DB_PASSWORD,
       database: config.DB_NAME,
+      ssl: databaseTls(),
       max: config.DB_MAX_POOL,
       connectionTimeoutMillis: config.DB_CONNECTION_TIMEOUT,
       idleTimeoutMillis: config.DB_IDLE_TIMEOUT,
     });
 
+    if (databaseTls()) {
+      for (const url of parseReplicaUrls(config.DB_READ_REPLICA_URLS)) {
+        if (
+          ["sslmode", "sslcert", "sslkey", "sslrootcert"].some((key) =>
+            new URL(url).searchParams.has(key),
+          )
+        )
+          throw new Error(
+            "Configure replica TLS with DB_SSL_CA_FILE, without URL ssl parameters",
+          );
+      }
+    }
     this.replicaPoolStates = parseReplicaUrls(config.DB_READ_REPLICA_URLS).map(
       (connectionString, index) =>
         this.createMonitoredPool(`replica-${index + 1}`, "replica", {
           connectionString,
+          ssl: databaseTls(),
           max: config.DB_REPLICA_MAX_POOL,
           connectionTimeoutMillis: config.DB_CONNECTION_TIMEOUT,
           idleTimeoutMillis: config.DB_IDLE_TIMEOUT,
@@ -153,6 +172,7 @@ class DatabaseManager {
         this.refreshDatabaseStatus("Database client disconnected");
       });
       this.wrapClientQuery(client as pg.PoolClient, poolState.name);
+      installQueryScope(client as pg.PoolClient);
     });
 
     return poolState;
@@ -162,10 +182,14 @@ class DatabaseManager {
     if (this.wrappedClients.has(client)) return;
 
     this.wrappedClients.add(client);
-    const originalQuery = client.query.bind(client) as (...args: unknown[]) => unknown;
+    const originalQuery = client.query.bind(client) as (
+      ...args: unknown[]
+    ) => unknown;
 
     // Override the query method to add monitoring
-    (client as unknown as { query: typeof originalQuery }).query = async (...args: unknown[]) => {
+    (client as unknown as { query: typeof originalQuery }).query = async (
+      ...args: unknown[]
+    ) => {
       if (
         typeof args[1] === "function" ||
         typeof args[2] === "function" ||
@@ -174,11 +198,15 @@ class DatabaseManager {
         return originalQuery(...args);
       }
 
-      const queryText = this.extractQueryText(args[0] as string | { text?: string } | undefined);
+      const queryText = this.extractQueryText(
+        args[0] as string | { text?: string } | undefined,
+      );
       const startedAt = performance.now();
 
       try {
-        const result = await (originalQuery(...args) as Promise<pg.QueryResult>);
+        const result = await (originalQuery(
+          ...args,
+        ) as Promise<pg.QueryResult>);
         this.recordQueryExecution({
           target,
           text: queryText,

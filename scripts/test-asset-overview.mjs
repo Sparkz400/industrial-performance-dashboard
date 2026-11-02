@@ -152,7 +152,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
       "GET",
       `/digital-twins/instances/${instances[1].id}`,
       undefined,
-      403,
+      404,
       role,
     );
     await ok(
@@ -206,7 +206,7 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
     "GET",
     `/digital-twins/instances/${instances[1].id}/element-history?${historyParams}`,
     undefined,
-    403,
+    404,
   );
   for (const [machine, node, message] of [
     [machines[0], "Temperature", "Motor inspection required"],

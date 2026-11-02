@@ -270,6 +270,17 @@ export function createApp() {
 
 // --- Bootstrap ---
 async function bootstrap() {
+  if (config.NODE_ENV === "production") {
+    const { rows } = await dbClient.pool.query(
+      "SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user",
+    );
+    if (rows[0]?.rolsuper || rows[0]?.rolbypassrls)
+      throw new Error(
+        "Production requires a database role without SUPERUSER or BYPASSRLS",
+      );
+  }
+  const { webhookService } = await import("./src/services/webhookService.js");
+  if (!config.RECOVERY_MODE) await webhookService.encryptLegacySecrets();
   const { startConfiguredGateway } =
     await import("./src/gateway/configuredGateway.js");
   await startConfiguredGateway();

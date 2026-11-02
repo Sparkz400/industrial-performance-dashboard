@@ -31,6 +31,13 @@ export interface MiddlewareContext {
 }
 
 export function setupMiddleware(app: express.Application): MiddlewareContext {
+  app.set(
+    "trust proxy",
+    config.TRUSTED_PROXIES
+      ? config.TRUSTED_PROXIES.split(",").map((address) => address.trim())
+      : false,
+  );
+  const https = new URL(config.CLIENT_URL).protocol === "https:";
   app.use(
     cors({
       origin: config.CLIENT_URL,
@@ -50,8 +57,12 @@ export function setupMiddleware(app: express.Application): MiddlewareContext {
           "connect-src": [
             "'self'",
             config.CLIENT_URL,
-            `ws://${new URL(config.CLIENT_URL).hostname}:3000`,
-            `http://${new URL(config.CLIENT_URL).hostname}:3000`,
+            ...(https
+              ? []
+              : [
+                  `ws://${new URL(config.CLIENT_URL).hostname}:3000`,
+                  `http://${new URL(config.CLIENT_URL).hostname}:3000`,
+                ]),
           ],
         },
       },
@@ -60,6 +71,21 @@ export function setupMiddleware(app: express.Application): MiddlewareContext {
       crossOriginResourcePolicy: { policy: "same-origin" },
     }),
   );
+  app.use((req, res, next) => {
+    if (req.path.startsWith("/api/") || req.path === "/metrics")
+      res.set("Cache-Control", "no-store");
+    // Loopback readiness probes carry no session or application data.
+    const localProbe =
+      req.path === "/healthz" &&
+      ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(
+        req.socket.remoteAddress ?? "",
+      );
+    if (https && !req.secure && !localProbe) {
+      res.status(426).json({ error: "HTTPS is required" });
+      return;
+    }
+    next();
+  });
   app.use(rateLimiter);
   app.use(compression());
   // Edge batches have their own larger limit (edgeSyncRoutes).
@@ -97,7 +123,7 @@ export function setupMiddleware(app: express.Application): MiddlewareContext {
     saveUninitialized: false,
     cookie: {
       maxAge: 2 * 60 * 60 * 1000,
-      secure: new URL(config.CLIENT_URL).protocol === "https:",
+      secure: https,
       httpOnly: true,
       sameSite: "lax",
       path: "/",
@@ -161,7 +187,7 @@ export function setupMiddleware(app: express.Application): MiddlewareContext {
     let token = req.session.csrfToken;
     if (!token) {
       token = generateToken(req);
-      logger.info(`[CSRF Token Gen] New token for session ${req.sessionID}`);
+      logger.debug("[CSRF Token Gen] New session token");
     }
     // Explicitly save session before responding so the token is persisted
     // to the store before the client can fire a POST with it.

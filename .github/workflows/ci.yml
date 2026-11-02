@@ -38,6 +38,7 @@ jobs:
       - run: node scripts/test-ci-feedback.mjs
       - run: node scripts/test-dev-dependencies.mjs
       - run: node scripts/test-dependency-audit.mjs
+      - run: node scripts/test-backup-crypt.mjs
       - run: node scripts/test-lint-policy.mjs
       - run: node scripts/test-release-package.mjs
       - run: npm run db:generate -w server
@@ -107,6 +108,9 @@ jobs:
       - run: npm run db:migrate -w server
       - run: npm run db:seed -w server
       - run: npx playwright install --with-deps chromium
+      - name: PostgreSQL row isolation and shared login limits
+        if: matrix.shard == 1
+        run: node scripts/test-security-database.mjs
       - run: node scripts/run-ci-suite.mjs ${{ matrix.shard }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
@@ -149,6 +153,25 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: node scripts/test-operations.mjs performance-dashboard:ci
+      - name: Verify the secure deployment from an empty database
+        run: |
+          node scripts/prepare-secure-deployment.mjs --directory .local/secure-ci --project pd-security-ci --image performance-dashboard:ci
+          docker compose --file .local/secure-ci/compose.json build --pull db proxy
+          docker compose --file .local/secure-ci/compose.json --profile setup run --rm setup
+          docker compose --file .local/secure-ci/compose.json up -d --wait
+          node scripts/test-secure-deployment.mjs .local/secure-ci
+      - name: Diagnose a failed secure database startup
+        if: failure()
+        run: |
+          if test -f .local/secure-ci/compose.json; then
+            docker compose --file .local/secure-ci/compose.json logs --no-color --tail 80 db
+          fi
+      - name: Remove the owned secure deployment
+        if: always()
+        run: |
+          if test -f .local/secure-ci/compose.json; then
+            docker compose --file .local/secure-ci/compose.json down --volumes
+          fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:

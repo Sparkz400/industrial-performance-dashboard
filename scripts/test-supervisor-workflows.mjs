@@ -239,21 +239,21 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
     "GET",
     `/maintenance-actions/${action.id}/revisions`,
     undefined,
-    403,
+    404,
   );
   await request(
     "supervisor",
     "POST",
     `/maintenance-actions/${action.id}/complete`,
     { version: 2, serviceEventId: 1, note: "Denied" },
-    403,
+    404,
   );
   await request(
     "supervisor",
     "POST",
     `/maintenance-actions/${action.id}/revise`,
     { ...revise, version: 2, reason: "Denied" },
-    403,
+    404,
   );
   assert.deepEqual(await request("supervisor", "GET", "/lines"), []);
   await pool.query(

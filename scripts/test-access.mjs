@@ -170,16 +170,17 @@ await dailyFixture(
         ).result.data.map((r) => r.name),
         ["Site A rule"],
       );
-      assert.equal(
-        (
-          await call(
-            role,
-            "PUT",
-            `/api/v1/alerts/history/${alarms[1].id}/acknowledge`,
-            {},
-          )
-        ).status(),
-        403,
+      assert.ok(
+        [403, 404].includes(
+          (
+            await call(
+              role,
+              "PUT",
+              `/api/v1/alerts/history/${alarms[1].id}/acknowledge`,
+              {},
+            )
+          ).status(),
+        ),
       );
       const rpc = new URLSearchParams({
         input: JSON.stringify({ nodeKey: "Count", machineId: b }),

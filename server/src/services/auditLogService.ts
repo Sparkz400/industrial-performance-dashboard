@@ -64,12 +64,6 @@ function normalizeQuery(query: AuditLogQuery): AuditLogListFilters {
 }
 
 function getIpAddress(req: Request): string | undefined {
-  const forwardedFor = req.headers["x-forwarded-for"];
-
-  if (typeof forwardedFor === "string" && forwardedFor.trim() !== "") {
-    return forwardedFor.split(",")[0]?.trim();
-  }
-
   return req.ip || undefined;
 }
 

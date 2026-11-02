@@ -73,7 +73,7 @@ describe("Auth Routes - POST /api/v1/auth/login", () => {
     expect(res.body.code).toBe("UNAUTHORIZED");
   });
 
-  it("should return 403 if user account is deactivated", async () => {
+  it("does not reveal whether an account is deactivated", async () => {
     mockDb.then.mockImplementation((resolve: any) =>
       Promise.resolve([
         {
@@ -93,8 +93,9 @@ describe("Auth Routes - POST /api/v1/auth/login", () => {
       .set("x-csrf-token", csrfToken)
       .send({ username: "inactive", password: "password123" });
 
-    expect(res.status).toBe(403);
-    expect(res.body.code).toBe("FORBIDDEN");
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe("UNAUTHORIZED");
+    expect(res.body.error).toBe("Invalid username or password.");
   });
 
   it("should return 401 if password is invalid", async () => {

@@ -1,5 +1,46 @@
 import rateLimit from "express-rate-limit";
+import { createHash } from "node:crypto";
 import config from "../config/config.js";
+import { PostgresRateLimitStore } from "./postgresRateLimitStore.js";
+
+export const credentialRateLimit = [
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 60,
+    store: new PostgresRateLimitStore("login-total"),
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many sign-in attempts. Try again later." },
+  }),
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    store: new PostgresRateLimitStore("login-ip"),
+    skipSuccessfulRequests: true,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many sign-in attempts. Try again later." },
+  }),
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    store: new PostgresRateLimitStore("login-account"),
+    keyGenerator: (req) =>
+      createHash("sha256")
+        .update(
+          req.path === "/change-password" && req.session?.userId
+            ? `user:${req.session.userId}`
+            : `login:${String(req.body?.username ?? "")
+                .trim()
+                .toLowerCase()}`,
+        )
+        .digest("hex"),
+    skipSuccessfulRequests: true,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many sign-in attempts. Try again later." },
+  }),
+];
 
 export const rateLimiter = rateLimit({
   windowMs: config.RATE_LIMIT_WINDOW_MS,

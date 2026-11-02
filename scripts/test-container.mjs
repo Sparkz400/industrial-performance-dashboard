@@ -63,6 +63,23 @@ try {
     await delay(1000);
   }
   assert.ok(ready, "Owned test PostgreSQL did not start");
+  docker(
+    [
+      "exec",
+      "-i",
+      database,
+      "psql",
+      "-U",
+      "dashboard",
+      "-d",
+      "dashboard",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-v",
+      `pw=${password}`,
+    ],
+    "CREATE ROLE dashboard_app LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD :'pw'; ALTER DATABASE dashboard OWNER TO dashboard_app;",
+  );
   const app = docker([
     "run",
     "-d",
@@ -75,7 +92,7 @@ try {
     "-e",
     "DB_HOST=database",
     "-e",
-    "DB_USER=dashboard",
+    "DB_USER=dashboard_app",
     "-e",
     "DB_NAME=dashboard",
     "-e",
@@ -179,6 +196,8 @@ try {
     }).listen(55432, '127.0.0.1');
     await once(proxy, 'listening');
     process.env.DB_HOST = '127.0.0.1'; process.env.DB_PORT = '55432';
+    // Only the owned-database fixture needs creation privileges; the running app stays restricted.
+    process.env.DB_USER = 'dashboard';
     try { await import('./scripts/test-recovery.mjs'); }
     finally { for (const socket of sockets) socket.destroy(); await new Promise(resolve => proxy.close(resolve)); }
   `,

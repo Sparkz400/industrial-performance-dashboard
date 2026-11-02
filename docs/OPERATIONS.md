@@ -60,7 +60,88 @@ collector lease and takes over when the holder dies ([high availability](HIGH_AV
 exposing the service beyond the workstation; the installer binds only to loopback.
 For the first PLC, follow the [S7-1500 guide](S7_1500_PILOT.md).
 
+## HTTPS and trusted proxies
+
+Before remote production use, set `CLIENT_URL` to the public HTTPS origin and
+`TRUSTED_PROXIES` to the exact proxy peer IPs or narrowly scoped CIDR ranges, separated
+by commas. For a proxy connecting directly over host loopback, for example, use
+`127.0.0.1,::1`. A container sees the proxy's address on its network; do not assume that
+address is loopback. The default trusts no forwarded headers.
+
+Set these in the installation's authoritative `compose.json` environment, or in the
+root Compose environment when using `docker-compose.yml`. The TLS proxy must replace
+client-supplied forwarded headers, set `X-Forwarded-Proto: https`, and pass the client
+address in `X-Forwarded-For`. It must redirect or reject public HTTP and prevent direct
+external connections to the application's HTTP/WebSocket port. Verify sign-in, secure
+cookies, WebSocket reconnection and sign-out at the actual public origin.
+
+With HTTPS configured, insecure Express requests receive 426; local readiness probes
+are exempt. Production HTTP origins are allowed only for loopback previews. Session
+and cookie secrets must each contain at least 32 characters; use independent random
+values. Login throttles use PostgreSQL counters shared across replicas and restarts.
+See the [security checklist](SECURITY_BOUNDARIES.md#20-point-security-checklist-2026-11-02)
+for encryption upgrades, backup/rollback constraints and remaining deployment checks.
+
 ## Complete backup
+
+### Prepared secure local deployment
+
+Generate a new installation under ignored `.local` or outside the checkout, on an
+encrypted host volume. Node 24, Docker and OpenSSL are required (Git for Windows'
+OpenSSL is detected automatically). Existing directories are never overwritten.
+
+```text
+node scripts/prepare-secure-deployment.mjs --directory .local/secure-pilot --project secure-pilot
+docker compose --file .local/secure-pilot/compose.json build --pull
+docker compose --file .local/secure-pilot/compose.json --profile setup run --rm setup
+docker compose --file .local/secure-pilot/compose.json up -d --wait
+```
+
+This starts a read-only recovery preview at `https://localhost:8443`; port 8080
+redirects to HTTPS. Only the proxy publishes loopback ports. PostgreSQL 16 requires
+TLS, the app verifies its certificate/hostname, and the proxy overwrites forwarded
+headers and limits login traffic. Trust `tls/ca.crt` only in the local test client;
+read the generated `initial-login.json` privately for the administrator login.
+Remove that file and the setup service/password after initializing the installation
+and changing its initial administrator password.
+do not disable certificate verification. The generated CA/certificates expire in 30
+days. Configuration and keys are private files; keep the CA key and `backup.key`
+separately, and restrict the directory's Windows ACL to the owning operator.
+
+For a real installation, provision trusted certificates, review the fixed private
+subnet `172.29.249.0/24`, firewall and required outbound machine/identity-provider
+access, and use encrypted disks for PostgreSQL, spool, reports and certificate
+volumes. The prepared network intentionally has no application egress. Apply the
+existing activation procedure only after those checks; this generator does not
+activate a production site or change host disk encryption.
+
+The database and proxy Dockerfiles pin upstream images and install available Alpine
+security updates. PostgreSQL uses Alpine's `su-exec` for its fixed `postgres` user
+instead of the upstream bundled obsolete Go runtime. CI scans all three prepared
+images and rejects high/critical findings, including unfixed ones. Rebuild with
+`docker compose build --pull --no-cache` and rescan before a later deployment;
+an image tag or an old clean report does not establish current patch status.
+
+### Encrypted backup transport
+
+Create the complete backup below on encrypted storage, then encrypt it before
+copying it elsewhere. Keep the 32-byte `backup.key` outside both backup directories
+and in separate recovery custody. Lost keys cannot be recovered. Existing plaintext
+backups are not retroactively encrypted or deleted.
+
+```text
+node scripts/backup-crypt.mjs encrypt --input .local/backups/plain --output .local/backups/encrypted --key-file .local/secure-pilot/backup.key
+node scripts/backup-crypt.mjs decrypt --input .local/backups/encrypted --output .local/backups/restored --key-file .local/secure-pilot/backup.key
+node scripts/operate.mjs verify --project secure-pilot --backup .local/backups/restored
+```
+
+Decryption publishes usable filenames only after all files authenticate. A failed
+operation leaves `.partial` files, never a usable recovery manifest. Always verify
+the original backup manifest and perform an isolated restore. TLS private keys from
+the generated proxy are not part of application-volume backups; preserve the CA
+separately or provision fresh deployment certificates. Restores clear external TLS
+and replica settings for their isolated loopback recovery preview; reprovision
+these settings before deploying that restored installation.
 
 ```text
 node scripts/operate.mjs backup --project factory-pilot --file .local/factory-pilot/compose.json --output .local/backups/pilot-before-upgrade
@@ -152,13 +233,13 @@ missing receive times remain unknown. It is a support snapshot, not a full audit
 
 `/metrics` (administrators only) adds operational gauges, read at each scrape:
 
-| Gauge | Meaning |
-| --- | --- |
-| `opcua_connection_reconnects`, `opcua_connection_losses` (`machine_id`) | Observed since this process started; restarts reset them |
-| `measurement_spool_pending`, `measurement_spool_oldest_age_seconds` | Accepted samples waiting for PostgreSQL; age is `NaN` when a receive time is unknown |
-| `measurement_last_commit_age_seconds` (`machine_id`) | Time since the last database commit of that machine's samples by this process |
-| `database_up`, `database_roundtrip_seconds` | `SELECT 1` within three seconds; round trip is `NaN` when unreachable |
-| `background_jobs` (`job`, `state`) | Report generation, report email, undelivered webhooks and retention schedules by state; absent when the database cannot be read |
+| Gauge                                                                   | Meaning                                                                                                                         |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `opcua_connection_reconnects`, `opcua_connection_losses` (`machine_id`) | Observed since this process started; restarts reset them                                                                        |
+| `measurement_spool_pending`, `measurement_spool_oldest_age_seconds`     | Accepted samples waiting for PostgreSQL; age is `NaN` when a receive time is unknown                                            |
+| `measurement_last_commit_age_seconds` (`machine_id`)                    | Time since the last database commit of that machine's samples by this process                                                   |
+| `database_up`, `database_roundtrip_seconds`                             | `SELECT 1` within three seconds; round trip is `NaN` when unreachable                                                           |
+| `background_jobs` (`job`, `state`)                                      | Report generation, report email, undelivered webhooks and retention schedules by state; absent when the database cannot be read |
 
 Alert on growth or age, not single values: a quiet machine also has an old last commit.
 

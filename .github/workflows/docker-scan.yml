@@ -5,7 +5,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: '41 6 * * 1'
+    - cron: "41 6 * * 1"
   workflow_dispatch:
 permissions:
   contents: read
@@ -29,9 +29,17 @@ jobs:
           scanners: vuln
           format: json
           output: trivy-results.json
-          list-all-pkgs: 'true'
+          list-all-pkgs: "true"
       - name: Preserve the full scan for code scanning
         run: trivy convert --format sarif --output trivy-results.sarif trivy-results.json
+      - name: Scan the prepared database and TLS proxy images
+        run: |
+          docker build --pull -f deploy/postgres/Dockerfile -t performance-dashboard-postgres:scan .
+          docker build --pull -f deploy/proxy/Dockerfile -t performance-dashboard-proxy:scan .
+          trivy image --scanners vuln --format json --output postgres-scan.json performance-dashboard-postgres:scan
+          trivy image --scanners vuln --format json --output proxy-scan.json performance-dashboard-proxy:scan
+          trivy convert --format table --severity HIGH,CRITICAL --exit-code 1 postgres-scan.json
+          trivy convert --format table --severity HIGH,CRITICAL --exit-code 1 proxy-scan.json
       - uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
           sarif_file: trivy-results.sarif
@@ -45,4 +53,6 @@ jobs:
             image-identity.json
             trivy-results.json
             trivy-results.sarif
+            postgres-scan.json
+            proxy-scan.json
           retention-days: 14

@@ -13,9 +13,42 @@ const envVarsSchema = Joi.object({
 
   // Client Configuration
   CLIENT_URL: Joi.string()
-    .uri()
+    .uri({ scheme: ["http", "https"] })
+    .custom((value, helpers) => {
+      const url = new URL(value);
+      if (
+        helpers.state.ancestors[0].NODE_ENV === "production" &&
+        url.protocol !== "https:" &&
+        !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
+      )
+        return helpers.message({
+          custom:
+            "Production CLIENT_URL must use HTTPS except for local previews",
+        });
+      return value;
+    })
     .required()
     .description("Frontend application URL"),
+  TRUSTED_PROXIES: Joi.string()
+    .allow("")
+    .default("")
+    .custom((value, helpers) => {
+      if (
+        value &&
+        value
+          .split(",")
+          .some(
+            (address: string) =>
+              Joi.string().ip({ cidr: "optional" }).validate(address.trim())
+                .error,
+          )
+      )
+        return helpers.message({
+          custom:
+            "TRUSTED_PROXIES must contain only proxy IP addresses or CIDR ranges",
+        });
+      return value;
+    }),
 
   // Database Configuration
   DB_HOST: Joi.string().hostname().required().description("Database host"),
@@ -111,9 +144,11 @@ const envVarsSchema = Joi.object({
     .default("State")
     .description("State/Province for self-signed cert"),
   COOKIE_SECRET: Joi.string()
+    .when("NODE_ENV", { is: "production", then: Joi.string().min(32) })
     .required()
     .description("Secret used for signing cookies"),
   SESSION_SECRET: Joi.string()
+    .when("NODE_ENV", { is: "production", then: Joi.string().min(32) })
     .required()
     .description("Secret used for signing sessions"),
   AUTO_ACCEPT_CERTIFICATES: Joi.boolean()
@@ -209,9 +244,6 @@ const envVarsSchema = Joi.object({
     .description("Max requests per window for rate limit"),
 
   // Webhooks
-  WEBHOOK_SIGNING_SECRET: Joi.string()
-    .default("whsec_default_change_me")
-    .description("Default secret for webhook HMAC signing"),
   ALLOW_PRIVATE_OUTBOUND_URLS: Joi.boolean()
     .default(false)
     .description(
@@ -317,6 +349,7 @@ export interface AppConfig {
   PORT: number;
   HOST: string;
   CLIENT_URL: string;
+  TRUSTED_PROXIES: string;
   DB_HOST: string;
   DB_PORT: number;
   DB_USER: string;
@@ -383,7 +416,6 @@ export interface AppConfig {
   OTEL_ENABLED: boolean;
   OTEL_EXPORTER_OTLP_ENDPOINT: string;
   OTEL_SERVICE_NAME: string;
-  WEBHOOK_SIGNING_SECRET: string;
   ALLOW_PRIVATE_OUTBOUND_URLS: boolean;
   REPORT_RETENTION_DAYS?: number;
   SMTP_HOST?: string;

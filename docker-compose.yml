@@ -15,6 +15,7 @@ services:
       HOST: 0.0.0.0
       PORT: 3000
       CLIENT_URL: ${CLIENT_URL:-http://localhost:3001}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: dashboard

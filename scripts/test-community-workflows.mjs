@@ -110,7 +110,7 @@ await dailyFixture(async ({ pool, users, call, actors, frontend, expect }) => {
         `/api/v1/production/shifts/${known.shiftId}/evidence`,
       )
     ).status(),
-    403,
+    404,
   );
   assert.equal(
     (

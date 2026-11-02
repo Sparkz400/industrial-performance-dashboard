@@ -8,6 +8,7 @@ export interface TrpcContext {
     username?: string;
     userRole?: string;
     userVersion?: string;
+    oidcAuthTime?: number;
   };
 }
 
@@ -22,6 +23,7 @@ export const createContext = ({
       username: sess?.username as string | undefined,
       userRole: sess?.userRole as string | undefined,
       userVersion: sess?.userVersion as string | undefined,
+      oidcAuthTime: sess?.oidcAuthTime as number | undefined,
     },
   };
 };

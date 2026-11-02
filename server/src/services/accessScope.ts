@@ -1,4 +1,3 @@
-import { AsyncLocalStorage } from "node:async_hooks";
 import { and, eq, inArray, sql, type SQLWrapper } from "drizzle-orm";
 import type { UserRole } from "@performance-dashboard/shared";
 import db from "../database/db.js";
@@ -14,13 +13,8 @@ import {
 import { sessionEvents } from "./sessionAccess.js";
 import { ForbiddenError, NotFoundError } from "../utils/errors.js";
 
-export interface AccessScope {
-  userId: number;
-  role: UserRole;
-  machineIds: number[];
-  dashboardIds: string[];
-}
-export const accessScope = new AsyncLocalStorage<AccessScope>();
+import { accessScope, type AccessScope } from "./requestScope.js";
+export { accessScope, type AccessScope } from "./requestScope.js";
 
 export async function loadAccessScope(
   userId: number,

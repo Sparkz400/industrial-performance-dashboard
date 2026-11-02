@@ -17,7 +17,7 @@ import { dailyFixture } from "./daily-fixture.mjs";
 
 // H08/E03/E04: two edge installations (own processes and owned databases) send committed
 // history to the central installation (this fixture) through an HTTPS front with a pinned CA.
-await dailyFixture(async ({ pool, call, actors, users, frontend, api, expect }) => {
+await dailyFixture(async ({ pool, call, actors, users, frontend, api, expect, databaseAdmin }) => {
   const directory = dirname(process.env.OPCUA_PKI_DIR);
   const certificate = async (name) => {
     const manager = new opcua.OPCUACertificateManager({ rootFolder: join(directory, `${name}-pki`), automaticallyAcceptUnknownCertificate: false });
@@ -55,8 +55,9 @@ await dailyFixture(async ({ pool, call, actors, users, frontend, api, expect }) 
   await once(front, "listening");
   const centralUrl = `https://localhost:${front.address().port}`;
 
-  const base = { host: process.env.DB_HOST, port: 55432, user: process.env.DB_USER, password: process.env.DB_PASSWORD };
-  const admin = new pg.Client({ ...base, database: "postgres" });
+  const base = { host: process.env.DB_HOST, port: Number(process.env.DB_PORT), user: process.env.DB_USER, password: process.env.DB_PASSWORD };
+  assert.match(base.user, /^pd_daily_[a-f0-9]{32}$/);
+  const admin = new pg.Client(databaseAdmin);
   await admin.connect();
   const edgePassword = "edge-admin-" + randomUUID();
   const hash = await bcrypt.hash(edgePassword, 4);
@@ -84,7 +85,10 @@ await dailyFixture(async ({ pool, call, actors, users, frontend, api, expect }) 
     const database = "pd_daily_" + randomUUID().replaceAll("-", "");
     console.log(JSON.stringify({ ownedEdgeDatabase: database }));
     await admin.query(`CREATE DATABASE "${database}"`);
+    await admin.query(`ALTER DATABASE "${database}" OWNER TO "${base.user}"`);
     const db = new pg.Pool({ ...base, database });
+    const { installQueryScope } = await import("../server/dist/src/database/queryScope.js");
+    db.on("connect", installQueryScope);
     await migrate(drizzle(db), { migrationsFolder: "server/drizzle" });
     await db.query("INSERT INTO users(username,email,password_hash,role) VALUES('edgeadmin','edgeadmin@example.com',$1,'admin')", [hash]);
     // Both edges number their machine 1, on the same private address: they must not collide.

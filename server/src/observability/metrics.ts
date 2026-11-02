@@ -77,7 +77,7 @@ export function metricsMiddleware(
   const end = httpRequestDuration.startTimer();
 
   res.on("finish", () => {
-    const route = normalizeRoute(req.route?.path || req.path);
+    const route = normalizeRoute(req.route?.path);
     const labels = {
       method: req.method,
       route,

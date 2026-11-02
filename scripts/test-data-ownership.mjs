@@ -102,10 +102,35 @@ await dailyFixture(async ({ pool, call, users }) => {
     201,
   );
   assert.ok(destination.secret.length > 13);
+  const storedSecret = (await pool.query("SELECT secret FROM webhooks WHERE id=$1", [destination.id])).rows[0].secret;
+  assert.match(storedSecret, /^sealed:v1:/);
+  assert(!storedSecret.includes(destination.secret));
   const renamed = await ok("admin", "PUT", `/api/v1/webhooks/${destination.id}`, { recipients: ["shift@example.com"] });
   assert.equal(renamed.secret, destination.secret.substring(0, 10) + "...");
   await ok("admin", "DELETE", `/api/v1/webhooks/${destination.id}`);
   for (const action of ["webhook.created", "webhook.updated", "webhook.deleted"]) await audited(action, since);
+
+  // Upgrade existing secrets without changing receivers, and never commit a half-created destination.
+  const { webhookService } = await import("../server/dist/src/services/webhookService.js");
+  const legacy = (await pool.query("INSERT INTO webhooks(name,url,secret,is_active) VALUES('Legacy fixture','https://example.invalid','whsec_owned_legacy_fixture',false) RETURNING id")).rows[0].id;
+  await webhookService.encryptLegacySecrets();
+  const encrypted = (await pool.query("SELECT secret FROM webhooks WHERE id=$1", [legacy])).rows[0].secret;
+  assert.match(encrypted, /^sealed:v1:/);
+  assert.equal((await webhookService.listWebhooks()).find((row) => row.id === legacy).secret, "whsec_owned_legacy_fixture");
+  await webhookService.encryptLegacySecrets();
+  assert.equal((await pool.query("SELECT secret FROM webhooks WHERE id=$1", [legacy])).rows[0].secret, encrypted);
+  const key = process.env.MACHINE_SECRETS_KEY_FILE;
+  try {
+    process.env.MACHINE_SECRETS_KEY_FILE = process.env.OPCUA_PKI_DIR + "/missing/key";
+    // A pre-existing invalid key must fail without replacing the key or inserting a destination.
+    const { mkdir, writeFile } = await import("node:fs/promises");
+    await mkdir(process.env.OPCUA_PKI_DIR + "/missing", { recursive: true });
+    await writeFile(process.env.MACHINE_SECRETS_KEY_FILE, "invalid");
+    await assert.rejects(webhookService.createWebhook({ name: "Must roll back", kind: "email", recipients: ["ops@example.invalid"], events: ["alarm.triggered"] }));
+    assert.equal((await pool.query("SELECT count(*)::int n FROM webhooks WHERE name='Must roll back'")).rows[0].n, 0);
+  } finally {
+    process.env.MACHINE_SECRETS_KEY_FILE = key;
+  }
 
   // Access review: grant and account changes keep the previous values.
   since = await mark();
@@ -113,6 +138,7 @@ await dailyFixture(async ({ pool, call, users }) => {
   const [access] = await audited("access.updated", since);
   assert.deepEqual(access.metadata.previous, { machineIds: [machine], plantIds: [] });
   await ok("admin", "PUT", `/api/v1/auth/users/${users.viewer.id}`, { email: "viewer.new@example.com" });
+  await ok("admin", "PUT", `/api/v1/auth/users/${users.viewer.id}invalid`, { email: "tampered@example.com" }, 400);
   const [account] = await audited("user.updated", since);
   assert.deepEqual(account.metadata.changes, {
     email: { from: "viewer@example.invalid", to: "viewer.new@example.com" },

@@ -4,6 +4,9 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema.js";
+import { newPasswordSchema } from "../utils/password.js";
+import { databaseTls } from "./tls.js";
+import { installQueryScope } from "./queryScope.js";
 
 const { Pool } = pg;
 
@@ -16,7 +19,9 @@ async function seed() {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
+    ssl: databaseTls(),
   });
+  pool.on("connect", installQueryScope);
 
   const db = drizzle(pool, { schema });
 
@@ -31,7 +36,10 @@ async function seed() {
 
   if (existingAdmin.length === 0) {
     const password = process.env.SEED_ADMIN_PASSWORD;
-    if (!password || password.length < 12) throw new Error("Set SEED_ADMIN_PASSWORD to at least 12 characters before seeding");
+    if (!password || newPasswordSchema.validate(password).error)
+      throw new Error(
+        "Set SEED_ADMIN_PASSWORD to at least 12 characters and at most 72 UTF-8 bytes before seeding",
+      );
     const hash = await bcrypt.hash(password, SALT_ROUNDS);
     await db.insert(schema.users).values({
       username: "admin",
@@ -66,7 +74,7 @@ async function seed() {
     if (existingMachine.length === 0) {
       await db.insert(schema.machines).values({
         name: "Local OPC-UA Simulator",
-        endpointUrl: `opc.tcp://localhost:${process.env.OPCUA_PORT || '4841'}/UA/MyLittleServer`,
+        endpointUrl: `opc.tcp://localhost:${process.env.OPCUA_PORT || "4841"}/UA/MyLittleServer`,
         ip: "localhost",
         port: Number(process.env.OPCUA_PORT || 4841),
         resourcePath: "/UA/MyLittleServer",
