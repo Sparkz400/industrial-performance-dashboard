@@ -202,15 +202,32 @@ export async function testOperator({
   await page
     .getByLabel("Observation / action")
     .fill("Supervisor confirmed guide inspection remains open");
-  await page
-    .getByRole("button", { name: "Save handover", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: `History #${entry.id}`, exact: true })
-    .click();
+  let releaseSave;
+  const saving = new Promise((resolve) => {
+    releaseSave = resolve;
+  });
+  const editUrl = `**${base}/entries/${entry.id}`;
+  await page.route(editUrl, async (route) => {
+    await saving;
+    await route.continue();
+  });
+  try {
+    await page
+      .getByRole("button", { name: "Save handover", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: `History #${entry.id}`, exact: true })
+      .click();
+    await expect(
+      page.getByLabel(`History for entry ${entry.id}`),
+    ).toContainText("Revision 2");
+  } finally {
+    releaseSave();
+  }
   await expect(page.getByLabel(`History for entry ${entry.id}`)).toContainText(
     "Revision 3",
   );
+  await page.unroute(editUrl);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
     page.getByRole("button", { name: "More", exact: true }),

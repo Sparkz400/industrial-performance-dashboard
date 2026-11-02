@@ -9,7 +9,8 @@ documentation, translations, simulator examples and focused tests, each with sta
 files and completion criteria. GitHub issues carry current availability and status.
 
 The [dependency review](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/docs/DEPENDENCY_REVIEW.md)
-records the lint migration that removes the development-dependency exception.
+records the lint migration, supported TypeScript 6 update, current dependency
+upgrades and removal of the unused Twilio SDK.
 All npm advisories block CI. The guarded OPC UA overflow patch remains pending
 [upstream resolution](https://github.com/node-opcua/node-opcua/issues/1849).
 The November 2 review records zero npm advisories and keeps Node declarations

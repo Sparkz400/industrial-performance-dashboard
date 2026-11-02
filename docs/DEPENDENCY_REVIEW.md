@@ -1,5 +1,38 @@
 # Dependency PR disposition — 2026-10-26
 
+## Replacement repository review — 2026-11-02
+
+The five initial Dependabot proposals in `industrial-performance-dashboard` are
+handled together, with the operator-history race exposed by CI.
+
+| Proposal | Disposition |
+| --- | --- |
+| [#1](https://github.com/Sparkz400/industrial-performance-dashboard/pull/1) | Adopt dotenv 18.0.9. Existing `dotenv/config` imports and explicit quiet configuration remain in use. No vault or removed preloading API is used. |
+| [#2](https://github.com/Sparkz400/industrial-performance-dashboard/pull/2) | Adopt react-resizable 4.0.2 for the direct stylesheet import. React Grid Layout retains its own compatible 3.2.0 runtime dependency; no override forces its major version. |
+| [#3](https://github.com/Sparkz400/industrial-performance-dashboard/pull/3) | Remove the unused Twilio SDK instead of upgrading it. No application or test caller imports it; the retired SMS integration is not restored. |
+| [#4](https://github.com/Sparkz400/industrial-performance-dashboard/pull/4) | Adopt express-rate-limit 8.7.2 with the existing PostgreSQL login stores and default IP key handling. |
+| [#5](https://github.com/Sparkz400/industrial-performance-dashboard/pull/5) | Replace TypeScript 7 with supported TypeScript 6.0.3. typescript-eslint 8.72.1 requires TypeScript below 6.1, and the compiler-policy regression still uses the classic compiler API. Remove the deprecated client `baseUrl` and retain the alias through a relative `paths` target. |
+
+Dependabot continues to update TypeScript 6. TypeScript 7 proposals are held until
+the lint parser supports that major and the compiler-policy checks can migrate
+without losing their rejected/safe examples. This does not suppress vulnerability
+scanning. See the [typescript-eslint support policy](https://github.com/typescript-eslint/typescript-eslint/blob/v8.72.1/docs/users/Dependency_Versions.mdx),
+[resizable changelog](https://github.com/react-grid-layout/react-resizable/blob/master/CHANGELOG.md)
+and [rate-limit changelog](https://github.com/express-rate-limit/express-rate-limit/blob/main/docs/reference/changelog.mdx).
+
+The operator-history query now includes the saved entry version. Opening history
+while a save is pending can no longer leave the previous revision cached. The
+browser regression pauses the save, opens the old history, then requires the new
+revision after the save completes. The session type augmentation explicitly imports
+its base module, so the client-side tRPC type check also works with TypeScript 6's
+explicit ambient-type discovery.
+
+Local validation passes clean installation and peer checks, both builds, client
+types, all 477 unit tests, lint/compiler-policy and developer-tool regressions,
+lint/format and the isolated PostgreSQL/browser production workflow. The full npm
+audit has zero advisories. Hosted CI additionally covers Linux/Windows, four browser
+suites, the production container and the secure deployment setup.
+
 ## Maintenance review — 2026-11-02
 
 The six November proposals were reviewed together against `1c380dc5` and the
