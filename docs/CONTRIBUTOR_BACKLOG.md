@@ -5,25 +5,25 @@ The initial set below was inspected against `4b13bb7f` on 2026-10-31. Each issue
 contains the current gap/reproduction, source files, parent TODO IDs, completion
 criteria, validation and exclusions. Recheck current `main` before changing code.
 
-Use [open good first issues](https://github.com/Sparkz400/performance_dashboard/issues?q=is%3Aissue%20is%3Aopen%20label%3A%22good%20first%20issue%22)
-for a smaller starting point, or [open help wanted issues](https://github.com/Sparkz400/performance_dashboard/issues?q=is%3Aissue%20is%3Aopen%20label%3A%22help%20wanted%22)
+Use [open good first issues](https://github.com/Sparkz400/industrial-performance-dashboard/issues?q=is%3Aissue%20is%3Aopen%20label%3A%22good%20first%20issue%22)
+for a smaller starting point, or [open help wanted issues](https://github.com/Sparkz400/industrial-performance-dashboard/issues?q=is%3Aissue%20is%3Aopen%20label%3A%22help%20wanted%22)
 for the full contribution list. GitHub is the live status/assignment record; this
 page is an index, not a second issue-status checklist.
 
 | Issue | Parent TODO area | Contribution |
 | --- | --- | --- |
-| [#91](https://github.com/Sparkz400/performance_dashboard/issues/91) | P02, U07 | German interactive-demo walkthrough |
-| [#92](https://github.com/Sparkz400/performance_dashboard/issues/92) | H03, U02, P03 | Short glossary for unknown, stale and verified data |
-| [#93](https://github.com/Sparkz400/performance_dashboard/issues/93) | C04, P03 | Worked review of an existing profile import |
-| [#94](https://github.com/Sparkz400/performance_dashboard/issues/94) | P02, P03 | Two real synthetic-demo screenshots with captions and alt text |
-| [#95](https://github.com/Sparkz400/performance_dashboard/issues/95) | U06 | Reusable manual-accessibility observation template |
-| [#96](https://github.com/Sparkz400/performance_dashboard/issues/96) | I02 | Useful plain-text rate-limit errors in the example client |
-| [#97](https://github.com/Sparkz400/performance_dashboard/issues/97) | F10, O09 | External-file CLI tests for the correctness comparator |
-| [#98](https://github.com/Sparkz400/performance_dashboard/issues/98) | C04, C10 | Catalog containment tests with existing files and directory links |
-| [#99](https://github.com/Sparkz400/performance_dashboard/issues/99) | R04, P03 | One downloadable synthetic shift-evidence example |
-| [#100](https://github.com/Sparkz400/performance_dashboard/issues/100) | C04, C10 | Simulator-only Boolean running-state profile and replay |
-| [#101](https://github.com/Sparkz400/performance_dashboard/issues/101) | C04, C10 | Simulator-only 16-bit rollover profile and replay |
-| [#102](https://github.com/Sparkz400/performance_dashboard/issues/102) | R04, U07 | German offline evidence-verification guide |
+| [#9](https://github.com/Sparkz400/industrial-performance-dashboard/issues/9) | P02, U07 | German interactive-demo walkthrough |
+| [#10](https://github.com/Sparkz400/industrial-performance-dashboard/issues/10) | H03, U02, P03 | Short glossary for unknown, stale and verified data |
+| [#11](https://github.com/Sparkz400/industrial-performance-dashboard/issues/11) | C04, P03 | Worked review of an existing profile import |
+| [#12](https://github.com/Sparkz400/industrial-performance-dashboard/issues/12) | P02, P03 | Two real synthetic-demo screenshots with captions and alt text |
+| [#13](https://github.com/Sparkz400/industrial-performance-dashboard/issues/13) | U06 | Reusable manual-accessibility observation template |
+| [#14](https://github.com/Sparkz400/industrial-performance-dashboard/issues/14) | I02 | Useful plain-text rate-limit errors in the example client |
+| [#15](https://github.com/Sparkz400/industrial-performance-dashboard/issues/15) | F10, O09 | External-file CLI tests for the correctness comparator |
+| [#16](https://github.com/Sparkz400/industrial-performance-dashboard/issues/16) | C04, C10 | Catalog containment tests with existing files and directory links |
+| [#17](https://github.com/Sparkz400/industrial-performance-dashboard/issues/17) | R04, P03 | One downloadable synthetic shift-evidence example |
+| [#18](https://github.com/Sparkz400/industrial-performance-dashboard/issues/18) | C04, C10 | Simulator-only Boolean running-state profile and replay |
+| [#19](https://github.com/Sparkz400/industrial-performance-dashboard/issues/19) | C04, C10 | Simulator-only 16-bit rollover profile and replay |
+| [#20](https://github.com/Sparkz400/industrial-performance-dashboard/issues/20) | R04, U07 | German offline evidence-verification guide |
 
 ## Work through one issue
 

@@ -44,6 +44,7 @@ async function checkRedis(): Promise<DependencyCheck> {
   try {
     const Redis = (IORedis as any).default || IORedis;
     const redis = new Redis(config.REDIS_URL!, {
+      protocol: 2, // Match the cache connection's existing Redis protocol.
       connectTimeout: 3000,
       lazyConnect: true,
     });

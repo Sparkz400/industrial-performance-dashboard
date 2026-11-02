@@ -23,9 +23,12 @@ against any OEE tool and publish the result. It builds on the
 
 Try it without installing anything in [GitHub Codespaces](https://codespaces.new/Sparkz400/industrial-performance-dashboard?quickstart=1),
 or build the current checkout using the [container guide](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/docs/GETTING_STARTED.md#run-the-published-image).
-This independent repository starts with sanitized branch history; historical releases,
-issues and pull requests remain in the predecessor repository. No release image has
-been published from this repository yet. Dated history is in the
+This independent repository contains sanitized branch history and all 12 open
+contributor issues. The six remaining predecessor dependency proposals are resolved
+in the dependency review above. Historical release files and review records are in
+the maintainer's private migration backup; old GitHub release, PR and CI links may
+become unavailable when the predecessor is deleted. No release image has been
+published from this repository yet. Dated history is in the
 [changelog](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/CHANGELOG.md).
 [Engineering feedback](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/docs/ENGINEERING_FEEDBACK.md)
 describes four isolated CI groups, retained required checks, timing/failure receipts
