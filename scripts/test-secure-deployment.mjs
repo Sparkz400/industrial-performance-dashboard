@@ -20,6 +20,21 @@ assert.equal(environment.RECOVERY_MODE, "true");
 assert.equal(config.services.app.ports, undefined);
 assert.equal(config.services.db.ports, undefined);
 assert(config.networks.default.internal);
+execFileSync(
+  "docker",
+  [
+    "compose",
+    "--file",
+    join(directory, "compose.json"),
+    "exec",
+    "-T",
+    "db",
+    "sh",
+    "-ec",
+    'test "$(stat -c %a /run/pg-tls/pg_hba.conf)" = 600; su-exec postgres test -r /run/pg-tls/pg_hba.conf',
+  ],
+  { windowsHide: true, stdio: "pipe" },
+);
 const ca = await readFile(join(directory, "tls/ca.crt"));
 const { password } = JSON.parse(
   await readFile(join(directory, "initial-login.json"), "utf8"),

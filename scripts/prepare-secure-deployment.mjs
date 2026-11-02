@@ -158,7 +158,7 @@ db.build = { context: root, dockerfile: "deploy/postgres/Dockerfile" };
 db.entrypoint = [
   "/bin/sh",
   "-ec",
-  `mkdir -p /run/pg-tls; cp /run/tls-input/database.key /run/pg-tls/server.key; cp /run/tls-input/database.crt /run/pg-tls/server.crt; chown -R postgres:postgres /run/pg-tls; chmod 600 /run/pg-tls/server.key; exec docker-entrypoint.sh "$@"`,
+  `mkdir -p /run/pg-tls; cp /run/tls-input/database.key /run/pg-tls/server.key; cp /run/tls-input/database.crt /run/pg-tls/server.crt; cp /run/pg_hba.conf /run/pg-tls/pg_hba.conf; chown -R postgres:postgres /run/pg-tls; chmod 600 /run/pg-tls/server.key /run/pg-tls/pg_hba.conf; exec docker-entrypoint.sh "$@"`,
   "--",
 ];
 db.command = [
@@ -170,7 +170,7 @@ db.command = [
   "-c",
   "ssl_key_file=/run/pg-tls/server.key",
   "-c",
-  "hba_file=/run/pg_hba.conf",
+  "hba_file=/run/pg-tls/pg_hba.conf",
 ];
 db.tmpfs = ["/run/pg-tls"];
 db.volumes.push(

@@ -160,6 +160,12 @@ jobs:
           docker compose --file .local/secure-ci/compose.json --profile setup run --rm setup
           docker compose --file .local/secure-ci/compose.json up -d --wait
           node scripts/test-secure-deployment.mjs .local/secure-ci
+      - name: Diagnose a failed secure database startup
+        if: failure()
+        run: |
+          if test -f .local/secure-ci/compose.json; then
+            docker compose --file .local/secure-ci/compose.json logs --no-color --tail 80 db
+          fi
       - name: Remove the owned secure deployment
         if: always()
         run: |
