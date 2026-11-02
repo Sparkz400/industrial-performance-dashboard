@@ -169,4 +169,4 @@ Ready to post; no project has been contacted on its behalf.
 > Run the inputs through your tool, compare with one Node.js command and publish the
 > result, including the cases you interpret differently. No database or installation
 > is needed. Apache-2.0:
-> https://github.com/Sparkz400/performance_dashboard/blob/main/benchmarks/correctness/CONFORMANCE.md
+> https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/benchmarks/correctness/CONFORMANCE.md

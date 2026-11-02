@@ -414,7 +414,7 @@ export default function CommissioningPanel() {
         {preview?.namespaces.join(' · ') ?? 'Check the connection first'}
         {t('. Importing a profile previews fields here; it does not change the machine.')}{' '}
         <MuiLink
-          href="https://github.com/Sparkz400/performance_dashboard/tree/main/profiles"
+          href="https://github.com/Sparkz400/industrial-performance-dashboard/tree/main/profiles"
           target="_blank"
           rel="noopener noreferrer"
         >

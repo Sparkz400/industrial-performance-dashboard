@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Read the [conformance specification](https://github.com/Sparkz400/performance_dashboard/blob/main/benchmarks/correctness/CONFORMANCE.md) first. Use only synthetic suite data; do not attach customer or machine data.
+        Read the [conformance specification](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/benchmarks/correctness/CONFORMANCE.md) first. Use only synthetic suite data; do not attach customer or machine data.
   - type: input
     id: implementation
     attributes:

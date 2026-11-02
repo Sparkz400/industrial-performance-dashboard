@@ -5,11 +5,11 @@ receive its events. Other `/api/v1` routes and every tRPC procedure serve the
 browser application; they can change without notice and are not part of this
 contract. Integrations must not depend on them.
 
-Contract evidence: [`scripts/test-api-contract.mjs`](https://github.com/Sparkz400/performance_dashboard/blob/main/scripts/test-api-contract.mjs)
+Contract evidence: [`scripts/test-api-contract.mjs`](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/scripts/test-api-contract.mjs)
 runs the published example client
-[`scripts/examples/integration-client.mjs`](https://github.com/Sparkz400/performance_dashboard/blob/main/scripts/examples/integration-client.mjs)
+[`scripts/examples/integration-client.mjs`](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/scripts/examples/integration-client.mjs)
 against an owned database. Outbound events are covered by
-[`scripts/test-integration-outbox.mjs`](https://github.com/Sparkz400/performance_dashboard/blob/main/scripts/test-integration-outbox.mjs).
+[`scripts/test-integration-outbox.mjs`](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/scripts/test-integration-outbox.mjs).
 Ready-made Grafana provisioning and Node-RED flows that use this contract are in
 [Grafana and Node-RED](INTEGRATIONS.md).
 

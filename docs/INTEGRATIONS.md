@@ -90,7 +90,7 @@ reported as errors and not passed on as data.
 
 ## Validation
 
-Automated: [`scripts/test-examples.mjs`](https://github.com/Sparkz400/performance_dashboard/blob/main/scripts/test-examples.mjs)
+Automated: [`scripts/test-examples.mjs`](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/scripts/test-examples.mjs)
 parses every Grafana and Node-RED file, refuses private keys, literal tokens and stored
 flow credentials, requires core Node-RED nodes and a verified broker CA, and checks
 that every request is one of the service-token contract reads. Against an owned

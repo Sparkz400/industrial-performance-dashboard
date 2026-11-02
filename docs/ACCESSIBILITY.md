@@ -4,7 +4,7 @@ Scope: login, dashboards (including editing), the production shift workspace, op
 handover, machine commissioning, machines and alarm rules. Other screens follow the same
 components but are not individually checked here.
 
-Evidence: [`scripts/test-accessibility.mjs`](https://github.com/Sparkz400/performance_dashboard/blob/main/scripts/test-accessibility.mjs)
+Evidence: [`scripts/test-accessibility.mjs`](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/scripts/test-accessibility.mjs)
 runs against an owned database in a real browser and fails on **any** axe finding for the
 WCAG 2.0/2.1/2.2 A and AA rule sets. On 2026-10-29 all seven screens had zero findings
 after fixing the side-navigation list structure, unnamed progress indicators and adding

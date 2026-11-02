@@ -1,7 +1,7 @@
 # Getting started
 
 Use Node.js 24 and Docker with Compose. Clone
-`https://github.com/Sparkz400/performance_dashboard.git` and use branch `main`.
+`https://github.com/Sparkz400/industrial-performance-dashboard.git` and use branch `main`.
 All npm commands below run from the repository root.
 
 ## Local simulator setup
@@ -75,19 +75,21 @@ for upgrade, rollback, SMTP and report settings. Review the exact-image
 
 ### Run the published image
 
-Version tags publish `ghcr.io/sparkz400/performance_dashboard` for `linux/amd64`
+This repository has no published release image yet. Build the current checkout
+with `docker compose build`; no historical release or image was republished during
+the repository migration.
+
+Future version tags publish `ghcr.io/sparkz400/industrial-performance-dashboard` for `linux/amd64`
 and `linux/arm64` (for example 64-bit Raspberry Pi OS; no specific board is
 qualified). Each architecture passes the runtime smoke test on a native runner
-before publishing. Check which workflow and commit built an image:
+before publishing. The historical `0.1.0` image belongs to the predecessor repository
+and predates the current security fixes. Its original provenance can still be checked:
 
 ```sh
 gh attestation verify oci://ghcr.io/sparkz400/performance_dashboard:0.1.0 --repo Sparkz400/performance_dashboard
 ```
 
-To use it with the Compose setup above, add
-`APP_IMAGE=ghcr.io/sparkz400/performance_dashboard:0.1.0` to `.env` and run
-`docker compose pull app` instead of `docker compose build`. Provenance identifies
-the build; it does not replace the signed offline package sites verify with the
+Provenance identifies the build; it does not replace the signed offline package sites verify with the
 publisher key ([releasing](RELEASING.md)).
 
 For nonlocal deployments, read [SECURITY.md](../SECURITY.md) and validate HTTPS,

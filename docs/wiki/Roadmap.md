@@ -1,6 +1,6 @@
 # Roadmap
 
-[Factory readiness](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/FACTORY_READINESS.md)
+[Factory readiness](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/docs/FACTORY_READINESS.md)
 adds scoped supervisor line/action workflows, attributable maintenance corrections,
 fair comparisons of frozen shift reports and full-application endurance testing.
 Short runs do not establish multi-day reliability; physical qualification remains open.
@@ -21,16 +21,16 @@ The plan has six stages:
 Stages are acceptance gates, not promised release dates. The core remains read-only
 toward machines (ConditionRefresh for PLC alarms is the one approved method call); physical-machine qualification is separate from automated checks.
 
-- [Full roadmap and milestone criteria](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/ROADMAP.md)
-- [TODO priorities, dependencies and completion checks](https://github.com/Sparkz400/performance_dashboard/blob/main/TODO.md)
-- [Current capabilities, code findings and primary-source research](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/RESEARCH.md)
-- [Research decisions: what to build, defer or reject, and the triggers to revisit](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/RESEARCH_DECISIONS.md)
-- [Current status and limitations](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/STATUS.md)
-- [Machine compatibility](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/COMPATIBILITY.md)
+- [Full roadmap and milestone criteria](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/docs/ROADMAP.md)
+- [TODO priorities, dependencies and completion checks](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/TODO.md)
+- [Current capabilities, code findings and primary-source research](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/docs/RESEARCH.md)
+- [Research decisions: what to build, defer or reject, and the triggers to revisit](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/docs/RESEARCH_DECISIONS.md)
+- [Current status and limitations](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/docs/STATUS.md)
+- [Machine compatibility](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/docs/COMPATIBILITY.md)
 
 Task status lives in TODO. This page is only an overview and is maintained in the repository.
 
-[Daily factory workflows](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DAILY_OPERATIONS.md)
+[Daily factory workflows](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/docs/DAILY_OPERATIONS.md)
 cover scoped roles, history retention, calendars/product runs, immutable reports,
-maintenance and energy. [Acceptance evidence](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DAILY_OPERATIONS_ACCEPTANCE.md)
+maintenance and energy. [Acceptance evidence](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/docs/DAILY_OPERATIONS_ACCEPTANCE.md)
 separates software checks from physical S7-1500 and operator acceptance.

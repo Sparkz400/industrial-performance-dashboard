@@ -2,10 +2,10 @@
 
 ![Performance Dashboard — Connect. Measure. Understand.](docs/assets/banner.svg)
 
-[![CI](https://github.com/Sparkz400/performance_dashboard/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Sparkz400/performance_dashboard/actions/workflows/ci.yml)
-[![Security](https://github.com/Sparkz400/performance_dashboard/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/Sparkz400/performance_dashboard/actions/workflows/security.yml)
+[![CI](https://github.com/Sparkz400/industrial-performance-dashboard/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Sparkz400/industrial-performance-dashboard/actions/workflows/ci.yml)
+[![Security](https://github.com/Sparkz400/industrial-performance-dashboard/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/Sparkz400/industrial-performance-dashboard/actions/workflows/security.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/Sparkz400/performance_dashboard?quickstart=1)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/Sparkz400/industrial-performance-dashboard?quickstart=1)
 
 An industrial monitoring dashboard for exploring machine data, production trends,
 alarms and overall equipment effectiveness (OEE). Connect OPC UA machines, map
@@ -35,18 +35,18 @@ zero or perfect production:</sub>
 [Compatibility](docs/COMPATIBILITY.md) · [Roadmap](docs/ROADMAP.md) ·
 [TODO](TODO.md) · [Changelog](CHANGELOG.md) · [Research](docs/RESEARCH.md) ·
 [Contributing](CONTRIBUTING.md) · [Maintaining](MAINTAINERS.md) ·
-[Discussions](https://github.com/Sparkz400/performance_dashboard/discussions)
+[Discussions](https://github.com/Sparkz400/industrial-performance-dashboard/discussions)
 
 ## Try it
 
-- **In the browser:** [open a codespace](https://codespaces.new/Sparkz400/performance_dashboard?quickstart=1).
+- **In the browser:** [open a codespace](https://codespaces.new/Sparkz400/industrial-performance-dashboard?quickstart=1).
   It installs dependencies, starts the owned demo database and runs `npm run demo`;
   open the **Factory demo** address printed in the terminal.
 - **On your computer:** install Node.js 24 and Docker, then run `npm ci`,
   `docker compose -f compose.local.yml up -d` and **`npm run demo`**.
-- **As a container:** version tags publish `ghcr.io/sparkz400/performance_dashboard`
-  for `linux/amd64` and `linux/arm64` with build provenance; see
-  [run the published image](docs/GETTING_STARTED.md#run-the-published-image).
+- **As a container:** build the current checkout with `docker compose build`.
+  This repository has no published release image yet; see
+  [container releases](docs/GETTING_STARTED.md#run-the-published-image).
 
 The demo guide provides a generated login, a known shift and missing-data, bad-quality
 and counter-reset scenarios. See the [interactive demo guide](docs/INTERACTIVE_DEMO.md).
@@ -103,7 +103,10 @@ See the [production workflow](docs/PRODUCTION_WORKFLOW.md),
 The [20-point security review](docs/SECURITY_BOUNDARIES.md#20-point-security-checklist-2026-11-02)
 records application hardening, database row isolation, shared login limits and the
 [prepared HTTPS deployment and encrypted backups](docs/OPERATIONS.md#prepared-secure-local-deployment).
-Production disk encryption, network acceptance and GitHub's historical caches remain separate checks.
+Production disk encryption and network acceptance remain separate checks.
+This independent repository contains the sanitized branch history. The predecessor's
+immutable release, issues, pull requests and cached history were not imported;
+cleaning up those older copies remains separate work.
 The first nominated pilot family is [Siemens SIMATIC S7-1500](docs/S7_1500_PILOT.md);
 software acceptance uses owned simulators, with physical CPU qualification still open.
 For isolated installation, complete backups, restore checks and upgrades, see the

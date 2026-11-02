@@ -1,6 +1,6 @@
 # Security policy
 
-Report vulnerabilities privately using [Security Advisories](https://github.com/Sparkz400/performance_dashboard/security/advisories/new).
+Report vulnerabilities privately using [Security Advisories](https://github.com/Sparkz400/industrial-performance-dashboard/security/advisories/new).
 Include the commit, affected boundary, impact and a minimal reproduction using
 synthetic machine data. Do not disclose credentials, real endpoints, customer
 measurements or exploit details in a public issue.

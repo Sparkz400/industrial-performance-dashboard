@@ -1,6 +1,6 @@
 # Support
 
-Use [Discussions](https://github.com/Sparkz400/performance_dashboard/discussions)
+Use [Discussions](https://github.com/Sparkz400/industrial-performance-dashboard/discussions)
 for setup questions and early ideas. Use the issue templates for reproducible
 bugs, documentation errors and concrete feature requests.
 

@@ -30,7 +30,7 @@ No additional account, access grant or signing key is created by this document.
 ## Decide and record scope
 
 Use an issue for a reproducible bug or bounded improvement and
-[Discussions](https://github.com/Sparkz400/performance_dashboard/discussions) for an
+[Discussions](https://github.com/Sparkz400/industrial-performance-dashboard/discussions) for an
 early proposal. Search existing work first. Record the affected workflow, parent
 [TODO](TODO.md) ID, smallest useful outcome, exclusions and evidence needed to finish.
 The steward or delegated maintainer records the accepted scope in that conversation.

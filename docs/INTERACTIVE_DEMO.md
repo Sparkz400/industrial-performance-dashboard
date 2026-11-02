@@ -21,7 +21,7 @@ to use the demo. The first server build can take a minute.
 
 ### In GitHub Codespaces
 
-[Open a codespace](https://codespaces.new/Sparkz400/performance_dashboard?quickstart=1).
+[Open a codespace](https://codespaces.new/Sparkz400/industrial-performance-dashboard?quickstart=1).
 The [development container](../.devcontainer/devcontainer.json) installs dependencies,
 starts the owned database with Docker-in-Docker and runs `npm run demo` in a terminal.
 Open the printed **Factory demo** address; Codespaces forwards each port privately to
