@@ -7,26 +7,32 @@ updates:
     open-pull-requests-limit: 5
     # Keep declarations on the supported Node runtime major.
     ignore:
-      - dependency-name: '@types/node'
-        update-types: ['version-update:semver-major']
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       npm-minor-patch:
-        patterns: ['*']
+        patterns: ["*"]
         update-types: [minor, patch]
       mui-major:
-        patterns: ['@mui/*']
+        patterns: ["@mui/*"]
         update-types: [major]
       storybook-vite-major:
-        patterns: ['storybook', '@storybook/*', 'vite', '@vitejs/*']
+        patterns: ["storybook", "@storybook/*", "vite", "@vitejs/*"]
         update-types: [major]
       lint-major:
-        patterns: ['eslint*', '@eslint/*', 'typescript-eslint', '@typescript-eslint/*']
+        patterns:
+          ["eslint*", "@eslint/*", "typescript-eslint", "@typescript-eslint/*"]
         update-types: [major]
       test-runner-major:
-        patterns: ['vitest', '@vitest/*']
+        patterns: ["vitest", "@vitest/*"]
         update-types: [major]
       virtualization-major:
-        patterns: ['react-window', '@types/react-window', 'react-virtualized-auto-sizer']
+        patterns:
+          [
+            "react-window",
+            "@types/react-window",
+            "react-virtualized-auto-sizer",
+          ]
         update-types: [major]
   - package-ecosystem: github-actions
     directory: /
@@ -34,11 +40,11 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
   - package-ecosystem: docker
-    directory: /
+    directories: [/, /deploy/postgres, /deploy/proxy]
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
     # Node major changes require the support/qualification decision in TODO F09.
     ignore:
       - dependency-name: node
-        update-types: ['version-update:semver-major']
+        update-types: ["version-update:semver-major"]

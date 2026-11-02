@@ -153,8 +153,8 @@ Object.assign(db.environment, {
   POSTGRES_PASSWORD: secret(),
   APP_DB_PASSWORD: app.environment.DB_PASSWORD,
 });
-db.image =
-  "postgres:16-alpine@sha256:f4610795587492cd4fb887c2dc3de301b813278bb6f616992061141b5f15ac36";
+db.image = "performance-dashboard-postgres:secure-local";
+db.build = { context: root, dockerfile: "deploy/postgres/Dockerfile" };
 db.entrypoint = [
   "/bin/sh",
   "-ec",
@@ -183,8 +183,8 @@ await save(
   "local all all trust\nhostnossl all all all reject\nhostssl all all all scram-sha-256\n",
 );
 config.services.proxy = {
-  image:
-    "nginx:stable-alpine@sha256:0e52bd054126cdc040b1276c0af347aeb02a41b9cfe305d6094767ac30e97949",
+  image: "performance-dashboard-proxy:secure-local",
+  build: { context: root, dockerfile: "deploy/proxy/Dockerfile" },
   ports: [`127.0.0.1:${httpPort}:8080`, `127.0.0.1:${httpsPort}:8443`],
   volumes: [
     `${join(directory, "nginx.conf")}:/etc/nginx/nginx.conf:ro`,

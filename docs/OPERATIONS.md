@@ -92,8 +92,9 @@ OpenSSL is detected automatically). Existing directories are never overwritten.
 
 ```text
 node scripts/prepare-secure-deployment.mjs --directory .local/secure-pilot --project secure-pilot
-docker compose --file .local/secure-pilot/compose.json --profile setup run --build --rm setup
-docker compose --file .local/secure-pilot/compose.json up -d --build --wait
+docker compose --file .local/secure-pilot/compose.json build --pull
+docker compose --file .local/secure-pilot/compose.json --profile setup run --rm setup
+docker compose --file .local/secure-pilot/compose.json up -d --wait
 ```
 
 This starts a read-only recovery preview at `https://localhost:8443`; port 8080
@@ -113,6 +114,13 @@ access, and use encrypted disks for PostgreSQL, spool, reports and certificate
 volumes. The prepared network intentionally has no application egress. Apply the
 existing activation procedure only after those checks; this generator does not
 activate a production site or change host disk encryption.
+
+The database and proxy Dockerfiles pin upstream images and install available Alpine
+security updates. PostgreSQL uses Alpine's `su-exec` for its fixed `postgres` user
+instead of the upstream bundled obsolete Go runtime. CI scans all three prepared
+images and rejects high/critical findings, including unfixed ones. Rebuild with
+`docker compose build --pull --no-cache` and rescan before a later deployment;
+an image tag or an old clean report does not establish current patch status.
 
 ### Encrypted backup transport
 
