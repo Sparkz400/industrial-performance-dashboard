@@ -247,6 +247,8 @@ Security checks include the full npm audit, CodeQL and exact-image container rep
 The production image uses Node 24/Wolfi and browser-free PDFs; the full migrated
 image scan is clear. See the [dependency and image review](docs/DEPENDENCY_REVIEW.md)
 and [reporting compatibility/upgrade guide](docs/REPORTING.md) for evidence and limits.
+The current dependency review uses supported TypeScript 6, updates environment
+loading and rate limiting, and removes the unused Twilio SDK.
 
 ## License
 

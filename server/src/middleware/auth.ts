@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import type {} from "express-session";
 import logger from "../utils/logger.js";
 import { UnauthorizedError, ForbiddenError } from "../utils/errors.js";
 import { getSessionUser } from "../services/sessionAccess.js";
