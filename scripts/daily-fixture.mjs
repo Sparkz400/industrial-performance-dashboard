@@ -44,7 +44,8 @@ export async function dailyFixture(test, demo) {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
   };
-  const admin = new pg.Client({ ...base, database: "postgres" });
+  const databaseAdmin = { ...base, database: "postgres" };
+  const admin = new pg.Client(databaseAdmin);
   let pool,
     browser,
     vite,
@@ -202,6 +203,7 @@ export async function dailyFixture(test, demo) {
     if (!demo) for (const role of Object.keys(users)) await login(role);
     await mkdir(".local/daily-evidence", { recursive: true });
     await test({
+      databaseAdmin,
       pool,
       users,
       actors,
@@ -254,6 +256,8 @@ export async function dailyFixture(test, demo) {
     }
     if (createdRole) await admin.query(`DROP ROLE "${database}"`);
     await admin.end();
+    process.env.DB_USER = databaseAdmin.user;
+    process.env.DB_PASSWORD = databaseAdmin.password;
     if (!demo) {
       assert.equal(dirname(directory), resolve(tmpdir()));
       // Vite's optimizer can finish a filesystem write after its server closes on Windows.
