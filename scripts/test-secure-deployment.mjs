@@ -21,7 +21,9 @@ assert.equal(config.services.app.ports, undefined);
 assert.equal(config.services.db.ports, undefined);
 assert(config.networks.default.internal);
 const ca = await readFile(join(directory, "tls/ca.crt"));
-const password = await readFile(join(directory, "seed-password"), "utf8");
+const { password } = JSON.parse(
+  await readFile(join(directory, "initial-login.json"), "utf8"),
+);
 let cookie = "";
 function request(
   path,

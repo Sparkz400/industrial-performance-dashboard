@@ -56,6 +56,7 @@ await dailyFixture(async ({ pool, call, actors, users, frontend, api, expect, da
   const centralUrl = `https://localhost:${front.address().port}`;
 
   const base = { host: process.env.DB_HOST, port: Number(process.env.DB_PORT), user: process.env.DB_USER, password: process.env.DB_PASSWORD };
+  assert.match(base.user, /^pd_daily_[a-f0-9]{32}$/);
   const admin = new pg.Client(databaseAdmin);
   await admin.connect();
   const edgePassword = "edge-admin-" + randomUUID();

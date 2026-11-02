@@ -130,6 +130,25 @@ Object.assign(app.environment, {
 });
 app.volumes.push(`${join(tls, "ca.crt")}:/run/database-ca.crt:ro`);
 app.security_opt = ["no-new-privileges:true"];
+const initialPassword = secret();
+config.services.setup = {
+  image: app.image,
+  build: root,
+  profiles: ["setup"],
+  command: [
+    "sh",
+    "-c",
+    "node dist/src/database/migrate.js && node dist/src/database/seed.js",
+  ],
+  environment: { ...app.environment, SEED_ADMIN_PASSWORD: initialPassword },
+  volumes: [`${join(tls, "ca.crt")}:/run/database-ca.crt:ro`],
+  depends_on: { db: { condition: "service_healthy" } },
+  security_opt: ["no-new-privileges:true"],
+};
+await save(
+  join(directory, "initial-login.json"),
+  JSON.stringify({ username: "admin", password: initialPassword }) + "\n",
+);
 Object.assign(db.environment, {
   POSTGRES_PASSWORD: secret(),
   APP_DB_PASSWORD: app.environment.DB_PASSWORD,

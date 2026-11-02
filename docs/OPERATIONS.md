@@ -92,6 +92,7 @@ OpenSSL is detected automatically). Existing directories are never overwritten.
 
 ```text
 node scripts/prepare-secure-deployment.mjs --directory .local/secure-pilot --project secure-pilot
+docker compose --file .local/secure-pilot/compose.json --profile setup run --build --rm setup
 docker compose --file .local/secure-pilot/compose.json up -d --build --wait
 ```
 
@@ -99,6 +100,9 @@ This starts a read-only recovery preview at `https://localhost:8443`; port 8080
 redirects to HTTPS. Only the proxy publishes loopback ports. PostgreSQL 16 requires
 TLS, the app verifies its certificate/hostname, and the proxy overwrites forwarded
 headers and limits login traffic. Trust `tls/ca.crt` only in the local test client;
+read the generated `initial-login.json` privately for the administrator login.
+Remove that file and the setup service/password after initializing the installation
+and changing its initial administrator password.
 do not disable certificate verification. The generated CA/certificates expire in 30
 days. Configuration and keys are private files; keep the CA key and `backup.key`
 separately, and restrict the directory's Windows ACL to the owning operator.
