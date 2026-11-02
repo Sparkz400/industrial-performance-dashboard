@@ -13,16 +13,14 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 
 dotenv.config({ path: "server/.env", quiet: true });
 assert.ok(["localhost", "127.0.0.1"].includes(process.env.DB_HOST));
-assert.equal(
-  process.env.DB_PORT,
-  "55432",
-  "Requires the owned test PostgreSQL port",
-);
+const testPort = Number(process.env.TEST_DB_PORT ?? 55432);
+assert.equal(process.env.DB_PORT, String(testPort));
+assert(Number.isInteger(testPort) && testPort > 1024 && testPort <= 65535);
 const database = `pd_shift_${randomUUID().replaceAll("-", "")}`;
 const directory = await mkdtemp(join(tmpdir(), "dashboard-shift-"));
 const admin = new pg.Client({
   host: process.env.DB_HOST,
-  port: 55432,
+  port: testPort,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: "postgres",
@@ -78,7 +76,7 @@ try {
   });
   pool = new pg.Pool({
     host: process.env.DB_HOST,
-    port: 55432,
+    port: testPort,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database,
@@ -542,7 +540,9 @@ try {
     "Good recovery did not clear persisted incident",
   );
   accepts = true;
-  await pool.query("UPDATE webhook_deliveries SET next_attempt_at=now()-interval '1 second'");
+  await pool.query(
+    "UPDATE webhook_deliveries SET next_attempt_at=now()-interval '1 second'",
+  );
   await waitFor(
     async () =>
       Number(
@@ -733,19 +733,23 @@ try {
   const openShift = (
     await pool.query("SELECT id, machine_id FROM production_shifts")
   ).rows[0];
-  const handoverAction = await call("POST", "/api/v1/production/operator/entries", {
-    requestId: randomUUID(),
-    machineId: openShift.machine_id,
-    shiftId: openShift.id,
-    intervalStart: null,
-    intervalEnd: null,
-    quantity: null,
-    kind: "action",
-    text: "Clear jam sensor before next shift",
-    priority: "high",
-    ownerId: adminId,
-    dueAt: null,
-  });
+  const handoverAction = await call(
+    "POST",
+    "/api/v1/production/operator/entries",
+    {
+      requestId: randomUUID(),
+      machineId: openShift.machine_id,
+      shiftId: openShift.id,
+      intervalStart: null,
+      intervalEnd: null,
+      quantity: null,
+      kind: "action",
+      text: "Clear jam sensor before next shift",
+      priority: "high",
+      ownerId: adminId,
+      dueAt: null,
+    },
+  );
   assert.equal(handoverAction.status(), 201, await handoverAction.text());
   await page.getByLabel("Independent total", { exact: true }).fill("15");
   await page.getByLabel("Independent good", { exact: true }).fill("13");
@@ -774,7 +778,9 @@ try {
   assert.deepEqual(report.quantities, { total: 15, good: 13, reject: 2 });
   assert.equal(report.handover[0].text, "Clear jam sensor before next shift");
   await expectVisible(
-    page.getByText("Clear jam sensor before next shift", { exact: false }).first(),
+    page
+      .getByText("Clear jam sensor before next shift", { exact: false })
+      .first(),
   );
   await page
     .getByText("Reconciled against recorded independent counts", {

@@ -60,7 +60,7 @@ export async function testReportJobs({ call, pool, page, frontend, smtp, waitFor
   try {
     await blocker.query("BEGIN");
     await blocker.query("LOCK TABLE opcua_data IN ACCESS EXCLUSIVE MODE");
-    const code = `if (!/^pd_shift_[a-f0-9]+$/.test(process.env.DB_NAME ?? "") || process.env.DB_PORT !== "55432") throw new Error("Owned DB required"); const {reportJobService}=await import("./server/dist/src/services/reportJobService.js"); await reportJobService.processPending();`;
+    const code = `if (!/^pd_shift_[a-f0-9]+$/.test(process.env.DB_NAME ?? "") || process.env.DB_PORT !== (process.env.TEST_DB_PORT ?? "55432")) throw new Error("Owned DB required"); const {reportJobService}=await import("./server/dist/src/services/reportJobService.js"); await reportJobService.processPending();`;
     child = spawn(process.execPath, ["--input-type=module", "-e", code], { env: process.env, cwd: process.cwd(), windowsHide: true, stdio: "ignore" });
     await waitFor(async () => (await row(crash.id)).status === "generating", "Owned child did not begin report generation");
     const stopped = once(child, "exit"); child.kill("SIGKILL"); await stopped;

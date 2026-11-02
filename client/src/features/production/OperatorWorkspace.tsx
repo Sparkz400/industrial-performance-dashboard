@@ -161,7 +161,11 @@ export default function OperatorWorkspace() {
     refetchInterval: 5000,
   });
   const events = useQuery({
-    queryKey: ['operator-history', history],
+    queryKey: [
+      'operator-history',
+      history,
+      entries.data?.entries.find((entry) => entry.id === history)?.version,
+    ],
     queryFn: () =>
       productionRequest<{
         events: {
@@ -251,7 +255,6 @@ export default function OperatorWorkspace() {
         discardOfflineDraft(user.id, offlineReview.id);
       clear();
       await entries.refetch();
-      if (history !== null) await events.refetch();
     } catch (failure) {
       if (identityGeneration.current !== generation) return;
       setError(String(failure));
