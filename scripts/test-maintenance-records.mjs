@@ -116,7 +116,7 @@ await dailyFixture(async ({ pool, call, users, actors, api, frontend, expect }) 
   assert.equal(download.headers()["x-content-type-options"], "nosniff");
   assert.equal(download.headers()["content-security-policy"], "sandbox");
   const outsider = await call("wallboard", "GET", `/api/v1/maintenance/plans/${plan.id}/events/${record.id}/attachments/${photo.id}`);
-  assert.equal(outsider.status(), 403, "An ungranted account cannot read attachments");
+  assert.equal(outsider.status(), 404, "RLS hides an ungranted attachment's parent record");
 
   const [listed] = (await ok("viewer", "GET", `/maintenance/machines/${machine}`))[0].events;
   assert.equal(listed.stop.reason, "Belt worn");

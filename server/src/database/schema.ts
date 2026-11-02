@@ -24,6 +24,19 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
+export const authRateLimits = pgTable(
+  "auth_rate_limits",
+  {
+    key: text("key").primaryKey(),
+    hits: integer("hits").notNull(),
+    resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    check("auth_rate_limits_hits_check", sql`${table.hits} >= 0`),
+    index("auth_rate_limits_expiry").on(table.resetAt),
+  ],
+);
+
 export const retentionPolicies = pgTable("retention_policies", {
   machineId: integer("machine_id").primaryKey(),
   days: integer("days").notNull(),

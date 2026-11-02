@@ -22,8 +22,8 @@ differs. It is not an ISO certification.
 <sub>Synthetic demo data. Missing or bad measurements stay unknown instead of becoming
 zero or perfect production:</sub>
 
-| Missing measurements | Phone |
-| --- | --- |
+| Missing measurements                                                                                                                         | Phone                                                                            |
+| -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | ![A shift with a measurement gap: OEE factors are unavailable and the report is marked incomplete](docs/assets/screenshots/missing-data.png) | ![The reconciled demo shift on a phone](docs/assets/screenshots/shift-phone.png) |
 
 > **Status:** development software for evaluation with owned simulators and test
@@ -87,7 +87,6 @@ bottom navigation and the More menu, with page-sized machine editors, grouped
 Operations, Settings selectors and labelled administration rows. See the
 [interface guide](DESIGN.md) for navigation, state semantics and validation scope.
 
-
 Sites can run their own installation and send committed history to a central one, which
 shows each site's availability and data coverage ([edge sites](docs/MULTI_SITE.md)).
 Single sign-on through OIDC and read-only service tokens are available
@@ -102,7 +101,9 @@ See the [production workflow](docs/PRODUCTION_WORKFLOW.md),
 [data ownership and retention inventory](docs/DATA_OWNERSHIP.md) and the WCAG 2.2
 [accessibility checklist](docs/ACCESSIBILITY.md).
 The [20-point security review](docs/SECURITY_BOUNDARIES.md#20-point-security-checklist-2026-11-02)
-records application hardening and the remaining Git-history, RLS and deployment checks.
+records application hardening, database row isolation, shared login limits and the
+[prepared HTTPS deployment and encrypted backups](docs/OPERATIONS.md#prepared-secure-local-deployment).
+Production disk encryption, network acceptance and GitHub's historical caches remain separate checks.
 The first nominated pilot family is [Siemens SIMATIC S7-1500](docs/S7_1500_PILOT.md);
 software acceptance uses owned simulators, with physical CPU qualification still open.
 For isolated installation, complete backups, restore checks and upgrades, see the

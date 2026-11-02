@@ -5,6 +5,8 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema.js";
 import { newPasswordSchema } from "../utils/password.js";
+import { databaseTls } from "./tls.js";
+import { installQueryScope } from "./queryScope.js";
 
 const { Pool } = pg;
 
@@ -17,7 +19,9 @@ async function seed() {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
+    ssl: databaseTls(),
   });
+  pool.on("connect", installQueryScope);
 
   const db = drizzle(pool, { schema });
 

@@ -2,6 +2,8 @@ import "dotenv/config";
 import pg from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { databaseTls } from "./tls.js";
+import { installQueryScope } from "./queryScope.js";
 
 const pool = new pg.Pool({
   host: process.env.DB_HOST,
@@ -9,7 +11,9 @@ const pool = new pg.Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+  ssl: databaseTls(),
 });
+pool.on("connect", installQueryScope);
 try {
   await migrate(drizzle(pool), { migrationsFolder: "drizzle" });
   console.log("Database migrations complete");

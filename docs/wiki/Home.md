@@ -66,7 +66,9 @@ the WCAG 2.2 [accessibility checklist](https://github.com/Sparkz400/performance_
 the [security and deployment boundaries](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/SECURITY_BOUNDARIES.md)
 and the [data ownership and retention inventory](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/DATA_OWNERSHIP.md).
 The [20-point security review](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/SECURITY_BOUNDARIES.md#20-point-security-checklist-2026-11-02)
-records application hardening and the remaining Git-history, RLS and deployment checks.
+records application hardening, database row isolation, shared login limits and the
+[prepared HTTPS deployment and encrypted backups](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/OPERATIONS.md#prepared-secure-local-deployment).
+Production disk encryption, network acceptance and GitHub's historical caches remain separate checks.
 
 - [[Getting Started]]
 - [[Architecture]]

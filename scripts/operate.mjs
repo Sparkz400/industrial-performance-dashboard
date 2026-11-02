@@ -150,6 +150,10 @@ function stack(image, environment, databaseImage = "postgres:16-alpine") {
     DB_PORT: "5432",
     DB_USER: "dashboard",
     DB_NAME: "performance_dashboard",
+    // Recovery is a new isolated network; external replica/TLS settings must be reprovisioned before deployment.
+    DB_READ_REPLICA_URLS: "",
+    DB_SSL: "false",
+    DB_SSL_CA_FILE: "",
     OPCUA_PKI_DIR: "/app/server/certificates",
     OPCUA_SPOOL_PATH: "/app/server/data/measurements.sqlite",
     MACHINE_SECRETS_KEY_FILE: "/app/server/data/machine-secrets.key",
@@ -372,7 +376,9 @@ async function backupStack(file, destination, resume = true) {
         "db",
         "pg_dump",
         "-U",
-        "dashboard",
+        ids.db.Config.Env.find((line) =>
+          line.startsWith("POSTGRES_USER="),
+        ).slice("POSTGRES_USER=".length),
         "-d",
         "performance_dashboard",
         "-Fc",
@@ -474,6 +480,7 @@ if (command === "verify") {
       "ON_ERROR_STOP=1",
       "-c",
       `DO $$ BEGIN
+        PERFORM set_config('app.access_scope', '{"role":"system"}', true);
         IF to_regclass('public.retention_schedules') IS NOT NULL THEN
           UPDATE retention_schedules SET status='cancelled', error='Cancelled by restore; review a new preview' WHERE status='scheduled';
         END IF;

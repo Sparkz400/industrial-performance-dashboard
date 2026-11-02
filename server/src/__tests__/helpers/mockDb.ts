@@ -1,5 +1,10 @@
 import { vi } from "vitest";
 
+vi.mock("../../middleware/postgresRateLimitStore.js", async () => {
+  const { MemoryStore } = await import("express-rate-limit");
+  return { PostgresRateLimitStore: MemoryStore };
+});
+
 /**
  * Creates a chainable mock that mimics Drizzle ORM's fluent query API.
  */

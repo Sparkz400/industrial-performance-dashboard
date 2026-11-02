@@ -1,12 +1,21 @@
 import rateLimit from "express-rate-limit";
 import { createHash } from "node:crypto";
 import config from "../config/config.js";
+import { PostgresRateLimitStore } from "./postgresRateLimitStore.js";
 
-// shortcut: counters are per process; multiple replicas need a shared perimeter login limit.
 export const credentialRateLimit = [
   rateLimit({
     windowMs: 15 * 60 * 1000,
+    max: 60,
+    store: new PostgresRateLimitStore("login-total"),
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many sign-in attempts. Try again later." },
+  }),
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
     max: 30,
+    store: new PostgresRateLimitStore("login-ip"),
     skipSuccessfulRequests: true,
     standardHeaders: true,
     legacyHeaders: false,
@@ -15,6 +24,7 @@ export const credentialRateLimit = [
   rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
+    store: new PostgresRateLimitStore("login-account"),
     keyGenerator: (req) =>
       createHash("sha256")
         .update(

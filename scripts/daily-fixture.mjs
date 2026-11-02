@@ -26,7 +26,9 @@ export const publicUrl = (url) =>
 export async function dailyFixture(test, demo) {
   dotenv.config({ path: "server/.env", quiet: true });
   dotenv.config({ path: "server/.env.example", quiet: true });
-  assert.equal(process.env.DB_PORT, "55432");
+  const testPort = Number(process.env.TEST_DB_PORT ?? 55432);
+  assert.equal(process.env.DB_PORT, String(testPort));
+  assert(Number.isInteger(testPort) && testPort > 1024 && testPort <= 65535);
   assert(["localhost", "127.0.0.1"].includes(process.env.DB_HOST));
   const database =
     demo?.database ?? "pd_daily_" + randomUUID().replaceAll("-", "");
@@ -38,7 +40,7 @@ export async function dailyFixture(test, demo) {
   );
   const base = {
     host: process.env.DB_HOST,
-    port: 55432,
+    port: testPort,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
   };
@@ -50,7 +52,8 @@ export async function dailyFixture(test, demo) {
     sockets,
     store,
     manager,
-    created = false;
+    created = false,
+    createdRole = false;
   try {
     await admin.connect();
     const existing = await admin.query(
@@ -71,7 +74,19 @@ export async function dailyFixture(test, demo) {
           `COMMENT ON DATABASE "${database}" IS 'performance-dashboard-demo:${demo.id}'`,
         );
     }
+    if (!demo) {
+      const rolePassword = randomUUID();
+      await admin.query(
+        `CREATE ROLE "${database}" LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD '${rolePassword}'`,
+      );
+      createdRole = true;
+      await admin.query(`ALTER DATABASE "${database}" OWNER TO "${database}"`);
+      base.user = database;
+      base.password = rolePassword;
+    }
     Object.assign(process.env, {
+      DB_USER: base.user,
+      DB_PASSWORD: base.password,
       DB_NAME: database,
       DB_READ_REPLICA_URLS: "",
       DB_HEALTH_CHECK_INTERVAL: "0",
@@ -85,6 +100,9 @@ export async function dailyFixture(test, demo) {
       ENABLE_LEGACY_GATEWAY: "false",
     });
     pool = new pg.Pool({ ...base, database });
+    const { installQueryScope } =
+      await import("../server/dist/src/database/queryScope.js");
+    pool.on("connect", installQueryScope);
     await migrate(drizzle(pool), { migrationsFolder: "server/drizzle" });
     const password = demo?.password ?? randomUUID(),
       hash = await bcrypt.hash(password, 4);
@@ -234,6 +252,7 @@ export async function dailyFixture(test, demo) {
       }
       await admin.query(`DROP DATABASE "${database}"`);
     }
+    if (createdRole) await admin.query(`DROP ROLE "${database}"`);
     await admin.end();
     if (!demo) {
       assert.equal(dirname(directory), resolve(tmpdir()));
