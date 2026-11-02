@@ -135,6 +135,27 @@ the final evidence outside an unused worktree before cleanup. A machine-owner
 approved physical pilot, independent full-shift reconciliation and deployment
 acceptance are still required separately.
 
+## Latest sustained attempt — 2026-11-01
+
+The clean source `1c380dc508ab0eacd070ba2d15a741e631fe6f12`, including the
+asynchronous storage fix, ran on Windows with Node 24.22.1 and Chromium
+156.0.8078.4. The workload used three browser sessions, 20 tags sampled each
+second, 300-second cycles and 10-second database interruptions.
+
+The workload started at 16:23:51.641 UTC and stopped at 21:11 UTC with
+`ERR_NO_BUFFER_SPACE` while loading a compiled JavaScript asset. It completed
+54 cycles and 4.7222725 workload hours; total measured time was 4.7950094 hours.
+The final receipt records `state=failed`, `passed=false`, `full72Hours=false`
+and launcher exit code 1. The last browser resource sample was within the
+harness budget; that does not identify or exclude the transport failure's cause.
+
+Evidence is retained locally under
+`.local/qualification-72h-20261101-async-spool/`: `run/status.json`,
+`run/cycles.jsonl`, `run/chromium-netlog.json`, `resource-samples.jsonl`,
+`run.err.log` and `launcher-exit.json`. The run is stopped. No failed duration
+counts toward FR01; diagnose the transport failure and complete a fresh
+72-hour run on a clean revision. Physical and deployment acceptance remain separate.
+
 ## Software validation — 2026-10-28
 
 - Full unit/coverage suites: **185 server tests and 80 client tests** passed.
