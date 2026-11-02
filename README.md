@@ -157,6 +157,8 @@ events remain in a durable local spool until PostgreSQL confirms storage.
 Measurement spool operations run in a dedicated storage thread. Batched writes
 retain SQLite FULL durability; live updates and MQTT acknowledgements wait for commit,
 and bounded uncommitted input stops acquisition if storage cannot keep up.
+The latest sustained attempt stopped after 54 cycles / 4.72 workload hours with
+a browser transport failure; [72-hour acceptance remains open](docs/FACTORY_READINESS.md#latest-sustained-attempt--2026-11-01).
 
 [Data integrity and reviewed operations](docs/DATA_INTEGRITY.md) adds observed-data
 widgets, attributable measurement corrections, bounded calculated signals, explicit

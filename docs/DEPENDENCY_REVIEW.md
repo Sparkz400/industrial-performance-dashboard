@@ -1,5 +1,32 @@
 # Dependency PR disposition — 2026-10-26
 
+## Maintenance review — 2026-11-02
+
+The six November proposals were reviewed together against `1c380dc5` and the
+supported Node 24 runtime. Five are consolidated without changing application
+APIs. The Node 26 declaration proposal is replaced with Node 24 declarations.
+
+| Proposal | Disposition |
+| --- | --- |
+| [#107](https://github.com/Sparkz400/performance_dashboard/pull/107) | Adopt the pinned Wolfi base digest `88a20e2d017bd20cdc0cb3910de603e7bea9512a6c351a8dd3c9df212ab03d73`; retain Node 24 and require the actual-image checks. |
+| [#108](https://github.com/Sparkz400/performance_dashboard/pull/108) | Adopt the nine grouped minor/patch updates. tRPC client, React Query adapter and server stay together at 11.22.1. The OPC UA package remains subject to the guarded overflow patch and its regression. |
+| [#109](https://github.com/Sparkz400/performance_dashboard/pull/109) | Adopt jsdom 30.1.3 for client tests, matching the existing server major. Its Node 24 minimum is 24.15.0; validation uses 24.22.1. |
+| [#110](https://github.com/Sparkz400/performance_dashboard/pull/110) | Adopt config-conventional 21.2.4 with the existing commitlint CLI 20.5.3. The real CLI accepts a valid message and rejects an invalid one with the installed configuration. |
+| [#111](https://github.com/Sparkz400/performance_dashboard/pull/111) | Decline Node 26 declarations. Replace the previous Node 25 declarations with `@types/node` 24.19.2 at the root and server; root placement keeps client/build tooling on the same declarations. Dependabot still updates this supported major, but no longer proposes automatic major changes. This does not change the Node runtime. |
+| [#112](https://github.com/Sparkz400/performance_dashboard/pull/112) | Adopt lint-staged 17.6.0. The pre-commit hook uses `--hide-unstaged` so tasks see staged content and restore private work afterward. An owned Git fixture verifies partial staging, unrelated unstaged work and the resulting index. |
+
+The review uses the upstream [lint-staged staging contract](https://github.com/lint-staged/lint-staged#--hide-unstaged),
+[commitlint configuration](https://github.com/conventional-changelog/commitlint/tree/master/%40commitlint/config-conventional),
+[jsdom runtime requirement](https://github.com/jsdom/jsdom/blob/main/package.json)
+and [DefinitelyTyped version policy](https://github.com/DefinitelyTyped/DefinitelyTyped#how-do-definitely-typed-package-versions-relate-to-versions-of-the-corresponding-library).
+The hook regressions extend `test-dev-dependencies.mjs`, which already runs on
+Windows and Linux CI. No production credentials, databases or machines are used.
+
+The full npm audit reports zero advisories, including development dependencies;
+the removed minimatch exception is not reinstated. The failed November 1
+[endurance attempt](FACTORY_READINESS.md#latest-sustained-attempt--2026-11-01)
+is separate evidence: these updates do not close FR01 or any physical/publisher gate.
+
 ## Exception removed and upstream follow-through — 2026-10-31
 
 The December 1 minimatch exception is removed, not extended. A clean root install

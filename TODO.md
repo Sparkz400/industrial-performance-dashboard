@@ -65,6 +65,9 @@ Physical-machine qualification remains separate.
   A diagnostic run isolated synchronous spool writes blocking the HTTP thread;
   storage now runs in a dedicated thread with bounded durable batches. This fix
   does not establish a 72-hour pass or resolve the separate Windows socket error.
+  The clean `1c380dc5` attempt stopped on 2026-11-01 after 54 cycles and 4.7223
+  workload hours with the same transport error; it is no longer running
+  ([receipt summary](docs/FACTORY_READINESS.md#latest-sustained-attempt--2026-11-01)).
   Remaining: a complete 72-hour receipt on a clean revision; no failed duration is
   reused ([transport investigation](docs/FACTORY_READINESS.md#browser-transport-investigation--2026-10-31)).
 - [x] **FR02 — Supervisor work:** scoped line/action access, attributable maintenance

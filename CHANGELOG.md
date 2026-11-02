@@ -8,6 +8,11 @@ never closes an open acceptance item.
 
 ## [Unreleased]
 
+- Review November dependency updates, align Node declarations with the supported
+  Node 24 runtime, and preserve unstaged work during pre-commit checks.
+- Correct the dependency-audit status and record the failed November 1 endurance
+  attempt; the 72-hour acceptance gate remains open.
+
 ## [0.1.0] — 2026-10-31
 
 First tagged pre-release: an **unsigned candidate** for isolated evaluation with

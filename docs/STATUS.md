@@ -1,5 +1,17 @@
 # Current status
 
+## Maintenance and endurance checkpoint — 2026-11-02
+
+The [dependency review](DEPENDENCY_REVIEW.md#maintenance-review--2026-11-02)
+records the November update decisions. The full npm audit has zero findings;
+there is no remaining development-dependency exception.
+
+The latest full-application attempt on `1c380dc5` stopped on November 1 at
+21:11 UTC after 54 completed cycles and 4.7223 workload hours with
+`ERR_NO_BUFFER_SPACE`. It is no longer running; `passed` and `full72Hours` are
+false. The storage-thread fix does not resolve this separate transport failure.
+FR01 remains open; see the [exact checkpoint](FACTORY_READINESS.md#latest-sustained-attempt--2026-11-01).
+
 ## Open-source launch — 2026-10-31
 
 The README now leads with screenshots of synthetic demo shifts and a quick-try section;
@@ -414,11 +426,10 @@ simulator evidence do not establish physical-machine acceptance or release readi
   one installation; this does not establish tenant isolation. See the
   [production workflow and evidence](PRODUCTION_WORKFLOW.md) and [TODO](../TODO.md).
 - Separate companies must use separate installations. Tenant isolation is unqualified.
-- The 2026-10-31 dependency refresh fixes Joi, glob and modern minimatch advisories.
-  The server runtime audit has zero findings. The full raw audit retains 14 development
-  package findings from one non-applicable legacy minimatch advisory; a source-hash,
-  version, development-only and expiry checked review handles it explicitly.
-  All other advisories remain blocking. See [dependency review](DEPENDENCY_REVIEW.md).
+- The 2026-11-02 full npm audit has zero findings, including development packages.
+  The legacy minimatch exception was removed on October 31; every advisory remains
+  blocking. These results apply to the reviewed dependency set and scan date.
+  See [dependency review](DEPENDENCY_REVIEW.md).
   The scoped esbuild override and its compatibility check are documented in
   [the review](DEPENDENCY_REVIEW.md). CSRF and cross-origin socket regression checks pass.
 - The Node 24/Wolfi image renders scheduled PDFs without Chromium and has zero
