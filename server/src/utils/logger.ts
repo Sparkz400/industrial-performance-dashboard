@@ -2,6 +2,7 @@ import winston from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
 import crypto from "crypto";
 import type { Request, Response, NextFunction } from "express";
+import { redactRequestUrl } from "./requestLog.js";
 
 const { combine, timestamp, json, colorize, simple, printf } = winston.format;
 
@@ -56,15 +57,14 @@ export const generateRequestId = (): string => crypto.randomUUID();
  */
 logger.middleware = (req: Request, res: Response, next: NextFunction): void => {
   const r = req as Request & { requestId?: string };
-  r.requestId =
-    (req.headers["x-request-id"] as string) || generateRequestId();
+  r.requestId = (req.headers["x-request-id"] as string) || generateRequestId();
   res.setHeader("x-request-id", r.requestId);
 
   logger.info({
-    message: `${req.method} ${req.url}`,
+    message: `${req.method} ${redactRequestUrl(req.originalUrl)}`,
     requestId: r.requestId,
     method: req.method,
-    url: req.url,
+    url: redactRequestUrl(req.originalUrl),
     ip: req.ip,
     userAgent: req.get("User-Agent"),
   });

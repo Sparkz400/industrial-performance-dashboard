@@ -92,8 +92,8 @@ router.post(
         .getDashboardById(req.params.id)
         .catch(() => null);
       const dashboard = await dashboardService.saveDashboard({
-        id: req.params.id,
         ...req.body,
+        id: req.params.id,
       });
       const actor = getAuditActor(req);
       await auditLogService.recordEvent(

@@ -2,7 +2,16 @@ import crypto from "crypto";
 import { notificationResume } from "./maintenanceActions.js";
 import { cmmsDestinationDigest } from "./cmmsHandoff.js";
 import { reportEmailService } from "./reportEmailService.js";
-import { eq, and, isNull, isNotNull, lte, asc, sql } from "drizzle-orm";
+import {
+  eq,
+  and,
+  isNull,
+  isNotNull,
+  lte,
+  asc,
+  sql,
+  notLike,
+} from "drizzle-orm";
 import db from "../database/db.js";
 import {
   webhooks,
@@ -17,6 +26,7 @@ import {
   ValidationError,
 } from "../utils/errors.js";
 import type { WebhookEvent } from "@performance-dashboard/shared";
+import { openSecret, sealSecret } from "./machineIdentity.js";
 import {
   assertSafeOutboundUrl,
   fetchSafeOutbound,
@@ -30,6 +40,19 @@ function signPayload(payload: string, secret: string): string {
   return crypto.createHmac("sha256", secret).update(payload).digest("hex");
 }
 
+const SEALED = "sealed:v1:";
+async function signingSecret(webhook: Pick<WebhookRow, "id" | "secret">) {
+  if (!webhook.secret.startsWith(SEALED)) return webhook.secret;
+  const secret = (
+    await openSecret(
+      `webhook:${webhook.id}`,
+      webhook.secret.slice(SEALED.length),
+    )
+  ).password;
+  if (!secret) throw new Error("Webhook signing secret is missing");
+  return secret;
+}
+
 // With the 15-minute backoff cap this is about one day of failed attempts.
 export const MAX_DELIVERY_ATTEMPTS = 100;
 
@@ -38,6 +61,26 @@ let pending: Promise<void> | undefined;
 let stopped = true;
 
 export const webhookService = {
+  /** Upgrade existing destinations before serving requests; preserve the receiver's key. */
+  async encryptLegacySecrets(): Promise<void> {
+    const rows = await db
+      .select({ id: webhooks.id, secret: webhooks.secret })
+      .from(webhooks);
+    // Verify the original key before any operation that could create a new key file.
+    for (const row of rows.filter((row) => row.secret.startsWith(SEALED)))
+      await signingSecret(row);
+    for (const row of rows.filter((row) => !row.secret.startsWith(SEALED))) {
+      const secret =
+        SEALED +
+        (await sealSecret(`webhook:${row.id}`, { password: row.secret }));
+      await db
+        .update(webhooks)
+        .set({ secret })
+        .where(
+          and(eq(webhooks.id, row.id), notLike(webhooks.secret, `${SEALED}%`)),
+        );
+    }
+  },
   start(): void {
     if (!stopped) return;
     stopped = false;
@@ -230,7 +273,14 @@ export const webhookService = {
     return requeued;
   },
   async listWebhooks(): Promise<WebhookRow[]> {
-    return db.select().from(webhooks).orderBy(webhooks.createdAt);
+    return Promise.all(
+      (await db.select().from(webhooks).orderBy(webhooks.createdAt)).map(
+        async (row) => ({
+          ...row,
+          secret: await signingSecret(row),
+        }),
+      ),
+    );
   },
 
   async createWebhook(input: {
@@ -249,22 +299,32 @@ export const webhookService = {
       : (await assertSafeOutboundUrl(input.url!, "Webhook URL")).toString();
 
     const secret = generateSecret();
-    const [created] = await db
-      .insert(webhooks)
-      .values({
-        name: input.name,
-        kind: email ? "email" : "webhook",
-        url,
-        recipients: email ? (input.recipients ?? []) : [],
-        minSeverity: input.minSeverity ?? null,
-        machineIds: input.machineIds ?? [],
-        events: input.events,
-        secret,
-        isActive: true,
-        createdBy: input.createdBy ?? null,
-      })
-      .returning();
-    return created;
+    return db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(webhooks)
+        .values({
+          name: input.name,
+          kind: email ? "email" : "webhook",
+          url,
+          recipients: email ? (input.recipients ?? []) : [],
+          minSeverity: input.minSeverity ?? null,
+          machineIds: input.machineIds ?? [],
+          events: input.events,
+          secret: "pending",
+          isActive: true,
+          createdBy: input.createdBy ?? null,
+        })
+        .returning();
+      await tx
+        .update(webhooks)
+        .set({
+          secret:
+            SEALED +
+            (await sealSecret(`webhook:${created.id}`, { password: secret })),
+        })
+        .where(eq(webhooks.id, created.id));
+      return { ...created, secret };
+    });
   },
 
   async updateWebhook(
@@ -312,7 +372,7 @@ export const webhookService = {
       .where(eq(webhooks.id, id))
       .returning();
     if (!updated) throw new NotFoundError("Webhook");
-    return updated;
+    return { ...updated, secret: await signingSecret(updated) };
   },
 
   async deleteWebhook(id: number): Promise<void> {
@@ -446,9 +506,8 @@ async function deliverWebhook(
   deliveryId?: number,
 ): Promise<{ success: boolean; statusCode: number; message: string }> {
   const body = JSON.stringify(event);
-  const signature = signPayload(body, webhook.secret);
-
   try {
+    const signature = signPayload(body, await signingSecret(webhook));
     const safeUrl = await assertSafeOutboundUrl(
       webhook.url ?? "",
       "Webhook URL",

@@ -60,6 +60,28 @@ collector lease and takes over when the holder dies ([high availability](HIGH_AV
 exposing the service beyond the workstation; the installer binds only to loopback.
 For the first PLC, follow the [S7-1500 guide](S7_1500_PILOT.md).
 
+## HTTPS and trusted proxies
+
+Before remote production use, set `CLIENT_URL` to the public HTTPS origin and
+`TRUSTED_PROXIES` to the exact proxy peer IPs or narrowly scoped CIDR ranges, separated
+by commas. For a proxy connecting directly over host loopback, for example, use
+`127.0.0.1,::1`. A container sees the proxy's address on its network; do not assume that
+address is loopback. The default trusts no forwarded headers.
+
+Set these in the installation's authoritative `compose.json` environment, or in the
+root Compose environment when using `docker-compose.yml`. The TLS proxy must replace
+client-supplied forwarded headers, set `X-Forwarded-Proto: https`, and pass the client
+address in `X-Forwarded-For`. It must redirect or reject public HTTP and prevent direct
+external connections to the application's HTTP/WebSocket port. Verify sign-in, secure
+cookies, WebSocket reconnection and sign-out at the actual public origin.
+
+With HTTPS configured, insecure Express requests receive 426; local readiness probes
+are exempt. Production HTTP origins are allowed only for loopback previews. Session
+and cookie secrets must each contain at least 32 characters; use independent random
+values. Login throttles are per process, so multiple replicas need a shared perimeter
+limit. See the [security checklist](SECURITY_BOUNDARIES.md#20-point-security-checklist-2026-11-02)
+for encryption upgrades, backup/rollback constraints and remaining deployment checks.
+
 ## Complete backup
 
 ```text

@@ -270,6 +270,8 @@ export function createApp() {
 
 // --- Bootstrap ---
 async function bootstrap() {
+  const { webhookService } = await import("./src/services/webhookService.js");
+  if (!config.RECOVERY_MODE) await webhookService.encryptLegacySecrets();
   const { startConfiguredGateway } =
     await import("./src/gateway/configuredGateway.js");
   await startConfiguredGateway();

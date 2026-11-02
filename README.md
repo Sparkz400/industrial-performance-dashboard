@@ -101,6 +101,8 @@ See the [production workflow](docs/PRODUCTION_WORKFLOW.md),
 [security and deployment boundaries](docs/SECURITY_BOUNDARIES.md), the
 [data ownership and retention inventory](docs/DATA_OWNERSHIP.md) and the WCAG 2.2
 [accessibility checklist](docs/ACCESSIBILITY.md).
+The [20-point security review](docs/SECURITY_BOUNDARIES.md#20-point-security-checklist-2026-11-02)
+records application hardening and the remaining Git-history, RLS and deployment checks.
 The first nominated pilot family is [Siemens SIMATIC S7-1500](docs/S7_1500_PILOT.md);
 software acceptance uses owned simulators, with physical CPU qualification still open.
 For isolated installation, complete backups, restore checks and upgrades, see the

@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import logger from "../utils/logger.js";
 import { UnauthorizedError, ForbiddenError } from "../utils/errors.js";
 import { getSessionUser } from "../services/sessionAccess.js";
+import { redactRequestUrl } from "../utils/requestLog.js";
 
 export type UserRole =
   "admin" | "viewer" | "wallboard" | "operator" | "supervisor";
@@ -34,7 +35,7 @@ export const requireAuth = async (
     const user = await getSessionUser(req.session);
     if (!user) {
       logger.warn(
-        `[Auth] Unauthenticated request to ${req.method} ${req.originalUrl}`,
+        `[Auth] Unauthenticated request to ${req.method} ${redactRequestUrl(req.originalUrl)}`,
       );
       next(new UnauthorizedError());
       return;
@@ -98,7 +99,7 @@ export const requireRole = (...roles: UserRole[]) => {
     const userRole = req.session?.userRole;
     if (!userRole || !roles.includes(userRole)) {
       logger.warn(
-        `[Auth] Forbidden: user "${req.session?.username}" (role: ${userRole}) attempted ${req.method} ${req.originalUrl}`,
+        `[Auth] Forbidden: user "${req.session?.username}" (role: ${userRole}) attempted ${req.method} ${redactRequestUrl(req.originalUrl)}`,
       );
       next(new ForbiddenError());
       return;

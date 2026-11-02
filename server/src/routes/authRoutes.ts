@@ -1,8 +1,11 @@
 import express, { type Request, type Response } from "express";
 import { eq, asc, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
+import { randomBytes } from "node:crypto";
 import Joi from "joi";
-import { validateBody } from "../middleware/validation.js";
+import { validateBody, validateParams } from "../middleware/validation.js";
+import { credentialRateLimit } from "../middleware/security.js";
+import { newPasswordSchema } from "../utils/password.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import db from "../database/db.js";
@@ -25,6 +28,10 @@ import { oidcEnabled } from "../services/oidc.js";
 const router = express.Router();
 
 const SALT_ROUNDS = 12;
+const failedPasswordHash = bcrypt.hash(
+  randomBytes(32).toString("hex"),
+  SALT_ROUNDS,
+);
 
 // --- Validation Schemas ---
 const loginSchema = Joi.object({
@@ -35,7 +42,7 @@ const loginSchema = Joi.object({
 const registerSchema = Joi.object({
   username: Joi.string().alphanum().min(3).max(100).required(),
   email: Joi.string().email().required(),
-  password: Joi.string().min(8).max(255).required(),
+  password: newPasswordSchema,
   role: Joi.string()
     .valid("admin", "viewer", "wallboard", "operator", "supervisor")
     .default("viewer"),
@@ -50,14 +57,15 @@ const updateUserSchema = Joi.object({
 });
 
 const changePasswordSchema = Joi.object({
-  currentPassword: Joi.string().min(1).required(),
-  newPassword: Joi.string().min(8).max(255).required(),
+  currentPassword: Joi.string().min(1).max(255).required(),
+  newPassword: newPasswordSchema,
 });
 
 // --- POST /api/auth/login ---
 router.post(
   "/login",
   validateBody(loginSchema),
+  ...credentialRateLimit,
   asyncHandler(async (req: Request, res: Response) => {
     const { username, password } = req.body;
 
@@ -90,18 +98,20 @@ router.post(
         },
         getAuditActor(req),
       );
-    if (result.length === 0) {
+    const user = result[0];
+    // Unknown and passwordless accounts also pay the password-check cost.
+    const passwordValid = await bcrypt.compare(
+      password,
+      user?.passwordHash || (await failedPasswordHash),
+    );
+    if (!user) {
       await failed("unknown account");
       throw new UnauthorizedError("Invalid username or password.");
     }
 
-    const user = result[0];
-
     if (!user.isActive) {
       await failed("deactivated account", user);
-      throw new ForbiddenError(
-        "Account is deactivated. Contact an administrator.",
-      );
+      throw new UnauthorizedError("Invalid username or password.");
     }
 
     // Identity-provider and service accounts have no password.
@@ -109,7 +119,6 @@ router.post(
       await failed(`no password for a ${user.authSource} account`, user);
       throw new UnauthorizedError("Invalid username or password.");
     }
-    const passwordValid = await bcrypt.compare(password, user.passwordHash);
     if (!passwordValid) {
       await failed("wrong password", user);
       throw new UnauthorizedError("Invalid username or password.");
@@ -226,6 +235,7 @@ router.post(
   "/change-password",
   requireAuth,
   validateBody(changePasswordSchema),
+  ...credentialRateLimit,
   asyncHandler(async (req: Request, res: Response) => {
     const { currentPassword, newPassword } = req.body;
 
@@ -351,6 +361,9 @@ router.put(
   requireAuth,
   requireRole("admin"),
   validateBody(updateUserSchema),
+  validateParams(
+    Joi.object({ id: Joi.number().integer().positive().required() }),
+  ),
   asyncHandler(async (req: Request, res: Response) => {
     const id = parseInt(req.params.id as string, 10);
     const { email, role, isActive } = req.body;

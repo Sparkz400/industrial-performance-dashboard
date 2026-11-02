@@ -44,13 +44,14 @@ export function initTracing(): void {
           return (
             url.includes("/health") ||
             url.includes("/metrics") ||
-            url.includes("/favicon")
+            url.includes("/favicon") ||
+            /^\/(?:api\/v1\/(?:auth|share)(?:\/|\?|$)|embed\/)/i.test(url)
           );
         },
       }),
       new ExpressInstrumentation(),
       new PgInstrumentation({
-        enhancedDatabaseReporting: true,
+        enhancedDatabaseReporting: false,
       }),
     ],
   });

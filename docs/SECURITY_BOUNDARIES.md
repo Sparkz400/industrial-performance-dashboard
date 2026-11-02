@@ -6,6 +6,71 @@ security review) and **D01** (OT deployment boundary) for the software, recorded
 publisher-key acceptance remain separate. Re-run the checks below for the exact
 revision and image you deploy; this record does not certify a different build.
 
+## 20-point security checklist (2026-11-02)
+
+Reviewed from `main` at `1c380dc508ab0eacd070ba2d15a741e631fe6f12`, with
+application fixes on `codex/security-checklist-20261102`. Scope: one company's
+installation behind an approved TLS proxy, with a private PostgreSQL database.
+The browser has no direct database access. This is a source review and local
+verification, not an internet penetration test or production qualification.
+
+| # | Check | Result after application fixes |
+| --- | --- | --- |
+| 1 | Hide API keys | Server-only configuration; no client DB/provider keys found. Request logs remove query strings and share tokens; session IDs are no longer logged. Authentication/share requests are excluded from tracing and SQL parameter capture is disabled. |
+| 2 | Purge Git secrets | **Open.** Old `.env` revisions retain `DB_PASSWORD` and an example-looking `ADMIN_API_KEY`. Neither matches current local configuration. Treat any reused values as exposed; revoke/rotate them before coordinating a history rewrite. No history, credentials or remote refs were changed. |
+| 3 | Use public DB key | **Not applicable.** This is private PostgreSQL, not a browser-accessible database service. No database credential should be made public. New production installs already use a restricted application role. |
+| 4 | Enable RLS | **Open.** No PostgreSQL row-level policies exist. Application machine/site grants are enforced, but they are not database RLS or multi-company isolation. Adding RLS requires transaction-scoped identities, background-job policies and separate runtime/migration roles; merely enabling it on owner-run tables would not establish protection. |
+| 5 | Encrypt sensitive data | **Partial.** Machine/MQTT/edge credentials already use AES-256-GCM. Webhook signing secrets now use the same independent key file and are bound to the destination ID. Existing webhook keys upgrade without changing receiver keys. Database disks, spools, attachments, reports, backups and database transport still need deployment controls. |
+| 6 | Server-side authentication | REST, tRPC and sockets check server-side identities. Fixed tRPC's omission of the OIDC sign-in time, which previously bypassed the configured maximum identity-provider session age. |
+| 7 | Record access | Deny-by-default route policy, machine/site grants, scoped exports and socket rooms. Real two-site access/revocation tests passed. Keep declared dashboard assets aligned with widget contents; this remains one-company isolation. |
+| 8 | Field tampering | Schemas and explicit writable fields protect account roles and record metadata. Fixed a dashboard body `id` overriding the URL's destination. |
+| 9 | Session cookies | HttpOnly, SameSite=Lax and two-hour expiry; Secure for HTTPS. Explicit proxy IP/CIDR trust now allows Secure cookies through approved TLS proxies without trusting arbitrary forwarded headers. API responses are no-store. |
+| 10 | Password hashing | bcrypt cost 12 retained. New/reset/seed passwords require 12 characters and at most 72 UTF-8 bytes, avoiding silent bcrypt truncation. Existing passwords still work for login/change. Unknown/passwordless accounts also undergo a password comparison; inactive accounts return the generic login failure. |
+| 11 | Limit login attempts | Added limits for login/password changes: 10 failed attempts per account and 30 per IP per 15 minutes, with Retry-After. Successful requests are removed from counters. **Counters are per process**; replicas/restarts require a shared perimeter limit for installation-wide protection. |
+| 12 | Bot protection | **Partial.** Rate limits and administrator-only registration reduce automated abuse. No CAPTCHA, WAF or device/risk challenge is installed. Choose perimeter/identity-provider protection if exposing this industrial application publicly. |
+| 13 | Parameterized queries | Reviewed paths use Drizzle bindings or PostgreSQL parameters; dynamic table/view names use fixed allowlists. No raw SQL interpolation of untrusted values found in reviewed request paths. |
+| 14 | Input validation | Joi/Zod schemas, body limits and upload validation retained. Fixed account-update ID validation; invalid numeric suffixes now fail instead of selecting a different ID. Dashboard/widget structures remain flexible; this does not claim exhaustive semantic validation of every field. |
+| 15 | Escape user content | React text rendering and server/client SVG sanitization retained; sanitization regressions passed. No newly introduced HTML rendering. |
+| 16 | Restrict uploads | Authenticated, asset-scoped attachments: 5 MiB, PNG/JPEG/PDF/UTF-8 allowlist, file signature checks, sanitized names, at most 10 per record, download-only sandbox/no-sniff headers. No malware scanner; file signatures do not establish that a PDF/image is harmless. |
+| 17 | Trim API responses | User responses omit password hashes, credential endpoints omit encrypted secrets, service/share tokens are hashed and shown once, webhook responses mask keys after creation. Added no-store for API/metrics responses. |
+| 18 | Security headers | Helmet CSP/HSTS/frame/resource policies retained. HTTPS CSP no longer permits the development HTTP/WebSocket endpoints. |
+| 19 | Force HTTPS | Remote production CLIENT_URL must use HTTPS; HTTPS-configured Express endpoints reject insecure requests and ignore untrusted forwarded protocol headers. Loopback previews/readiness probes remain supported. The operator must provision certificates, redirect/reject public HTTP and restrict direct app/socket access. |
+| 20 | Dependency scan | Current root-lockfile npm audit: **0 vulnerabilities**, including development dependencies (1,334 total packages reported). Existing CodeQL, Gitleaks and container-scan workflows retained; no new dependency. Exact-image/container scanning was not rerun locally. |
+
+### Verification and findings requiring an owner
+
+- Local tests: **357 server + 120 client tests passed**; both builds and client/server
+  type checks passed. Focused regressions cover proxy spoofing, cookie flags, password
+  bounds, login throttling, stale OIDC sessions, destination tampering, logging and
+  webhook encryption/key-loss behavior.
+- Real-database/headless checks: `test-access.mjs`, `test-data-ownership.mjs`,
+  `test-integration-outbox.mjs`, `test-maintenance-records.mjs` and `test-oidc.mjs`.
+  An owned temporary PostgreSQL 18 cluster was used because Docker was unavailable;
+  this does not replace the deployed PostgreSQL 16/container checks. The encryption
+  upgrade is idempotent and failed key storage rolls back new destinations.
+- Gitleaks 8.30.1 scanned 181 reachable commits (about 146 MB) with zero matches.
+  Manual inspection nevertheless found historic credentials in `.env`, including
+  revisions `694071b5`, `95bd6408` and `8ccec8ac`. A clean scanner result is not proof
+  that history contains no secrets. Values are omitted from this report and evidence.
+- Local evidence: `.local/security-checklist-20261102/` (ignored by Git). No production
+  machines, production databases, deployed credentials or remote history were changed.
+- Remaining release/deployment work: credential reuse review and coordinated Git
+  cleanup, an explicit RLS decision, disk/backup/database-transport encryption,
+  shared login limits for multiple replicas, perimeter bot protection if needed, and
+  TLS/firewall verification on the actual installation.
+
+Normal startup upgrades legacy webhook secrets before serving requests. Recovery
+previews remain read-only and defer the upgrade until activation. Back up the original
+`machine-secrets.key` with the database: loss of that key prevents decryption and
+normal startup when encrypted webhook records exist. A plaintext backup/history copy
+does not become encrypted retroactively. Do not roll an upgraded database back to a
+version that expects plaintext webhook secrets; restore a matching pre-upgrade backup.
+Previously collected logs and traces are not scrubbed by the new redaction settings.
+
+Production session/cookie secrets shorter than 32 characters are now rejected. Generate
+independent random values and expect existing sessions to end when the session secret
+changes. See [HTTPS configuration](OPERATIONS.md#https-and-trusted-proxies).
+
 ## Access matrix (F07)
 
 Every `/api/v1` route except sign-in and selected-data links passes `requireAuth`,
@@ -99,7 +164,7 @@ Boundary checks:
 | --- | --- |
 | Outbound URLs (webhooks, CMMS, widget manifests) | `outboundUrlSafety.test.ts`: private/loopback/metadata addresses, credentials in URLs, DNS rebinding at connect time, redirects and >1 MiB responses refused |
 | SVG (digital twins) | `sanitizeSvg.test.ts`: scripts, handlers, `foreignObject`, external `href`/`url()`, `data:` URIs, `<style>`, `<image>`, animation elements removed; sanitised again in the browser |
-| Request bodies / uploads | JSON only (100 KB limit, `anonymous.test.ts` → 413); no multipart endpoints; bundles and work orders have their own row/size limits |
+| Request bodies / uploads | JSON: 100 KB limit (`anonymous.test.ts` → 413). Maintenance attachments: authenticated raw-body endpoint, 5 MiB/type/signature/count limits and sandboxed downloads (`test-maintenance-records.mjs`). No multipart endpoints; bundles and work orders have their own row/size limits |
 | CSRF and socket origin | `e2e/security.spec.ts`, integration tests with real CSRF middleware |
 | Secrets | session/cookie secrets required in production; machine credentials encrypted with a separate key file (`test-secure-machine.mjs`); share tokens hashed; support bundles redacted; `.env`, keys and evidence ignored by Git and scanned by Gitleaks |
 
