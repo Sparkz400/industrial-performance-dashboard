@@ -12,6 +12,8 @@ The [dependency review](https://github.com/Sparkz400/performance_dashboard/blob/
 records the lint migration that removes the development-dependency exception.
 All npm advisories block CI. The guarded OPC UA overflow patch remains pending
 [upstream resolution](https://github.com/node-opcua/node-opcua/issues/1849).
+The November 2 review records zero npm advisories and keeps Node declarations
+on the supported Node 24 major.
 
 **OEE you can audit:** run the [OEE conformance suite](https://github.com/Sparkz400/performance_dashboard/blob/main/benchmarks/correctness/CONFORMANCE.md)
 against any OEE tool and publish the result. It builds on the
@@ -52,6 +54,9 @@ fair comparisons of frozen shift reports and full-application endurance testing.
 Maintenance correction history is preserved without a fixed count ceiling and
 browsed in pages; shift calculations use a boundary sweep with unchanged evidence rules.
 Short runs do not establish multi-day reliability; physical qualification remains open.
+The [latest sustained attempt](https://github.com/Sparkz400/performance_dashboard/blob/main/docs/FACTORY_READINESS.md#latest-sustained-attempt--2026-11-01)
+stopped on November 1 after 54 cycles / 4.72 workload hours with
+`ERR_NO_BUFFER_SPACE`. It is no longer running; FR01 remains open.
 
 Industrial monitoring with OPC UA machine connections, configurable dashboards,
 historical trends and OEE. Development software for owned simulators and isolated
