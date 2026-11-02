@@ -22,7 +22,7 @@ COPY server/package.json server/package.json
 COPY scripts/patch-opcua.mjs scripts/patch-opcua.mjs
 RUN npm ci --omit=dev --workspace=server --workspace=shared --ignore-scripts && node scripts/patch-opcua.mjs
 
-FROM cgr.dev/chainguard/wolfi-base:latest@sha256:88a20e2d017bd20cdc0cb3910de603e7bea9512a6c351a8dd3c9df212ab03d73 AS production
+FROM cgr.dev/chainguard/wolfi-base:latest@sha256:fd50bd0cdeb808cf4f45c9c9189e0cc7f7fcc27195d69abd6622c80527e7e021 AS production
 ARG SOURCE_REVISION=unversioned
 LABEL org.opencontainers.image.revision=$SOURCE_REVISION
 WORKDIR /app

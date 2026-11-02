@@ -26,6 +26,7 @@ class CacheManager {
   initRedis(url) {
     try {
       this.client = new Redis(url, {
+        protocol: 2, // Preserve compatibility with existing RESP2-only Redis servers.
         maxRetriesPerRequest: 3,
         retryStrategy: (times) => {
           if (times > 5) {

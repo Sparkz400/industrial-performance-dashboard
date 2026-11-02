@@ -104,9 +104,13 @@ The [20-point security review](docs/SECURITY_BOUNDARIES.md#20-point-security-che
 records application hardening, database row isolation, shared login limits and the
 [prepared HTTPS deployment and encrypted backups](docs/OPERATIONS.md#prepared-secure-local-deployment).
 Production disk encryption and network acceptance remain separate checks.
-This independent repository contains the sanitized branch history. The predecessor's
-immutable release, issues, pull requests and cached history were not imported;
-cleaning up those older copies remains separate work.
+This independent repository contains the sanitized branch history and all 12 open
+contributor issues. The six remaining predecessor dependency proposals are resolved
+in the [dependency review](docs/DEPENDENCY_REVIEW.md#predecessor-proposals--2026-11-02).
+Historical release files and review records are retained in the maintainer's private
+migration backup; old GitHub release, pull-request and CI URLs are historical references
+and may become unavailable when the predecessor is deleted. No release image has
+been published from this repository yet.
 The first nominated pilot family is [Siemens SIMATIC S7-1500](docs/S7_1500_PILOT.md);
 software acceptance uses owned simulators, with physical CPU qualification still open.
 For isolated installation, complete backups, restore checks and upgrades, see the

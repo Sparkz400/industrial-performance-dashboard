@@ -1,5 +1,26 @@
 # Dependency PR disposition — 2026-10-26
 
+## Predecessor proposals — 2026-11-02
+
+The six remaining proposals from `performance_dashboard` are handled in the
+replacement repository. The original review records and clean branch heads are
+preserved in the maintainer's private migration backup.
+
+| Old PR | Disposition |
+| --- | --- |
+| #114 | Adopt Wolfi digest `fd50bd0cdeb808cf4f45c9c9189e0cc7f7fcc27195d69abd6622c80527e7e021`; retain Node 24, native x86/ARM runtime checks and the full image security scan. |
+| #116 | Adopt Framer Motion 14.9.0. Existing motion elements, presence transitions and reduced-motion configuration remain in use; validate the actual dashboard/browser flows. |
+| #117 | Adopt commitlint CLI 21.2.4, matching config-conventional. The existing CLI regression checks valid and invalid commit messages on Windows and Linux. |
+| #118 | Adopt concurrently 10.0.6. Root build and test commands exercise the installed CLI with the existing Node 24 workspace commands. |
+| #119 | Adopt ioredis 6.0.0 with explicit `protocol: 2` in both the cache and health probe, preserving compatibility with existing Redis servers. A health-probe regression rejects a connection that would require RESP3's `HELLO`. |
+| #121 | Decline the isolated PostgreSQL 18 base-image bump. Keep PostgreSQL 16: the Compose mount, installation tools, offline packages, backup/restore and CI fixtures use its data layout. Major proposals are held until an explicit data migration and rollback procedure is tested; PostgreSQL 16 updates and vulnerability scanning continue. |
+
+Upstream references: [Motion upgrade guide](https://motion.dev/docs/react-upgrade-guide),
+[ioredis 6 release notes](https://github.com/redis/ioredis/releases/tag/v6.0.0),
+and [PostgreSQL image data-directory requirements](https://github.com/docker-library/docs/blob/master/postgres/README.md#pgdata).
+No existing database is upgraded or reset by this review. PostgreSQL 18 support is
+not a prerequisite for retiring the predecessor repository.
+
 ## Replacement repository review — 2026-11-02
 
 The five initial Dependabot proposals in `industrial-performance-dashboard` are

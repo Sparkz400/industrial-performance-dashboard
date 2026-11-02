@@ -51,3 +51,6 @@ updates:
     ignore:
       - dependency-name: node
         update-types: ["version-update:semver-major"]
+      # Major upgrades need a tested volume migration and restore path first.
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
