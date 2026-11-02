@@ -12,6 +12,7 @@ handled together, with the operator-history race exposed by CI.
 | [#3](https://github.com/Sparkz400/industrial-performance-dashboard/pull/3) | Remove the unused Twilio SDK instead of upgrading it. No application or test caller imports it; the retired SMS integration is not restored. |
 | [#4](https://github.com/Sparkz400/industrial-performance-dashboard/pull/4) | Adopt express-rate-limit 8.7.2 with the existing PostgreSQL login stores and default IP key handling. |
 | [#5](https://github.com/Sparkz400/industrial-performance-dashboard/pull/5) | Replace TypeScript 7 with supported TypeScript 6.0.3. typescript-eslint 8.72.1 requires TypeScript below 6.1, and the compiler-policy regression still uses the classic compiler API. Remove the deprecated client `baseUrl` and retain the alias through a relative `paths` target. |
+| [#7](https://github.com/Sparkz400/industrial-performance-dashboard/pull/7) | Adopt Undici 8.12.3. The outbound request helper retains connection-time DNS validation, private-address rejection, redirect refusal and its response-size limit; the existing ten security regressions exercise the installed client. |
 
 Dependabot continues to update TypeScript 6. TypeScript 7 proposals are held until
 the lint parser supports that major and the compiler-policy checks can migrate
