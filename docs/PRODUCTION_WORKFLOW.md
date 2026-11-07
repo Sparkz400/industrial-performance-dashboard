@@ -28,6 +28,16 @@ channel is suitable only for the owned local demonstration. Certificate/user
 identity qualification remains C01/C02. Profile units and model/version text are
 operator declarations, not automatically verified vendor compatibility.
 
+A profile may list the server builds it was checked against in `supportedEndpoints`
+(up to 20 entries of `manufacturerName`, `productName` and `softwareVersion`, matched
+exactly after trimming). Preview reads the endpoint's standard
+`Server_ServerStatus_BuildInfo` and shows it with one of four results: *matches a
+declared build*, *no builds declared*, *not among the declared builds* or *unknown*
+when the endpoint does not report all three fields. Only the first is shown as
+success; a mismatch or unknown build is a warning to review, not a save blocker, and a
+match does not qualify the machine. The redacted diagnostics include the build and the
+result.
+
 **Suggest mappings from the information model** browses the server read-only (at most
 2,000 nodes, six levels, the Server object skipped) and names the companion
 specifications it declares by namespace URI (Machinery, Devices, PackML, Machine Tools,
