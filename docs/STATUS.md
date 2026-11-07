@@ -8,6 +8,13 @@ and reported status, so reports and live values treat it as unknown
 ([compatibility](COMPATIBILITY.md)). An owned server changing a tag from Int32 to
 Double during live collection covers it. C10 still needs a real vendor/model/firmware entry.
 
+## Backlog recovery estimate — 2026-11-07
+
+The collector backlog status now shows the net backlog change per minute and, while it
+shrinks, an estimated clearing time. It accounts for ingress during recovery and stays
+unknown without a minute of history ([unattended operation](UNATTENDED_OPERATION.md#collector-capacity-quarantine-and-a-second-collector)).
+H09 still needs production limits from the D04 measured envelope.
+
 ## Repeatable UI measurement — 2026-11-07
 
 `scripts/measure-ui-performance.mjs` measures the production client build on a fixed

@@ -401,8 +401,9 @@ below retain their unfulfilled acceptance criteria.
   and reviewed retention (H05) are implemented. [PR #69](https://github.com/Sparkz400/performance_dashboard/pull/69): capacity, reserve, backlog-age and runway
   thresholds are configurable (80% capacity warns before the stop); operators see spool bytes, age,
   rows written per minute and the last write failure; records PostgreSQL refuses are quarantined on
-  the collector with audited export/retry (`test-spool-quarantine.mjs`). Remaining: choose production
-  values from the D04 measured envelope.
+  the collector with audited export/retry (`test-spool-quarantine.mjs`). Operators also see the net
+  backlog change per minute and an estimated clearing time, unknown without a minute of history.
+  Remaining: choose production values from the D04 measured envelope.
 
 - [x] **H10 — Add reusable derived signals safely** · P2 · M3 · New · L. Depends: H02, H04.
   Done: a bounded expression model supports units, quality propagation and versioning;

@@ -10,6 +10,7 @@ never closes an open acceptance item.
 
 - Store OPC UA samples whose actual data type differs from the mapping as
   `BadTypeMismatch`, keeping raw value and reported status (C10).
+- Show the net collector backlog change per minute and an estimated clearing time (H09).
 - Add a repeatable UI measurement script for the production build with a fixed
   synthetic workload and a developer-workstation baseline (U10).
 - Let production profiles declare supported endpoint builds and compare them with the

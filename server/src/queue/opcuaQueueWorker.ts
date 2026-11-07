@@ -30,6 +30,7 @@ export class OpcuaQueueWorker {
   private storageFailure: { at: string; message: string } | null = null;
   private writeFailure: { at: string; message: string } | null = null;
   private commits: { at: number; count: number }[] = [];
+  private pendingSamples: { at: number; pending: number }[] = [];
 
   private getSpool() {
     return (this.spool ??= new AsyncMeasurementSpool(config.OPCUA_SPOOL_PATH, {
@@ -65,10 +66,17 @@ export class OpcuaQueueWorker {
   }
 
   async getHealth() {
-    const since = Date.now() - 60000;
+    const now = Date.now();
+    const since = now - 60000;
     this.commits = this.commits.filter((commit) => commit.at >= since);
+    const spool = await this.getSpool().health();
+    this.pendingSamples = [
+      ...this.pendingSamples.filter((sample) => sample.at >= now - 120000),
+      { at: now, pending: spool.pendingMeasurements },
+    ];
     return {
-      ...(await this.getSpool().health()),
+      ...spool,
+      ...backlogTrend(this.pendingSamples),
       committedLastMinute: this.commits.reduce((sum, c) => sum + c.count, 0),
       writeFailure: this.writeFailure,
       storageFailure: this.storageFailure,
@@ -218,3 +226,29 @@ export class OpcuaQueueWorker {
 }
 
 export default new OpcuaQueueWorker();
+
+/**
+ * Net backlog change from a sample at least 55 s old (health is polled every few
+ * seconds). Ingress continues while the backlog drains, so writes per minute alone
+ * would overstate recovery. Without enough history both values stay unknown (null).
+ */
+export function backlogTrend(samples: { at: number; pending: number }[]): {
+  backlogChangePerMinute: number | null;
+  backlogClearSeconds: number | null;
+} {
+  const latest = samples.at(-1);
+  const earliest = samples[0];
+  if (!latest || !earliest || latest.at - earliest.at < 55000)
+    return { backlogChangePerMinute: null, backlogClearSeconds: null };
+  const change =
+    ((latest.pending - earliest.pending) * 60000) / (latest.at - earliest.at);
+  return {
+    backlogChangePerMinute: Math.round(change),
+    backlogClearSeconds:
+      latest.pending === 0
+        ? 0
+        : change < 0
+          ? Math.round((latest.pending / -change) * 60)
+          : null,
+  };
+}
