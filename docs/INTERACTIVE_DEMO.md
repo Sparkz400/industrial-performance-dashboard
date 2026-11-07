@@ -1,5 +1,7 @@
 # Interactive factory demo
 
+[Deutsch](de/INTERACTIVE_DEMO.md)
+
 The demo runs the actual dashboard against an isolated, persistent local database.
 Its four-signal replay uses the [owned factory profile](../profiles/owned-factory.json).
 All names and measurements are synthetic. It does not connect to a physical machine.

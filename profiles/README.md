@@ -15,6 +15,42 @@ and cycle standard. Import only previews the fields; commissioning and its read-
 checks still determine whether it can be saved for the selected machine.
 For the legacy profile also follow the [gateway recipe](../docs/LEGACY_GATEWAY.md).
 
+## Worked review: owned-factory.json
+
+A field-by-field reading of [owned-factory.json](owned-factory.json). Labels in
+bold are the **Commission machine** form fields that import fills; JSON names come
+from the [profile schema](../server/src/services/productionProfile.ts).
+
+| JSON field | Value in this profile | What to check |
+| --- | --- | --- |
+| `version`, `name`, `endpointModel` (**Profile name**, **Machine model / supported version**) | `1`, `Synthetic factory demo`, `Owned replay simulator v1; not a vendor map` | Only version 1 exists. The model text is an operator declaration, not verified compatibility. |
+| `signals.<role>.nodeKey` (**key**) | `ProductionState`, `ProductionCount`, `GoodCount`, `RejectCount` | The stored signal alias; the four roles need distinct keys. |
+| `namespaceUri` + `identifier` (**namespace URI**, **identifier**) | `urn:performance-dashboard:factory-demo:v1` with `s=ProductionState` etc. | The stable identity. The URI, not a namespace index, is stored; preview resolves it to `ns=<index>;<identifier>` on the selected endpoint and fails if the endpoint does not publish that URI. Identifiers start with `i=`, `s=`, `g=` or `b=`. |
+| `dataType` (**type**) | `Int32` for all four | Must equal the scalar type the endpoint reports; preview marks a mismatch as not ready. Allowed: Boolean, Byte, SByte, Int16, UInt16, Int32, UInt32, Float, Double. |
+| `unit`, `scale` (**unit**, **scale**) | state `null`/`1`; counters `parts`/`1` | Values are multiplied by `scale` (a state value is scaled before it is matched to a state meaning). The unit is declared text, not converted. |
+| `states` (**running/idle/fault/planned values**) | running `1`, idle `0`, fault `2`, planned `3` | Must match the machine's own state codes; a value may belong to only one meaning and at least one running value is required. Any other value is unknown time. |
+| `maxGapSeconds` (**Unknown after (seconds)**) | `20` | Longer than the collection heartbeat (ten seconds). After this a state becomes unknown and a counter pair is incomplete. Range 1–300. |
+| `idealCycleMs` (**Ideal cycle (milliseconds)**) | `2000` | One part per two running seconds; drives performance. Use the product's agreed cycle standard, not this demo value. |
+| `counterPolicy` (**Counter decreases**) | `reject-decrease` (**Mark as incomplete**) | A decrease is discarded and the counter marked incomplete. Use `reset-to-zero` or `rollover` (with `counterModulus`) only when the machine documents that behavior. |
+
+This profile has no live endpoint: [factory-scenario.mjs](../scripts/factory-scenario.mjs)
+writes stored samples for a replay machine. Importing it does not change any
+machine; it fills the form after server validation. Saving still requires a
+selected machine, a **Preview mapped signals** check in which every signal is
+Good, of the declared type and numeric, and the review checkbox. Saving checks the
+endpoint again and stores a new profile revision.
+
+For a different endpoint, change at least the namespace URI and identifier of
+every signal to what that server publishes, the data types, scale/unit, the state
+codes, the ideal cycle, the maximum gap and the counter policy (plus modulus).
+Edit `name` and `endpointModel` to describe the real model; never add endpoint
+addresses or credentials to the profile. The connection belongs to the machine.
+
+This entry's qualification is `simulator` (see the levels below): it was only
+exercised against owned replay fixtures. A changed copy that works on equipment is
+at most `reported` until a named reviewer accepts physical evidence for
+`physically-verified`, and either level covers only that model and firmware.
+
 ## Contribute
 
 1. Add a plain version-1 production profile in this directory and an entry in

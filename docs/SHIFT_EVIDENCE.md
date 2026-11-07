@@ -1,5 +1,7 @@
 # Portable shift evidence
 
+[Deutsch](de/SHIFT_EVIDENCE.md)
+
 On **Production**, select a shift and choose **Export reproducible evidence**.
 The same session and machine access checks as the shift report protect the download.
 Successful exports record their actor and shift in the application audit log.
@@ -58,6 +60,7 @@ run input, mismatched calculator, source-identity change or non-reproducing resu
 exits with an error. Hashes do not authenticate a publisher; someone can change a
 bundle and recompute its digest. Physical accuracy and publisher signing remain
 separate acceptance steps.
+The [glossary](GLOSSARY.md) defines unknown, stale, non-Good and verified data.
 
 ## Sharing and limits
 
