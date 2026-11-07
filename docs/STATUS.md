@@ -8,6 +8,13 @@ not declared, differs or is unknown; only a match is shown as success and none b
 saving. C04 stays open until such declarations are qualified against real devices
 ([commissioning](PRODUCTION_WORKFLOW.md#commissioning)).
 
+## Upstream OPC UA fix adopted — 2026-11-07
+
+node-opcua 2.187.23 contains the upstream fix for the overflow assertions
+([#1849](https://github.com/node-opcua/node-opcua/issues/1849)). The local patch and
+its install hooks are removed; the unmodified package passes the overflow regression.
+See the [dependency review](DEPENDENCY_REVIEW.md#opc-ua-overflow-patch-removed--2026-11-07).
+
 ## Contributor backlog completed — 2026-11-07
 
 All twelve [initial contributor issues](CONTRIBUTOR_BACKLOG.md) are done: a
