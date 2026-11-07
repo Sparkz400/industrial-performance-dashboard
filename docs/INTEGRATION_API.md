@@ -63,6 +63,13 @@ text and the recovery-preview `503` carries only `error`:
 
 Quote `requestId` when reporting a problem; it matches the server log entry.
 
+The example client throws an `Error` with `status`, the parsed JSON `body` (`{}` for
+plain text) and, when the response carries `RateLimit-Reset`, `retryAfterSeconds`.
+Plain-text and other non-JSON bodies appear in the message shortened to 200
+characters; cookies and credentials are never included. The client does not retry
+or log in again on its own: wait `retryAfterSeconds` after a `429`, and log in again
+after a `401`.
+
 ## Rate limits
 
 Each client IP has `RATE_LIMIT_MAX_REQUESTS` requests per `RATE_LIMIT_WINDOW_MS`

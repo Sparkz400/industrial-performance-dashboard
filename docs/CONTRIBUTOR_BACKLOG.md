@@ -10,6 +10,12 @@ for a smaller starting point, or [open help wanted issues](https://github.com/Sp
 for the full contribution list. GitHub is the live status/assignment record; this
 page is an index, not a second issue-status checklist.
 
+All twelve issues in this initial set were completed in
+[PR #22](https://github.com/Sparkz400/industrial-performance-dashboard/pull/22)
+(2026-11-07); the table is kept as a record of finished examples. New bounded issues
+are published with the same structure and labels; until then, ask in a discussion
+before starting larger TODO work.
+
 | Issue | Parent TODO area | Contribution |
 | --- | --- | --- |
 | [#9](https://github.com/Sparkz400/industrial-performance-dashboard/issues/9) | P02, U07 | German interactive-demo walkthrough |

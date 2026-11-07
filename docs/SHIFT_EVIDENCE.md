@@ -1,5 +1,7 @@
 # Portable shift evidence
 
+[Deutsch](de/SHIFT_EVIDENCE.md)
+
 On **Production**, select a shift and choose **Export reproducible evidence**.
 The same session and machine access checks as the shift report protect the download.
 Successful exports record their actor and shift in the application audit log.
@@ -35,13 +37,20 @@ node scripts/verify-shift-evidence.mjs path/to/shift-123-evidence.json
 
 No installed npm packages, database, dashboard server or network connection are
 needed for this checker. For a smaller offline transfer, preserve the directory
-structure of these three trusted repository files alongside the JSON:
+structure of these three trusted source files alongside the JSON, plus
+`server/package.json`, which marks the two `.ts` files as ES modules (without it
+Node.js cannot load the calculator):
 
 ```text
 scripts/verify-shift-evidence.mjs
 server/src/services/shiftCalculation.ts
 server/src/utils/canonicalJson.ts
+server/package.json
 ```
+
+To try this before exporting anything, verify the published synthetic sample
+[`examples/shift-evidence-known.json`](../examples/shift-evidence-known.json); see
+[examples](../examples/README.md#synthetic-shift-evidence).
 
 The checker verifies the payload hash and calculator fingerprint, reconstructs
 numeric inputs using their source identities, recalculates each product run and
@@ -58,6 +67,7 @@ run input, mismatched calculator, source-identity change or non-reproducing resu
 exits with an error. Hashes do not authenticate a publisher; someone can change a
 bundle and recompute its digest. Physical accuracy and publisher signing remain
 separate acceptance steps.
+The [glossary](GLOSSARY.md) defines unknown, stale, non-Good and verified data.
 
 ## Sharing and limits
 

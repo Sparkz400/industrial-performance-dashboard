@@ -8,7 +8,10 @@ import { verifyShiftEvidence } from "./verify-shift-evidence.mjs";
 import { canonicalJson } from "../server/src/utils/canonicalJson.ts";
 
 const catalog = JSON.parse(await readFile("profiles/catalog.json", "utf8"));
-assert.equal((await validateCatalog(catalog)).length, 2);
+assert.deepEqual(
+  (await validateCatalog(catalog)).map(({ id }) => id),
+  ["owned-factory", "owned-legacy", "owned-boolean-state", "owned-rollover"],
+);
 assert.deepEqual(
   JSON.parse(await readFile("profiles/owned-legacy.json", "utf8")),
   JSON.parse(await readFile("examples/legacy-production-profile.json", "utf8")),
@@ -42,8 +45,10 @@ const rehash = (bundle) => {
 await mkdir(".local/community-evidence", { recursive: true });
 await dailyFixture(async ({ pool, users, call, actors, frontend, expect }) => {
   let known;
+  const shiftIds = {};
   for (const scenario of scenarios) {
     const seeded = await factoryScenario(pool, users.admin.id, scenario);
+    shiftIds[scenario] = seeded.shiftId;
     const response = await call(
       "admin",
       "GET",
@@ -97,6 +102,28 @@ await dailyFixture(async ({ pool, users, call, actors, frontend, expect }) => {
     () => verifyShiftEvidence(rehash(algorithm)),
     /Calculator differs/,
   );
+
+  // docs/INTERACTIVE_DEMO.md captures, taken before later steps change the known
+  // shift. Only the main region, so no account menu, navigation or generated
+  // credentials appear. Copy to docs/assets/demo/ to publish.
+  {
+    const capture = await actors.admin.newPage();
+    await capture.setViewportSize({ width: 1280, height: 900 });
+    for (const [scenario, text] of [
+      ["known", "overall: 43.3%"],
+      ["gap", "overall: Unavailable"],
+    ]) {
+      await capture.goto(`${frontend}/production?shift=${shiftIds[scenario]}`);
+      const main = capture.locator("#main-content");
+      await expect(
+        main.getByText(text, { exact: false }).first(),
+      ).toBeVisible();
+      await main.screenshot({
+        path: `.local/community-evidence/demo-${scenario}.png`,
+      });
+    }
+    await capture.close();
+  }
 
   // Existing asset grants protect both the report and the raw evidence.
   await pool.query("DELETE FROM machine_grants WHERE user_id=$1", [
