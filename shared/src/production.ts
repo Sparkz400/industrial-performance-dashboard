@@ -88,7 +88,18 @@ export interface ProductionProfile {
   counterPolicy: "reset-to-zero" | "reject-decrease" | "rollover";
   /** Exclusive upper bound in the unscaled PLC counter domain. */
   counterModulus?: number;
+  /** Server builds this mapping was checked against: a declaration, not a qualification. */
+  supportedEndpoints?: EndpointBuild[];
 }
+/** OPC UA Server_ServerStatus_BuildInfo fields that identify an endpoint's software. */
+export interface EndpointBuild {
+  manufacturerName: string;
+  productName: string;
+  softwareVersion: string;
+}
+/** How the endpoint's reported build compares with the profile's declarations. */
+export type EndpointSupport =
+  "matches-declaration" | "not-declared" | "mismatch" | "unknown";
 export interface ProductRun {
   start: string;
   end: string;

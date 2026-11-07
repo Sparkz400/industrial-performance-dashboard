@@ -349,6 +349,8 @@ export type {
   MachineLiveSummary,
   ProductionSignal,
   ProductionProfile,
+  EndpointBuild,
+  EndpointSupport,
   ProductRun,
   ProductionInterval,
   DowntimeReason,
