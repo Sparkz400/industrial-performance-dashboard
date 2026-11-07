@@ -1,5 +1,12 @@
 # Current status
 
+## Upstream OPC UA fix adopted — 2026-11-07
+
+node-opcua 2.187.23 contains the upstream fix for the overflow assertions
+([#1849](https://github.com/node-opcua/node-opcua/issues/1849)). The local patch and
+its install hooks are removed; the unmodified package passes the overflow regression.
+See the [dependency review](DEPENDENCY_REVIEW.md#opc-ua-overflow-patch-removed--2026-11-07).
+
 ## Maintenance and endurance checkpoint — 2026-11-02
 
 The [dependency review](DEPENDENCY_REVIEW.md#maintenance-review--2026-11-02)

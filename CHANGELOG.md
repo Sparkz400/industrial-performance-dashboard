@@ -8,6 +8,8 @@ never closes an open acceptance item.
 
 ## [Unreleased]
 
+- Adopt node-opcua 2.187.23 with the upstream overflow fix and remove the local
+  patch, its `postinstall` hook and Dockerfile steps; update react-window to 2.5.2.
 - Review November dependency updates, align Node declarations with the supported
   Node 24 runtime, and preserve unstaged work during pre-commit checks.
 - Correct the dependency-audit status and record the failed November 1 endurance
