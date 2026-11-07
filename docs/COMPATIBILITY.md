@@ -38,6 +38,11 @@ Not supported, by decision rather than oversight (see C07 and C06 in
 Map scalar numeric, Boolean or string tags. Verify units, state enumerations,
 timestamps, quality flags, counter behavior and the requested sampling interval.
 Array and structured values are outside the supported collector contract.
+If an OPC UA server later sends a mapped tag with a different data type than its
+mapping declares (for example after a PLC program change), each such sample is stored
+as `BadTypeMismatch` with its raw value, declared type and reported status, and is
+treated as unknown until the mapping is reviewed. MQTT values that do not match their
+declared type are already stored as `BadDecodingError`.
 Sessions can be anonymous, username/password or user-certificate; protected
 identities need an encrypted channel and explicitly trusted server certificates
 ([S7-1500 pilot](S7_1500_PILOT.md)). Those paths are tested against owned servers only.
@@ -58,6 +63,7 @@ compatible, but `dataComplete=false` must be respected by consumers.
 | Evidence | Status |
 | --- | --- |
 | Owned node-opcua simulator, anonymous and protected identities | Automated (CI and local scripts) |
+| Owned OPC UA tag changing from Int32 to Double while collected live | Automated (`test-production.mjs`, `measurementSpool.test.ts`) |
 | Owned Modbus TCP fixture through the built-in gateway | Automated (`test-gateway.mjs`) |
 | Owned RTU-to-TCP gateway fixture, two units and an absent unit | Automated (`modbusRead.test.ts`) |
 | Owned TLS MQTT broker (aedes) with ACLs, redelivery and restart | Automated (`test-mqtt-ingestion.mjs`) |

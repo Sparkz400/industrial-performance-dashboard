@@ -313,7 +313,9 @@ below retain their unfulfilled acceptance criteria.
   software commit and outstanding limits. Simulator success is listed separately.
   Progress: OPC UA and gateway fixtures cover disconnect, bad quality and timestamps
   (`test-gateway.mjs`, `test-signal-quality.mjs`); [compatibility](docs/COMPATIBILITY.md)
-  lists simulator evidence separately. Blocker: no real vendor/model/firmware entry yet.
+  lists simulator evidence separately. A live OPC UA type change is stored as
+  `BadTypeMismatch` with its raw value (`test-production.mjs`); MQTT already rejects
+  mismatched types as `BadDecodingError`. Blocker: no real vendor/model/firmware entry yet.
 
 ## Historian
 

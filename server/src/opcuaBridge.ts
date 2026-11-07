@@ -5,6 +5,7 @@ import { opcuaEmitter } from "./opc-ua/opcuaClient.js";
 import opcuaConnectionManager from "./opc-ua/services/opcuaConnectionManager.js";
 import multiMachineManager from "./opc-ua/services/multiMachineManager.js";
 import opcuaQueueWorker from "./queue/opcuaQueueWorker.js";
+import { typeChanged } from "./queue/measurementSpool.js";
 import statusManager from "./utils/status.js";
 import StatusConstants from "./utils/statusConstants.js";
 import logger from "./utils/logger.js";
@@ -82,14 +83,20 @@ export function setupOpcuaBridge({
   if (!config.RECOVERY_MODE) webhookService.start();
 
   let acquisitionStopped = false;
-  opcuaEmitter.on("nodeChanged", async (data: OpcuaNodeData) => {
+  opcuaEmitter.on("nodeChanged", async (received: OpcuaNodeData) => {
     if (acquisitionStopped) return;
-    if (data && data.key && data.timestamp && data.value !== undefined) {
+    if (
+      received &&
+      received.key &&
+      received.timestamp &&
+      received.value !== undefined
+    ) {
       try {
-        if (!data.alreadySpooled)
+        // Stored with the reported status; the spool derives BadTypeMismatch itself.
+        if (!received.alreadySpooled)
           await opcuaQueueWorker.enqueue({
-            ...data,
-            machineId: data.machineId,
+            ...received,
+            machineId: received.machineId,
           });
       } catch (error) {
         acquisitionStopped = true;
@@ -109,6 +116,10 @@ export function setupOpcuaBridge({
           );
         return;
       }
+      // Live values and SPC see the same quality the stored row will have.
+      const data = typeChanged(received)
+        ? { ...received, statusCode: "BadTypeMismatch" }
+        : received;
       opcuaService.broadcastNodeChange(data);
       opcuaDataPointsReceived.inc({
         machine_id: String(data.machineId || "default"),
@@ -147,7 +158,7 @@ export function setupOpcuaBridge({
         });
       }
     } else {
-      logger.warn("Received invalid nodeChanged data:", data);
+      logger.warn("Received invalid nodeChanged data:", received);
     }
   });
 }

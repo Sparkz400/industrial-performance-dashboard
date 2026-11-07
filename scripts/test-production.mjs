@@ -306,7 +306,10 @@ try {
     GoodCount: 0,
     RejectCount: 0,
     AlarmSignal: 0,
+    TypeProbe: 0,
   };
+  // C10 type-change fixture: a key listed here is served with a different variant type.
+  const types = {};
   for (const key of Object.keys(values))
     namespace.addVariable({
       organizedBy: uaServer.engine.addressSpace.rootFolder.objects,
@@ -317,7 +320,7 @@ try {
       value: {
         get: () =>
           new opcua.Variant({
-            dataType: opcua.DataType.Int32,
+            dataType: types[key] ?? opcua.DataType.Int32,
             value: values[key],
           }),
       },
@@ -442,6 +445,14 @@ try {
         nodeId: "ns=1;s=AlarmSignal",
         nodeKey: "AlarmSignal",
         displayName: "AlarmSignal",
+        dataType: "Int32",
+        samplingInterval: 100,
+        isActive: true,
+      },
+      {
+        nodeId: "ns=1;s=TypeProbe",
+        nodeKey: "TypeProbe",
+        displayName: "TypeProbe",
         dataType: "Int32",
         samplingInterval: 100,
         isActive: true,
@@ -604,6 +615,27 @@ try {
   );
   assert.ok(repeated.length >= 2);
   assert.ok(repeated.every((r) => r.body === repeated[0].body));
+  // C10: the server changes TypeProbe from Int32 to Double while collected live.
+  // The stored row keeps the raw value and reported status, but the sample is unknown.
+  const typeChangedAt = new Date();
+  types.TypeProbe = opcua.DataType.Double;
+  values.TypeProbe = 2.5;
+  let mismatch;
+  await waitFor(
+    async () =>
+      (mismatch = (
+        await pool.query(
+          "SELECT value, raw_value, status_code, reported_status_code, data_type FROM opcua_data WHERE machine_id=$1 AND node_key='TypeProbe' AND status_code='BadTypeMismatch' AND received_at >= $2 LIMIT 1",
+          [machine.id, typeChangedAt],
+        )
+      ).rows[0]),
+    "Live type change was not stored as BadTypeMismatch",
+  );
+  assert.equal(mismatch.value, null);
+  assert.equal(mismatch.raw_value, 2.5);
+  assert.match(mismatch.reported_status_code, /^Good/);
+  assert.equal(mismatch.data_type, "Int32");
+  delete types.TypeProbe;
   await multiMachine.disconnectAll();
   await worker.stop();
   console.log(

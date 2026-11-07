@@ -14,6 +14,8 @@ export interface OpcuaDataItem {
   value: number | string | boolean | null;
   statusCode?: string;
   dataType?: string;
+  /** The type the source actually sent; a difference from dataType is a type change. */
+  actualDataType?: string;
   machineId?: number;
   /** Deterministic identity from a redelivering source; a repeat is stored once. */
   eventId?: string;
@@ -241,6 +243,21 @@ export class MeasurementSpool {
   }
 }
 
+/**
+ * A source that changed a tag's type is not a valid observation of the mapped signal.
+ * A Null variant (no value, e.g. with Bad quality) keeps its reported status.
+ */
+export function typeChanged(
+  data: Pick<OpcuaDataItem, "dataType" | "actualDataType">,
+): boolean {
+  return (
+    data.dataType != null &&
+    data.actualDataType != null &&
+    data.actualDataType !== "Null" &&
+    data.actualDataType !== data.dataType
+  );
+}
+
 export function toMeasurementRow({ id, data }: SpoolEntry) {
   const reportedStatusCode = data.statusCode ?? "Uncertain";
   const receivedAt = data.receivedAt ? new Date(data.receivedAt) : null;
@@ -253,7 +270,11 @@ export function toMeasurementRow({ id, data }: SpoolEntry) {
     times.some((time) => time.getTime() > receivedAt.getTime() + 300_000);
   const sourceClockState =
     receivedAt == null ? "unknown" : future ? "future" : "not-future";
-  const statusCode = future ? "BadSourceClock" : reportedStatusCode;
+  const statusCode = future
+    ? "BadSourceClock"
+    : typeChanged(data)
+      ? "BadTypeMismatch"
+      : reportedStatusCode;
   const numericValue =
     typeof data.value === "boolean" ? Number(data.value) : data.value;
   return {

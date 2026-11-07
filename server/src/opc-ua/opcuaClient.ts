@@ -25,6 +25,8 @@ export interface OpcuaNodeData {
   receivedAt?: Date;
   signalMetadata?: SignalMetadata;
   dataType: string;
+  /** The type the server actually sent; compared with dataType when stored. */
+  actualDataType?: string;
   statusCode: string;
   machineId?: number;
   /** Deterministic identity from a redelivering source such as MQTT. */
@@ -320,6 +322,7 @@ export async function connectAndSubscribe(
               receivedAt: new Date(),
               signalMetadata: metadata,
               dataType: nodeConfig.dataType,
+              actualDataType: opcua.DataType[dataValue.value.dataType],
               statusCode: dataValue.statusCode.toString(),
               machineId,
             } as OpcuaNodeData);
@@ -369,6 +372,7 @@ export async function connectAndSubscribe(
                 receivedAt: new Date(),
                 signalMetadata: metadataByKey.get(key),
                 dataType: mapping.dataType,
+                actualDataType: opcua.DataType[value.value.dataType],
                 statusCode: value.statusCode.toString(),
                 machineId,
               });

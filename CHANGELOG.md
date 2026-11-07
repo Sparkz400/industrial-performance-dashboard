@@ -8,6 +8,8 @@ never closes an open acceptance item.
 
 ## [Unreleased]
 
+- Store OPC UA samples whose actual data type differs from the mapping as
+  `BadTypeMismatch`, keeping raw value and reported status (C10).
 - Record independent downtime with a tolerance in the shift ledger; a difference beyond
   it or unknown state time prevents verification (O09). The synthetic evidence sample
   was regenerated for the changed calculator.
