@@ -2,7 +2,6 @@ import { translate as t, useLanguage } from '@/i18n';
 import React, { useEffect, useState, Suspense, useMemo, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Alert, Box, CircularProgress, Typography, Button } from '@mui/material';
-import { motion, AnimatePresence } from 'framer-motion';
 import ResponsiveSidebar from './features/layout/components/sidebar';
 import ErrorBoundary from './features/system/components/ErrorBoundary';
 import CertificateNotification from './features/settings/components/CertificateNotification';
@@ -64,11 +63,7 @@ const PageLoader = () => (
       gap: 2,
     }}
   >
-    <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4 }}
-    >
+    <div className="pd-enter">
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
         <Box
           sx={{
@@ -94,7 +89,7 @@ const PageLoader = () => (
           {t('Loading...')}{' '}
         </Typography>
       </Box>
-    </motion.div>
+    </div>
   </Box>
 );
 
@@ -133,15 +128,9 @@ interface PageTransitionProps {
 
 // Page transition wrapper
 const PageTransition = ({ children }: PageTransitionProps) => (
-  <motion.div
-    initial={{ opacity: 0, y: 8 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -8 }}
-    transition={{ duration: 0.25, ease: 'easeOut' }}
-    style={{ height: '100%' }}
-  >
+  <div className="pd-enter" style={{ height: '100%' }}>
     {children}
-  </motion.div>
+  </div>
 );
 
 /**
@@ -280,229 +269,227 @@ function App() {
             )}
             <ErrorBoundary FallbackComponent={ErrorFallback}>
               <Suspense fallback={<PageLoader />}>
-                <AnimatePresence mode="wait">
-                  <Routes>
-                    <Route path="/dashboards" element={<DashboardPage />} />
-                    <Route path="/operations" element={<OperationsPage />} />
-                    <Route path="/wallboard" element={<Wallboard />} />
-                    <Route
-                      path="/production"
-                      element={
+                <Routes>
+                  <Route path="/dashboards" element={<DashboardPage />} />
+                  <Route path="/operations" element={<OperationsPage />} />
+                  <Route path="/wallboard" element={<Wallboard />} />
+                  <Route
+                    path="/production"
+                    element={
+                      <PageTransition>
+                        <ProductionPage />
+                      </PageTransition>
+                    }
+                  />
+                  <Route
+                    path="/"
+                    element={
+                      <PageTransition>
+                        {user.role === 'wallboard' ? (
+                          <Navigate to="/wallboard" replace />
+                        ) : (
+                          <OverviewPage />
+                        )}
+                      </PageTransition>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/:id"
+                    element={
+                      <PageTransition>
+                        <DashboardPage />
+                      </PageTransition>
+                    }
+                  />
+                  <Route
+                    path="/machines"
+                    element={
+                      <PrivateRoute requiredRole="admin">
                         <PageTransition>
-                          <ProductionPage />
+                          <MachinesPage />
                         </PageTransition>
-                      }
-                    />
-                    <Route
-                      path="/"
-                      element={
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/settings"
+                    element={
+                      <PageTransition>
+                        <PrivateRoute requiredRole="admin">
+                          <SettingsPage />
+                        </PrivateRoute>
+                      </PageTransition>
+                    }
+                  />
+                  <Route
+                    path="/help"
+                    element={
+                      <PageTransition>
+                        <HelpPage />
+                      </PageTransition>
+                    }
+                  />
+                  {/* Tier 1: Multi-plant */}
+                  <Route
+                    path="/plants"
+                    element={
+                      <PrivateRoute requiredRole="admin">
                         <PageTransition>
-                          {user.role === 'wallboard' ? (
-                            <Navigate to="/wallboard" replace />
-                          ) : (
-                            <OverviewPage />
-                          )}
+                          <PlantsPage />
                         </PageTransition>
-                      }
-                    />
-                    <Route
-                      path="/dashboard/:id"
-                      element={
+                      </PrivateRoute>
+                    }
+                  />
+                  {/* Tier 1: OEE */}
+                  <Route
+                    path="/oee/config"
+                    element={
+                      <PrivateRoute requiredRole="admin">
                         <PageTransition>
-                          <DashboardPage />
+                          <OeeConfigPage />
                         </PageTransition>
-                      }
-                    />
-                    <Route
-                      path="/machines"
-                      element={
-                        <PrivateRoute requiredRole="admin">
-                          <PageTransition>
-                            <MachinesPage />
-                          </PageTransition>
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/settings"
-                      element={
+                      </PrivateRoute>
+                    }
+                  />
+                  {/* Tier 1: Alerts */}
+                  <Route
+                    path="/alerts/rules"
+                    element={
+                      <PrivateRoute requiredRole="admin">
                         <PageTransition>
-                          <PrivateRoute requiredRole="admin">
-                            <SettingsPage />
-                          </PrivateRoute>
+                          <AlertRulesPage />
                         </PageTransition>
-                      }
-                    />
-                    <Route
-                      path="/help"
-                      element={
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/alerts/history"
+                    element={
+                      <PageTransition>
+                        <AlertHistoryPage />
+                      </PageTransition>
+                    }
+                  />
+                  <Route
+                    path="/alerts/channels"
+                    element={
+                      <PrivateRoute requiredRole="admin">
                         <PageTransition>
-                          <HelpPage />
+                          <NotificationChannelsPage />
                         </PageTransition>
-                      }
-                    />
-                    {/* Tier 1: Multi-plant */}
-                    <Route
-                      path="/plants"
-                      element={
-                        <PrivateRoute requiredRole="admin">
-                          <PageTransition>
-                            <PlantsPage />
-                          </PageTransition>
-                        </PrivateRoute>
-                      }
-                    />
-                    {/* Tier 1: OEE */}
-                    <Route
-                      path="/oee/config"
-                      element={
-                        <PrivateRoute requiredRole="admin">
-                          <PageTransition>
-                            <OeeConfigPage />
-                          </PageTransition>
-                        </PrivateRoute>
-                      }
-                    />
-                    {/* Tier 1: Alerts */}
-                    <Route
-                      path="/alerts/rules"
-                      element={
-                        <PrivateRoute requiredRole="admin">
-                          <PageTransition>
-                            <AlertRulesPage />
-                          </PageTransition>
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/alerts/history"
-                      element={
+                      </PrivateRoute>
+                    }
+                  />
+                  {/* Tier 1: Reports */}
+                  <Route
+                    path="/reports/templates"
+                    element={
+                      <PrivateRoute requiredRole="admin">
                         <PageTransition>
-                          <AlertHistoryPage />
+                          <ReportTemplatesPage />
                         </PageTransition>
-                      }
-                    />
-                    <Route
-                      path="/alerts/channels"
-                      element={
-                        <PrivateRoute requiredRole="admin">
-                          <PageTransition>
-                            <NotificationChannelsPage />
-                          </PageTransition>
-                        </PrivateRoute>
-                      }
-                    />
-                    {/* Tier 1: Reports */}
-                    <Route
-                      path="/reports/templates"
-                      element={
-                        <PrivateRoute requiredRole="admin">
-                          <PageTransition>
-                            <ReportTemplatesPage />
-                          </PageTransition>
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/reports/schedules"
-                      element={
-                        <PrivateRoute requiredRole="admin">
-                          <PageTransition>
-                            <ReportSchedulesPage />
-                          </PageTransition>
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/reports/history"
-                      element={
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/reports/schedules"
+                    element={
+                      <PrivateRoute requiredRole="admin">
                         <PageTransition>
-                          <PrivateRoute requiredRole="admin">
-                            <ReportHistoryPage />
-                          </PrivateRoute>
+                          <ReportSchedulesPage />
                         </PageTransition>
-                      }
-                    />
-                    {/* Tier 2: Compliance */}
-                    <Route
-                      path="/compliance"
-                      element={
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/reports/history"
+                    element={
+                      <PageTransition>
                         <PrivateRoute requiredRole="admin">
-                          <PageTransition>
-                            <CompliancePage />
-                          </PageTransition>
+                          <ReportHistoryPage />
                         </PrivateRoute>
-                      }
-                    />
-                    {/* Tier 2: SPC */}
-                    <Route
-                      path="/spc"
-                      element={
-                        <PrivateRoute requiredRole="admin">
-                          <PageTransition>
-                            <SpcProfilesPage />
-                          </PageTransition>
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/spc/chart/:id"
-                      element={
+                      </PageTransition>
+                    }
+                  />
+                  {/* Tier 2: Compliance */}
+                  <Route
+                    path="/compliance"
+                    element={
+                      <PrivateRoute requiredRole="admin">
                         <PageTransition>
-                          <PrivateRoute requiredRole="admin">
-                            <SpcChartPage />
-                          </PrivateRoute>
+                          <CompliancePage />
                         </PageTransition>
-                      }
-                    />
-                    {/* Tier 2: Digital Twins */}
-                    <Route
-                      path="/digital-twins"
-                      element={
-                        <PrivateRoute requiredRole="admin">
-                          <PageTransition>
-                            <DigitalTwinsPage />
-                          </PageTransition>
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/digital-twins/:id"
-                      element={
-                        <PrivateRoute requiredRole="admin">
-                          <PageTransition>
-                            <DigitalTwinDetailPage />
-                          </PageTransition>
-                        </PrivateRoute>
-                      }
-                    />
-                    {/* Tier 2: Recipes & Batches */}
-                    <Route
-                      path="/recipes"
-                      element={
-                        <PrivateRoute requiredRole="admin">
-                          <PageTransition>
-                            <RecipesPage />
-                          </PageTransition>
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/batches"
-                      element={
+                      </PrivateRoute>
+                    }
+                  />
+                  {/* Tier 2: SPC */}
+                  <Route
+                    path="/spc"
+                    element={
+                      <PrivateRoute requiredRole="admin">
                         <PageTransition>
-                          <PrivateRoute requiredRole="admin">
-                            <BatchesPage />
-                          </PrivateRoute>
+                          <SpcProfilesPage />
                         </PageTransition>
-                      }
-                    />
-                    <Route path="/shared/:token" element={<EmbedPage mode="shared" />} />
-                    <Route path="/embed/:token" element={<EmbedPage mode="embed" />} />
-                    <Route path="/login" element={<Navigate to="/" replace />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Routes>
-                </AnimatePresence>
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/spc/chart/:id"
+                    element={
+                      <PageTransition>
+                        <PrivateRoute requiredRole="admin">
+                          <SpcChartPage />
+                        </PrivateRoute>
+                      </PageTransition>
+                    }
+                  />
+                  {/* Tier 2: Digital Twins */}
+                  <Route
+                    path="/digital-twins"
+                    element={
+                      <PrivateRoute requiredRole="admin">
+                        <PageTransition>
+                          <DigitalTwinsPage />
+                        </PageTransition>
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/digital-twins/:id"
+                    element={
+                      <PrivateRoute requiredRole="admin">
+                        <PageTransition>
+                          <DigitalTwinDetailPage />
+                        </PageTransition>
+                      </PrivateRoute>
+                    }
+                  />
+                  {/* Tier 2: Recipes & Batches */}
+                  <Route
+                    path="/recipes"
+                    element={
+                      <PrivateRoute requiredRole="admin">
+                        <PageTransition>
+                          <RecipesPage />
+                        </PageTransition>
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/batches"
+                    element={
+                      <PageTransition>
+                        <PrivateRoute requiredRole="admin">
+                          <BatchesPage />
+                        </PrivateRoute>
+                      </PageTransition>
+                    }
+                  />
+                  <Route path="/shared/:token" element={<EmbedPage mode="shared" />} />
+                  <Route path="/embed/:token" element={<EmbedPage mode="embed" />} />
+                  <Route path="/login" element={<Navigate to="/" replace />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
               </Suspense>
             </ErrorBoundary>
           </Box>

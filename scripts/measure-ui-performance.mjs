@@ -127,6 +127,12 @@ await dailyFixture(async ({ pool, users, frontend, browser, password }) => {
             (sum, entry) => sum + (entry.transferSize || entry.encodedBodySize),
             0,
           ),
+          scripts: scripts
+            .map((entry) => ({
+              name: new URL(entry.name).pathname.split("/").pop(),
+              bytes: entry.transferSize || entry.encodedBodySize,
+            }))
+            .sort((a, b) => b.bytes - a.bytes),
         };
       });
 

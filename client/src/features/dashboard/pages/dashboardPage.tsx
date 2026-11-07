@@ -17,7 +17,7 @@ import {
 import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { useSnackbar } from 'notistack';
 
 import WidgetContainer, { type LayoutNudge } from '../../widgets/components/WidgetContainer';
@@ -441,7 +441,12 @@ function DashboardPageInternal(): React.JSX.Element {
  *
  */
 function DashboardPage(): React.JSX.Element {
-  return <DashboardPageInternal />;
+  // Every framer-motion user lives under this lazily loaded page.
+  return (
+    <MotionConfig reducedMotion="user">
+      <DashboardPageInternal />
+    </MotionConfig>
+  );
 }
 
 export default DashboardPage;

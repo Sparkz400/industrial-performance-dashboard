@@ -29,8 +29,6 @@
     "@nivo/tooltip": "^0.99.0",
     "@performance-dashboard/shared": "*",
     "@tanstack/react-query": "^5.105.0",
-    "@trpc/client": "^11.22.1",
-    "@trpc/react-query": "^11.22.1",
     "@types/file-saver": "^2.0.7",
     "csrf-sync": "^4.2.1",
     "date-fns": "^4.4.0",

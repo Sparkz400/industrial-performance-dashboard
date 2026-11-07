@@ -59,6 +59,25 @@ paint **64 ms**, **962,245 script bytes**, in-app navigation about **31 ms** per
 ordinary operator device; run the same command on the operator device for U10 evidence
 before deciding which bundles or renders to reduce.
 
+**First reduction (2026-11-07).** The receipt's per-script list showed the Production
+page loading the 268 KB chart library only because its incident-replay tab (and the
+Operations asset overview) imported the chart view statically. Those panels now load the
+chart when they draw one, with an accessible loading indicator. framer-motion now loads
+only with the dashboard page, which is the only place it animates; the loader, page and
+login fades are CSS and stop under `prefers-reduced-motion`. The unused client tRPC
+provider and its two packages were removed. Same workstation and workload, 5 runs each:
+
+| Median | Before | After |
+| --- | --- | --- |
+| Script bytes on Production | 965,174 | **659,104** (−32 %) |
+| Entry chunk (uncompressed) | 542 KB | 498 KB |
+| JS heap after GC | 10.6 MB | **9.3 MB** |
+| Navigation to Operations, 4× CPU throttling | 213 ms | **121 ms** |
+| Production heading visible, no throttling | 883 ms | 878 ms |
+
+Startup timing on this workstation is dominated by data requests, not script size; the
+operator-device run decides whether further splitting is worthwhile.
+
 ## Remaining acceptance boundaries
 
 - Physical S7-1500 CPU/firmware/licence/security settings, meter calibration, signal

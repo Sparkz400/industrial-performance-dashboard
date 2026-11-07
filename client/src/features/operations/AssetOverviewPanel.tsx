@@ -12,7 +12,7 @@ import { useDigitalTwinLiveData } from '../digital-twin/hooks/useDigitalTwinLive
 import SvgViewer from '../digital-twin/components/SvgViewer';
 import { operationRequest, localInput, toIso } from './api';
 import MaintenancePanel from './MaintenancePanel';
-import TrendingExplorerWidgetView from '../widgets/types/trending-explorer/TrendingExplorerWidgetView';
+import TrendingExplorerWidgetView from '../widgets/types/trending-explorer/LazyTrendingExplorerView';
 import { toChartSeries } from '../widgets/types/trending-explorer/useTrendingData';
 import type { TrendingSeries } from '@performance-dashboard/shared';
 import { downloadJson } from '../production/productionApi';

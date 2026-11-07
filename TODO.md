@@ -590,7 +590,9 @@ below retain their unfulfilled acceptance criteria.
   about 54 KB ([acceptance](docs/DAILY_OPERATIONS_ACCEPTANCE.md#measured-bounds)).
   `scripts/measure-ui-performance.mjs` measures startup, navigation, script bytes and heap
   on the production build with a fixed synthetic workload and writes a receipt, so the
-  same workload can be compared on the operator device.
+  same workload can be compared on the operator device. Loading the chart library on
+  demand, keeping framer-motion with the dashboard page and removing the unused tRPC
+  client cut Production page script from 965 KB to 659 KB on the same workload.
   Blocker: startup/navigation/memory/live-update timing needs the ordinary operator device.
 
 ## Alerts

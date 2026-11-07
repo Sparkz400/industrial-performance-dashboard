@@ -2,7 +2,6 @@
 import React, { useMemo, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
-import { MotionConfig } from 'framer-motion';
 import App from './App';
 import { CsrfProvider } from './utils/csrfContext';
 import { SnackbarProvider, SnackbarKey } from 'notistack';
@@ -39,10 +38,8 @@ const ThemeWrapper = ({ children }: ThemeWrapperProps) => {
 
   return (
     <MuiThemeProvider theme={theme}>
-      <MotionConfig reducedMotion="user">
-        <CssBaseline />
-        {children}
-      </MotionConfig>
+      <CssBaseline />
+      {children}
     </MuiThemeProvider>
   );
 };

@@ -20,7 +20,7 @@ import {
   type IncidentReplay,
 } from '@performance-dashboard/shared';
 import { productionRequest, downloadJson } from './productionApi';
-import TrendingExplorerWidgetView from '@/features/widgets/types/trending-explorer/TrendingExplorerWidgetView';
+import TrendingExplorerWidgetView from '@/features/widgets/types/trending-explorer/LazyTrendingExplorerView';
 
 /** Review a bounded historical snapshot without changing operational data. */
 export default function IncidentReplayPanel() {

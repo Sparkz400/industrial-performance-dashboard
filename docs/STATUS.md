@@ -1,5 +1,13 @@
 # Current status
 
+## Smaller Production page download — 2026-11-07
+
+On the same workload, the Production page now downloads 659 KB of script instead of
+965 KB and uses 9.3 MB instead of 10.6 MB of JS heap: the chart library loads only when
+a panel draws a chart, framer-motion loads only with the dashboard page, and the unused
+client tRPC provider is removed ([measurement](DAILY_OPERATIONS_ACCEPTANCE.md#repeatable-ui-measurement-u10)).
+U10 still needs the operator-device run.
+
 ## OPC UA type changes become unknown — 2026-11-07
 
 When an OPC UA server sends a mapped tag with a different data type than its mapping

@@ -38,3 +38,19 @@ textarea {
     scroll-behavior: auto !important;
   }
 }
+
+/* Entrance fade for always-loaded views; framer-motion stays with the dashboard page. */
+@keyframes pd-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.pd-enter {
+  animation: pd-enter 250ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pd-enter {
+    animation: none;
+  }
+}
