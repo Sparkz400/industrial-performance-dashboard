@@ -1,5 +1,17 @@
 # Dependency PR disposition — 2026-10-26
 
+## OPC UA overflow patch removed — 2026-11-07
+
+Upstream closed [issue #1849](https://github.com/node-opcua/node-opcua/issues/1849) as
+completed with commit [`d21095e`](https://github.com/node-opcua/node-opcua/commit/d21095eb3cf704e98e68896149bad61c6431a577)
+on 2026-11-02; the first npm release after it is 2.187.20 (2026-11-03). The server now
+uses node-opcua 2.187.23. Its `node-opcua-server/dist/monitored_item.js` no longer
+contains either Good-only overflow assertion, and an unmodified installation passes
+`node scripts/test-opcua-overflow.mjs` (all quality/discard combinations), which still
+runs in `test-dev-dependencies.mjs` and the production image's runtime smoke.
+`scripts/patch-opcua.mjs`, the root `postinstall` hook and both Dockerfile patch steps
+are removed. `react-window` moves to 2.5.2 (the pending Dependabot patch update).
+
 ## Predecessor proposals — 2026-11-02
 
 The six remaining proposals from `performance_dashboard` are handled in the
@@ -363,6 +375,10 @@ and was rejected. Those results remain historical evidence; they do not describe
 the migrated browser-free runtime. None was dismissed to obtain the new result.
 
 ## OPC UA overflow patch
+
+**Removed on 2026-11-07** after the upstream fix was released; see
+[the removal record](#opc-ua-overflow-patch-removed--2026-11-07). The history below
+explains why it existed.
 
 Current upstream status and reproduction: see the [2026-10-31 follow-through](#exception-removed-and-upstream-follow-through--2026-10-31)
 and [upstream issue #1849](https://github.com/node-opcua/node-opcua/issues/1849).
