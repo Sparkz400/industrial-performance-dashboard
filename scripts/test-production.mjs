@@ -284,6 +284,11 @@ try {
   uaServer = new opcua.OPCUAServer({
     port: uaPort,
     resourcePath: "/UA/ShiftTest",
+    buildInfo: {
+      manufacturerName: "Owned test fixture",
+      productName: "Shift test server",
+      softwareVersion: "9.8.7",
+    },
     securityModes: [opcua.MessageSecurityMode.None],
     securityPolicies: [opcua.SecurityPolicy.None],
     serverCertificateManager: new opcua.OPCUACertificateManager({
@@ -373,6 +378,19 @@ try {
         !Object.hasOwn(signal, "value") && !Object.hasOwn(signal, "nodeId"),
     ),
   );
+  // C04: the preview reports the endpoint build; the example profile declares none.
+  const ownedBuild = {
+    manufacturerName: "Owned test fixture",
+    productName: "Shift test server",
+    softwareVersion: "9.8.7",
+  };
+  assert.deepEqual(diagnostic.endpointBuild, ownedBuild);
+  assert.equal(diagnostic.endpointSupport, "not-declared");
+  await expectVisible(
+    page.getByText(
+      /Endpoint build: Owned test fixture · Shift test server · 9\.8\.7/,
+    ),
+  );
   await page.getByLabel(/I reviewed the mappings/).check();
   await page
     .getByRole("button", { name: "Save profile and create dashboard" })
@@ -387,6 +405,32 @@ try {
     await (await call("GET", "/api/v1/production/profiles")).json()
   )[0].profile;
   assert.equal(profile.signals.state.namespaceUri, namespace.namespaceUri);
+  const declared = async (supportedEndpoints) =>
+    (
+      await (
+        await call(
+          "POST",
+          `/api/v1/production/machines/${machine.id}/inspect`,
+          {
+            profile: {
+              version: 1,
+              name: "Endpoint build check",
+              endpointModel: "Owned test fixture",
+              signals: {},
+              idealCycleMs: 1000,
+              maxGapSeconds: 20,
+              counterPolicy: "reject-decrease",
+              supportedEndpoints,
+            },
+          },
+        )
+      ).json()
+    ).endpointSupport;
+  assert.equal(await declared([ownedBuild]), "matches-declaration");
+  assert.equal(
+    await declared([{ ...ownedBuild, softwareVersion: "9.8.6" }]),
+    "mismatch",
+  );
   console.log(
     "PASS: actual browser commissioning, namespace resolution, read preview and dashboard creation",
   );

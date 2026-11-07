@@ -9,6 +9,8 @@ never closes an open acceptance item.
 ## [Unreleased]
 
 - Show the net collector backlog change per minute and an estimated clearing time (H09).
+- Let production profiles declare supported endpoint builds and compare them with the
+  endpoint's OPC UA BuildInfo during commissioning preview (C04).
 - Adopt node-opcua 2.187.23 with the upstream overflow fix and remove the local
   patch, its `postinstall` hook and Dockerfile steps; update react-window to 2.5.2.
 - Complete the initial contributor backlog: glossary, German demo and evidence

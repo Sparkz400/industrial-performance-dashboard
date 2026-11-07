@@ -392,6 +392,14 @@ export const german: Record<string, string> = {
   'Backlog is not shrinking': 'Rückstand nimmt nicht ab',
   'Backlog clears in about': 'Rückstand abgebaut in etwa',
   'per minute': 'pro Minute',
+  'Endpoint build:': 'Endpunkt-Build:',
+  'Matches a build declared by this profile.':
+    'Entspricht einem in diesem Profil angegebenen Build.',
+  'This profile declares no endpoint builds.': 'Dieses Profil gibt keine Endpunkt-Builds an.',
+  'Not among the builds declared by this profile. Review the mapping before saving.':
+    'Nicht unter den in diesem Profil angegebenen Builds. Zuordnung vor dem Speichern prüfen.',
+  'The endpoint did not report its complete build, so it cannot be compared.':
+    'Der Endpunkt hat seinen Build nicht vollständig gemeldet; ein Vergleich ist nicht möglich.',
   'Available namespaces:': 'Verfügbare Namensräume:',
   'Existing mappings:': 'Bestehende Zuordnungen:',
   '2. Map the signals and their meaning': '2. Signale und ihre Bedeutung zuordnen',

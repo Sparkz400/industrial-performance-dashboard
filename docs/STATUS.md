@@ -7,6 +7,14 @@ shrinks, an estimated clearing time. It accounts for ingress during recovery and
 unknown without a minute of history ([unattended operation](UNATTENDED_OPERATION.md#collector-capacity-quarantine-and-a-second-collector)).
 H09 still needs production limits from the D04 measured envelope.
 
+## Declared endpoint builds — 2026-11-07
+
+Production profiles can list the OPC UA server builds they were checked against. The
+commissioning preview reads the endpoint's BuildInfo and shows whether it matches, is
+not declared, differs or is unknown; only a match is shown as success and none blocks
+saving. C04 stays open until such declarations are qualified against real devices
+([commissioning](PRODUCTION_WORKFLOW.md#commissioning)).
+
 ## Upstream OPC UA fix adopted — 2026-11-07
 
 node-opcua 2.187.23 contains the upstream fix for the overflow assertions
