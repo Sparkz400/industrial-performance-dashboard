@@ -8,6 +8,18 @@ not declared, differs or is unknown; only a match is shown as success and none b
 saving. C04 stays open until such declarations are qualified against real devices
 ([commissioning](PRODUCTION_WORKFLOW.md#commissioning)).
 
+## Contributor backlog completed — 2026-11-07
+
+All twelve [initial contributor issues](CONTRIBUTOR_BACKLOG.md) are done: a
+[glossary](GLOSSARY.md), German [demo](de/INTERACTIVE_DEMO.md) and
+[evidence](de/SHIFT_EVIDENCE.md) guides, demo screenshots, a manual accessibility
+observation template, a [synthetic evidence sample](../examples/README.md#synthetic-shift-evidence),
+Boolean-state and 16-bit rollover catalog profiles with owned replays, catalog
+path-escape tests with real links, comparator CLI tests and readable example-client
+rate-limit errors. The offline evidence recipe now also lists `server/package.json`;
+without it the copied calculator does not load. All additions are synthetic or
+simulator-level; no acceptance gate closes with them.
+
 ## Maintenance and endurance checkpoint — 2026-11-02
 
 The [dependency review](DEPENDENCY_REVIEW.md#maintenance-review--2026-11-02)

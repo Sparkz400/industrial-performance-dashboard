@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
+import { createHash } from "node:crypto";
 import { dailyFixture } from "./daily-fixture.mjs";
+import { verifyShiftEvidence } from "./verify-shift-evidence.mjs";
+import { canonicalJson } from "../server/src/utils/canonicalJson.ts";
 
 // P03: the published examples carry no secrets and produce their documented output.
 const examples = {};
@@ -13,6 +16,24 @@ for (const name of (await readdir("examples")).filter((n) => n.endsWith(".json")
     `${name} must not contain credentials`,
   );
   examples[name] = JSON.parse(text);
+}
+
+// Published synthetic shift evidence (examples/README.md): reproduces the independent ledger.
+{
+  const sample = examples["shift-evidence-known.json"];
+  const verified = await verifyShiftEvidence(sample);
+  assert.equal(verified.reproduced, true);
+  assert.equal(verified.authenticated, false);
+  assert.deepEqual(verified.issues, []);
+  assert(Math.abs(verified.oee.overall - 13 / 30) < 1e-12);
+  assert.deepEqual(sample.payload.report.quantities, { total: 15, good: 13, reject: 2 });
+  assert.match(sample.payload.sourceRevision, /^[0-9a-f]{40}$/);
+  assert.doesNotMatch(JSON.stringify(sample), /opc\.tcp:|https?:\/\/|@/, "No endpoints or addresses");
+  const changed = structuredClone(sample);
+  changed.payload.report.quantities.good--;
+  await assert.rejects(() => verifyShiftEvidence(changed), /hash mismatch/);
+  changed.sha256 = createHash("sha256").update(canonicalJson(changed.payload)).digest("hex");
+  await assert.rejects(() => verifyShiftEvidence(changed), /does not reproduce/);
 }
 
 // Integrations (docs/INTEGRATIONS.md): Grafana provisioning and Node-RED flows.

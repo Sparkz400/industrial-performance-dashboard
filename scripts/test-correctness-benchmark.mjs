@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { canonicalJson } from "../server/src/utils/canonicalJson.ts";
 import {
   loadCorrectnessSuite,
@@ -101,6 +106,76 @@ assert.throws(
   () => claimReport(suite, actual, compareCorrectness(suite, actual), "x"),
   /implementation/,
 );
+// The published --results CLI: real child processes, owned temporary files, no shell.
+const cli = fileURLToPath(
+  new URL("./run-correctness-benchmark.mjs", import.meta.url),
+);
+const run = (...args) => {
+  try {
+    const stdout = execFileSync(process.execPath, [cli, ...args], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    return { status: 0, stdout, stderr: "" };
+  } catch (error) {
+    return { status: error.status, stdout: error.stdout, stderr: error.stderr };
+  }
+};
+const temp = await mkdtemp(join(tmpdir(), "pd-correctness-cli-"));
+try {
+  const file = (name, body) => {
+    const path = join(temp, name);
+    return writeFile(path, body).then(() => path);
+  };
+  const valid = run(
+    "--results",
+    await file("valid.json", JSON.stringify(actual)),
+  );
+  assert.equal(valid.status, 0, valid.stderr);
+  assert.equal(JSON.parse(valid.stdout).passed, true);
+
+  const out = join(temp, "out", "mismatch.json");
+  const mismatch = run(
+    "--results",
+    await file("mismatch.json", JSON.stringify(changed)),
+    "--out",
+    out,
+  );
+  assert.equal(mismatch.status, 1);
+  assert.equal(JSON.parse(mismatch.stdout).passed, false);
+  const recorded = JSON.parse(await readFile(out, "utf8"));
+  assert.equal(recorded.comparison.passed, false);
+  assert(
+    recorded.comparison.failures.some(
+      (f) => f.path === "missing-counter-reading.oee.overall",
+    ),
+  );
+
+  const bounded = (result, pattern) => {
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, pattern);
+    assert(
+      result.stderr.length < 500,
+      `diagnostic is bounded: ${result.stderr.length}`,
+    );
+  };
+  bounded(
+    run("--results", await file("malformed.json", '{"format": ')),
+    /JSON/,
+  );
+  bounded(run("--results", join(temp, "absent.json")), /ENOENT|no such file/);
+  bounded(
+    run(
+      "--results",
+      await file("large.json", `{"padding":"${"x".repeat(1024 * 1024)}"}`),
+    ),
+    /exceed 1 MiB/,
+  );
+} finally {
+  await rm(temp, { recursive: true, force: true });
+}
+
 console.log(
-  "PASS: 15 independent answers; altered totals, unknown-to-zero, missing/duplicate cases and dataset mismatches are rejected; claim reports list differing fields",
+  "PASS: 15 independent answers; altered totals, unknown-to-zero, missing/duplicate cases and dataset mismatches are rejected; claim reports list differing fields; the --results CLI exits 0/1 with bounded diagnostics",
 );
