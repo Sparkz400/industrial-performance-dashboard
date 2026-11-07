@@ -92,7 +92,11 @@ creating duplicates. They diagnose observation availability, not a physical faul
 
 The Production page shows administrators the backlog against its capacity, spool
 bytes, oldest pending age, rows written in the last minute and the last database
-write failure. Acquisition stops (and never acknowledges a sample it cannot keep)
+write failure. While a backlog exists it also shows the net change of the backlog
+per minute and, when it is shrinking, about how long it takes to clear. The estimate
+compares the pending count with one at least 55 seconds old, so new samples arriving
+during recovery are counted; without that history it is shown as unknown, and a
+growing or steady backlog has no clearing time. Acquisition stops (and never acknowledges a sample it cannot keep)
 when the backlog reaches `OPCUA_SPOOL_MAX_ENTRIES` (default 1,000,000) or free
 space beside the spool falls to `OPCUA_SPOOL_RESERVE_MB` (default 64). Size them
 for the outage you must ride through: spool bytes ÷ pending measurements gives

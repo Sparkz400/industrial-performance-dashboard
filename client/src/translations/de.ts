@@ -387,6 +387,11 @@ export const german: Record<string, string> = {
   'Add machine': 'Maschine hinzufügen',
   'Check connection': 'Verbindung prüfen',
   'Connected using': 'Verbunden über',
+  'Clearing time unknown until a minute of history exists.':
+    'Abbauzeit unbekannt, bis eine Minute Verlauf vorliegt.',
+  'Backlog is not shrinking': 'Rückstand nimmt nicht ab',
+  'Backlog clears in about': 'Rückstand abgebaut in etwa',
+  'per minute': 'pro Minute',
   'Endpoint build:': 'Endpunkt-Build:',
   'Matches a build declared by this profile.':
     'Entspricht einem in diesem Profil angegebenen Build.',

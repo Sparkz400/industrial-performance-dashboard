@@ -1,5 +1,12 @@
 # Current status
 
+## Backlog recovery estimate — 2026-11-07
+
+The collector backlog status now shows the net backlog change per minute and, while it
+shrinks, an estimated clearing time. It accounts for ingress during recovery and stays
+unknown without a minute of history ([unattended operation](UNATTENDED_OPERATION.md#collector-capacity-quarantine-and-a-second-collector)).
+H09 still needs production limits from the D04 measured envelope.
+
 ## Repeatable UI measurement — 2026-11-07
 
 `scripts/measure-ui-performance.mjs` measures the production client build on a fixed
