@@ -430,12 +430,30 @@ export function calculateShift(input: {
     issues.push("Shift has not ended.");
   if (!input.evidence)
     issues.push("Independent reconciliation has not been recorded.");
-  else if (
-    (["total", "good", "reject"] as const).some(
-      (key) => quantities[key] !== input.evidence![key],
+  else {
+    const { evidence } = input;
+    if (
+      (["total", "good", "reject"] as const).some(
+        (key) => quantities[key] !== evidence[key],
+      )
     )
-  )
-    issues.push("Independent counts do not match observed quantities.");
+      issues.push("Independent counts do not match observed quantities.");
+    if (evidence.downtimeSeconds != null) {
+      // Same basis as availability: scheduled time not spent running.
+      const observedDowntime = scheduledSeconds - runningSeconds;
+      const tolerance = evidence.downtimeToleranceSeconds ?? 0;
+      if (seconds.unknown > 0)
+        issues.push(
+          "Independent downtime cannot be compared while state coverage has unknown intervals.",
+        );
+      else if (
+        Math.abs(observedDowntime - evidence.downtimeSeconds) > tolerance
+      )
+        issues.push(
+          `Independent downtime ${minutes(evidence.downtimeSeconds)} differs from observed ${minutes(observedDowntime)} by more than the recorded ${minutes(tolerance)} tolerance.`,
+        );
+    }
+  }
   return {
     revision: "shift-v1",
     id: input.id,

@@ -815,8 +815,10 @@ router.post(
       total: Joi.number().integer().min(0).required(),
       good: Joi.number().integer().min(0).required(),
       reject: Joi.number().integer().min(0).required(),
+      downtimeSeconds: Joi.number().integer().min(0).max(172800),
+      downtimeToleranceSeconds: Joi.number().integer().min(0).max(3600),
       reference: Joi.string().trim().min(1).max(500).required(),
-    }),
+    }).and("downtimeSeconds", "downtimeToleranceSeconds"),
   ),
   asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
