@@ -39,6 +39,26 @@ from approximately **834 KB** to **901 KB** as the new UI/locale support was add
 These are uncompressed generated asset sizes, not total network load or a timing claim.
 The comparison receipt lives alongside browser evidence.
 
+### Repeatable UI measurement (U10)
+
+`node scripts/measure-ui-performance.mjs [--runs 5] [--cpu-slowdown 4]` (after
+`npm run build`) serves the **production client build** through `vite preview` against
+an owned, isolated database with four synthetic shifts. Each run uses a fresh browser
+context. It records the time until the Production page heading is visible after a full
+load, first contentful paint, script bytes, in-app navigation to Operations, Wallboard
+and back to Production, and the JS heap and DOM node count after garbage collection. The
+medians and per-run samples go to `.local/ui-performance/*.json` with the source
+revision, workload and host. `--cpu-slowdown` uses Chromium CPU throttling as a rough
+stand-in for a slower device; it is not a device measurement. Live-update latency is
+not measured yet: the views poll, and a latency budget needs the D04 workload.
+
+Baseline on a developer workstation (AMD Ryzen 7 9800X3D, Windows 11, Chromium,
+3 runs, no throttling, 2026-11-07): heading visible after **897 ms**, first contentful
+paint **64 ms**, **962,245 script bytes**, in-app navigation about **31 ms** per view,
+**10.6 MB** JS heap and **617** DOM nodes. A developer workstation is far faster than an
+ordinary operator device; run the same command on the operator device for U10 evidence
+before deciding which bundles or renders to reduce.
+
 ## Remaining acceptance boundaries
 
 - Physical S7-1500 CPU/firmware/licence/security settings, meter calibration, signal
