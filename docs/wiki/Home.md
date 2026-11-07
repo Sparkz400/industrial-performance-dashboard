@@ -152,3 +152,6 @@ for guided synthetic shifts, safe reset and restart persistence. The
 separates simulator, reported and physical qualification claims. A
 [portable shift evidence export](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/docs/SHIFT_EVIDENCE.md)
 recalculates one shift/OEE offline with Node.js 24, without a database or installed dependencies.
+German guides cover the [demo](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/docs/de/INTERACTIVE_DEMO.md) and
+[shift evidence](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/docs/de/SHIFT_EVIDENCE.md); the [glossary](https://github.com/Sparkz400/industrial-performance-dashboard/blob/main/docs/GLOSSARY.md)
+explains unknown, stale and verified data.

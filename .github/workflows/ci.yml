@@ -33,9 +33,11 @@ jobs:
           node scripts/test-report-pdf.mjs
           python scripts/check-report-pdf.py
       - run: npm run profiles:check
+      - run: node scripts/test-profile-catalog.mjs
       - run: node scripts/run-correctness-benchmark.mjs --out .local/correctness-benchmark/result.json
       - run: node scripts/test-correctness-benchmark.mjs
       - run: node scripts/test-ci-feedback.mjs
+      - run: node scripts/test-integration-client.mjs
       - run: node scripts/test-dev-dependencies.mjs
       - run: node scripts/test-dependency-audit.mjs
       - run: node scripts/test-backup-crypt.mjs

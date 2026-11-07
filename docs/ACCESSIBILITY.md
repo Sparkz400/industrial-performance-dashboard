@@ -35,3 +35,4 @@ A person using a screen reader must still walk through the operator tasks above 
 record the announcements, and a 200 % text-zoom pass and a focus-obscured check are
 needed on the target operator device. Automated rules find only part of real
 accessibility problems; a passing scan is not a conformance claim.
+Record a manual pass with the [observation template](templates/ACCESSIBILITY_OBSERVATION.md).

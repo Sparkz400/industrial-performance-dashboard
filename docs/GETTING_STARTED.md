@@ -38,6 +38,7 @@ For a complete synthetic shift, open **Production shift → Commission machine**
 and follow the [production workflow](PRODUCTION_WORKFLOW.md). The simulator includes
 running/idle/fault states and total/good/reject counters. These fixtures exercise
 the calculations; they do not qualify a physical machine.
+The [glossary](GLOSSARY.md) explains unknown, stale and verified results.
 
 ## Container deployment
 

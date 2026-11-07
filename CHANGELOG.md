@@ -8,6 +8,11 @@ never closes an open acceptance item.
 
 ## [Unreleased]
 
+- Complete the initial contributor backlog: glossary, German demo and evidence
+  guides, demo screenshots, accessibility observation template, synthetic shift
+  evidence sample, Boolean-state and 16-bit rollover profiles, catalog path-escape,
+  comparator CLI and example-client error tests. The offline evidence recipe now
+  includes `server/package.json`.
 - Review November dependency updates, align Node declarations with the supported
   Node 24 runtime, and preserve unstaged work during pre-commit checks.
 - Correct the dependency-audit status and record the failed November 1 endurance

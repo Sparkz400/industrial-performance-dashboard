@@ -49,7 +49,8 @@ zero or perfect production:</sub>
   [container releases](docs/GETTING_STARTED.md#run-the-published-image).
 
 The demo guide provides a generated login, a known shift and missing-data, bad-quality
-and counter-reset scenarios. See the [interactive demo guide](docs/INTERACTIVE_DEMO.md).
+and counter-reset scenarios. See the [interactive demo guide](docs/INTERACTIVE_DEMO.md) ([Deutsch](docs/de/INTERACTIVE_DEMO.md))
+and the [glossary](docs/GLOSSARY.md) for unknown, stale and verified data.
 Pilot gates, benchmark, dependency and maintainer notes are in [status](docs/STATUS.md);
 first contributions start in the [contributor backlog](docs/CONTRIBUTOR_BACKLOG.md).
 

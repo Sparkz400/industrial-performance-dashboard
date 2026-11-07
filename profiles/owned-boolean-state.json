@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "name": "Synthetic Boolean running state",
+  "endpointModel": "Owned replay simulator v1; not a vendor map",
+  "signals": {
+    "state": {
+      "nodeKey": "Running",
+      "namespaceUri": "urn:performance-dashboard:boolean-state-demo:v1",
+      "identifier": "s=Running",
+      "dataType": "Boolean",
+      "unit": null,
+      "scale": 1
+    }
+  },
+  "states": {
+    "running": [1],
+    "idle": [0],
+    "fault": [],
+    "planned": []
+  },
+  "idealCycleMs": 2000,
+  "maxGapSeconds": 20,
+  "counterPolicy": "reject-decrease"
+}

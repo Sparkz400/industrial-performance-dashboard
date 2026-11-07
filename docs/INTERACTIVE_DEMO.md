@@ -1,5 +1,7 @@
 # Interactive factory demo
 
+[Deutsch](de/INTERACTIVE_DEMO.md)
+
 The demo runs the actual dashboard against an isolated, persistent local database.
 Its four-signal replay uses the [owned factory profile](../profiles/owned-factory.json).
 All names and measurements are synthetic. It does not connect to a physical machine.
@@ -45,6 +47,27 @@ It does not use or reset the application's normal database or account credential
    not become a good observation.
 4. **Counter reset:** decreasing counters are rejected by this profile. Choose a
    reset policy only when it matches the actual equipment's documented behavior.
+
+### What the known and missing cases look like
+
+Synthetic data only. Both captures show the signed-in **Production → Shift workspace**
+main area (navigation and account menu excluded) at a 1280 × 900 viewport, from
+source revision `196c2ea5`, seeded by the owned fixture in
+[`scripts/test-community-workflows.mjs`](../scripts/test-community-workflows.mjs),
+which writes them to `.local/community-evidence/demo-*.png`.
+
+![Production shift workspace for the synthetic Demo known shift: reconciled against recorded independent counts; availability 50.0%, performance 100.0%, quality 86.7%, overall 43.3%; total 15, good 13, reject 2; one minute scheduled, nothing unknown](assets/demo/known-shift.png)
+
+<sub>Known shift: the report is reconciled against the independent ledger and OEE is
+43.3% (13/30, shown rounded to one decimal).</sub>
+
+![Production shift workspace for the synthetic Demo gap shift: marked incomplete and not verified; availability, performance, quality and overall all Unavailable; 0.2 minutes unknown, with a note that unknown state is not counted as downtime](assets/demo/missing-measurements.png)
+
+<sub>Missing measurements: the report is incomplete and not verified, every OEE factor
+is *Unavailable*, and the 0.2 minutes without data stay unknown instead of becoming
+downtime. The `total/good/reject: 0` chips count only the counter changes that were
+actually observed between Good samples; the report's issue list says each counter has
+gaps, so these are not complete shift quantities and no factor is calculated from them.</sub>
 
 Each button adds a fresh machine/shift without overwriting earlier edits. Up to
 100 shifts are allowed before reset. The replay writes a fixed historical ledger;
