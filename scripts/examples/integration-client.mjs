@@ -29,11 +29,31 @@ export async function integrationClient({ api, username, password }) {
   const json = async (path) => {
     const response = await request("GET", path);
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw Object.assign(new Error(`${response.status} ${error.code}: ${error.error}`), {
-        status: response.status,
-        body: error,
-      });
+      const text = await response.text().catch(() => "");
+      let error = {};
+      try {
+        error = JSON.parse(text) ?? {};
+      } catch {
+        // 429 from the rate limiter is plain text; other proxies may send HTML.
+      }
+      // Bounded so a large or unexpected body never floods the integrator's log.
+      const detail =
+        error.error ??
+        (text.replace(/\s+/g, " ").trim().slice(0, 200) || response.statusText);
+      const reset = response.headers.get("ratelimit-reset");
+      const retryAfterSeconds =
+        reset !== null && reset !== "" && Number.isFinite(Number(reset))
+          ? Number(reset)
+          : undefined;
+      const message = `${response.status} ${error.code ?? response.statusText}: ${detail}`;
+      throw Object.assign(
+        new Error(
+          retryAfterSeconds === undefined
+            ? message
+            : `${message} (rate limit resets in ${retryAfterSeconds} s)`,
+        ),
+        { status: response.status, body: error, retryAfterSeconds },
+      );
     }
     return response.json();
   };
@@ -66,7 +86,10 @@ export async function integrationClient({ api, username, password }) {
   };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   const [machineId, nodeKey] = process.argv.slice(2);
   const client = await integrationClient({
     api: process.env.PD_API,
@@ -79,7 +102,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (machineId && nodeKey) {
     console.log(
       JSON.stringify(
-        await client.summaries(machineId, nodeKey, start.toISOString(), end.toISOString()),
+        await client.summaries(
+          machineId,
+          nodeKey,
+          start.toISOString(),
+          end.toISOString(),
+        ),
         null,
         2,
       ),
