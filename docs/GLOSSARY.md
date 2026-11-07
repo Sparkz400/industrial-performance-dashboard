@@ -64,7 +64,8 @@ legacy rows without receive time keep an unknown clock status
 state coverage is complete, every stop has a reason, all three counters are
 complete, total equals good plus reject, no factor exceeds 100 %, no manual state
 or quantity declaration was used, and an administrator recorded independent
-total/good/reject counts that match. It is the calculator's internal
+total/good/reject counts that match (and, when the ledger records downtime, observed
+downtime lies within its recorded tolerance). It is the calculator's internal
 reconciliation. It does not authenticate who published the data or an evidence
 bundle (`authenticated: false`), and it does not qualify a machine or installation.
 

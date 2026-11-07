@@ -8,6 +8,15 @@ and reported status, so reports and live values treat it as unknown
 ([compatibility](COMPATIBILITY.md)). An owned server changing a tag from Int32 to
 Double during live collection covers it. C10 still needs a real vendor/model/firmware entry.
 
+## Independent downtime in the shift ledger — 2026-11-07
+
+The independent shift ledger can record downtime with a tolerance next to the
+total/good/reject counts. Observed downtime (scheduled time not spent running) must
+lie within that tolerance for the report to be verified; unknown state time is never
+compared ([shift workflow](PRODUCTION_WORKFLOW.md#shift-and-operator-workflow)).
+The calculator changed, so the published synthetic evidence sample was regenerated.
+O09 still needs a supervised physical shift reconciliation (D06).
+
 ## Backlog recovery estimate — 2026-11-07
 
 The collector backlog status now shows the net backlog change per minute and, while it
