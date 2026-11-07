@@ -45,11 +45,17 @@ export class OpcuaQueueWorker {
       throw new Error("Measurement collector is stopped");
     }
     // Fail visibly if local storage is unavailable; never acknowledge a lost sample.
+    const lease = data.leaseEpoch == null ? currentLease() : undefined;
     try {
-      await this.getSpool().enqueue({
-        ...data,
-        leaseEpoch: data.leaseEpoch ?? currentLease()?.epoch,
-      });
+      await this.getSpool().enqueue(
+        lease
+          ? {
+              ...data,
+              leaseEpoch: lease.epoch,
+              leaseClockOffsetMs: lease.clockOffsetMs,
+            }
+          : data,
+      );
       collectorDiagnostics.accepted(data.machineId);
     } catch (error) {
       collectorDiagnostics.rejected(data.machineId);
@@ -125,8 +131,10 @@ export class OpcuaQueueWorker {
     const accepted: SpoolEntry[] = [];
     for (const entry of batch) {
       const own = epochs.find((e) => e.epoch === entry.data.leaseEpoch);
+      // Receipt on the database clock, which also stamped every lease's acquiredAt.
       const received = entry.data.receivedAt
-        ? new Date(entry.data.receivedAt).getTime()
+        ? new Date(entry.data.receivedAt).getTime() +
+          (entry.data.leaseClockOffsetMs ?? 0)
         : NaN;
       const newer =
         own && Number.isFinite(received)

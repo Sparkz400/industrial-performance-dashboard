@@ -155,7 +155,7 @@ Trigger: the pilot owner agrees RPO/RTO (ROADMAP "Recovery objectives") and the 
 
 **Outcome 2026-10-29 (wave 12).** The owner asked for the deferred items to be built. Without agreed RPO/RTO, the design ([high availability](HIGH_AVAILABILITY.md)) separates database recovery, web redundancy and collector ownership with labelled assumptions, and only fencing is built:
 - `collector_epochs` records a lease per lock acquisition; spooled samples carry their lease. Before writing, a sample received after a *different* collector's newer lease began is quarantined (`Fenced: …`). A collector's own backlog after its own retake or restart is kept.
-- Fencing is decided by receive time against lease start (assumes synchronised clocks), checked just before the insert rather than in its transaction; both limits are documented.
+- Fencing is decided by receive time against lease start (assumes synchronised clocks), checked just before the insert rather than in its transaction; both limits are documented. *2026-11-07:* receive time is now mapped onto the database clock with the offset measured at lease acquisition, so synchronised clocks are no longer assumed.
 - `test-collector-fencing.mjs`: the rule in-process, then two app processes on one owned database and OPC UA server — the second waits, takes over after `kill -9` and no source timestamp is stored twice.
 - Replication, automatic failover and cross-host failover remain for an agreed target missed by the D06 drill.
 

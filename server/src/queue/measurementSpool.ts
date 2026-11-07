@@ -21,6 +21,8 @@ export interface OpcuaDataItem {
   eventId?: string;
   /** D08: the collector lease the sample was taken under. */
   leaseEpoch?: number;
+  /** Database clock minus this collector's clock under that lease; fencing compares on one clock. */
+  leaseClockOffsetMs?: number;
 }
 
 export interface SpoolEntry {

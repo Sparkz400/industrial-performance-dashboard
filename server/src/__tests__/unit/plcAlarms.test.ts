@@ -72,15 +72,20 @@ it("keeps condition identity and states, and stores information-only events too"
     retain: true,
     refresh: true,
   });
+  const informationFields = {
+    EventId: variant(opcua.DataType.ByteString, Buffer.from([1])),
+    EventType: variant(
+      opcua.DataType.NodeId,
+      opcua.resolveNodeId("BaseEventType"),
+    ),
+    Severity: variant(opcua.DataType.UInt16, 100),
+  };
+  // Without Time the server's ReceiveTime is used, never the collector's clock.
   const information = eventRow(
     3,
     values({
-      EventId: variant(opcua.DataType.ByteString, Buffer.from([1])),
-      EventType: variant(
-        opcua.DataType.NodeId,
-        opcua.resolveNodeId("BaseEventType"),
-      ),
-      Severity: variant(opcua.DataType.UInt16, 100),
+      ...informationFields,
+      ReceiveTime: variant(opcua.DataType.DateTime, time),
     }),
     false,
   );
@@ -88,6 +93,8 @@ it("keeps condition identity and states, and stores information-only events too"
     conditionId: null,
     active: null,
     severity: 100,
+    eventTime: time,
   });
+  expect(eventRow(3, values(informationFields), false)).toBeNull();
   expect(eventRow(3, values({}), false)).toBeNull();
 });

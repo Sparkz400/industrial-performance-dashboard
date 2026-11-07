@@ -14,7 +14,8 @@ let retryMs = 5000;
 // D08 fencing: this process's identity and its latest lease (kept after a lost session, so
 // samples spooled during a database outage still name the lease they were taken under).
 const HOLDER = `${hostname()}:${process.pid}:${randomBytes(4).toString("hex")}`;
-let lease: { epoch: number; holder: string } | undefined;
+// clockOffsetMs maps this host's clock onto the database clock that stamps acquired_at.
+let lease: { epoch: number; holder: string; clockOffsetMs: number } | undefined;
 export const currentLease = () => lease;
 
 async function tryLock(): Promise<boolean> {
@@ -34,11 +35,17 @@ async function tryLock(): Promise<boolean> {
   }
   holder = client;
   watch(client);
-  const { rows } = await client.query<{ epoch: number }>(
-    "INSERT INTO collector_epochs(holder) VALUES ($1) RETURNING epoch",
+  const sent = Date.now();
+  const { rows } = await client.query<{ epoch: number; acquired_at: Date }>(
+    "INSERT INTO collector_epochs(holder) VALUES ($1) RETURNING epoch, acquired_at",
     [HOLDER],
   );
-  lease = { epoch: Number(rows[0].epoch), holder: HOLDER };
+  lease = {
+    epoch: Number(rows[0].epoch),
+    holder: HOLDER,
+    clockOffsetMs:
+      new Date(rows[0].acquired_at).getTime() - (sent + Date.now()) / 2,
+  };
   return true;
 }
 

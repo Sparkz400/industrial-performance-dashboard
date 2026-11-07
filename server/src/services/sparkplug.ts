@@ -259,6 +259,8 @@ interface Scope {
 interface NodeState {
   bdSeq: bigint | null;
   seq: number | null;
+  /** Latest source timestamp (node clock, ms) of any message from the node or its devices. */
+  lastSeen: number | null;
   node: Scope;
   devices: Map<string, Scope>;
 }
@@ -280,6 +282,7 @@ export function createSparkplugState(
     const node = state.get(key) ?? {
       bdSeq: null,
       seq: null,
+      lastSeen: null,
       node: unborn(),
       devices: new Map(),
     };
@@ -475,6 +478,10 @@ export function parseSparkplugMessage(
     (m) => m.groupId === groupId && m.edgeNodeId === edgeNodeId,
   );
   const scoped = ofNode.filter((m) => m.deviceId === deviceId);
+  const stamps = [
+    decoded.timestamp,
+    ...decoded.metrics.map((m) => m.timestamp),
+  ].filter((t): t is number => t !== null);
 
   if (type === "NDEATH") {
     const bdSeq = birthSequence(decoded);
@@ -484,11 +491,17 @@ export function parseSparkplugMessage(
     node.seq = null;
     for (const scope of [node.node, ...node.devices.values()])
       lose(scope, "death");
+    // Death time on the node's clock, not arrival (late after a collector takeover). A broker
+    // will carries its connect time, so the node died after (+1 ms) the last message seen.
+    const diedAt = Math.max(...stamps, (node.lastSeen ?? -Infinity) + 1);
+    const time = Number.isFinite(diedAt) ? new Date(diedAt) : receivedAt;
     return {
-      measurements: deaths(source, ofNode, receivedAt, receivedAt),
+      measurements: deaths(source, ofNode, time, receivedAt),
       rejected: null,
     };
   }
+  if (stamps.length)
+    node.lastSeen = Math.max(node.lastSeen ?? -Infinity, ...stamps);
   if (type === "NBIRTH") {
     node.bdSeq = birthSequence(decoded);
     node.seq = decoded.seq;

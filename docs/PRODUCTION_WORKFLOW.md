@@ -152,9 +152,10 @@ primary host, sends no `STATE` and never requests a rebirth.
   Without a rebirth request, a node that sends only aliases stays unreadable until it
   restarts or is rebirthed by its primary host.
 - A node death whose `bdSeq` matches the latest birth (or with no known birth) stores
-  every mapped signal of the node and its devices as `BadCommunicationError` at receipt
-  time; an older will is ignored. A device death does the same for that device at its
-  payload time. Signals stay unknown instead of holding their last value.
+  every mapped signal of the node and its devices as `BadCommunicationError` at the
+  death's own timestamp, but no earlier than 1 ms after the node's last message (a will
+  carries its connect time); with neither, at receipt. An older will is ignored. A device
+  death does the same for that device at its payload time. Signals stay unknown instead of holding their last value.
 - A metric's own timestamp is used, then the payload's; without either the reading is
   refused. `is_null` is stored as `BadNoData`, never as zero. Int8 and Int16 accept both
   the 3.0 two's-complement form and the older narrow form; 64-bit values are stored only
