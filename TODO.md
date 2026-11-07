@@ -583,6 +583,9 @@ below retain their unfulfilled acceptance criteria.
   justify it. Preserve accessible loading states and compare results on the same workload.
   Progress: deferring the widget library reduced the dashboard page chunk from 3.9 MB to
   about 54 KB ([acceptance](docs/DAILY_OPERATIONS_ACCEPTANCE.md#measured-bounds)).
+  `scripts/measure-ui-performance.mjs` measures startup, navigation, script bytes and heap
+  on the production build with a fixed synthetic workload and writes a receipt, so the
+  same workload can be compared on the operator device.
   Blocker: startup/navigation/memory/live-update timing needs the ordinary operator device.
 
 ## Alerts

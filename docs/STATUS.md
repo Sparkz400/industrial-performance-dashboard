@@ -1,5 +1,14 @@
 # Current status
 
+## Repeatable UI measurement — 2026-11-07
+
+`scripts/measure-ui-performance.mjs` measures the production client build on a fixed
+synthetic workload: startup, in-app navigation, script bytes, JS heap and DOM nodes,
+written as a receipt with source revision and host
+([measured bounds](DAILY_OPERATIONS_ACCEPTANCE.md#repeatable-ui-measurement-u10)). A
+developer-workstation baseline is recorded; U10 still needs the same run on the
+ordinary operator device before bundle or render changes are chosen.
+
 ## Declared endpoint builds — 2026-11-07
 
 Production profiles can list the OPC UA server builds they were checked against. The

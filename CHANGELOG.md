@@ -8,6 +8,8 @@ never closes an open acceptance item.
 
 ## [Unreleased]
 
+- Add a repeatable UI measurement script for the production build with a fixed
+  synthetic workload and a developer-workstation baseline (U10).
 - Let production profiles declare supported endpoint builds and compare them with the
   endpoint's OPC UA BuildInfo during commissioning preview (C04).
 - Adopt node-opcua 2.187.23 with the upstream overflow fix and remove the local
