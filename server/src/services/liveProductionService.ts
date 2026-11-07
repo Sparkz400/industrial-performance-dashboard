@@ -51,6 +51,35 @@ export function liveState(
   return state ? { state, freshness: "fresh" } : unknown("bad-quality");
 }
 
+/**
+ * Shift count so far. No sample sits exactly at `now`: the count runs through a fresh last
+ * sample (asOf), and a last sample older than the profile's gap leaves it incomplete.
+ */
+export function liveCount(
+  samples: Parameters<typeof counterDeltas>[0],
+  profile: ProductionProfile,
+  scale: number,
+  start: Date,
+  now: Date,
+): MachineLiveSummary["production"] {
+  const asOf = samples.at(-1)?.timestamp ?? null;
+  const fresh =
+    asOf && now.getTime() - asOf.getTime() <= profile.maxGapSeconds * 1000;
+  const result = counterDeltas(
+    samples,
+    profile,
+    scale,
+    start,
+    fresh ? asOf : now,
+  );
+  return {
+    observed: result.count,
+    complete: result.complete,
+    asOf: asOf?.toISOString() ?? null,
+    truncated: false,
+  };
+}
+
 export async function liveProduction(
   ids?: number[],
   includeProgress = true,
@@ -172,19 +201,13 @@ export async function liveProduction(
               },
             ]),
           );
-          const result = counterDeltas(
+          production = liveCount(
             [...unique.values()],
             profile!,
             total.scale,
             shift.start,
             now,
           );
-          production = {
-            observed: result.count,
-            complete: result.complete,
-            asOf: rows.at(-1)?.timestamp.toISOString() ?? null,
-            truncated: false,
-          };
         }
       }
       return {

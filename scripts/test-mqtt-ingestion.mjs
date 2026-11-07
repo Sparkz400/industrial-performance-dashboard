@@ -242,15 +242,17 @@ await dailyFixture(async ({ pool, call, sockets, actors, frontend, expect }) => 
         )
       ).rows.map((r) => [r.node_key, r.timestamp < new Date(at(59)) ? r.timestamp.toISOString() : "received", r.value, r.status_code]);
     const iso = (minute) => new Date(at(minute)).toISOString();
+    // The timestamp-less node death lies just after the node's last message (DDEATH at 07:04), not at arrival.
+    const died = new Date(at(4) + 1).toISOString();
     const spExpected = [
       ["SpCount", iso(1), 100, "Good"],
       ["SpCount", iso(2), 101, "Good"],
+      ["SpCount", died, null, "BadCommunicationError"],
       ["SpCount", iso(10), 110, "Good"],
-      ["SpCount", "received", null, "BadCommunicationError"],
       ["SpPressure", iso(2), 2.5, "Good"],
       ["SpPressure", iso(3), 2.75, "Good"],
       ["SpPressure", iso(4), null, "BadCommunicationError"],
-      ["SpPressure", "received", null, "BadCommunicationError"],
+      ["SpPressure", died, null, "BadCommunicationError"],
     ];
     await expect.poll(spRows, { timeout: 15000 }).toEqual(spExpected);
     // After the database committed them, a redelivered data message is still stored once.

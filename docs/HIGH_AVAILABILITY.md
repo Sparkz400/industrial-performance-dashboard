@@ -51,8 +51,9 @@ Evidence, `scripts/test-collector-fencing.mjs`, against an owned database:
 
 - **A1:** A host loss loses the samples still in that host's spool. The spool is on the
   collector's disk.
-- **A2:** Clocks of collector hosts and the database are synchronised (NTP) to well under
-  a second. Fencing compares a sample's receive time with the start of a newer lease.
+- **A2:** A collector host's clock does not jump between taking its lease and receiving
+  a sample. Fencing maps a sample's receive time onto the database clock with the offset
+  measured when the lease was taken, then compares it with the start of a newer lease.
 - **A3:** The database is a single instance. Its loss means restoring the latest backup,
   so history after that backup is lost unless it is still in a spool.
 - **A4:** One installation per database. A second installation with a *different*

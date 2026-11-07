@@ -27,10 +27,18 @@ A review of collection, spool and storage, calculations and outputs found and fi
 - The compliance audit CSV and two client CSV exports did not neutralize formula-like
   text; one client export also broke columns on quotes.
 
-Open findings, not yet changed: collector-lease fencing compares the old collector's
-clock with the database clock; Sparkplug death markers use the receive time and a
-receive-time event ID; a PLC alarm without a `Time` field gets the current time; live
-production counts are never reported complete (errs toward unknown).
+Follow-up fixes, same day:
+
+- Collector-lease fencing compared the old collector's clock with the database clock.
+  Each lease now records the collector-to-database clock offset, and samples are judged
+  on the database clock.
+- Sparkplug node deaths were timed (and identified) by arrival, which is late after a
+  collector takeover. They now use the node's clock: the death's own timestamp, but never
+  before just after the node's last message (a broker will carries its connect time).
+- A PLC alarm without `Time` got the collector's current time. It now uses the server's
+  `ReceiveTime`; an event with neither is refused and shown as the source's last error.
+- Live production counts were never complete, because no sample sits exactly at "now".
+  They are now complete through a fresh last sample (shown as "Counts through").
 
 ## Smaller Production page download — 2026-11-07
 

@@ -24,8 +24,9 @@ await dailyFixture(async ({ pool, expect }) => {
   ).rows;
   const t0 = Date.now();
   const at = (offset) => new Date(t0 + offset).toISOString();
-  const sample = async (key, received, leaseEpoch = mine.epoch) =>
-    await worker.enqueue({ key, label: key, timestamp: received, receivedAt: received, value: 1, statusCode: "Good", machineId: fenceMachine, leaseEpoch });
+  assert.ok(Number.isFinite(mine.clockOffsetMs));
+  const sample = async (key, received, leaseClockOffsetMs = 0) =>
+    await worker.enqueue({ key, label: key, timestamp: received, receivedAt: received, value: 1, statusCode: "Good", machineId: fenceMachine, leaseEpoch: mine.epoch, leaseClockOffsetMs });
   // This process retakes its own lock (for example after a database outage): its backlog stays valid.
   await pool.query("INSERT INTO collector_epochs(holder,acquired_at) VALUES($1,$2)", [mine.holder, at(0)]);
   await sample("OwnRetake", at(500));
@@ -33,11 +34,14 @@ await dailyFixture(async ({ pool, expect }) => {
   await pool.query("INSERT INTO collector_epochs(holder,acquired_at) VALUES('other-host:7:feed',$1)", [at(1000)]);
   await sample("BeforeTakeover", at(900));
   await sample("AfterTakeover", at(1100));
+  // Receipt is judged on the database clock: a collector clock 300 ms ahead or behind of it.
+  await sample("ClockAheadBeforeTakeover", at(1100), -300);
+  await sample("ClockBehindAfterTakeover", at(900), 300);
   for (let i = 0; i < 5; i++) await worker.processBatch();
   const stored = (await pool.query("SELECT node_key FROM opcua_data WHERE machine_id=$1 ORDER BY node_key", [fenceMachine])).rows.map((r) => r.node_key);
-  assert.deepEqual(stored, ["BeforeTakeover", "OwnRetake"]);
+  assert.deepEqual(stored, ["BeforeTakeover", "ClockAheadBeforeTakeover", "OwnRetake"]);
   const quarantined = await worker.getQuarantine(10);
-  assert.equal(quarantined.length, 1);
+  assert.equal(quarantined.length, 2);
   assert.match(quarantined[0].reason, /^Fenced: received after collector lease \d+ \(other-host:7:feed\) began; taken under lease \d+/);
   await lock.releaseCollectorLock();
 

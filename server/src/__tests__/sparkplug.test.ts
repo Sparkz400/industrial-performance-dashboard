@@ -441,11 +441,43 @@ describe("Sparkplug B session state", () => {
       ["Pressure", null, "BadCommunicationError"],
       ["Temp", null, "BadCommunicationError"],
     ]);
-    expect(death.measurements[0].timestamp).toEqual(new Date(T + 60000));
+    // A will without a timestamp: just after the last message seen, not its arrival (T + 60 s).
+    expect(death.measurements[0].timestamp).toEqual(new Date(T + 1));
+    expect(death.measurements[0].receivedAt).toEqual(new Date(T + 60000));
     expect(status()).toEqual({
       "Plant/Line1": "offline",
       "Plant/Line1/Press": "offline",
     });
+  });
+
+  it("times a node death on the node's clock", () => {
+    // A will registered at connect (T) never moves the death before the last data (T + 5 s).
+    let { message } = listener();
+    message("NBIRTH", nbirth(0, 5n));
+    message("NDATA", {
+      timestamp: T + 5000,
+      seq: 1,
+      metrics: [{ alias: 1, int: 11 }],
+    });
+    const will = message("NDEATH", {
+      timestamp: T,
+      metrics: [{ name: "bdSeq", datatype: 8, long: 5n }],
+    });
+    expect(will.measurements[0].timestamp).toEqual(new Date(T + 5001));
+    // A deliberate death carries its own, later time.
+    ({ message } = listener());
+    message("NBIRTH", nbirth(0, 5n));
+    const graceful = message("NDEATH", {
+      timestamp: T + 9000,
+      metrics: [{ name: "bdSeq", datatype: 8, long: 5n }],
+    });
+    expect(graceful.measurements[0].timestamp).toEqual(new Date(T + 9000));
+    // Nothing seen and no timestamp: arrival is the only time there is.
+    ({ message } = listener());
+    const unseen = message("NDEATH", {
+      metrics: [{ name: "bdSeq", datatype: 8, long: 5n }],
+    });
+    expect(unseen.measurements[0].timestamp).toEqual(new Date(T + 60000));
   });
 
   it("stores null and wrongly typed values as bad and refuses readings without time", () => {

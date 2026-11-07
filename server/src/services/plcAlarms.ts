@@ -57,11 +57,13 @@ export function eventRow(
   ) as Fields;
   const type = f.EventType?.value as opcua.NodeId | null;
   const id = f.EventId?.value as Buffer | null;
-  if (!type || !id?.length) return null;
-  const text = (v: opcua.Variant) =>
-    v?.value == null ? null : String(v.value);
   const date = (v: opcua.Variant) =>
     v?.value instanceof Date ? v.value : null;
+  // Without the source's Time or ReceiveTime the event has no time on the PLC's clock.
+  const time = date(f.Time) ?? date(f.ReceiveTime);
+  if (!type || !id?.length || !time) return null;
+  const text = (v: opcua.Variant) =>
+    v?.value == null ? null : String(v.value);
   const bool = (v: opcua.Variant) =>
     typeof v?.value === "boolean" ? v.value : null;
   return {
@@ -72,7 +74,7 @@ export function eventRow(
     conditionName: text(f.ConditionName),
     sourceName: text(f.SourceName),
     sourceNode: text(f.SourceNode),
-    eventTime: date(f.Time) ?? new Date(),
+    eventTime: time,
     receiveTime: date(f.ReceiveTime),
     severity: Number(f.Severity?.value ?? 0),
     message: (f.Message?.value as opcua.LocalizedText | null)?.text ?? null,
@@ -241,7 +243,9 @@ class PlcAlarmService {
         return void this.refresh(observation);
     }
     const row = eventRow(machineId, values, observation.refreshing);
-    if (!row) return;
+    if (!row)
+      return void (observation.status.lastError =
+        "Event without EventId, EventType or a source time refused");
     try {
       this.spool!.enqueue(row);
       observation.status.received++;
