@@ -10,6 +10,8 @@ never closes an open acceptance item.
 
 - Store OPC UA samples whose actual data type differs from the mapping as
   `BadTypeMismatch`, keeping raw value and reported status (C10).
+- Adopt node-opcua 2.187.23 with the upstream overflow fix and remove the local
+  patch, its `postinstall` hook and Dockerfile steps; update react-window to 2.5.2.
 - Complete the initial contributor backlog: glossary, German demo and evidence
   guides, demo screenshots, accessibility observation template, synthetic shift
   evidence sample, Boolean-state and 16-bit rollover profiles, catalog path-escape,
