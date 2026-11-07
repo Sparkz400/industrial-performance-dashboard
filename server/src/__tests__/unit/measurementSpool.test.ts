@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import {
   MeasurementSpool,
   toMeasurementRow,
+  type OpcuaDataItem,
 } from "../../queue/measurementSpool.js";
 import { measurementIdentity } from "../../opc-ua/measurementIdentity.js";
 const directories: string[] = [];
@@ -51,6 +52,43 @@ describe("durable measurement spool", () => {
     expect(futureSource.timestamp.toISOString()).toBe(
       "2026-01-01T00:00:00.000Z",
     );
+  });
+  it("stores a changed source type as BadTypeMismatch with its raw value (C10)", () => {
+    const counter: OpcuaDataItem = {
+      ...sample,
+      key: "Count",
+      label: "Count",
+      value: 41,
+      dataType: "Int32",
+    };
+    const row = (data: Partial<OpcuaDataItem>) =>
+      toMeasurementRow({ id: "type-fixture", data: { ...counter, ...data } });
+    expect(row({ actualDataType: "Int32" })).toMatchObject({
+      value: 41,
+      statusCode: "Good",
+    });
+    // Without a reported type (older spool entries, other adapters) nothing changes.
+    expect(row({}).statusCode).toBe("Good");
+    expect(row({ actualDataType: "Double", value: 41.5 })).toMatchObject({
+      value: null,
+      rawValue: 41.5,
+      statusCode: "BadTypeMismatch",
+      reportedStatusCode: "Good",
+      dataType: "Int32",
+    });
+    expect(row({ actualDataType: "String", value: "41" })).toMatchObject({
+      value: null,
+      rawValue: "41",
+      statusCode: "BadTypeMismatch",
+    });
+    // An empty Bad value keeps the reported quality instead of a type verdict.
+    expect(
+      row({
+        actualDataType: "Null",
+        value: null,
+        statusCode: "BadNoCommunication",
+      }).statusCode,
+    ).toBe("BadNoCommunication");
   });
   it("reports receive age and empty queue as unknown rather than zero-age data", () => {
     const spool = new MeasurementSpool(":memory:");

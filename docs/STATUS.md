@@ -1,5 +1,13 @@
 # Current status
 
+## OPC UA type changes become unknown — 2026-11-07
+
+When an OPC UA server sends a mapped tag with a different data type than its mapping
+declares, the sample is stored as `BadTypeMismatch` with its raw value, declared type
+and reported status, so reports and live values treat it as unknown
+([compatibility](COMPATIBILITY.md)). An owned server changing a tag from Int32 to
+Double during live collection covers it. C10 still needs a real vendor/model/firmware entry.
+
 ## Contributor backlog completed — 2026-11-07
 
 All twelve [initial contributor issues](CONTRIBUTOR_BACKLOG.md) are done: a

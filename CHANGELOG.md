@@ -8,6 +8,8 @@ never closes an open acceptance item.
 
 ## [Unreleased]
 
+- Store OPC UA samples whose actual data type differs from the mapping as
+  `BadTypeMismatch`, keeping raw value and reported status (C10).
 - Complete the initial contributor backlog: glossary, German demo and evidence
   guides, demo screenshots, accessibility observation template, synthetic shift
   evidence sample, Boolean-state and 16-bit rollover profiles, catalog path-escape,
