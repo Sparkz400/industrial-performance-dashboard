@@ -1,0 +1,621 @@
+{
+  "payload": {
+    "format": "performance-dashboard-shift-evidence-v1",
+    "exportedAt": "2026-11-07T07:58:25.143Z",
+    "sourceRevision": "196c2ea52e13f91ce648e961b89a4ce9a961cfa7",
+    "calculatorSha256": "c6de8d31befee3f541a5e2bdee3425560ed5dca0a66ecce8c09659bf447816c3",
+    "privacy": "Contains production names, references, reason text, timestamps and numeric record/actor IDs. Handover notes, usernames, credentials and endpoints are excluded. Review before sharing.",
+    "scope": "Current retained inputs, one shift and its product runs. Revision entries are historical references, not reproduced snapshots. Hashes detect changes; they do not authenticate a publisher or prove physical accuracy.",
+    "report": {
+      "revision": "shift-v1",
+      "id": 1,
+      "machineId": 1,
+      "name": "Demo known · 2026-11-07T07:56:25.000Z",
+      "timezone": "UTC",
+      "start": "2026-11-07T07:56:25.000Z",
+      "end": "2026-11-07T07:57:25.000Z",
+      "generatedAt": "2026-11-07T07:58:25.137Z",
+      "profile": {
+        "name": "Synthetic factory demo",
+        "states": {
+          "idle": [
+            0
+          ],
+          "fault": [
+            2
+          ],
+          "planned": [
+            3
+          ],
+          "running": [
+            1
+          ]
+        },
+        "signals": {
+          "good": {
+            "unit": "parts",
+            "scale": 1,
+            "nodeKey": "GoodCount",
+            "dataType": "Int32",
+            "identifier": "s=GoodCount",
+            "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+          },
+          "state": {
+            "unit": null,
+            "scale": 1,
+            "nodeKey": "ProductionState",
+            "dataType": "Int32",
+            "identifier": "s=ProductionState",
+            "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+          },
+          "total": {
+            "unit": "parts",
+            "scale": 1,
+            "nodeKey": "ProductionCount",
+            "dataType": "Int32",
+            "identifier": "s=ProductionCount",
+            "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+          },
+          "reject": {
+            "unit": "parts",
+            "scale": 1,
+            "nodeKey": "RejectCount",
+            "dataType": "Int32",
+            "identifier": "s=RejectCount",
+            "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+          }
+        },
+        "version": 1,
+        "idealCycleMs": 2000,
+        "counterPolicy": "reject-decrease",
+        "endpointModel": "Owned replay simulator v1; not a vendor map",
+        "maxGapSeconds": 20
+      },
+      "job": {
+        "target": 30,
+        "product": "Synthetic parts",
+        "reference": "DEMO-001"
+      },
+      "intervals": [
+        {
+          "start": "2026-11-07T07:56:25.000Z",
+          "end": "2026-11-07T07:56:55.000Z",
+          "state": "running"
+        },
+        {
+          "start": "2026-11-07T07:56:55.000Z",
+          "end": "2026-11-07T07:57:25.000Z",
+          "state": "fault"
+        }
+      ],
+      "reasons": [
+        {
+          "id": 1,
+          "shiftId": 1,
+          "start": "2026-11-07T07:56:55.000Z",
+          "end": "2026-11-07T07:57:25.000Z",
+          "category": "unplanned",
+          "reason": "Synthetic jam",
+          "supersedesId": null,
+          "actorId": 1,
+          "createdAt": "2026-11-07T07:58:25.046Z"
+        }
+      ],
+      "seconds": {
+        "running": 30,
+        "idle": 0,
+        "fault": 30,
+        "planned": 0,
+        "unknown": 0
+      },
+      "scheduledSeconds": 60,
+      "plannedSeconds": 0,
+      "observedSeconds": 60,
+      "quantities": {
+        "total": 15,
+        "good": 13,
+        "reject": 2
+      },
+      "quantitySource": "measured",
+      "declaration": null,
+      "stateSource": "measured",
+      "manualStateSeconds": 0,
+      "oee": {
+        "availability": 0.5,
+        "performance": 1,
+        "quality": 0.8666666666666667,
+        "overall": 0.43333333333333335
+      },
+      "losses": [
+        {
+          "reason": "Synthetic jam",
+          "seconds": 30
+        }
+      ],
+      "issues": [],
+      "evidence": {
+        "good": 13,
+        "total": 15,
+        "reject": 2,
+        "actorId": 1,
+        "reference": "Independent synthetic ledger v1"
+      },
+      "verified": true,
+      "planVersion": 1,
+      "measurementEvidence": {
+        "digest": "773147aac4ec68c9d6c3c0e618767bff612659e72042d246c09527a0c4c9b61c",
+        "samples": 20,
+        "correctedSamples": 0,
+        "lateSamples": 0,
+        "latestReceivedAt": "2026-11-07T07:57:25.000Z"
+      }
+    },
+    "calculations": [
+      {
+        "manualStates": [],
+        "asOf": "2026-11-07T07:58:25.137Z",
+        "declaration": null,
+        "id": 1,
+        "machineId": 1,
+        "name": "Demo known · 2026-11-07T07:56:25.000Z",
+        "timezone": "UTC",
+        "start": "2026-11-07T07:56:25.000Z",
+        "end": "2026-11-07T07:57:25.000Z",
+        "profile": {
+          "name": "Synthetic factory demo",
+          "states": {
+            "idle": [
+              0
+            ],
+            "fault": [
+              2
+            ],
+            "planned": [
+              3
+            ],
+            "running": [
+              1
+            ]
+          },
+          "signals": {
+            "good": {
+              "unit": "parts",
+              "scale": 1,
+              "nodeKey": "GoodCount",
+              "dataType": "Int32",
+              "identifier": "s=GoodCount",
+              "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+            },
+            "state": {
+              "unit": null,
+              "scale": 1,
+              "nodeKey": "ProductionState",
+              "dataType": "Int32",
+              "identifier": "s=ProductionState",
+              "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+            },
+            "total": {
+              "unit": "parts",
+              "scale": 1,
+              "nodeKey": "ProductionCount",
+              "dataType": "Int32",
+              "identifier": "s=ProductionCount",
+              "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+            },
+            "reject": {
+              "unit": "parts",
+              "scale": 1,
+              "nodeKey": "RejectCount",
+              "dataType": "Int32",
+              "identifier": "s=RejectCount",
+              "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+            }
+          },
+          "version": 1,
+          "idealCycleMs": 2000,
+          "counterPolicy": "reject-decrease",
+          "endpointModel": "Owned replay simulator v1; not a vendor map",
+          "maxGapSeconds": 20
+        },
+        "job": {
+          "target": 30,
+          "product": "Synthetic parts",
+          "reference": "DEMO-001"
+        },
+        "breaks": [],
+        "evidence": {
+          "good": 13,
+          "total": 15,
+          "reject": 2,
+          "actorId": 1,
+          "reference": "Independent synthetic ledger v1"
+        },
+        "reasons": [
+          {
+            "id": 1,
+            "shiftId": 1,
+            "start": "2026-11-07T07:56:55.000Z",
+            "end": "2026-11-07T07:57:25.000Z",
+            "category": "unplanned",
+            "reason": "Synthetic jam",
+            "supersedesId": null,
+            "actorId": 1,
+            "createdAt": "2026-11-07T07:58:25.046Z"
+          }
+        ],
+        "samples": {
+          "GoodCount": [
+            {
+              "id": 11,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:56:25.000Z",
+              "timestamp": "2026-11-07T07:56:25.000Z",
+              "value": 0,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=GoodCount",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 0,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:56:25.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 0
+            },
+            {
+              "id": 12,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:56:40.000Z",
+              "timestamp": "2026-11-07T07:56:40.000Z",
+              "value": 6,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=GoodCount",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 6,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:56:40.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 6
+            },
+            {
+              "id": 13,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:56:55.000Z",
+              "timestamp": "2026-11-07T07:56:55.000Z",
+              "value": 13,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=GoodCount",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 13,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:56:55.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 13
+            },
+            {
+              "id": 14,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:57:10.000Z",
+              "timestamp": "2026-11-07T07:57:10.000Z",
+              "value": 13,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=GoodCount",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 13,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:57:10.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 13
+            },
+            {
+              "id": 15,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:57:25.000Z",
+              "timestamp": "2026-11-07T07:57:25.000Z",
+              "value": 13,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=GoodCount",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 13,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:57:25.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 13
+            }
+          ],
+          "ProductionState": [
+            {
+              "id": 1,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:56:25.000Z",
+              "timestamp": "2026-11-07T07:56:25.000Z",
+              "value": 1,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=ProductionState",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 1,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:56:25.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 1
+            },
+            {
+              "id": 2,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:56:40.000Z",
+              "timestamp": "2026-11-07T07:56:40.000Z",
+              "value": 1,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=ProductionState",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 1,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:56:40.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 1
+            },
+            {
+              "id": 3,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:56:55.000Z",
+              "timestamp": "2026-11-07T07:56:55.000Z",
+              "value": 2,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=ProductionState",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 2,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:56:55.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 2
+            },
+            {
+              "id": 4,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:57:10.000Z",
+              "timestamp": "2026-11-07T07:57:10.000Z",
+              "value": 2,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=ProductionState",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 2,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:57:10.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 2
+            },
+            {
+              "id": 5,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:57:25.000Z",
+              "timestamp": "2026-11-07T07:57:25.000Z",
+              "value": 1,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=ProductionState",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 1,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:57:25.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 1
+            }
+          ],
+          "ProductionCount": [
+            {
+              "id": 6,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:56:25.000Z",
+              "timestamp": "2026-11-07T07:56:25.000Z",
+              "value": 0,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=ProductionCount",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 0,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:56:25.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 0
+            },
+            {
+              "id": 7,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:56:40.000Z",
+              "timestamp": "2026-11-07T07:56:40.000Z",
+              "value": 7,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=ProductionCount",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 7,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:56:40.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 7
+            },
+            {
+              "id": 8,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:56:55.000Z",
+              "timestamp": "2026-11-07T07:56:55.000Z",
+              "value": 15,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=ProductionCount",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 15,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:56:55.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 15
+            },
+            {
+              "id": 9,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:57:10.000Z",
+              "timestamp": "2026-11-07T07:57:10.000Z",
+              "value": 15,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=ProductionCount",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 15,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:57:10.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 15
+            },
+            {
+              "id": 10,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:57:25.000Z",
+              "timestamp": "2026-11-07T07:57:25.000Z",
+              "value": 15,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=ProductionCount",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 15,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:57:25.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 15
+            }
+          ],
+          "RejectCount": [
+            {
+              "id": 16,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:56:25.000Z",
+              "timestamp": "2026-11-07T07:56:25.000Z",
+              "value": 0,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=RejectCount",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 0,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:56:25.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 0
+            },
+            {
+              "id": 17,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:56:40.000Z",
+              "timestamp": "2026-11-07T07:56:40.000Z",
+              "value": 1,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=RejectCount",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 1,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:56:40.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 1
+            },
+            {
+              "id": 18,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:56:55.000Z",
+              "timestamp": "2026-11-07T07:56:55.000Z",
+              "value": 2,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=RejectCount",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 2,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:56:55.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 2
+            },
+            {
+              "id": 19,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:57:10.000Z",
+              "timestamp": "2026-11-07T07:57:10.000Z",
+              "value": 2,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=RejectCount",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 2,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:57:10.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 2
+            },
+            {
+              "id": 20,
+              "correctionRevision": 0,
+              "receivedAt": "2026-11-07T07:57:25.000Z",
+              "timestamp": "2026-11-07T07:57:25.000Z",
+              "value": 2,
+              "statusCode": "Good",
+              "signalMetadata": {
+                "identifier": "s=RejectCount",
+                "namespaceUri": "urn:performance-dashboard:factory-demo:v1"
+              },
+              "rawValue": 2,
+              "dataType": "Int32",
+              "sourceTimestamp": "2026-11-07T07:57:25.000Z",
+              "reportedStatusCode": "Good",
+              "sourceClockState": "valid",
+              "recordedValue": 2
+            }
+          ]
+        }
+      }
+    ],
+    "revisions": []
+  },
+  "sha256": "74dcd124aefaf777828a2a4efe7cd1d8a15e891166d2d71598789b241c6a863f"
+}

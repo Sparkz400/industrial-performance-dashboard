@@ -41,5 +41,51 @@
     "limitations": [
       "Not a vendor register map. Check offsets, endian order and scale with the responsible engineer."
     ]
+  },
+  {
+    "id": "owned-boolean-state",
+    "title": "Synthetic Boolean running state",
+    "profile": "owned-boolean-state.json",
+    "transport": "opc-ua",
+    "equipment": {
+      "model": "Synthetic one-signal Boolean replay",
+      "firmware": "Fixture format v1"
+    },
+    "qualification": {
+      "level": "simulator",
+      "scope": "Owned stored-sample replay of true, false, a stale interval and BadNoCommunication through the spool and shift calculation; not live OPC UA transport or PLC qualification",
+      "evidence": [
+        "profiles/README.md",
+        "scripts/test-profile-catalog.mjs"
+      ]
+    },
+    "limitations": [
+      "A single Boolean only distinguishes running (true/1) from idle (false/0); fault and planned time are never inferred from it.",
+      "No counters are mapped, so quantities and OEE stay unknown until counter signals are added.",
+      "Synthetic only; node identities must be commissioned for each real machine."
+    ]
+  },
+  {
+    "id": "owned-rollover",
+    "title": "Synthetic 16-bit counter rollover",
+    "profile": "owned-rollover.json",
+    "transport": "opc-ua",
+    "equipment": {
+      "model": "Synthetic four-signal replay with UInt16 counters",
+      "firmware": "Fixture format v1"
+    },
+    "qualification": {
+      "level": "simulator",
+      "scope": "Owned stored-sample replay crossing 65530 to 4 with modulus 65536, plus a bad-quality boundary variant; not live OPC UA transport or PLC qualification",
+      "evidence": [
+        "profiles/README.md",
+        "scripts/test-profile-catalog.mjs"
+      ]
+    },
+    "limitations": [
+      "The modulus 65536 is an explicit equipment-specific choice; it is never inferred from a decreasing counter.",
+      "Confirm the counter width and wrap behavior with the responsible engineer before using rollover on a real machine.",
+      "Synthetic only; no vendor, physical device or operator acceptance."
+    ]
   }
 ]

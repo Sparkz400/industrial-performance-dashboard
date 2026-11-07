@@ -48,14 +48,20 @@ node scripts/verify-shift-evidence.mjs path/to/shift-123-evidence.json
 
 Dieser Prüfer benötigt keine installierten npm-Pakete, keine Datenbank, keinen
 Dashboard-Server und keine Netzwerkverbindung. Für eine kleinere Offline-Übertragung
-die Verzeichnisstruktur dieser drei vertrauenswürdigen Repository-Dateien neben dem
-JSON beibehalten:
+die Verzeichnisstruktur dieser drei vertrauenswürdigen Quelldateien neben dem
+JSON beibehalten, zusätzlich `server/package.json`, das die beiden `.ts`-Dateien als
+ES-Module kennzeichnet (ohne diese Datei kann Node.js den Berechner nicht laden):
 
 ```text
 scripts/verify-shift-evidence.mjs
 server/src/services/shiftCalculation.ts
 server/src/utils/canonicalJson.ts
+server/package.json
 ```
+
+Zum Ausprobieren ohne eigenen Export eignet sich das veröffentlichte synthetische
+Beispiel [`examples/shift-evidence-known.json`](../../examples/shift-evidence-known.json);
+siehe [Beispiele](../../examples/README.md#synthetic-shift-evidence).
 
 Der Prüfer verifiziert den Nutzlast-Hash und den Fingerabdruck des Berechners,
 rekonstruiert numerische Eingaben anhand ihrer Quellidentitäten, berechnet jeden

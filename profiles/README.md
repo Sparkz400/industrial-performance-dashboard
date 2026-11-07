@@ -8,6 +8,8 @@ evidence and limitations separately from each importable profile.
 | --- | --- | --- |
 | [Owned factory replay](owned-factory.json) | Simulator | Four synthetic production signals; independent shift ledger, gaps, bad quality and rejected resets |
 | [Owned legacy gateway](owned-legacy.json) | Simulator | Owned Modbus fixture offsets 0–6, exposed through the legacy gateway; not a vendor map |
+| [Owned Boolean running state](owned-boolean-state.json) | Simulator | One Boolean state signal: true/1 running, false/0 idle; stale and BadNoCommunication intervals stay unknown |
+| [Owned 16-bit rollover](owned-rollover.json) | Simulator | UInt16 counters with `counterPolicy: rollover` and an explicit `counterModulus` of 65536 |
 
 Download a profile JSON file, then use **Production → Commissioning → Import profile**.
 Review its node identities, scale, units, state meanings, maximum gap, counter policy
@@ -50,6 +52,35 @@ This entry's qualification is `simulator` (see the levels below): it was only
 exercised against owned replay fixtures. A changed copy that works on equipment is
 at most `reported` until a named reviewer accepts physical evidence for
 `physically-verified`, and either level covers only that model and firmware.
+
+## Boolean running state and 16-bit rollover
+
+[`owned-boolean-state.json`](owned-boolean-state.json) maps a single Boolean `state`
+signal. The spool stores `true` as `1` and `false` as `0`, so the state meanings are
+numeric: `running: [1]`, `idle: [0]`, and `fault`/`planned` stay empty. One Boolean
+cannot tell a fault from planned downtime or a stopped-but-ready machine, so that time
+is never inferred: classify stops with reasons, or map a richer state signal. The
+profile has no counters, so quantities and OEE stay unknown until you add them.
+
+[`owned-rollover.json`](owned-rollover.json) keeps the factory layout but reads UInt16
+counters with `counterPolicy: "rollover"` and `counterModulus: 65536`. The modulus is
+your explicit statement about the equipment's counter width: the dashboard never
+infers a wrap from a decreasing value, and with `reject-decrease` the same decrease
+leaves the interval incomplete. Confirm the width and wrap behavior with the
+responsible engineer before using it.
+
+[`scripts/test-profile-catalog.mjs`](../scripts/test-profile-catalog.mjs) replays both
+through the real spool normalization and shift calculation, without a database, and
+checks independently specified results for a 60-second shift with a 20-second maximum gap:
+
+| Replay | Expected |
+| --- | --- |
+| Boolean: `true` at 0 and 10 s, `false` at 20 and 30 s, `BadNoCommunication` at 55 s | 20 s running, 30 s idle (the 30 s sample goes stale after 50 s), 10 s unknown, no fault or planned time, OEE unknown |
+| Rollover: total and good 65530 → 65533 → 65535 → 1 → 4, rejects 0, running throughout | 10 total, 10 good, 0 rejects, availability 1, performance 1/3, quality 1, `verified: true` |
+| Rollover with a `BadNoCommunication` total at the 65535 sample | Total not completed across the gap, performance/quality/OEE `null`, `verified: false` |
+
+Both entries are `simulator` only: stored-sample replay, not live OPC UA transport,
+a PLC or physical acceptance. The published benchmark cases are unchanged.
 
 ## Contribute
 
