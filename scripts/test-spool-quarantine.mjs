@@ -75,6 +75,14 @@ await dailyFixture(async ({ pool, actors, frontend, expect }) => {
     [(await worker.getHealth()).pendingMeasurements, (await worker.getHealth()).quarantinedMeasurements],
     [1, 0],
   );
+  // H09: the clearing estimate uses the net backlog change, seeded one minute back.
+  await worker.enqueue(sample("Count", 8.5));
+  worker.pendingSamples = [{ at: Date.now() - 60000, pending: 122 }];
+  await page.reload();
+  await expect(
+    page.getByText(/Backlog clears in about 1 min \(-1[12]\d per minute\)/),
+  ).toBeVisible();
+  worker.pendingSamples = [];
   // Still refused: it returns to quarantine instead of stalling the queue.
   await worker.enqueue(sample("Count", 9));
   await worker.processBatch();

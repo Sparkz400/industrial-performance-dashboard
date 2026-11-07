@@ -97,6 +97,8 @@ export default function ProductionPage() {
         spoolBytes: number | null;
         oldestReceivedAgeSeconds: number | null;
         committedLastMinute: number;
+        backlogChangePerMinute: number | null;
+        backlogClearSeconds: number | null;
         quarantinedMeasurements: number;
         writeFailure: { at: string; message: string } | null;
         storageFailure: { at: string; message: string } | null;
@@ -217,6 +219,12 @@ export default function ProductionPage() {
                 ? '—'
                 : `${Math.round(health.data.oldestReceivedAgeSeconds)} s`}{' '}
               · {t('Written last minute:')} {health.data.committedLastMinute}.{' '}
+              {health.data.pendingMeasurements > 0 &&
+                (health.data.backlogChangePerMinute == null
+                  ? `${t('Clearing time unknown until a minute of history exists.')} `
+                  : health.data.backlogClearSeconds == null
+                    ? `${t('Backlog is not shrinking')} (${health.data.backlogChangePerMinute >= 0 ? '+' : ''}${health.data.backlogChangePerMinute} ${t('per minute')}). `
+                    : `${t('Backlog clears in about')} ${Math.max(1, Math.ceil(health.data.backlogClearSeconds / 60))} ${t('min')} (${health.data.backlogChangePerMinute} ${t('per minute')}). `)}
               {health.data.writeFailure &&
                 `${t('Last database write failed:')} ${health.data.writeFailure.message} (${health.data.writeFailure.at}). `}
               {health.data.quarantinedMeasurements > 0 && (
