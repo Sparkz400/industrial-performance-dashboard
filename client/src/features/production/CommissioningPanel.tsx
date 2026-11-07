@@ -13,7 +13,11 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import type { ProductionProfile, ProductionSignal } from '@performance-dashboard/shared';
+import type {
+  EndpointSupport,
+  ProductionProfile,
+  ProductionSignal,
+} from '@performance-dashboard/shared';
 import { Link } from 'react-router-dom';
 import MachineForm from '@/features/machines/components/MachineForm';
 import { useMachineStore } from '@/stores/useMachineStore';
@@ -80,7 +84,19 @@ interface Preview {
     good: boolean;
   }[];
   checkedAt: string;
+  endpointBuild: {
+    manufacturerName: string | null;
+    productName: string | null;
+    softwareVersion: string | null;
+  };
+  endpointSupport: EndpointSupport;
 }
+const endpointSupportText: Record<EndpointSupport, string> = {
+  'matches-declaration': 'Matches a build declared by this profile.',
+  'not-declared': 'This profile declares no endpoint builds.',
+  mismatch: 'Not among the builds declared by this profile. Review the mapping before saving.',
+  unknown: 'The endpoint did not report its complete build, so it cannot be compared.',
+};
 
 /**
  *
@@ -321,6 +337,25 @@ export default function CommissioningPanel() {
             {t('Connected using')} {preview.identity}, {preview.securityMode}. {preview.trust}
             {t('. Checked')} {new Date(preview.checkedAt).toLocaleString()}.
           </Alert>
+          <Alert
+            severity={
+              preview.endpointSupport === 'matches-declaration'
+                ? 'success'
+                : preview.endpointSupport === 'not-declared'
+                  ? 'info'
+                  : 'warning'
+            }
+          >
+            {t('Endpoint build:')}{' '}
+            {[
+              preview.endpointBuild.manufacturerName,
+              preview.endpointBuild.productName,
+              preview.endpointBuild.softwareVersion,
+            ]
+              .map((value) => value ?? t('unknown'))
+              .join(' · ')}
+            . {t(endpointSupportText[preview.endpointSupport])}
+          </Alert>
           <Button
             onClick={() =>
               downloadJson(
@@ -330,6 +365,8 @@ export default function CommissioningPanel() {
                   identity: preview.identity,
                   securityMode: preview.securityMode,
                   trust: preview.trust,
+                  endpointBuild: preview.endpointBuild,
+                  endpointSupport: preview.endpointSupport,
                   ready: preview.ready,
                   signals: preview.signals.map(
                     ({ role, quality, actualType, sourceTime, good }) => ({

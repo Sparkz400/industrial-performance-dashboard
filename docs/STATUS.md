@@ -9,6 +9,14 @@ written as a receipt with source revision and host
 developer-workstation baseline is recorded; U10 still needs the same run on the
 ordinary operator device before bundle or render changes are chosen.
 
+## Declared endpoint builds — 2026-11-07
+
+Production profiles can list the OPC UA server builds they were checked against. The
+commissioning preview reads the endpoint's BuildInfo and shows whether it matches, is
+not declared, differs or is unknown; only a match is shown as success and none blocks
+saving. C04 stays open until such declarations are qualified against real devices
+([commissioning](PRODUCTION_WORKFLOW.md#commissioning)).
+
 ## Upstream OPC UA fix adopted — 2026-11-07
 
 node-opcua 2.187.23 contains the upstream fix for the overflow assertions

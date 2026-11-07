@@ -17,7 +17,7 @@ import { certificateManager } from "../opc-ua/opcuaClient.js";
 import { NotFoundError, ValidationError } from "../utils/errors.js";
 
 export { profileSchema, validateProfile } from "./productionProfile.js";
-import { validateProfile } from "./productionProfile.js";
+import { endpointSupport, validateProfile } from "./productionProfile.js";
 
 /** Runs a read-only check on the machine's live session, or on a short-lived one of its own. */
 export async function withMachineSession<T>(
@@ -92,6 +92,29 @@ export const commissioningService = {
             0,
           )
         : [];
+      // Standard BuildInfo identifies the server software; unreadable fields stay null.
+      const buildFields = [
+        "ManufacturerName",
+        "ProductName",
+        "SoftwareVersion",
+      ] as const;
+      const build = await session.read(
+        buildFields.map((field) => ({
+          nodeId: opcua.resolveNodeId(`Server_ServerStatus_BuildInfo_${field}`),
+          attributeId: opcua.AttributeIds.Value,
+        })),
+      );
+      const text = (i: number) =>
+        build[i].statusCode.isGood() &&
+        typeof build[i].value.value === "string" &&
+        build[i].value.value.trim()
+          ? (build[i].value.value as string).trim().slice(0, 200)
+          : null;
+      const endpointBuild = {
+        manufacturerName: text(0),
+        productName: text(1),
+        softwareVersion: text(2),
+      };
       const checkedAt = new Date().toISOString();
       const signals = mappings.map((mapping, i) => ({
         ...mapping,
@@ -123,6 +146,11 @@ export const commissioningService = {
             ? "No encrypted channel; owned local simulator only"
             : "Trusted certificate, validity and endpoint hostname checked",
         namespaces,
+        endpointBuild,
+        endpointSupport: endpointSupport(
+          profile?.supportedEndpoints,
+          endpointBuild,
+        ),
         signals,
         currentMappings,
         ready: signals.length > 0 && signals.every((signal) => signal.good),
@@ -130,6 +158,7 @@ export const commissioningService = {
           "Read-only value check; no machine writes",
           "Physical-machine qualification remains separate from this connection check",
           "Profile units and scale are operator declarations; verify against the source",
+          "Declared endpoint builds record what a mapping was checked against; a match does not qualify the machine",
         ],
       };
     });

@@ -1,5 +1,9 @@
 import Joi from "joi";
-import type { ProductionProfile } from "@performance-dashboard/shared";
+import type {
+  EndpointBuild,
+  EndpointSupport,
+  ProductionProfile,
+} from "@performance-dashboard/shared";
 import { ValidationError } from "../utils/errors.js";
 
 const signalSchema = Joi.object({
@@ -68,6 +72,15 @@ export const profileSchema = Joi.object({
       then: Joi.required(),
       otherwise: Joi.forbidden(),
     }),
+  supportedEndpoints: Joi.array()
+    .items(
+      Joi.object({
+        manufacturerName: Joi.string().trim().min(1).max(200).required(),
+        productName: Joi.string().trim().min(1).max(200).required(),
+        softwareVersion: Joi.string().trim().min(1).max(100).required(),
+      }),
+    )
+    .max(20),
 });
 
 export function validateProfile(input: unknown): ProductionProfile {
@@ -87,4 +100,27 @@ export function validateProfile(input: unknown): ProductionProfile {
   )
     throw new ValidationError("Each signal needs a distinct key and source");
   return profile;
+}
+
+/**
+ * Compares the endpoint's reported BuildInfo with the profile's declared builds.
+ * A missing or partial report stays unknown; it is never treated as a match.
+ */
+export function endpointSupport(
+  declared: EndpointBuild[] | undefined,
+  observed: Partial<Record<keyof EndpointBuild, string | null>> | null,
+): EndpointSupport {
+  if (!declared?.length) return "not-declared";
+  const fields = [
+    "manufacturerName",
+    "productName",
+    "softwareVersion",
+  ] as const;
+  if (!observed || fields.some((field) => !observed[field]?.trim()))
+    return "unknown";
+  return declared.some((build) =>
+    fields.every((field) => build[field].trim() === observed[field]!.trim()),
+  )
+    ? "matches-declaration"
+    : "mismatch";
 }
