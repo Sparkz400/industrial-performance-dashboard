@@ -15,7 +15,6 @@ import {
   MenuItem,
 } from '@mui/material';
 import { Visibility, VisibilityOff, Lock } from '@mui/icons-material';
-import { motion } from 'framer-motion';
 import { useAuthStore } from '../../../stores/useAuthStore';
 
 /**
@@ -62,11 +61,7 @@ export default function LoginPage() {
         p: 2,
       }}
     >
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
+      <div className="pd-enter">
         <Card
           sx={{
             width: 'min(400px, calc(100vw - 32px))',
@@ -226,7 +221,7 @@ export default function LoginPage() {
             </Box>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
     </Box>
   );
 }

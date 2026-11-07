@@ -1,6 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { trpc, createTrpcClient } from '../utils/trpc';
 import { useAuthStore } from '../stores/useAuthStore';
 
 const createQueryClient = () =>
@@ -22,13 +21,7 @@ export const QueryProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const queryClient = useMemo(() => createQueryClient(), [identity]);
   useEffect(() => () => queryClient.clear(), [queryClient]);
-  const [trpcClient] = useState(() => createTrpcClient());
-
-  return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </trpc.Provider>
-  );
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 };
 
 export default QueryProvider;

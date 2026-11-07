@@ -8,6 +8,9 @@ never closes an open acceptance item.
 
 ## [Unreleased]
 
+- Load the chart library on demand and framer-motion only with the dashboard page, and
+  remove the unused client tRPC provider: the Production page downloads 32 % less
+  script (U10). UI measurement receipts list each loaded script.
 - Store OPC UA samples whose actual data type differs from the mapping as
   `BadTypeMismatch`, keeping raw value and reported status (C10).
 - Record independent downtime with a tolerance in the shift ledger; a difference beyond

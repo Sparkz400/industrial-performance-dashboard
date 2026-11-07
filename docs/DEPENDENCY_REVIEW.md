@@ -1,5 +1,11 @@
 # Dependency PR disposition — 2026-10-26
 
+## Client tRPC packages removed — 2026-11-07
+
+No client code called the tRPC hooks; only the provider referenced them. `@trpc/client`
+and `@trpc/react-query` are removed from the client. The server keeps `@trpc/server` and
+its `/api/trpc` endpoint, which the access tests still exercise.
+
 ## OPC UA overflow patch removed — 2026-11-07
 
 Upstream closed [issue #1849](https://github.com/node-opcua/node-opcua/issues/1849) as

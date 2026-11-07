@@ -387,6 +387,7 @@ export const german: Record<string, string> = {
   'Add machine': 'Maschine hinzufügen',
   'Check connection': 'Verbindung prüfen',
   'Connected using': 'Verbunden über',
+  'Loading chart': 'Diagramm wird geladen',
   'Independent downtime (min, optional)': 'Unabhängige Stillstandszeit (min, optional)',
   'Downtime tolerance (min)': 'Toleranz Stillstandszeit (min)',
   '; downtime': '; Stillstand',
