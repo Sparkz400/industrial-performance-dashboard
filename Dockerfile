@@ -5,8 +5,7 @@ COPY package.json package-lock.json ./
 COPY shared/package.json shared/package.json
 COPY client/package.json client/package.json
 COPY server/package.json server/package.json
-COPY scripts/patch-opcua.mjs scripts/patch-opcua.mjs
-RUN npm ci --ignore-scripts && node scripts/patch-opcua.mjs
+RUN npm ci --ignore-scripts
 COPY shared/ shared/
 COPY client/ client/
 COPY server/ server/
@@ -19,8 +18,7 @@ COPY package.json package-lock.json ./
 COPY shared/package.json shared/package.json
 COPY client/package.json client/package.json
 COPY server/package.json server/package.json
-COPY scripts/patch-opcua.mjs scripts/patch-opcua.mjs
-RUN npm ci --omit=dev --workspace=server --workspace=shared --ignore-scripts && node scripts/patch-opcua.mjs
+RUN npm ci --omit=dev --workspace=server --workspace=shared --ignore-scripts
 
 FROM cgr.dev/chainguard/wolfi-base:latest@sha256:fd50bd0cdeb808cf4f45c9c9189e0cc7f7fcc27195d69abd6622c80527e7e021 AS production
 ARG SOURCE_REVISION=unversioned
