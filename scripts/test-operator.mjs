@@ -296,7 +296,8 @@ export async function testOperator({
   assert.equal(currentLive.shift.id, current.id);
   assert.equal(currentLive.state, "running");
   assert.equal(currentLive.production.observed, 5);
-  assert.equal(currentLive.production.complete, false);
+  // Readings at shift start and just now, within the profile's gap: complete through asOf.
+  assert.equal(currentLive.production.complete, true);
   await page.getByRole("link", { name: "Open supervisor wallboard" }).click();
   await expect(
     page.getByRole("heading", { name: "Production wallboard" }),
@@ -306,6 +307,9 @@ export async function testOperator({
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "5 / 20 target", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Observed production", { exact: true }),
   ).toBeVisible();
   await page.screenshot({
     path: ".local/production-evidence/wallboard.png",
