@@ -759,9 +759,15 @@ try {
     .fill(
       "Hand-calculated fixture: 30 seconds running, 30 seconds jam; 15 parts, 2 rejects",
     );
+  // O09: the ledger's independent downtime (0.5 min) is compared within its tolerance.
+  await page
+    .getByLabel("Independent downtime (min, optional)", { exact: true })
+    .fill("0.5");
+  await page.getByLabel("Downtime tolerance (min)", { exact: true }).fill("0");
   await page
     .getByRole("button", { name: "Record reconciliation", exact: true })
     .click();
+  await expectVisible(page.getByText(/; downtime 0\.5 min ± 0\.0 min/));
   await expectVisible(
     page.getByText("Reconciled against recorded independent counts", {
       exact: true,

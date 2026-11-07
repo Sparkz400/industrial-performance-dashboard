@@ -1,5 +1,14 @@
 # Current status
 
+## Independent downtime in the shift ledger — 2026-11-07
+
+The independent shift ledger can record downtime with a tolerance next to the
+total/good/reject counts. Observed downtime (scheduled time not spent running) must
+lie within that tolerance for the report to be verified; unknown state time is never
+compared ([shift workflow](PRODUCTION_WORKFLOW.md#shift-and-operator-workflow)).
+The calculator changed, so the published synthetic evidence sample was regenerated.
+O09 still needs a supervised physical shift reconciliation (D06).
+
 ## Contributor backlog completed — 2026-11-07
 
 All twelve [initial contributor issues](CONTRIBUTOR_BACKLOG.md) are done: a

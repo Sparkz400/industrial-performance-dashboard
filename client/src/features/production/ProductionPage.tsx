@@ -42,6 +42,15 @@ const iso = (time: number) => new Date(time).toISOString();
 const percent = (value: number | null) => formatPercent(value);
 const number = (value: number | null) => formatNumber(value);
 
+const emptyEvidence = {
+  total: '',
+  good: '',
+  reject: '',
+  reference: '',
+  downtime: '',
+  tolerance: '0',
+};
+
 /**
  *
  */
@@ -74,7 +83,7 @@ export default function ProductionPage() {
     reason: string;
     supersedesId: number | null;
   }>({ start: '', end: '', category: 'unplanned', reason: '', supersedesId: null });
-  const [evidence, setEvidence] = useState({ total: '', good: '', reject: '', reference: '' });
+  const [evidence, setEvidence] = useState({ ...emptyEvidence });
   const assets = useQuery({
     queryKey: ['production-assets'],
     queryFn: () => productionRequest<{ id: number; name: string; status: string }[]>('/assets'),
@@ -107,7 +116,7 @@ export default function ProductionPage() {
   });
   useEffect(() => {
     setReason({ start: '', end: '', category: 'unplanned', reason: '', supersedesId: null });
-    setEvidence({ total: '', good: '', reject: '', reference: '' });
+    setEvidence({ ...emptyEvidence });
   }, [selected]);
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
@@ -540,6 +549,8 @@ export default function ProductionPage() {
                   {t('; total')} {data.evidence.total}
                   {t(', good')} {data.evidence.good}
                   {t(', reject')} {data.evidence.reject}
+                  {data.evidence.downtimeSeconds != null &&
+                    `${t('; downtime')} ${(data.evidence.downtimeSeconds / 60).toFixed(1)} ${t('min')} ± ${((data.evidence.downtimeToleranceSeconds ?? 0) / 60).toFixed(1)} ${t('min')}`}
                   {t('; recorded by')} {data.evidence.actorId}.
                 </Typography>
               )}
@@ -672,14 +683,39 @@ export default function ProductionPage() {
                     onChange={(e) => setEvidence((v) => ({ ...v, [key]: e.target.value }))}
                   />
                 ))}
+                <TextField
+                  label={t('Independent downtime (min, optional)')}
+                  type="number"
+                  slotProps={{ htmlInput: { min: 0, step: 0.1 } }}
+                  value={evidence.downtime}
+                  onChange={(e) => setEvidence((v) => ({ ...v, downtime: e.target.value }))}
+                />
+                <TextField
+                  label={t('Downtime tolerance (min)')}
+                  type="number"
+                  slotProps={{ htmlInput: { min: 0, max: 60, step: 0.1 } }}
+                  value={evidence.tolerance}
+                  disabled={evidence.downtime === ''}
+                  onChange={(e) => setEvidence((v) => ({ ...v, tolerance: e.target.value }))}
+                />
                 <Button
-                  disabled={busy || Object.values(evidence).some((value) => value === '')}
+                  disabled={
+                    busy ||
+                    (['total', 'good', 'reject', 'reference'] as const).some(
+                      (key) => evidence[key] === '',
+                    ) ||
+                    (evidence.downtime !== '' && evidence.tolerance === '')
+                  }
                   onClick={() =>
                     void run(async () => {
                       await productionRequest(`/shifts/${selected}/reconcile`, {
                         total: Number(evidence.total),
                         good: Number(evidence.good),
                         reject: Number(evidence.reject),
+                        ...(evidence.downtime !== '' && {
+                          downtimeSeconds: Math.round(Number(evidence.downtime) * 60),
+                          downtimeToleranceSeconds: Math.round(Number(evidence.tolerance) * 60),
+                        }),
                         reference: evidence.reference,
                       });
                       await report.refetch();

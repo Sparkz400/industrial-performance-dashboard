@@ -232,6 +232,9 @@ export interface ShiftReport {
     total: number;
     good: number;
     reject: number;
+    /** Independently recorded unplanned stop time, compared within the recorded tolerance. */
+    downtimeSeconds?: number;
+    downtimeToleranceSeconds?: number;
     reference: string;
     actorId: number;
   } | null;

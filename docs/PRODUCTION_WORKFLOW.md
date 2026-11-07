@@ -70,8 +70,12 @@ Availability is unavailable when state coverage is incomplete. Planned exclusion
 and input signals are disclosed. Running during an excluded break withholds
 performance/OEE and asks for a schedule correction. The report is bounded to 100,000 samples per signal.
 
-An administrator can record independent total/good/reject counts and their source
-reference once. Missing coverage, unclassified stops, inconsistent quantities,
+An administrator or supervisor can record independent total/good/reject counts and
+their source reference once. The ledger may also record independent downtime with a
+tolerance (both in minutes in the form, at most 60 minutes of tolerance). Downtime is
+compared with the scheduled time not spent running, the same basis as availability;
+a difference beyond the tolerance is an issue, and with unknown state time the
+comparison is reported as impossible rather than made. Missing coverage, unclassified stops, inconsistent quantities,
 factor anomalies and mismatches prevent a verified label. A verified fixture does
 not establish physical-machine qualification. Export JSON includes the original
 reason history and profile; **Print shift report** provides a printable overview.

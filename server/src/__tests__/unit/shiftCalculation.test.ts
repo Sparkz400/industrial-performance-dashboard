@@ -130,6 +130,82 @@ describe("shift calculation", () => {
     });
     expect(report.losses).toEqual([{ reason: "Jam", seconds: 30 }]);
   });
+  it("compares independent downtime within the recorded tolerance (O09)", () => {
+    // 30 s running then 30 s fault: observed downtime is 30 s of 60 s scheduled.
+    const counters = (good: number[], reject: number[]) => ({
+      total: good.map((g, i) => point(i * 15, g + reject[i])),
+      good: good.map((g, i) => point(i * 15, g)),
+      reject: reject.map((r, i) => point(i * 15, r)),
+    });
+    const shift = (
+      downtime: { downtimeSeconds: number; downtimeToleranceSeconds: number },
+      state = [
+        point(0, 1),
+        point(15, 1),
+        point(30, 2),
+        point(45, 2),
+        point(60, 2),
+      ],
+    ) =>
+      calculateShift({
+        id: 1,
+        machineId: 2,
+        name: "Ledger downtime",
+        timezone: "UTC",
+        start,
+        end,
+        profile,
+        job: { reference: "J", product: "P", target: null },
+        breaks: [],
+        reasons: [
+          {
+            id: 1,
+            start: point(30, 0).timestamp.toISOString(),
+            end: end.toISOString(),
+            reason: "Jam",
+            category: "unplanned",
+            actorId: 1,
+            createdAt: end.toISOString(),
+            supersedesId: null,
+          },
+        ],
+        evidence: {
+          total: 30,
+          good: 27,
+          reject: 3,
+          reference: "Independent fixture",
+          actorId: 1,
+          ...downtime,
+        },
+        samples: {
+          state,
+          ...counters([0, 14, 27, 27, 27], [0, 1, 3, 3, 3]),
+        },
+      });
+    const exact = shift({ downtimeSeconds: 30, downtimeToleranceSeconds: 0 });
+    expect(exact.issues).toEqual([]);
+    expect(exact.verified).toBe(true);
+    expect(
+      shift({ downtimeSeconds: 24, downtimeToleranceSeconds: 6 }).verified,
+    ).toBe(true);
+    const outside = shift({ downtimeSeconds: 24, downtimeToleranceSeconds: 5 });
+    expect(outside.verified).toBe(false);
+    expect(outside.issues).toContain(
+      "Independent downtime 0.4 min differs from observed 0.5 min by more than the recorded 0.1 min tolerance.",
+    );
+    // Unknown state time is never compared as if it were known downtime.
+    const gap = shift({ downtimeSeconds: 30, downtimeToleranceSeconds: 60 }, [
+      point(0, 1),
+      point(15, 1),
+      point(30, 2, "BadNoCommunication"),
+      point(45, 2),
+      point(60, 2),
+    ]);
+    expect(gap.verified).toBe(false);
+    expect(gap.issues).toContain(
+      "Independent downtime cannot be compared while state coverage has unknown intervals.",
+    );
+  });
   it("caps stale state, never classifies a disconnect as a stopped machine", () => {
     const intervals = stateTimeline(
       [point(0, 1), point(40, 2, "BadNoCommunication"), point(50, 0)],

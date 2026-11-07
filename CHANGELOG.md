@@ -8,6 +8,9 @@ never closes an open acceptance item.
 
 ## [Unreleased]
 
+- Record independent downtime with a tolerance in the shift ledger; a difference beyond
+  it or unknown state time prevents verification (O09). The synthetic evidence sample
+  was regenerated for the changed calculator.
 - Complete the initial contributor backlog: glossary, German demo and evidence
   guides, demo screenshots, accessibility observation template, synthetic shift
   evidence sample, Boolean-state and 16-bit rollover profiles, catalog path-escape,

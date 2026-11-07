@@ -486,6 +486,8 @@ below retain their unfulfilled acceptance criteria.
   and prevent a report from being labeled verified.
   Progress: A recorded independent ledger must match total/good/reject quantities; differences prevent verification.
   Reviewed operator declarations now appear in the report beside measured counts (O05).
+  The ledger can also record independent downtime with a tolerance; a difference beyond it,
+  or unknown state time, prevents verification (`shiftCalculation.test.ts`, `test-production.mjs`).
   Remaining: a supervised physical shift reconciliation (D06).
 
 - [x] **O10 — Support machines with limited automatic data** · P2 · M2 · New · M. Depends: O02, U06.
