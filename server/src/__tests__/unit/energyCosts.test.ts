@@ -71,6 +71,25 @@ describe("energy cost estimates", () => {
     // One period parse and one evidence serialization; not samples multiplied by periods.
     expect(reads).toBeLessThanOrEqual(8000);
   });
+  it("treats full coverage with millisecond timestamps as complete", () => {
+    // These gaps sum to 2.2000000000000006 s as float seconds.
+    const offsets = [
+      0, 100, 300, 1100, 1200, 1300, 1400, 1700, 2000, 2100, 2200,
+    ];
+    const jitter = offsets.map((ms, i) => ({
+      ...point(0, i),
+      timestamp: new Date(+start + ms),
+    }));
+    const windowEnd = new Date(+start + 2200);
+    const result = estimateEnergyCosts(jitter, meter, start, windowEnd, [
+      { ...tariff, valid_to: windowEnd },
+    ]);
+    expect(result.energyComplete).toBe(true);
+    expect(result.costComplete).toBe(true);
+    expect(result.emissionsComplete).toBe(true);
+    expect(result.coveredSeconds).toBe(2.2);
+    expect(result.estimatedCost).toBeCloseTo(2);
+  });
   it("keeps arithmetic overflow and invalid factors unknown", () => {
     const huge = [point(0, 0), point(60, 1e308), point(120, 1e308)];
     const badScale = estimateEnergyCosts(

@@ -117,6 +117,20 @@ describe("frozen period comparisons", () => {
     ).toBe(0);
     expect(result.metrics.every((m) => m.delta === null)).toBe(true);
   });
+  it("does not block a comparison on float noise in summed durations", () => {
+    const a = revision(1),
+      b = revision(2);
+    // The same 30-minute break split differently sums to 1799.9999999999998 s.
+    a.snapshot.plannedSeconds = 1800;
+    b.snapshot.plannedSeconds = 1799.9999999999998;
+    b.snapshot.observedSeconds = 60.00000000000001;
+    const result = comparePeriods(a, b, [1, 2]);
+    expect(result.reasons).not.toContain("schedule");
+    expect(result.reasons).not.toContain("coverage");
+    // A real difference of one millisecond still blocks.
+    b.snapshot.plannedSeconds = 1800.001;
+    expect(comparePeriods(a, b, [1, 2]).reasons).toContain("schedule");
+  });
   it("blocks different products and cycle standards but permits different order references", () => {
     const a = revision(1),
       b = revision(2);

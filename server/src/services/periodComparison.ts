@@ -67,6 +67,9 @@ function period(
 }
 
 /** Frozen evidence is compared as recorded; subsequent corrections never replace it silently. */
+// Durations are summed from float seconds; compare them at the timestamps' ms precision.
+const ms = (seconds: number) => Math.round(seconds * 1000);
+
 export function comparePeriods(
   beforeRevision: FrozenRevision,
   afterRevision: FrozenRevision,
@@ -104,8 +107,8 @@ export function comparePeriods(
     [...Object.values(a.seconds), ...Object.values(b.seconds)].some(
       (v) => !Number.isFinite(v) || v < 0,
     ) ||
-    a.observedSeconds !== (Date.parse(a.end) - Date.parse(a.start)) / 1000 ||
-    b.observedSeconds !== (Date.parse(b.end) - Date.parse(b.start)) / 1000
+    ms(a.observedSeconds) !== Date.parse(a.end) - Date.parse(a.start) ||
+    ms(b.observedSeconds) !== Date.parse(b.end) - Date.parse(b.start)
   )
     reasons.push("coverage");
   if (
@@ -116,8 +119,8 @@ export function comparePeriods(
       a.plannedSeconds,
       b.plannedSeconds,
     ].every((v) => Number.isFinite(v) && v >= 0) ||
-    a.scheduledSeconds !== b.scheduledSeconds ||
-    a.plannedSeconds !== b.plannedSeconds
+    ms(a.scheduledSeconds) !== ms(b.scheduledSeconds) ||
+    ms(a.plannedSeconds) !== ms(b.plannedSeconds)
   )
     reasons.push("schedule");
   if (

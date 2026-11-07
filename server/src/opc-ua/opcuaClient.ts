@@ -16,6 +16,46 @@ import config from "../config/config.js";
 import { measurementIdentity } from "./measurementIdentity.js";
 import type { SignalMetadata } from "@performance-dashboard/shared";
 
+/**
+ * Turns an OPC UA variant value into something the spool can store. A value that is not a
+ * finite scalar (NaN, Infinity, an array or structure) or a 64-bit integer beyond the safe
+ * range becomes unknown instead of being rejected, which would stop collection for every
+ * machine. A status that is already Bad is kept; the raw text is kept where it is small.
+ */
+export function storableValue(
+  value: unknown,
+  actualDataType: string | undefined,
+  statusCode: string,
+): { value: number | string | boolean | null; statusCode: string } {
+  const unknown = (raw: string | null, replacement: string) => ({
+    value: raw,
+    statusCode: statusCode.startsWith("Bad") ? statusCode : replacement,
+  });
+  if (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    value.every(Number.isInteger) &&
+    (actualDataType === "Int64" || actualDataType === "UInt64")
+  ) {
+    const big =
+      actualDataType === "Int64"
+        ? opcua.Int64ToBigInt(value)
+        : opcua.UInt64ToBigInt(value);
+    return big >= BigInt(Number.MIN_SAFE_INTEGER) &&
+      big <= BigInt(Number.MAX_SAFE_INTEGER)
+      ? { value: Number(big), statusCode }
+      : unknown(big.toString(), "BadOutOfRange");
+  }
+  if (typeof value === "number" && !Number.isFinite(value))
+    return unknown(String(value), "BadOutOfRange");
+  if (value == null || ["number", "string", "boolean"].includes(typeof value))
+    return {
+      value: (value ?? null) as number | string | boolean | null,
+      statusCode,
+    };
+  return unknown(null, "BadTypeMismatch");
+}
+
 export interface OpcuaNodeData {
   key: string;
   label: string;
@@ -313,17 +353,21 @@ export async function connectAndSubscribe(
               dataValue.sourceTimestamp,
               dataValue.statusCode.toString(),
             );
+            const actualDataType = opcua.DataType[dataValue.value.dataType];
             opcuaEmitter.emit("nodeChanged", {
               key,
               label: nodeConfig.label,
-              value: dataValue.value.value,
+              ...storableValue(
+                dataValue.value.value,
+                actualDataType,
+                dataValue.statusCode.toString(),
+              ),
               timestamp: dataValue.serverTimestamp || new Date(),
               sourceTimestamp: dataValue.sourceTimestamp,
               receivedAt: new Date(),
               signalMetadata: metadata,
               dataType: nodeConfig.dataType,
-              actualDataType: opcua.DataType[dataValue.value.dataType],
-              statusCode: dataValue.statusCode.toString(),
+              actualDataType,
               machineId,
             } as OpcuaNodeData);
           });
@@ -363,17 +407,22 @@ export async function connectAndSubscribe(
                 value.sourceTimestamp,
                 value.statusCode.toString(),
               );
+              const actualDataType = opcua.DataType[value.value.dataType];
               opcuaEmitter.emit("nodeChanged", {
                 key,
                 label: mapping.label,
-                value: value.value.value ?? null,
-                timestamp: new Date(),
+                ...storableValue(
+                  value.value.value,
+                  actualDataType,
+                  value.statusCode.toString(),
+                ),
+                // The server's clock, like subscription samples, so rows stay in order.
+                timestamp: value.serverTimestamp ?? new Date(),
                 sourceTimestamp: value.sourceTimestamp,
                 receivedAt: new Date(),
                 signalMetadata: metadataByKey.get(key),
                 dataType: mapping.dataType,
-                actualDataType: opcua.DataType[value.value.dataType],
-                statusCode: value.statusCode.toString(),
+                actualDataType,
                 machineId,
               });
             }

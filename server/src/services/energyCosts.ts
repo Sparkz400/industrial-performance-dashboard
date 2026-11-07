@@ -36,8 +36,9 @@ export function estimateEnergyCosts(
     .sort((a, b) => a.from - b.from);
   let periodIndex = 0;
   const costs: Record<string, number> = {};
-  let pricedSeconds = 0,
-    emissionSeconds = 0,
+  // Whole milliseconds, compared exactly with the window.
+  let pricedMs = 0,
+    emissionMs = 0,
     observedKgCo2e = 0,
     pricedPairs = 0,
     emissionPairs = 0,
@@ -66,8 +67,7 @@ export function estimateEnergyCosts(
       unpricedPairs++;
       continue;
     }
-    const tariff = period.tariff,
-      seconds = (b.timestamp.getTime() - a.timestamp.getTime()) / 1000;
+    const tariff = period.tariff;
     const nextCost =
       (costs[tariff.currency] ?? 0) +
       measured.observedKWh * tariff.price_per_kwh;
@@ -78,22 +78,22 @@ export function estimateEnergyCosts(
     used.add(tariff.id);
     costs[tariff.currency] = nextCost;
     pricedPairs++;
-    pricedSeconds += seconds;
+    pricedMs += b.timestamp.getTime() - a.timestamp.getTime();
     if (tariff.kg_co2e_per_kwh !== null) {
       const nextEmissions =
         observedKgCo2e + measured.observedKWh * tariff.kg_co2e_per_kwh;
       if (!Number.isFinite(nextEmissions) || tariff.kg_co2e_per_kwh < 0)
         continue;
       observedKgCo2e = nextEmissions;
-      emissionSeconds += seconds;
+      emissionMs += b.timestamp.getTime() - a.timestamp.getTime();
       emissionPairs++;
     }
   }
   const currencies = Object.keys(costs),
-    seconds = (end.getTime() - start.getTime()) / 1000;
+    windowMs = end.getTime() - start.getTime();
   const costComplete =
-    energy.complete && pricedSeconds === seconds && currencies.length === 1;
-  const emissionsComplete = energy.complete && emissionSeconds === seconds;
+    energy.complete && pricedMs === windowMs && currencies.length === 1;
+  const emissionsComplete = energy.complete && emissionMs === windowMs;
   return {
     observedKWh: energy.observedKWh,
     energyComplete: energy.complete,
@@ -105,8 +105,8 @@ export function estimateEnergyCosts(
     costComplete,
     emissionsComplete,
     coveredSeconds: energy.coveredSeconds,
-    pricedSeconds,
-    emissionSeconds,
+    pricedSeconds: pricedMs / 1000,
+    emissionSeconds: emissionMs / 1000,
     pricedPairs,
     unpricedPairs,
     tariffs: tariffs.filter((tariff) => used.has(tariff.id)),

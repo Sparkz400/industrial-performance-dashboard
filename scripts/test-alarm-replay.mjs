@@ -76,6 +76,20 @@ await dailyFixture(async ({ pool }) => {
   const [cleared] = await incidents();
   assert.equal(cleared.status, "resolved");
   assert.equal((await incidents()).length, 1, "No duplicate incident on replay");
+  // Alarms judge what is stored: a changed data type or a source clock more than five
+  // minutes ahead is Bad there, even when the source reported Good.
+  const at = new Date(t1.getTime() + 120_000);
+  const mismatched = sample(at, 500);
+  Object.assign(mismatched.data, { dataType: "Int32", actualDataType: "Double" });
+  await evaluator.evaluate(mismatched);
+  const future = sample(at, 500);
+  future.data.sourceTimestamp = new Date(at.getTime() + 10 * 60_000);
+  await evaluator.evaluate(future);
+  assert.equal(
+    (await incidents()).length,
+    1,
+    "Samples stored as BadTypeMismatch or BadSourceClock must not trigger",
+  );
   console.log(
     JSON.stringify({
       alarmReplay: "passed",

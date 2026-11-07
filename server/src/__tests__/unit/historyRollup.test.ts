@@ -137,6 +137,19 @@ it("keeps counter increments with the profile's reset and gap rules", () => {
   expect(strict.reduce((n, c) => n + c.unknownPairs, 0)).toBe(1);
 });
 
+it("never stores an infinite counter increment", () => {
+  const { counters } = rollupRemoved(
+    removed("Count", [
+      { at: 0, value: 100 },
+      { at: 60, value: Infinity },
+      { at: 90, value: 110 },
+    ]),
+  );
+  expect(counters.every((c) => Number.isFinite(c.increment))).toBe(true);
+  expect(counters.reduce((n, c) => n + c.increment, 0)).toBe(0);
+  expect(counters.reduce((n, c) => n + c.unknownPairs, 0)).toBe(2);
+});
+
 it("ignores tags without a commissioned role or profile", () => {
   expect(
     rollupRemoved(

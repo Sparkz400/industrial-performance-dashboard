@@ -96,9 +96,15 @@ beforeEach(async () => {
       availability: 0.8,
       runningTimeMinutes: 30,
       plannedStopTimeMinutes: 5,
+      unknownTimeMinutes: 10,
     },
-    performance: { performance: 0.75, totalCount: 20 },
-    quality: { quality: 0.9, goodCount: 18, rejectCount: 2 },
+    performance: { performance: 0.75, totalCount: 20, dataComplete: true },
+    quality: {
+      quality: 0.9,
+      goodCount: 18,
+      rejectCount: 2,
+      dataComplete: false,
+    },
   });
   mocks.pdf.mockImplementation((file: string) =>
     writeFile(file, "%PDF-test fixture"),
@@ -130,6 +136,17 @@ describe("scheduled report migration", () => {
       "<script>literal</script>",
     );
     expect(document.sections[2].paragraphs.join(" ")).toContain("provisional");
+    // Unknown metrics print as unknown, never as the service's placeholder value.
+    expect(document.sections[2].paragraphs).toContain("OEE: N/A (incomplete)");
+    expect(
+      document.sections[2].table.rows.map((row: string[]) => row[1]),
+    ).toEqual(["N/A (incomplete)", "75.0%", "N/A (incomplete)"]);
+    expect(document.sections[2].table.rows[0][2]).toContain(
+      "Unknown: 10.0 min",
+    );
+    expect(document.sections[2].table.rows[2][2]).toContain(
+      "Observed (incomplete)",
+    );
     expect(mocks.trending.mock.calls[0][0].machineId).toBe(4);
     expect(mocks.alerts.mock.calls[0][0].machineId).toBe(4);
     expect(mocks.oee.mock.calls[0][0]).toBe(4);

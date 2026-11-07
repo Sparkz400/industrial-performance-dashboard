@@ -258,7 +258,10 @@ export const spcService = {
       await db.execute<{
         id: number;
         evidence: {
-          samples: { value: number | string | null }[];
+          samples: {
+            value: number | string | null;
+            status_code?: string | null;
+          }[];
           profile: { machineId: number | null; nodeKey: string };
         };
       }>(
@@ -276,9 +279,17 @@ export const spcService = {
     const n = type === "xbar-r" ? profile.subgroupSize! : 1;
     let limits;
     try {
+      // Same readings as the baseline statistics: Bad or missing values are not 0.
       limits = referenceLimits(
         type,
-        baseline.evidence.samples.map((s) => Number(s.value)),
+        baseline.evidence.samples
+          .filter(
+            (s) =>
+              s.status_code?.startsWith("Good") &&
+              s.value != null &&
+              Number.isFinite(Number(s.value)),
+          )
+          .map((s) => Number(s.value)),
         n,
       );
     } catch (error) {
