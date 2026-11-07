@@ -1,5 +1,13 @@
 # Current status
 
+## Declared endpoint builds — 2026-11-07
+
+Production profiles can list the OPC UA server builds they were checked against. The
+commissioning preview reads the endpoint's BuildInfo and shows whether it matches, is
+not declared, differs or is unknown; only a match is shown as success and none blocks
+saving. C04 stays open until such declarations are qualified against real devices
+([commissioning](PRODUCTION_WORKFLOW.md#commissioning)).
+
 ## Maintenance and endurance checkpoint — 2026-11-02
 
 The [dependency review](DEPENDENCY_REVIEW.md#maintenance-review--2026-11-02)

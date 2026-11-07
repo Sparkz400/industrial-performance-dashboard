@@ -8,6 +8,8 @@ never closes an open acceptance item.
 
 ## [Unreleased]
 
+- Let production profiles declare supported endpoint builds and compare them with the
+  endpoint's OPC UA BuildInfo during commissioning preview (C04).
 - Review November dependency updates, align Node declarations with the supported
   Node 24 runtime, and preserve unstaged work during pre-commit checks.
 - Correct the dependency-audit status and record the failed November 1 endurance

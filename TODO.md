@@ -247,7 +247,10 @@ below retain their unfulfilled acceptance criteria.
   The read-only gateway commissions two owned units from one profile
   ([gateway scope](docs/LEGACY_GATEWAY.md)) and reviewed setup bundles copy mappings
   to a paused second machine ([PR #64](https://github.com/Sparkz400/performance_dashboard/pull/64)).
-  Remaining: supported endpoint/vendor version declarations qualified against real devices.
+  Profiles can declare supported endpoint builds (`supportedEndpoints`); the read-only
+  preview compares them with the endpoint's OPC UA BuildInfo and warns on a mismatch or
+  an incomplete report (`endpointSupport.test.ts`, `test-production.mjs`).
+  Remaining: those declarations qualified against real devices.
 
 - [ ] **C05 — Define a connector contract and gateway recipes** · P1 · M2 · New · L. Depends: C04, H01.
   Done: normalize source identity, quality, timestamps and reconnect behavior; demonstrate
