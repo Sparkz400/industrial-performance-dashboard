@@ -9,6 +9,13 @@ written as a receipt with source revision and host
 developer-workstation baseline is recorded; U10 still needs the same run on the
 ordinary operator device before bundle or render changes are chosen.
 
+## Upstream OPC UA fix adopted — 2026-11-07
+
+node-opcua 2.187.23 contains the upstream fix for the overflow assertions
+([#1849](https://github.com/node-opcua/node-opcua/issues/1849)). The local patch and
+its install hooks are removed; the unmodified package passes the overflow regression.
+See the [dependency review](DEPENDENCY_REVIEW.md#opc-ua-overflow-patch-removed--2026-11-07).
+
 ## Contributor backlog completed — 2026-11-07
 
 All twelve [initial contributor issues](CONTRIBUTOR_BACKLOG.md) are done: a
