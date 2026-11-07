@@ -14,7 +14,10 @@ vi.mock("../../services/collectorLock.js", () => ({
   currentLease: () => undefined,
 }));
 import config from "../../config/config.js";
-import { OpcuaQueueWorker } from "../../queue/opcuaQueueWorker.js";
+import {
+  OpcuaQueueWorker,
+  backlogTrend,
+} from "../../queue/opcuaQueueWorker.js";
 let dir: string;
 let worker: OpcuaQueueWorker;
 afterEach(async () => {
@@ -132,3 +135,32 @@ it("stops acquisition at the configured spool capacity", async () => {
     config.OPCUA_SPOOL_MAX_ENTRIES = 1_000_000;
   }
 }, 60_000);
+it("estimates backlog recovery from the net change, never from writes alone", async () => {
+  // afterEach stops a worker and removes a directory.
+  dir = mkdtempSync(join(tmpdir(), "dashboard-worker-"));
+  worker = new OpcuaQueueWorker();
+  const at = (seconds: number, pending: number) => ({
+    at: seconds * 1000,
+    pending,
+  });
+  // Less than 55 s of history: unknown, not zero.
+  expect(backlogTrend([at(0, 900), at(30, 600)])).toEqual({
+    backlogChangePerMinute: null,
+    backlogClearSeconds: null,
+  });
+  // 1200 -> 600 over 60 s: -600/min, 600 left clears in 60 s.
+  expect(backlogTrend([at(0, 1200), at(30, 900), at(60, 600)])).toEqual({
+    backlogChangePerMinute: -600,
+    backlogClearSeconds: 60,
+  });
+  // Growing or steady backlog has no clearing time.
+  expect(backlogTrend([at(0, 100), at(60, 160)])).toEqual({
+    backlogChangePerMinute: 60,
+    backlogClearSeconds: null,
+  });
+  expect(
+    backlogTrend([at(0, 100), at(60, 100)]).backlogClearSeconds,
+  ).toBeNull();
+  // Empty backlog is cleared.
+  expect(backlogTrend([at(0, 10), at(60, 0)]).backlogClearSeconds).toBe(0);
+});

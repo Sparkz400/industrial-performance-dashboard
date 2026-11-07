@@ -8,6 +8,7 @@ never closes an open acceptance item.
 
 ## [Unreleased]
 
+- Show the net collector backlog change per minute and an estimated clearing time (H09).
 - Complete the initial contributor backlog: glossary, German demo and evidence
   guides, demo screenshots, accessibility observation template, synthetic shift
   evidence sample, Boolean-state and 16-bit rollover profiles, catalog path-escape,
