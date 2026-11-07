@@ -54,6 +54,37 @@ describe("completion forecast", () => {
     expect(products).toEqual(["Bracket", "Housing"]);
   });
 
+  it("uses product runs of a reconciled shift; run windows never carry the ledger", () => {
+    const run = (hourFrom: number, hourTo: number, issues: string[]) => ({
+      plan: {
+        product: "Bracket",
+        start: new Date(Date.UTC(2026, 4, 12, hourFrom)).toISOString(),
+        end: new Date(Date.UTC(2026, 4, 12, hourTo)).toISOString(),
+      },
+      report: {
+        verified: false,
+        issues,
+        seconds: { running: 1, idle: 0, fault: 0, planned: 0, unknown: 0 },
+        quantities: { total: 400, good: 400, reject: 0 },
+      },
+    });
+    const unreconciled = "Independent reconciliation has not been recorded.";
+    const { runs, excluded } = comparableRuns(
+      [
+        shift(12, 800, {
+          runs: [
+            run(6, 10, [unreconciled]),
+            run(10, 14, [unreconciled, "Shift has not ended."]),
+          ],
+        } as never),
+      ],
+      "Bracket",
+      null,
+    );
+    expect(runs.map((r) => r.rate)).toEqual([100]);
+    expect(excluded.unverified).toBe(1);
+  });
+
   it("withholds the estimate with too few runs and gives a range with enough", () => {
     const runs = Array.from(
       { length: MIN_COMPARABLE_RUNS },

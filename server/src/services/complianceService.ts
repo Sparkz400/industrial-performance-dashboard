@@ -87,6 +87,17 @@ export function getComplianceActor(
   };
 }
 
+/** One CSV cell; text that starts like a formula must not run when the export is opened. */
+export function escapeCSV(value: unknown): string {
+  const raw = value === null || value === undefined ? "" : String(value);
+  const str =
+    typeof value === "string" && /^[=+@\-\t\r]/.test(raw) ? `'${raw}` : raw;
+  if (/[,"\n\r]/.test(str) || str !== raw) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
 function formatAuditCsv(logs: Record<string, unknown>[]): string {
   const headers = [
     "id",
@@ -104,14 +115,6 @@ function formatAuditCsv(logs: Record<string, unknown>[]): string {
     "checksum",
     "createdAt",
   ];
-
-  const escapeCSV = (value: unknown): string => {
-    const str = value === null || value === undefined ? "" : String(value);
-    if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-      return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
-  };
 
   const rows = logs.map((log) =>
     headers
@@ -211,14 +214,6 @@ export const complianceService = {
         "checksum",
         "createdAt",
       ];
-
-      const escapeCSV = (value: unknown): string => {
-        const str = value === null || value === undefined ? "" : String(value);
-        if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-          return `"${str.replace(/"/g, '""')}"`;
-        }
-        return str;
-      };
 
       const rows = logs.map((log: Record<string, unknown>) =>
         headers

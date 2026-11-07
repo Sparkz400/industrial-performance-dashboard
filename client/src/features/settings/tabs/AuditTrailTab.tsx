@@ -24,6 +24,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import VirtualizedTable, { type VirtualizedColumn } from '@/shared/components/VirtualizedTable';
 import type { AuditLogEntry, GetAuditLogsRequest } from '@/types';
 import { useAuditLogs } from '../hooks/useAuditLogs';
+import { csvCell } from '@/utils/csv';
 
 const ENTITY_OPTIONS = [
   { label: 'All entities', value: '' },
@@ -71,7 +72,7 @@ function downloadCsv(rows: AuditLogEntry[]) {
       row.message,
       row.ipAddress || '',
     ]
-      .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+      .map(csvCell)
       .join(','),
   );
 

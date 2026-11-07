@@ -23,6 +23,7 @@ import { saveAs } from 'file-saver';
 import { API_ENDPOINTS } from '@/config/config';
 import api from '@/utils/api';
 import type { Widget, LayoutItem } from '@/types';
+import { csvCell } from '@/utils/csv';
 
 interface DashboardConfig {
   id?: string;
@@ -86,14 +87,13 @@ const ExportMenu: React.FC<ExportMenuProps> = ({
     if (!data || data.length === 0) return;
 
     const keys = dataKeys || Object.keys(data[0]);
-    const header = keys.join(',');
+    const header = keys.map(csvCell).join(',');
     const rows = data.map((row) =>
       keys
-        .map((key) => {
+        .map((key) =>
           // eslint-disable-next-line security/detect-object-injection -- key comes from Object.keys(data[0]) or dataKeys prop, not user input
-          const val = row[key];
-          return typeof val === 'string' && val.includes(',') ? `"${val}"` : val;
-        })
+          csvCell(row[key]),
+        )
         .join(','),
     );
     const csv = [header, ...rows].join('\n');

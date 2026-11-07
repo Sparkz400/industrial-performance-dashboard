@@ -27,6 +27,8 @@ type Excluded = Record<
  * process change. A shift without planned runs counts as one run of its job's product.
  * A run is measured over its planned window; actual run ends are not recorded.
  */
+const UNRECONCILED = "Independent reconciliation has not been recorded.";
+
 export function comparableRuns(
   revisions: { revisionId: number; snapshot: ComparisonSnapshot }[],
   product: string,
@@ -48,6 +50,9 @@ export function comparableRuns(
           start: run.plan.start,
           end: run.plan.end,
           report: run.report,
+          // A run window is calculated without the shift's independent ledger, so its
+          // own report always lists that one issue; the shift-level check covers it.
+          verified: run.report.issues.every((issue) => issue === UNRECONCILED),
         }))
       : [
           {
@@ -55,13 +60,13 @@ export function comparableRuns(
             start: snapshot.start,
             end: snapshot.end,
             report: snapshot,
+            verified: snapshot.verified,
           },
         ];
     for (const part of parts) {
       if (part.product) products.add(part.product);
       if (part.product !== product) excluded.otherProduct += 1;
-      else if (!snapshot.verified || !part.report.verified)
-        excluded.unverified += 1;
+      else if (!snapshot.verified || !part.verified) excluded.unverified += 1;
       else if (part.report.seconds.unknown > 0)
         excluded.incompleteCoverage += 1;
       else if (part.report.quantities.good == null) excluded.noGoodCount += 1;

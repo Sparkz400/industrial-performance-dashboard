@@ -111,8 +111,12 @@ async function collectSection(
         start,
         end,
       );
-      const pct = (value: number) =>
-        Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : "N/A";
+      // The legacy service returns 0 for unknown; print what the dashboard shows instead.
+      const pct = (value: number, known = true) =>
+        known && Number.isFinite(value)
+          ? `${(value * 100).toFixed(1)}%`
+          : "N/A (incomplete)";
+      const availabilityKnown = result.availability.unknownTimeMinutes === 0;
       return {
         title,
         paragraphs: [
@@ -121,7 +125,7 @@ async function collectSection(
             : [
                 "Incomplete measurement coverage. These figures are provisional.",
               ]),
-          `OEE: ${pct(result.oee)}`,
+          `OEE: ${pct(result.oee, result.dataComplete)}`,
         ],
         table: {
           headers: ["Metric", "Value", "Details"],
@@ -129,18 +133,23 @@ async function collectSection(
           rows: [
             [
               "Availability",
-              pct(result.availability.availability),
-              `Running: ${number(result.availability.runningTimeMinutes, 1)} min, Planned stop: ${number(result.availability.plannedStopTimeMinutes, 1)} min`,
+              pct(result.availability.availability, availabilityKnown),
+              `Running: ${number(result.availability.runningTimeMinutes, 1)} min, Planned stop: ${number(result.availability.plannedStopTimeMinutes, 1)} min${availabilityKnown ? "" : `, Unknown: ${number(result.availability.unknownTimeMinutes, 1)} min`}`,
             ],
             [
               "Performance",
-              pct(result.performance.performance),
-              `Total count: ${result.performance.totalCount}`,
+              pct(
+                result.performance.performance,
+                result.performance.dataComplete,
+              ),
+              result.performance.dataComplete
+                ? `Total count: ${result.performance.totalCount}`
+                : `Observed count (incomplete): ${result.performance.totalCount}`,
             ],
             [
               "Quality",
-              pct(result.quality.quality),
-              `Good: ${result.quality.goodCount}, Rejected: ${result.quality.rejectCount}`,
+              pct(result.quality.quality, result.quality.dataComplete),
+              `${result.quality.dataComplete ? "" : "Observed (incomplete): "}Good: ${result.quality.goodCount}, Rejected: ${result.quality.rejectCount}`,
             ],
           ],
         },

@@ -8,6 +8,11 @@ never closes an open acceptance item.
 
 ## [Unreleased]
 
+- Fix data-path audit findings: unusual OPC UA values no longer stop collection, heartbeat
+  rows use the server clock, overlapping machine connects cannot duplicate samples, alarms
+  and SPC limits ignore Bad readings, the PDF report prints unknown metrics as N/A, energy
+  and period comparisons tolerate millisecond timestamps, forecasts use product runs of
+  reconciled shifts, rollups reject infinite counters, and CSV exports neutralize formulas.
 - Load the chart library on demand and framer-motion only with the dashboard page, and
   remove the unused client tRPC provider: the Production page downloads 32 % less
   script (U10). UI measurement receipts list each loaded script.

@@ -32,6 +32,20 @@ interface MachineConnection {
 
 class MultiMachineManager extends EventEmitter {
   private connections: Map<number, MachineConnection> = new Map();
+  // Connect/disconnect per machine run one at a time, so overlapping requests can never
+  // leave an orphaned second subscription that stores every value twice.
+  private queues = new Map<number, Promise<unknown>>();
+
+  private serial<T>(machineId: number, task: () => Promise<T>): Promise<T> {
+    const next = (this.queues.get(machineId) ?? Promise.resolve())
+      .catch(() => undefined)
+      .then(task);
+    this.queues.set(
+      machineId,
+      next.catch(() => undefined),
+    );
+    return next;
+  }
   private isInitialized = false;
 
   async initialize(): Promise<void> {
@@ -72,13 +86,17 @@ class MultiMachineManager extends EventEmitter {
     }
   }
 
-  async connectMachine(machine: Machine): Promise<void> {
+  connectMachine(machine: Machine): Promise<void> {
+    return this.serial(machine.id, () => this.connectNow(machine));
+  }
+
+  private async connectNow(machine: Machine): Promise<void> {
     const existing = this.connections.get(machine.id);
     if (existing?.connection) {
       logger.info(
         `[MultiMachine] Machine ${machine.name} already connected. Disconnecting first.`,
       );
-      await this.disconnectMachine(machine.id);
+      await this.disconnectNow(machine.id);
     }
 
     const mappingsList = await this.getNodeMappingsForMachine(machine.id);
@@ -155,7 +173,11 @@ class MultiMachineManager extends EventEmitter {
     }
   }
 
-  async disconnectMachine(machineId: number): Promise<void> {
+  disconnectMachine(machineId: number): Promise<void> {
+    return this.serial(machineId, () => this.disconnectNow(machineId));
+  }
+
+  private async disconnectNow(machineId: number): Promise<void> {
     const entry = this.connections.get(machineId);
     if (!entry) return;
 
@@ -238,8 +260,9 @@ class MultiMachineManager extends EventEmitter {
             .where(eq(machines.id, machineId));
 
           if (result.length > 0 && result[0].isActive) {
+            // Re-read the machine when reconnecting: it may be deactivated meanwhile.
             setTimeout(() => {
-              this.connectMachine(result[0]).catch((e: any) => {
+              this.refreshMachineConnection(machineId).catch((e: any) => {
                 logger.error(
                   `[MultiMachine] Reconnect failed for machine ${machineId}: ${e.message}`,
                 );

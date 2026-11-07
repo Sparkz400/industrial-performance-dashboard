@@ -12,7 +12,10 @@ import {
   type AlertHistoryRow,
 } from "../database/schema.js";
 import { alarmRepository } from "../repositories/alarmRepository.js";
-import type { SpoolEntry } from "../queue/measurementSpool.js";
+import {
+  toMeasurementRow,
+  type SpoolEntry,
+} from "../queue/measurementSpool.js";
 import type { AlarmEvent } from "@performance-dashboard/shared";
 import logger from "../utils/logger.js";
 import { routesAlarm } from "./alarmRouting.js";
@@ -366,13 +369,13 @@ export class AlarmEvaluator extends EventEmitter {
       const sourceTime = new Date(
         data.sourceTimestamp ?? data.timestamp,
       ).getTime();
-      const scalar =
-        typeof data.value === "boolean" ? Number(data.value) : data.value;
+      // Evaluate what is stored: a future source clock or changed type is Bad there.
+      const stored = toMeasurementRow(entry);
       const value =
-        data.statusCode?.startsWith("Good") &&
-        typeof scalar === "number" &&
-        Number.isFinite(scalar)
-          ? scalar
+        stored.statusCode.startsWith("Good") &&
+        typeof stored.value === "number" &&
+        Number.isFinite(stored.value)
+          ? stored.value
           : null;
       let changed: AlertHistoryRow | undefined;
       let eventName = "alarmUpdated";

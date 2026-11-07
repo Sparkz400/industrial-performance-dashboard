@@ -69,6 +69,7 @@ export function rollupRemoved(readings: RemovedReading[]) {
     counters.set(key, entry);
     const usable = (v: number | null, status: string | null) =>
       v != null &&
+      Number.isFinite(v) &&
       v >= 0 &&
       !!status?.startsWith("Good") &&
       !(

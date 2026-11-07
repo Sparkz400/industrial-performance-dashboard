@@ -33,7 +33,8 @@ export function calculateEnergy(
   let kWh = 0,
     idleKWh = 0,
     unassignedKWh = 0,
-    coveredSeconds = 0,
+    // Whole milliseconds: summed float seconds rarely equal the window exactly.
+    coveredMs = 0,
     usable = 0;
   const valid = (s: EnergySample) =>
     s.value != null &&
@@ -70,7 +71,7 @@ export function calculateEnergy(
       delta * meter.signal.scale * (meter.signal.unit === "Wh" ? 0.001 : 1);
     if (!Number.isFinite(energy) || !Number.isFinite(kWh + energy)) continue;
     kWh += energy;
-    coveredSeconds += seconds;
+    coveredMs += b.timestamp.getTime() - a.timestamp.getTime();
     usable++;
     const covering = intervals.filter(
       (s) =>
@@ -88,12 +89,12 @@ export function calculateEnergy(
       0,
     );
     if (
-      coverage === seconds * 1000 &&
+      coverage === b.timestamp.getTime() - a.timestamp.getTime() &&
       covering.every((s) => s.state === "idle")
     )
       idleKWh += energy;
     else if (
-      coverage !== seconds * 1000 ||
+      coverage !== b.timestamp.getTime() - a.timestamp.getTime() ||
       covering.some((s) => s.state === "unknown") ||
       new Set(covering.map((s) => s.state)).size > 1
     )
@@ -103,9 +104,8 @@ export function calculateEnergy(
     observedKWh: usable ? kWh : null,
     idleKWh: usable ? idleKWh : null,
     unassignedKWh: usable ? unassignedKWh : null,
-    coveredSeconds,
-    complete:
-      usable > 0 && coveredSeconds === (end.getTime() - start.getTime()) / 1000,
+    coveredSeconds: coveredMs / 1000,
+    complete: usable > 0 && coveredMs === end.getTime() - start.getTime(),
   };
 }
 export async function loadEnergySamples(

@@ -1,5 +1,37 @@
 # Current status
 
+## Data-path audit — 2026-11-07
+
+A review of collection, spool and storage, calculations and outputs found and fixed:
+
+- One NaN, Infinity, 64-bit or non-scalar OPC UA value made the spool reject its whole
+  batch (other machines' samples included) and stopped acquisition for every machine.
+  Such values are now stored as unknown (`BadOutOfRange`/`BadTypeMismatch`, raw text kept
+  where small); 64-bit counters within the safe range are converted.
+- Read-heartbeat rows used the collector's clock while subscription rows used the
+  server's, so a small clock offset could misorder counter rows and look like a reset.
+  Both now use the server timestamp.
+- Overlapping connects for one machine could leave an orphaned second subscription that
+  stored every value twice; a disconnect during a connect was ignored. Connect and
+  disconnect now run one at a time per machine, and a delayed reconnect re-reads whether
+  the machine is still active.
+- Alarm evaluation used the source's reported status, so a sample stored as
+  `BadSourceClock` or `BadTypeMismatch` could still trigger. It now uses the stored row.
+- SPC control limits included Bad readings and treated missing values as 0.
+- The scheduled PDF report printed unknown availability, performance, quality and OEE as
+  percentages (0.0 % during an outage); it now prints "N/A (incomplete)".
+- Energy, cost and emission coverage summed float seconds and was almost never complete
+  with real millisecond timestamps; period comparisons failed on the same float noise.
+- Completion forecasts discarded every shift with product runs as unverified.
+- History rollups accepted an infinite counter value as an increment.
+- The compliance audit CSV and two client CSV exports did not neutralize formula-like
+  text; one client export also broke columns on quotes.
+
+Open findings, not yet changed: collector-lease fencing compares the old collector's
+clock with the database clock; Sparkplug death markers use the receive time and a
+receive-time event ID; a PLC alarm without a `Time` field gets the current time; live
+production counts are never reported complete (errs toward unknown).
+
 ## Smaller Production page download — 2026-11-07
 
 On the same workload, the Production page now downloads 659 KB of script instead of
