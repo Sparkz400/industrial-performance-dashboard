@@ -50,12 +50,12 @@ identities need an encrypted channel and explicitly trusted server certificates
 For OEE, map the operating state, configure each state meaning, and select cumulative
 production/good/reject counters and an ideal cycle time. Do not infer machine meaning
 from a tag name. Negative or missing counter values are unknown. Shift profiles
-declare reset-to-zero, reject-decrease or rollover with an explicit modulus; the
-older dashboard OEE widget still treats a decrease as a reset to zero.
-Legacy OEE now expires states after 60 seconds and requires good-quality counter
-readings at both exact query boundaries with no gap over 60 seconds. It never
-allocates a counter delta across an uncovered boundary. Use commissioned production
-profiles for different gap/rollover rules. Daily manual quantities apply only to
+declare reset-to-zero, reject-decrease or rollover with an explicit modulus.
+Legacy OEE uses the gap limit and counter policy of the machine's latest production
+profile; a machine without a profile keeps a 60-second gap limit and treats a
+decrease as a reset to zero. States expire after that gap, and counters need
+good-quality readings at both exact query boundaries with no longer gap. It never
+allocates a counter delta across an uncovered boundary. Daily manual quantities apply only to
 whole UTC-day windows, exclude the following midnight and always remain provisional;
 hourly/partial-day requests withhold those quantities. Numeric response fields stay
 compatible, but `dataComplete=false` must be respected by consumers.

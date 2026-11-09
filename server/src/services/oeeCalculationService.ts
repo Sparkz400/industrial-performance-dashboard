@@ -7,6 +7,7 @@ import {
 import { NotFoundError, ValidationError } from "../utils/errors.js";
 import logger from "../utils/logger.js";
 import type { OeeConfigRow } from "../database/schema.js";
+import type { ProductionProfile } from "@performance-dashboard/shared";
 
 // --- Types ---
 
@@ -62,22 +63,32 @@ function asNumberArray(value: unknown): number[] {
   return [];
 }
 
-// shortcut: legacy OEE uses a 60-second freshness limit; use a production profile for machine-specific gaps and rollover.
-const counterPolicy = {
+type CounterPolicy = Pick<
+  ProductionProfile,
+  "maxGapSeconds" | "counterPolicy" | "counterModulus"
+>;
+
+/** Machines without a production profile keep the legacy 60-second, reset-to-zero rules. */
+const legacyPolicy: CounterPolicy = {
   maxGapSeconds: 60,
-  counterPolicy: "reset-to-zero" as const,
+  counterPolicy: "reset-to-zero",
 };
+
+async function counterPolicyFor(machineId: number): Promise<CounterPolicy> {
+  return (await oeeRepository.getCounterPolicy(machineId)) ?? legacyPolicy;
+}
 
 function classifyDataPoints(
   dataPoints: ShiftSample[],
   config: OeeConfigRow,
+  maxGapSeconds: number,
   startDate: Date,
   endDate: Date,
 ) {
   const timeline = stateTimeline(
     dataPoints,
     {
-      maxGapSeconds: counterPolicy.maxGapSeconds,
+      maxGapSeconds,
       signals: {},
       states: {
         running: asNumberArray(config.runningModeValues),
@@ -183,6 +194,7 @@ export const oeeCalculationService = {
     const { runningMs, plannedStopMs, totalMs, unknownMs } = classifyDataPoints(
       dataPoints,
       config,
+      (await counterPolicyFor(machineId)).maxGapSeconds,
       startDate,
       endDate,
     );
@@ -213,19 +225,14 @@ export const oeeCalculationService = {
 
     // Try to get count from OPC-UA data first
     if (config.productionCountNodeKey) {
+      const policy = await counterPolicyFor(machineId);
       const countData = await oeeRepository.getNodeData(
         config.productionCountNodeKey,
         machineId,
         startDate,
         endDate,
       );
-      const measured = counterDeltas(
-        countData,
-        counterPolicy,
-        1,
-        startDate,
-        endDate,
-      );
+      const measured = counterDeltas(countData, policy, 1, startDate, endDate);
       totalCount = measured.count ?? 0;
       dataComplete = measured.complete;
     } else if (config.manualEntryEnabled) {
@@ -280,7 +287,8 @@ export const oeeCalculationService = {
 
     if (config.goodCountNodeKey && config.rejectCountNodeKey) {
       // Get counts from OPC-UA data
-      const [goodData, rejectData] = await Promise.all([
+      const [policy, goodData, rejectData] = await Promise.all([
+        counterPolicyFor(machineId),
         oeeRepository.getNodeData(
           config.goodCountNodeKey,
           machineId,
@@ -295,20 +303,8 @@ export const oeeCalculationService = {
         ),
       ]);
 
-      const good = counterDeltas(
-        goodData,
-        counterPolicy,
-        1,
-        startDate,
-        endDate,
-      );
-      const reject = counterDeltas(
-        rejectData,
-        counterPolicy,
-        1,
-        startDate,
-        endDate,
-      );
+      const good = counterDeltas(goodData, policy, 1, startDate, endDate);
+      const reject = counterDeltas(rejectData, policy, 1, startDate, endDate);
       goodCount = good.count ?? 0;
       rejectCount = reject.count ?? 0;
       dataComplete = good.complete && reject.complete;
