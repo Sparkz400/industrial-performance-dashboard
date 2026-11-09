@@ -1,4 +1,4 @@
-FROM postgres:16-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
+FROM postgres:16-alpine@sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e930ad126200f9d825139
 # Use Alpine's maintained privilege switcher instead of the bundled obsolete Go runtime.
 RUN apk upgrade --no-cache && apk add --no-cache su-exec \
     && grep -q 'exec gosu postgres' /usr/local/bin/docker-entrypoint.sh \
