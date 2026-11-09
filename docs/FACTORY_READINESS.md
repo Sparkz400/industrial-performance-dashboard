@@ -310,6 +310,20 @@ regression verifies that socket events survive shutdown and the fixture's
 session credential is excluded. These diagnostics are not a claimed fix or
 72-hour acceptance. A fresh clean-revision run must pass all existing gates.
 
+### Host kernel pool lead — 2026-11-09
+
+The 2026-11-01 NetLog contains one failure: a new loopback `TCP_CONNECT` to the
+application at 21:11:00 UTC returned Windows error 10055 (WSAENOBUFS). Host-wide
+TCP states stayed small for the whole run (about 250 `TimeWait`, 110 `Established`),
+which rules out ephemeral-port exhaustion. The run host, rechecked after 12 days of
+uptime, held 6.26 GB of nonpaged kernel pool and about 180,000 handles, far above a
+typical idle Windows host. Kernel pool pressure from a host driver is the leading
+hypothesis; it is not yet confirmed, and the failed runs did not record pool size.
+The harness now records host nonpaged/paged pool bytes and the total handle count
+at start and in every cycle (`hostKernel`, null when unavailable or off Windows).
+Before the next attempt, reboot the host, record its installed virtual adapters and
+filter drivers, and compare pool growth against the cycle receipts.
+
 ### Stable network during database outages — 2026-10-31
 
 Main run [41190892557](https://github.com/Sparkz400/performance_dashboard/actions/runs/41190892557)

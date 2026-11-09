@@ -1,7 +1,13 @@
 import { and, eq, gt, gte, lte, desc, asc } from "drizzle-orm";
 import db from "../database/db.js";
 import { getReadDb } from "../database/db.js";
-import { oeeConfig, oeeManualEntries, opcuaData } from "../database/schema.js";
+import {
+  machineProfiles,
+  oeeConfig,
+  oeeManualEntries,
+  opcuaData,
+} from "../database/schema.js";
+import type { ProductionProfile } from "@performance-dashboard/shared";
 
 export interface OeeConfigInput {
   runningModeValues: number[];
@@ -34,6 +40,20 @@ export const oeeRepository = {
       .where(eq(oeeConfig.machineId, machineId));
 
     return result[0] ?? null;
+  },
+
+  /** Gap and counter rules from the machine's latest production profile, if any. */
+  async getCounterPolicy(machineId: number) {
+    const [row] = await getReadDb()
+      .select({ profile: machineProfiles.profile })
+      .from(machineProfiles)
+      .where(eq(machineProfiles.machineId, machineId))
+      .orderBy(desc(machineProfiles.id))
+      .limit(1);
+    if (!row) return null;
+    const { maxGapSeconds, counterPolicy, counterModulus } =
+      row.profile as ProductionProfile;
+    return { maxGapSeconds, counterPolicy, counterModulus };
   },
 
   async saveConfig(machineId: number, input: OeeConfigInput) {

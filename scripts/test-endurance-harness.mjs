@@ -15,12 +15,30 @@ import {
   enduranceBrowserOptions,
   redactBrowserNetLog,
   fatalTransportFailure,
+  hostKernelResources,
 } from "./endurance-harness.mjs";
 
 for (const error of ["net::ERR_NO_BUFFER_SPACE", "net::ERR_NETWORK_CHANGED"])
   assert.match(fatalTransportFailure(error)?.message, /Browser transport failed/);
 for (const error of [undefined, "net::ERR_ABORTED", "net::ERR_CONNECTION_REFUSED"])
   assert.equal(fatalTransportFailure(error), null);
+
+if (process.platform === "win32") {
+  const kernel = hostKernelResources();
+  assert.ok(kernel && kernel.poolNonpagedBytes > 0 && kernel.handleCount > 0);
+  assert.equal(hostKernelResources(() => "1 x 3"), null);
+  assert.equal(
+    hostKernelResources(() => {
+      throw new Error("probe");
+    }),
+    null,
+  );
+  assert.deepEqual(hostKernelResources(() => "10 20 30\r\n"), {
+    poolNonpagedBytes: 10,
+    poolPagedBytes: 20,
+    handleCount: 30,
+  });
+} else assert.equal(hostKernelResources(), null);
 
 const receiptDirectory = await mkdtemp(join(tmpdir(), "pd-endurance-receipt-"));
 const receipt = join(receiptDirectory, "status.json");

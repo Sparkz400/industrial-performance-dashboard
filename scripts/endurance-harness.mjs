@@ -2,11 +2,50 @@ import assert from "node:assert/strict";
 import { join } from "node:path";
 import { readFile, writeFile, rename } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
+import { execFileSync } from "node:child_process";
 
 export function fatalTransportFailure(errorText) {
   return /ERR_NO_BUFFER_SPACE|ERR_NETWORK_CHANGED/.test(errorText ?? "")
     ? new Error(`Browser transport failed: ${errorText}`)
     : null;
+}
+
+/**
+ * Host kernel pool and handle totals. Windows reports ERR_NO_BUFFER_SPACE (WSAENOBUFS)
+ * when kernel buffers run short, which per-process socket counts cannot show.
+ * Other platforms and failed probes stay unknown (null).
+ */
+export function hostKernelResources(run = execFileSync) {
+  if (process.platform !== "win32") return null;
+  try {
+    const [nonpaged, paged, handles] = run(
+      join(
+        process.env.SystemRoot ?? "C:\\Windows",
+        "System32",
+        "WindowsPowerShell",
+        "v1.0",
+        "powershell.exe",
+      ),
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        '$m=Get-CimInstance Win32_PerfRawData_PerfOS_Memory;$p=Get-CimInstance Win32_PerfRawData_PerfProc_Process -Filter "Name=\'_Total\'";"$($m.PoolNonpagedBytes) $($m.PoolPagedBytes) $($p.HandleCount)"',
+      ],
+      { encoding: "utf8", timeout: 15000, windowsHide: true },
+    )
+      .trim()
+      .split(/\s+/)
+      .map(Number);
+    if (![nonpaged, paged, handles].every(Number.isFinite)) return null;
+    return {
+      poolNonpagedBytes: nonpaged,
+      poolPagedBytes: paged,
+      handleCount: handles,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function enduranceBrowserOptions(directory) {
@@ -104,7 +143,8 @@ export async function captureFailurePages(browser, directory) {
       });
     } catch (captureError) {
       snapshot.captureError = [snapshot.captureError, safeFailure(captureError)]
-        .filter(Boolean).join("\n");
+        .filter(Boolean)
+        .join("\n");
     }
     failurePages.push(snapshot);
   }
