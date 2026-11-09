@@ -20,7 +20,7 @@ COPY client/package.json client/package.json
 COPY server/package.json server/package.json
 RUN npm ci --omit=dev --workspace=server --workspace=shared --ignore-scripts
 
-FROM cgr.dev/chainguard/wolfi-base:latest@sha256:fd50bd0cdeb808cf4f45c9c9189e0cc7f7fcc27195d69abd6622c80527e7e021 AS production
+FROM cgr.dev/chainguard/wolfi-base:latest@sha256:24f549a7fcace88e69b9557941168c74645688ecc4acf7fb6d734a6b74e9019d AS production
 ARG SOURCE_REVISION=unversioned
 LABEL org.opencontainers.image.revision=$SOURCE_REVISION
 WORKDIR /app
