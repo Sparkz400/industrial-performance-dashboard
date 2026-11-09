@@ -14,7 +14,8 @@ const block = {
   unitId: 1,
   startAddress: 0,
   count: 2,
-  timeoutMs: 100,
+  // Generous so slow CI runners finish successful reads; only the timeout case shortens it.
+  timeoutMs: 5000,
   pollMs: 1000,
 };
 const config = {
@@ -135,8 +136,14 @@ describe("bounded read-only Modbus", () => {
         "timeout",
       ])
         await expect(
-          readRegisters({ ...block, port: address.port }),
-        ).rejects.toThrow();
+          readRegisters({
+            ...block,
+            port: address.port,
+            timeoutMs: mode === "timeout" ? 100 : block.timeoutMs,
+          }),
+        ).rejects.toThrow(
+          mode === "timeout" ? "timed out" : /^(?!.*timed out)/,
+        );
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }

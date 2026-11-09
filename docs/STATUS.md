@@ -518,7 +518,8 @@ simulator evidence do not establish physical-machine acceptance or release readi
 - Process crashes and unobserved machine events can leave uncertain intervals;
   reconnection notifications cannot reconstruct measurements never received.
 - Shift profiles explicitly choose reset-to-zero, reject-decrease or declared rollover.
-  Legacy OEE still assumes reset-to-zero. Calendars handle IANA timezones, holidays and
+  Legacy OEE follows the machine's latest profile and assumes reset-to-zero
+  only without one. Calendars handle IANA timezones, holidays and
   explicit DST ambiguity. Unsampled counter/run boundaries prevent verified reports;
   resets near rollover and multiple wraps still require source/sampling qualification.
 - The disk spool needs free space and a persistent volume. One collector holds the lease;

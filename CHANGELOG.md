@@ -8,6 +8,12 @@ never closes an open acceptance item.
 
 ## [Unreleased]
 
+- Legacy OEE uses the gap limit and counter policy (including rollover) of the
+  machine's latest production profile; machines without one keep 60 seconds and
+  reset-to-zero. Endurance receipts record host kernel pool and handle totals to
+  test the WSAENOBUFS lead behind FR01's transport failures. The server declares
+  its coverage dependency, and the Modbus and rate-limit tests no longer flake or
+  log store errors.
 - Fix data-path audit findings: unusual OPC UA values no longer stop collection, heartbeat
   rows use the server clock, overlapping machine connects cannot duplicate samples, alarms
   and SPC limits ignore Bad readings, the PDF report prints unknown metrics as N/A, energy

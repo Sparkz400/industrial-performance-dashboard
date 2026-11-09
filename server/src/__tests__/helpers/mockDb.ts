@@ -2,7 +2,14 @@ import { vi } from "vitest";
 
 vi.mock("../../middleware/postgresRateLimitStore.js", async () => {
   const { MemoryStore } = await import("express-rate-limit");
-  return { PostgresRateLimitStore: MemoryStore };
+  // MemoryStore's constructor takes validations, not the Postgres store's prefix.
+  return {
+    PostgresRateLimitStore: class extends MemoryStore {
+      constructor(_prefix: string) {
+        super();
+      }
+    },
+  };
 });
 
 /**

@@ -40,9 +40,6 @@ release candidate; physical pilot details and publisher key custody are not yet 
 
 External follow-through outside this checklist:
 
-- The latest OPC UA package still reproduces the notification-overflow defect;
-  [upstream issue #1849](https://github.com/node-opcua/node-opcua/issues/1849) has the
-  tested fix. The local hash-guarded patch stays until a patched official release.
 - Appointing a second maintainer and completing their independent handover rehearsal
   ([maintainer handbook](MAINTAINERS.md)).
 
@@ -68,6 +65,9 @@ Physical-machine qualification remains separate.
   The clean `1c380dc5` attempt stopped on 2026-11-01 after 54 cycles and 4.7223
   workload hours with the same transport error; it is no longer running
   ([receipt summary](docs/FACTORY_READINESS.md#latest-sustained-attempt--2026-11-01)).
+  The failing call was a loopback connect returning WSAENOBUFS; host kernel pool
+  pressure is the leading, unconfirmed lead and receipts now record pool size
+  ([lead](docs/FACTORY_READINESS.md#host-kernel-pool-lead--2026-11-09)).
   Remaining: a complete 72-hour receipt on a clean revision; no failed duration is
   reused ([transport investigation](docs/FACTORY_READINESS.md#browser-transport-investigation--2026-10-31)).
 - [x] **FR02 — Supervisor work:** scoped line/action access, attributable maintenance

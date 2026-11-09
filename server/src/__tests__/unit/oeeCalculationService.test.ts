@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("../../repositories/oeeRepository.js", () => ({
   oeeRepository: {
     getConfig: vi.fn(),
+    getCounterPolicy: vi.fn(),
     getOperationModeData: vi.fn(),
     getNodeData: vi.fn(),
     getManualEntries: vi.fn(),
@@ -186,5 +187,25 @@ describe("daily manual quantities", () => {
       "2026-01-01",
       "2026-01-01",
     );
+  });
+});
+
+it("uses the machine profile's gap and rollover rules instead of the legacy 60 seconds", async () => {
+  // Two-minute samples wrapping a 100-count register: legacy rules see gaps.
+  const points = Array.from({ length: 31 }, (_, i) =>
+    point(i * 2, (90 + i * 4) % 100),
+  );
+  vi.mocked(oeeRepository.getNodeData).mockResolvedValue(points);
+  expect(
+    (await service.calculatePerformance(1, start, end, 60)).dataComplete,
+  ).toBe(false);
+  vi.mocked(oeeRepository.getCounterPolicy).mockResolvedValue({
+    maxGapSeconds: 180,
+    counterPolicy: "rollover",
+    counterModulus: 100,
+  });
+  expect(await service.calculatePerformance(1, start, end, 60)).toMatchObject({
+    totalCount: 120,
+    dataComplete: true,
   });
 });
