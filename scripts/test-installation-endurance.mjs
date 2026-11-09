@@ -37,6 +37,7 @@ import {
   enduranceBrowserOptions,
   redactBrowserNetLog,
   fatalTransportFailure,
+  hostKernelResources,
 } from "./endurance-harness.mjs";
 
 // This harness owns every endpoint. It never loads the installation's .env.
@@ -114,6 +115,7 @@ const state = {
     cpu: cpus()[0]?.model,
     logicalCpus: cpus().length,
     hostMemoryBytes: totalmem(),
+    hostKernel: hostKernelResources(),
   },
   startedAt: new Date().toISOString(),
   pid: process.pid,
@@ -1037,6 +1039,7 @@ try {
       databaseStartedAt,
       databaseNetworkStable: true,
       harnessResidentBytes: process.memoryUsage().rss,
+      hostKernel: hostKernelResources(),
       queryP95Ms: sorted[Math.floor((sorted.length - 1) * 0.95)],
       querySamples: sorted.length,
       sessionRenewals: sessions.reduce(
