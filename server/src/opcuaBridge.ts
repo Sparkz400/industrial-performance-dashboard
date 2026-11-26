@@ -34,6 +34,8 @@ import {
   releaseCollectorLock,
 } from "./services/collectorLock.js";
 
+let pruneTimer: ReturnType<typeof setInterval> | undefined;
+
 interface Services {
   io: SocketServer;
   opcuaService: { broadcastNodeChange: (data: OpcuaNodeData) => void };
@@ -80,7 +82,17 @@ export function setupOpcuaBridge({
   });
 
   // Load alarm rules on startup
-  if (!config.RECOVERY_MODE) webhookService.start();
+  if (!config.RECOVERY_MODE) {
+    webhookService.start();
+    // Bookkeeping tables grow by a row per rule and sample; prune them hourly.
+    const prune = () =>
+      Promise.all([
+        alarmEvaluator.pruneReceipts(),
+        webhookService.pruneDelivered(),
+      ]).catch((error) => logger.error("Bookkeeping prune failed", error));
+    pruneTimer = setInterval(prune, 3_600_000);
+    pruneTimer.unref();
+  }
 
   let acquisitionStopped = false;
   opcuaEmitter.on("nodeChanged", async (received: OpcuaNodeData) => {
@@ -305,6 +317,7 @@ export function createShutdown(
       await stopConfiguredGateway();
       await healthIncidentService.stop();
       await opcuaQueueWorker.stop();
+      clearInterval(pruneTimer);
       await webhookService.stop();
       await edgeSync.stop();
       await releaseCollectorLock().catch((error) =>

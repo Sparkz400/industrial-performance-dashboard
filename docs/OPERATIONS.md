@@ -44,7 +44,7 @@ Do not commit, publish or attach these files to issues.
 The first start is an **isolated recovery preview**. Its browser is available on
 the chosen loopback port through a small proxy; the app and database remain on an
 internal network. Automatic connections, spool processing, schedules and webhook
-deliveries are paused. REST/tRPC changes are refused. Login/logout remain available
+deliveries are paused. REST changes are refused. Login/logout remain available
 so an administrator can inspect the restored data. The UI shows a recovery banner.
 
 After reviewing the configuration, access policy and intended machine endpoints:

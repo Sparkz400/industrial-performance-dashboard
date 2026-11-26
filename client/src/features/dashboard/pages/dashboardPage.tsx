@@ -1,6 +1,7 @@
 import { useT, translate as t } from '@/i18n';
 import { useAuthStore } from '@/stores/useAuthStore';
-import React, { useCallback, useRef, useMemo, useState } from 'react';
+import { useAnnotationStore } from '@/stores/useAnnotationStore';
+import React, { useCallback, useEffect, useRef, useMemo, useState } from 'react';
 import {
   CircularProgress,
   Box,
@@ -101,6 +102,10 @@ function DashboardPageInternal(): React.JSX.Element {
   const compact = useMediaQuery('(max-width:1099px)');
   const editable = useAuthStore((s) => s.user?.role === 'admin');
   const { state, dispatch } = useDashboardState();
+  const loadAnnotations = useAnnotationStore((s) => s.loadAnnotations);
+  useEffect(() => {
+    if (state.selectedDashboardId) void loadAnnotations(state.selectedDashboardId);
+  }, [state.selectedDashboardId, loadAnnotations]);
   const {
     widgets,
     layout,

@@ -53,6 +53,7 @@ jobs:
       - run: npx tsc --noEmit -p client/tsconfig.json
       - run: npm run lint
       - run: npm run format:check -w client
+      - run: npm run format:check -w server
       - run: npm run test:coverage
       - run: npx playwright install chromium
         if: runner.os == 'Windows'

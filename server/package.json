@@ -14,6 +14,8 @@
     "dev": "npm run build && npm start",
     "build": "tsc && node -e \"require('node:fs').cpSync('assets', 'dist/assets', {recursive: true})\" && node -e \"require('node:fs').copyFileSync('src/services/shiftCalculation.ts', 'dist/assets/shiftCalculation.ts')\"",
     "start": "node dist/app.js",
+    "lint": "eslint .",
+    "format:check": "prettier --check src app.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "simulate": "node dist/simulation/opcuaSimulationServer.js",
@@ -26,7 +28,6 @@
   },
   "dependencies": {
     "@opentelemetry/api": "^1.10.0",
-    "@opentelemetry/exporter-metrics-otlp-http": "^0.301.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.301.0",
     "@opentelemetry/instrumentation-express": "^0.73.0",
     "@opentelemetry/instrumentation-http": "^0.301.0",
@@ -36,8 +37,6 @@
     "@opentelemetry/sdk-node": "^0.301.0",
     "@opentelemetry/semantic-conventions": "^1.44.0",
     "@performance-dashboard/shared": "*",
-    "@trpc/server": "^11.25.0",
-    "async-retry": "^1.3.3",
     "bcrypt": "^6.0.0",
     "compression": "^1.8.0",
     "connect-pg-simple": "^10.0.0",
@@ -72,6 +71,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/bcrypt": "^6.0.0",
     "@types/compression": "^1.8.1",
     "@types/connect-pg-simple": "^7.0.3",
@@ -86,10 +86,15 @@
     "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^5.1.0",
     "drizzle-kit": "^0.31.9",
-    "nodemon": "^3.1.9",
+    "eslint": "^10.15.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-security": "^4.2.1",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.1",
     "supertest": "^7.3.1",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
+    "typescript-eslint": "^8.74.0",
     "vitest": "^5.0.5"
   }
 }

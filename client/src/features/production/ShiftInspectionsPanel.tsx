@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Alert, Box, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import { translate as t } from '@/i18n';
+import { formatPercent, translate as t } from '@/i18n';
 import { productionRequest } from './productionApi';
 
 interface Inspection {
@@ -31,6 +31,7 @@ interface Inspections {
       failed: number;
       reworked: number;
       unknown: number;
+      firstPassYield: number | null;
     }[];
     missing: { product: string; check: string }[];
   };
@@ -136,11 +137,18 @@ export default function ShiftInspectionsPanel({
           <Box component="table" aria-label={t('Inspection summary')} sx={tableSx}>
             <thead>
               <tr>
-                {['Product', 'Check', 'Inspected', 'Passed', 'Failed', 'Reworked', 'Unknown'].map(
-                  (h) => (
-                    <th key={h}>{t(h)}</th>
-                  ),
-                )}
+                {[
+                  'Product',
+                  'Check',
+                  'Inspected',
+                  'Passed',
+                  'Failed',
+                  'Reworked',
+                  'Unknown',
+                  'First-pass yield',
+                ].map((h) => (
+                  <th key={h}>{t(h)}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -153,6 +161,9 @@ export default function ShiftInspectionsPanel({
                   <td>{c.failed}</td>
                   <td>{c.reworked}</td>
                   <td>{c.unknown}</td>
+                  <td>
+                    {c.firstPassYield == null ? t('Unknown') : formatPercent(c.firstPassYield)}
+                  </td>
                 </tr>
               ))}
             </tbody>

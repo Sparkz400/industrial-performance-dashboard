@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { keepSameSubject } from '@/utils/keepSameSubject';
 import { API_ENDPOINTS } from '@/config/config';
 import { protectedFetch } from '@/utils/protectedFetch';
 import type {
@@ -48,7 +49,8 @@ export interface AvailableTag {
  */
 export function useTrendingData(params: TrendingDataParams) {
   return useQuery({
-    queryKey: ['trending', params],
+    queryKey: ['trending', params.machineId, params.nodeKeys, params.startDate, params.endDate],
+    placeholderData: keepSameSubject(['trending', params.machineId, params.nodeKeys]),
     queryFn: async (): Promise<TrendingSeries[]> => {
       const searchParams = new URLSearchParams({
         nodeKeys: params.nodeKeys.join(','),

@@ -66,12 +66,16 @@ export const dashboardRepository = {
         })
         .returning();
 
+      // A savepoint keeps a failed history row from aborting the dashboard save itself;
+      // catching the error alone would leave PostgreSQL's transaction aborted and COMMIT a rollback.
       try {
-        await tx.insert(dashboardHistory).values({
-          dashboardId: input.id,
-          action: "UPDATE",
-          userId: null,
-        });
+        await tx.transaction(async (savepoint: any) =>
+          savepoint.insert(dashboardHistory).values({
+            dashboardId: input.id,
+            action: "UPDATE",
+            userId: null,
+          }),
+        );
       } catch (error) {
         onHistoryError?.(error);
       }

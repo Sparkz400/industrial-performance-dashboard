@@ -1,0 +1,3 @@
+CREATE INDEX "idx_alarm_evaluation_receipts_processed" ON "alarm_evaluation_receipts" USING btree ("processed_at");--> statement-breakpoint
+CREATE INDEX "idx_webhook_deliveries_pending" ON "webhook_deliveries" USING btree ("next_attempt_at") WHERE delivered_at IS NULL AND dead_lettered_at IS NULL;--> statement-breakpoint
+CREATE INDEX "idx_webhook_deliveries_delivered" ON "webhook_deliveries" USING btree ("delivered_at");

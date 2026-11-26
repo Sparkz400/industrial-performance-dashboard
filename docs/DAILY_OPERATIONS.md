@@ -21,7 +21,7 @@ every listed machine. Keep that list consistent with its widgets. Other manageme
 and experimental modules are administrator-only. Separate companies still need
 separate installations: this is asset/site authorization, not tenant isolation.
 
-REST, individual tRPC calls, exports and socket subscriptions enforce the current
+REST calls, exports and socket subscriptions enforce the current
 account and asset scope. Grant changes invalidate existing non-administrator
 sessions, including streamed exports; socket revalidation also runs every second.
 The browser clears account caches and signs out after revocation. Recovery mode

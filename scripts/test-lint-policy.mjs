@@ -83,6 +83,11 @@ const cases = [
     "export const View = () => <div>can't</div>;",
   ],
   [
+    "write without CSRF token",
+    "no-restricted-syntax",
+    "export const save = () => fetch('/api/v1/x', { method: 'POST' });",
+  ],
+  [
     "conditional hook",
     "react-hooks/rules-of-hooks",
     "import { useState } from 'react'; export function View({enabled}) { if (enabled) useState(0); return null; }",

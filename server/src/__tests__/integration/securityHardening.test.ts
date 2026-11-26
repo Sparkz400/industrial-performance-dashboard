@@ -13,8 +13,7 @@ const mockDb = db as unknown as ReturnType<typeof createMockDbChain>;
 import config from "../../config/config.js";
 import { setupMiddleware } from "../../middleware/setupMiddleware.js";
 import { getAgentWithCsrf } from "../helpers/testApp.js";
-import { createContext } from "../../trpc/trpc.js";
-import { appRouter } from "../../trpc/index.js";
+import { getSessionUser } from "../../services/sessionAccess.js";
 import { newPasswordSchema } from "../../utils/password.js";
 import { getAuditActor } from "../../services/auditLogService.js";
 import {
@@ -88,21 +87,14 @@ describe("security boundaries", () => {
     expect(secure.headers["strict-transport-security"]).toBeTruthy();
   });
 
-  it("keeps the identity-provider session age in tRPC and rejects an expired session", async () => {
-    const ctx = createContext({
-      req: {
-        session: {
-          userId: 1,
-          userVersion: "fixture",
-          userRole: "admin",
-          oidcAuthTime: Date.now() - 25 * 3600_000,
-        },
-      },
-    } as never);
-    expect(ctx.session.oidcAuthTime).toBeTypeOf("number");
-    await expect(
-      appRouter.createCaller(ctx).dashboard.list(),
-    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  it("rejects an identity-provider session older than the configured age", async () => {
+    expect(
+      await getSessionUser({
+        userId: 1,
+        userVersion: "fixture",
+        oidcAuthTime: Date.now() - 25 * 3600_000,
+      }),
+    ).toBeNull();
   });
 
   it("bounds new passwords by UTF-8 bytes, including the seed password", () => {

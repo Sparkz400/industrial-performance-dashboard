@@ -40,6 +40,10 @@ export const machineRepository = {
     return db.select().from(machines).orderBy(machines.name);
   },
 
+  async listActiveMachines() {
+    return db.select().from(machines).where(eq(machines.isActive, true));
+  },
+
   async countMappingsByMachineId(machineId: number) {
     const [countRow] = await db
       .select({ count: sql<number>`count(*)::int` })

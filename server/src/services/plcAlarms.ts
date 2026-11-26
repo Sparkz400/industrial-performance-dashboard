@@ -1,11 +1,8 @@
+import { machineRepository } from "../repositories/machineRepository.js";
 import * as opcua from "node-opcua";
 import { eq } from "drizzle-orm";
 import db from "../database/db.js";
-import {
-  machines,
-  plcAlarmEvents,
-  plcAlarmSubscriptions,
-} from "../database/schema.js";
+import { plcAlarmEvents, plcAlarmSubscriptions } from "../database/schema.js";
 import { certificateManager } from "../opc-ua/opcuaClient.js";
 import { createMachineSession } from "./machineIdentity.js";
 import logger from "../utils/logger.js";
@@ -144,10 +141,7 @@ class PlcAlarmService {
   }
 
   private async start(machineId: number) {
-    const [machine] = await db
-      .select()
-      .from(machines)
-      .where(eq(machines.id, machineId));
+    const machine = await machineRepository.findMachineById(machineId);
     if (!machine) return;
     const status: PlcAlarmStatus = {
       state: "connecting",

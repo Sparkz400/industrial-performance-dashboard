@@ -226,14 +226,12 @@ router.post(
           username: users.username,
           role: users.role,
         });
-      await tx
-        .insert(machineGrants)
-        .values(
-          machineIds.map((machineId: number) => ({
-            userId: account.id,
-            machineId,
-          })),
-        );
+      await tx.insert(machineGrants).values(
+        machineIds.map((machineId: number) => ({
+          userId: account.id,
+          machineId,
+        })),
+      );
       return {
         ...account,
         token: await issueToken(tx, account.id, days, req.session.userId!),

@@ -43,6 +43,15 @@ export interface AlertFilters {
   limit?: number;
 }
 
+// Live evaluation looks up profiles for every sample (~1 per tag per second). Cache them per
+// signal; writes here clear the cache, and the TTL bounds staleness from other instances.
+const PROFILE_TTL_MS = 30_000;
+const activeProfiles = new Map<
+  string,
+  { at: number; rows: Promise<(typeof spcProfiles.$inferSelect)[]> }
+>();
+export const clearActiveProfileCache = () => activeProfiles.clear();
+
 export const spcRepository = {
   // ---- Profiles ----
 
@@ -51,6 +60,7 @@ export const spcRepository = {
       .insert(spcProfiles)
       .values(input satisfies NewSpcProfile)
       .returning();
+    clearActiveProfileCache();
     return created;
   },
 
@@ -63,6 +73,7 @@ export const spcRepository = {
       })
       .where(eq(spcProfiles.id, id))
       .returning();
+    clearActiveProfileCache();
     return result[0] ?? null;
   },
 
@@ -71,6 +82,7 @@ export const spcRepository = {
       .delete(spcProfiles)
       .where(eq(spcProfiles.id, id))
       .returning();
+    clearActiveProfileCache();
     return result[0] ?? null;
   },
 
@@ -94,7 +106,18 @@ export const spcRepository = {
       .orderBy(asc(spcProfiles.name));
   },
 
-  async listActiveProfilesByNodeKey(nodeKey: string, machineId?: number) {
+  listActiveProfilesByNodeKey(nodeKey: string, machineId?: number) {
+    const key = `${machineId ?? "legacy"}:${nodeKey}`;
+    const hit = activeProfiles.get(key);
+    if (hit && Date.now() - hit.at < PROFILE_TTL_MS) return hit.rows;
+    const rows = this.queryActiveProfiles(nodeKey, machineId);
+    activeProfiles.set(key, { at: Date.now(), rows });
+    // A failed lookup must not be served from the cache.
+    rows.catch(() => activeProfiles.delete(key));
+    return rows;
+  },
+
+  async queryActiveProfiles(nodeKey: string, machineId?: number) {
     const conditions = and(
       eq(spcProfiles.nodeKey, nodeKey),
       eq(spcProfiles.isActive, true),

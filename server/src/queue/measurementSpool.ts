@@ -114,13 +114,21 @@ export class MeasurementSpool {
   }
 
   enqueueBatch(items: OpcuaDataItem[]): void {
+    // Count and check disk space once per batch: count(*) scans the whole spool,
+    // so doing it per sample made writes slow exactly when an outage fills the spool.
+    this.assertRoom(items.length);
     this.transaction(() => {
-      for (const item of items) this.enqueue(item);
+      for (const item of items) this.insert(item);
     });
   }
 
   enqueue(data: OpcuaDataItem): void {
-    if (this.count() >= this.limits.maxEntries)
+    this.assertRoom(1);
+    this.insert(data);
+  }
+
+  private assertRoom(adding: number): void {
+    if (this.count() + adding > this.limits.maxEntries)
       throw new Error(
         "Measurement storage capacity reached; collection must stop",
       );
@@ -131,6 +139,9 @@ export class MeasurementSpool {
           "Measurement storage reserve reached; collection must stop",
         );
     }
+  }
+
+  private insert(data: OpcuaDataItem): void {
     if (!data.key || !Number.isFinite(new Date(data.timestamp).getTime())) {
       throw new Error("Invalid measurement key or timestamp");
     }

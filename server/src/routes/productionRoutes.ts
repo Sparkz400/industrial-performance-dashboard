@@ -7,6 +7,7 @@ import type {
   ProductionProfile,
   DowntimeReason,
   ShiftReport,
+  ProductRun,
 } from "@performance-dashboard/shared";
 import db from "../database/db.js";
 import {
@@ -14,6 +15,8 @@ import {
   machineProfiles,
   productionShifts,
   downtimeReasons,
+  downtimeReasonCodes,
+  productValues,
   opcuaData,
   operatorEntries,
   reportHistory,
@@ -33,6 +36,14 @@ import {
   getAuditActor,
 } from "../services/auditLogService.js";
 import { requireRole } from "../middleware/auth.js";
+import { applyReasonCode } from "../services/reasonCodes.js";
+import { machineReliability } from "../services/reliability.js";
+import { lossValue } from "../services/lossValue.js";
+import {
+  hourWindows,
+  plannedParts,
+  type PlanSegment,
+} from "../services/hourlyPlan.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import {
   commissioningService,
@@ -277,7 +288,8 @@ export async function report(
     job: shift.job as ShiftReport["job"],
     breaks: shift.breaks as TimeWindow[],
     evidence: shift.evidence as ShiftReport["evidence"],
-    reasons: reasons.map((reason) => ({
+    // The catalog link is metadata; evidence inputs keep their original shape and hashes.
+    reasons: reasons.map(({ codeId: _codeId, ...reason }) => ({
       ...reason,
       category: reason.category as DowntimeReason["category"],
       start: reason.start.toISOString(),
@@ -738,11 +750,20 @@ router.post(
       category: Joi.string()
         .valid("planned", "unplanned", "changeover")
         .required(),
-      reason: Joi.string().trim().min(1).max(500).required(),
+      // A listed reason (codeId) or free text; applyReasonCode enforces one of them.
+      reason: Joi.string().trim().allow("").max(500),
+      codeId: Joi.number().integer().positive().allow(null).default(null),
       supersedesId: Joi.number().integer().positive().allow(null).default(null),
     }),
   ),
   asyncHandler(async (req, res) => {
+    const [code] = req.body.codeId
+      ? await db
+          .select()
+          .from(downtimeReasonCodes)
+          .where(eq(downtimeReasonCodes.id, req.body.codeId))
+      : [];
+    req.body = applyReasonCode(req.body, code);
     const id = Number(req.params.id),
       { from, to } = window(req.body.start, req.body.end);
     const current = await report(id);
@@ -804,6 +825,200 @@ router.post(
       return row;
     });
     res.status(201).json(saved);
+  }),
+);
+router.get(
+  "/machines/:id/reliability",
+  validateParams(idSchema),
+  validateQuery(
+    Joi.object({
+      from: Joi.date().iso().required(),
+      to: Joi.date().iso().required(),
+    }),
+  ),
+  asyncHandler(async (req, res) => {
+    res.json(
+      await machineReliability(
+        Number(req.params.id),
+        new Date(String(req.query.from)),
+        new Date(String(req.query.to)),
+      ),
+    );
+  }),
+);
+// Product money values: plant-wide, append-only (the newest row per product applies).
+router.get(
+  "/product-values",
+  asyncHandler(async (_req, res) => {
+    res.json(
+      await db
+        .select()
+        .from(productValues)
+        .orderBy(asc(productValues.product), desc(productValues.id))
+        .limit(5000),
+    );
+  }),
+);
+router.post(
+  "/product-values",
+  requireRole("admin"),
+  validateBody(
+    Joi.object({
+      product: Joi.string().trim().min(1).max(160).required(),
+      currency: Joi.string().uppercase().length(3).required(),
+      unitValue: Joi.number().min(0).required(),
+      scrapCost: Joi.number().min(0).required(),
+      reference: Joi.string().trim().min(1).max(500).required(),
+    }),
+  ),
+  asyncHandler(async (req, res) => {
+    const [saved] = await db
+      .insert(productValues)
+      .values({ ...req.body, createdBy: req.session.userId })
+      .returning();
+    res.status(201).json(saved);
+  }),
+);
+// Stops and scrap in money, per product run (or the whole shift without runs).
+router.get(
+  "/shifts/:id/loss-value",
+  validateParams(idSchema),
+  asyncHandler(async (req, res) => {
+    const shift = await report(Number(req.params.id));
+    const parts = shift.runs?.length
+      ? shift.runs.map((run) => ({
+          report: run.report,
+          idealCycleMs: run.plan.idealCycleMs,
+        }))
+      : [{ report: shift, idealCycleMs: shift.profile.idealCycleMs }];
+    const names = [...new Set(parts.map((p) => p.report.job.product))];
+    const prices = names.length
+      ? await db
+          .select()
+          .from(productValues)
+          .where(inArray(productValues.product, names))
+          .orderBy(desc(productValues.id))
+      : [];
+    res.json(
+      parts.map((p) =>
+        lossValue(
+          p.report,
+          p.idealCycleMs,
+          prices.find((price) => price.product === p.report.job.product),
+        ),
+      ),
+    );
+  }),
+);
+// Hour-by-hour board: planned parts per hour beside the measured good parts, computed with
+// the same rules as the shift report. Hours not yet over have no actual value.
+router.get(
+  "/shifts/:id/hourly",
+  validateParams(idSchema),
+  asyncHandler(async (req, res) => {
+    const id = Number(req.params.id);
+    const [shift] = await db
+      .select()
+      .from(productionShifts)
+      .where(eq(productionShifts.id, id));
+    if (!shift) throw new NotFoundError("Shift");
+    const profile = shift.profile as ProductionProfile,
+      job = shift.job as ShiftReport["job"],
+      runs = shift.runs as ProductRun[],
+      breaks = shift.breaks as TimeWindow[];
+    const start = shift.start.toISOString(),
+      end = shift.end.toISOString();
+    const segments: PlanSegment[] = runs.length
+      ? runs
+      : [
+          {
+            start,
+            end,
+            target: job.target,
+            idealCycleMs: profile.idealCycleMs,
+          },
+        ];
+    let planned = 0,
+      actual: number | null = 0;
+    const hours = [];
+    for (const hour of hourWindows(start, end)) {
+      const plan = plannedParts(hour, segments, breaks);
+      planned += plan;
+      const over = Date.parse(hour.end) <= Date.now();
+      const measured = over
+        ? await report(id, { ...hour, job, idealCycleMs: profile.idealCycleMs })
+        : null;
+      const good = measured?.quantities.good ?? null;
+      // One unknown hour makes the running total unknown from there on.
+      actual = actual != null && good != null ? actual + good : null;
+      const [largest] = (measured?.losses ?? [])
+        .filter((l) => l.reason !== "Unknown data")
+        .sort((a, b) => b.seconds - a.seconds);
+      hours.push({
+        ...hour,
+        planned: plan,
+        good: over ? good : null,
+        cumulativePlanned: planned,
+        cumulativeGood: over ? actual : null,
+        unknownSeconds: measured?.seconds.unknown ?? null,
+        largestLoss: largest ?? null,
+      });
+    }
+    res.json({ shiftId: id, product: job.product, hours });
+  }),
+);
+// The reason catalog is plant-wide configuration: everyone reads it, administrators curate it.
+router.get(
+  "/reason-codes",
+  asyncHandler(async (_req, res) => {
+    res.json(
+      await db
+        .select()
+        .from(downtimeReasonCodes)
+        .orderBy(
+          asc(downtimeReasonCodes.category),
+          asc(downtimeReasonCodes.label),
+        ),
+    );
+  }),
+);
+router.post(
+  "/reason-codes",
+  requireRole("admin"),
+  validateBody(
+    Joi.object({
+      category: Joi.string()
+        .valid("planned", "unplanned", "changeover")
+        .required(),
+      label: Joi.string().trim().min(1).max(200).required(),
+    }),
+  ),
+  asyncHandler(async (req, res) => {
+    const [saved] = await db
+      .insert(downtimeReasonCodes)
+      .values(req.body)
+      .onConflictDoUpdate({
+        target: [downtimeReasonCodes.category, downtimeReasonCodes.label],
+        set: { active: true },
+      })
+      .returning();
+    res.status(201).json(saved);
+  }),
+);
+// Codes are retired, not renamed or deleted: recorded reasons keep the label they were given.
+router.patch(
+  "/reason-codes/:id",
+  requireRole("admin"),
+  validateParams(idSchema),
+  validateBody(Joi.object({ active: Joi.boolean().required() })),
+  asyncHandler(async (req, res) => {
+    const [saved] = await db
+      .update(downtimeReasonCodes)
+      .set({ active: req.body.active })
+      .where(eq(downtimeReasonCodes.id, Number(req.params.id)))
+      .returning();
+    if (!saved) throw new NotFoundError("Reason code");
+    res.json(saved);
   }),
 );
 router.post(

@@ -12,6 +12,7 @@ import {
 } from "../database/schema.js";
 import { pinnedFetch } from "../utils/pinnedFetch.js";
 import { ConflictError, ForbiddenError } from "../utils/errors.js";
+import { sessionEvents } from "./sessionAccess.js";
 
 // E02: authorization code flow with PKCE against one configured issuer.
 const LOGOUT_EVENT = "http://schemas.openid.net/event/backchannel-logout";
@@ -121,7 +122,7 @@ export async function signInAccount(claims: client.IDToken) {
   const plantIds = [...new Set(mappings.flatMap((m) => m.plantIds))];
   const issuer = claims.iss,
     subject = claims.sub;
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     let [user] = await tx
       .select()
       .from(users)
@@ -173,21 +174,32 @@ export async function signInAccount(claims: client.IDToken) {
           .where(eq(users.id, user.id))
           .returning();
     }
-    await tx
+    const removed = await tx
       .delete(plantMemberships)
-      .where(eq(plantMemberships.userId, user.id));
+      .where(eq(plantMemberships.userId, user.id))
+      .returning({ plantId: plantMemberships.plantId });
+    // A lost site must end the account's other sessions and live sockets, as a role change does.
+    const lostSite = removed.some((m) => !plantIds.includes(m.plantId));
+    if (lostSite)
+      [user] = await tx
+        .update(users)
+        .set({
+          updatedAt: sql`greatest(now(), ${users.updatedAt} + interval '1 millisecond')`,
+        })
+        .where(eq(users.id, user.id))
+        .returning();
     if (plantIds.length)
-      await tx
-        .insert(plantMemberships)
-        .values(
-          plantIds.map((plantId) => ({
-            userId: user.id,
-            plantId,
-            role: mapped,
-          })),
-        );
-    return { user, groups: mappings.map((m) => m.groupName) };
+      await tx.insert(plantMemberships).values(
+        plantIds.map((plantId) => ({
+          userId: user.id,
+          plantId,
+          role: mapped,
+        })),
+      );
+    return { user, groups: mappings.map((m) => m.groupName), lostSite };
   });
+  if (result.lostSite) sessionEvents.emit("userRevoked", result.user.id);
+  return { user: result.user, groups: result.groups };
 }
 
 /** OIDC Back-Channel Logout 1.0 §2.6 checks; returns the session or subject to end. */

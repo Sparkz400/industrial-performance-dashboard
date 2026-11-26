@@ -80,8 +80,8 @@ await dailyFixture(async ({ pool, call, users, actors, frontend, expect }) => {
   assert.equal(view.source, "manual inspection");
   assert.deepEqual(view.products, ["Bracket", "Housing"]);
   assert.deepEqual(view.summary.checks, [
-    { product: "Bracket", check: "Burr", inspected: 48, passed: 38, failed: 4, reworked: 6, unknown: 0 },
-    { product: "Housing", check: "Colour", inspected: 3, passed: 0, failed: 0, reworked: 0, unknown: 3 },
+    { product: "Bracket", check: "Burr", inspected: 48, passed: 38, failed: 4, reworked: 6, unknown: 0, firstPassYield: 38 / 48 },
+    { product: "Housing", check: "Colour", inspected: 3, passed: 0, failed: 0, reworked: 0, unknown: 3, firstPassYield: null },
   ]);
   assert.deepEqual(view.summary.missing, [{ product: "Bracket", check: "Length" }]);
   assert.equal(view.inspections.find((i) => i.id === passed.id).current, false, "The original stays readable");

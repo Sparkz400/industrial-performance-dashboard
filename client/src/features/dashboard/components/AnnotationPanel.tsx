@@ -4,6 +4,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import NoteIcon from '@mui/icons-material/StickyNote2';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import { useSnackbar } from 'notistack';
 import { useAnnotationStore } from '@/stores/useAnnotationStore';
 
 const COLORS = ['#ff9800', '#4caf50', '#2196f3', '#f44336', '#8A7925', '#00bcd4'];
@@ -23,9 +24,14 @@ const AnnotationPanel: React.FC<AnnotationPanelProps> = ({ widgetId }) => {
   const addAnnotation = useAnnotationStore((s) => s.addAnnotation);
   const removeAnnotation = useAnnotationStore((s) => s.removeAnnotation);
 
+  const { enqueueSnackbar } = useSnackbar();
+  const reportFailure = (saved: boolean) => {
+    if (!saved) enqueueSnackbar('The note could not be saved', { variant: 'error' });
+  };
+
   const handleAdd = () => {
     if (!newText.trim()) return;
-    addAnnotation(widgetId, newText.trim(), new Date(), selectedColor);
+    void addAnnotation(widgetId, newText.trim(), new Date(), selectedColor).then(reportFailure);
     setNewText('');
   };
 
@@ -154,7 +160,7 @@ const AnnotationPanel: React.FC<AnnotationPanelProps> = ({ widgetId }) => {
                   </Box>
                   <IconButton
                     size="small"
-                    onClick={() => removeAnnotation(ann.id)}
+                    onClick={() => void removeAnnotation(ann.id).then(reportFailure)}
                     sx={{ flexShrink: 0 }}
                   >
                     <DeleteIcon sx={{ fontSize: 14 }} />

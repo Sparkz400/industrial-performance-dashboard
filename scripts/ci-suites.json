@@ -18,6 +18,11 @@
         "env": {}
       },
       {
+        "script": "scripts/test-plant-insights.mjs",
+        "args": [],
+        "env": {}
+      },
+      {
         "script": "scripts/test-api-contract.mjs",
         "args": [],
         "env": {}

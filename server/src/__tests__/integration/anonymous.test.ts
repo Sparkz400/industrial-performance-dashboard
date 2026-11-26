@@ -35,12 +35,6 @@ describe("anonymous requests", () => {
     expect(reached).toEqual([]);
   }, 60_000);
 
-  it("cannot reach tRPC procedures", async () => {
-    const request = await getTestApp();
-    for (const path of ["dashboard.list", "alarm.list", "status.current"])
-      expect((await request.get(`/api/trpc/${path}`)).status).toBe(401);
-  });
-
   it("cannot send request bodies above the JSON limit", async () => {
     const request = await getTestApp();
     const res = await request

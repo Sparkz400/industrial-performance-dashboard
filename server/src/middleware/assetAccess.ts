@@ -155,7 +155,7 @@ export async function authorizeAssetRequest(
   if (
     canSupervise(scope.role) &&
     ((path === "/lines" && (read || method === "POST")) ||
-      (read && /^\/lines\/\d+\/report$/.test(path)) ||
+      (read && /^\/lines\/\d+\/(report|reliability)$/.test(path)) ||
       (read && /^\/maintenance-actions\/\d+\/revisions$/.test(path)) ||
       (/^\/maintenance-actions\/machines\/\d+(?:\/owners)?$/.test(path) &&
         (read || method === "POST")) ||
@@ -233,6 +233,8 @@ export async function authorizeAssetRequest(
       "/production/assets",
       "/production/shifts",
       "/production/operator/owners",
+      "/production/reason-codes",
+      "/production/product-values",
     ].includes(path)
   )
     return;
@@ -265,17 +267,21 @@ export async function authorizeAssetRequest(
     assertMachine(found[1]);
     return;
   }
+  if (read && (found = match(/^\/production\/machines\/(\d+)\/reliability$/))) {
+    assertMachine(found[1]);
+    return;
+  }
   if (read && (found = match(/^\/production\/replay\/(\d+)$/))) {
     assertMachine(found[1]);
     return;
   }
   if (
     (found = match(
-      /^\/production\/shifts\/(\d+)\/(report|evidence|reasons|reconcile)$/,
+      /^\/production\/shifts\/(\d+)\/(report|evidence|loss-value|hourly|reasons|reconcile)$/,
     ))
   ) {
     if (
-      found[2] === "report" || found[2] === "evidence"
+      ["report", "evidence", "loss-value", "hourly"].includes(found[2])
         ? !read
         : method !== "POST" ||
           !(found[2] === "reasons"
@@ -311,12 +317,7 @@ export async function authorizeAssetRequest(
     assertMachine(found[1]);
     return;
   }
-  if (
-    read &&
-    ["/alarms", "/alarms/rules", "/alerts/history", "/alerts/rules"].includes(
-      path,
-    )
-  ) {
+  if (read && ["/alarms", "/alerts/history", "/alerts/rules"].includes(path)) {
     if (query.machineId !== undefined) assertMachine(query.machineId);
     return;
   }

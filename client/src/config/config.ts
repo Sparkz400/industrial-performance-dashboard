@@ -99,8 +99,6 @@ export const API_ENDPOINTS = {
     base: `${API_BASE_URL}/alarms`,
     acknowledge: (id: number) => `${API_BASE_URL}/alarms/${id}/acknowledge`,
     clear: (id: number) => `${API_BASE_URL}/alarms/${id}/clear`,
-    rules: `${API_BASE_URL}/alarms/rules`,
-    ruleById: (id: number) => `${API_BASE_URL}/alarms/rules/${id}`,
   },
   annotations: `${API_BASE_URL}/annotations`,
   nodeData: `${API_BASE_URL}/node-data`,

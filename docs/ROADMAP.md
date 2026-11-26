@@ -163,7 +163,7 @@ Key contracts to establish before dependent features:
 - **Integration event:** stable event ID, schema version, authorized scope, retry
   state and receiver deduplication. Do not claim exactly-once network delivery.
 - **Permissions:** one company per deployment initially; site/asset scope must be
-  enforced by REST, tRPC, sockets, exports, shares and jobs before central hosting.
+  enforced by REST, sockets, exports, shares and jobs before central hosting.
 
 These are incremental contracts around existing modules, not a request to create
 all abstractions before shipping a vertical slice.

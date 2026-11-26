@@ -1,3 +1,4 @@
+import { machineRepository } from "../repositories/machineRepository.js";
 import { Router } from "express";
 import Joi from "joi";
 import { eq, inArray, sql } from "drizzle-orm";
@@ -167,7 +168,7 @@ router.put(
   ),
   asyncHandler(async (req, res) => {
     const id = Number(req.params.id);
-    if (!(await db.select().from(machines).where(eq(machines.id, id))).length)
+    if (!(await machineRepository.findMachineById(id)))
       throw new NotFoundError("Machine");
     await changeAccess(async (tx) => {
       if (req.body.plantId === null)

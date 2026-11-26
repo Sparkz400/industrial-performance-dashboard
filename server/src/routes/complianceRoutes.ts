@@ -1,3 +1,4 @@
+import { signatureRateLimit } from "../middleware/security.js";
 import { auditRequest } from "../services/auditLogService.js";
 import express, { type Request, type Response } from "express";
 import Joi from "joi";
@@ -73,6 +74,7 @@ router.get(
 // POST /verify-signature - Verify electronic signature
 router.post(
   "/verify-signature",
+  signatureRateLimit,
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.session?.userId;
     if (!userId) {
@@ -92,6 +94,7 @@ router.post(
       userId,
       password,
     );
+    res.locals.credentialRejected = !result.verified;
     res.json({ verified: result.verified });
   }),
 );

@@ -95,6 +95,15 @@ try {
     ).rows[0];
     assert.equal(afterCrash.delivered_at, null, "A crash must not acknowledge");
     assert.equal(afterCrash.attempts, 0);
+    // The crashed sender's claim hides the row from other senders until it expires.
+    assert.ok(
+      new Date(afterCrash.next_attempt_at) > new Date(),
+      "A claimed delivery waits for its claim to expire",
+    );
+    await pool.query(
+      "UPDATE webhook_deliveries SET next_attempt_at=now()-interval '1 second' WHERE id=$1",
+      [queued.id],
+    );
 
     const { webhookService, MAX_DELIVERY_ATTEMPTS } = await import(
       "../server/dist/src/services/webhookService.js"

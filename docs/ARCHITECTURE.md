@@ -9,7 +9,7 @@ flowchart LR
   Collector --> Spool[Storage thread: local SQLite measurement spool]
   Spool --> Database[(PostgreSQL history)]
   Collector --> Socket[Authenticated live updates]
-  Database --> API[Express REST and tRPC]
+  Database --> API[Express REST]
   API --> UI[React dashboard]
   Socket --> UI
 ```
@@ -85,7 +85,7 @@ rows commit together; receivers deduplicate delivery IDs. That outbox table carr
 schema version, retries with backoff and stops at a dead letter that administrators
 requeue ([integration contract](INTEGRATION_API.md)). Profiles and shift inputs
 are immutable snapshots; operator corrections append history. Authorization checks
-the current account at REST/tRPC boundaries and socket actions, with logout/expiry
+the current account at REST boundaries and socket actions, with logout/expiry
 disconnection. Unauthenticated access is limited to expiring, revocable links to
 selected trend widgets ([security boundaries](SECURITY_BOUNDARIES.md#selected-data-links-f08)).
 See [contracts and limits](PRODUCTION_WORKFLOW.md).
@@ -98,7 +98,7 @@ and user 1000 are unchanged. See [reporting contracts and migration](REPORTING.m
 ## Daily workflow boundaries
 
 An asynchronous request scope carries current machine/dashboard grants through REST
-and individual tRPC calls; socket rooms and streamed exports use the same account
+calls; socket rooms and streamed exports use the same account
 boundary. Background jobs retain explicit administrator scope. Additive migrations
 store calendar plans, product runs, immutable report snapshots, inspection history,
 energy meters/reconciliation and reviewed retention previews. Retention summarizes

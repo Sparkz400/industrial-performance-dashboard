@@ -58,6 +58,10 @@ export const MAX_DELIVERY_ATTEMPTS = 100;
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 let pending: Promise<void> | undefined;
+const DELIVERY_WORKERS = 4;
+// A claimed delivery is retried after this long if the sender dies mid-send (at-least-once;
+// receivers deduplicate on X-Webhook-Delivery-Id). Longer than the 10 s send timeout.
+const CLAIM_MS = 120_000;
 let stopped = true;
 
 export const webhookService = {
@@ -85,7 +89,16 @@ export const webhookService = {
     if (!stopped) return;
     stopped = false;
     const tick = () => {
-      pending = this.processDeliveries()
+      let busy = false;
+      // A few deliveries in parallel so one slow receiver cannot hold up an alarm storm.
+      pending = Promise.all(
+        Array.from({ length: DELIVERY_WORKERS }, () =>
+          this.processDeliveries(),
+        ),
+      )
+        .then((worked) => {
+          busy = worked.some(Boolean);
+        })
         .catch((error) => {
           logger.error(
             "Webhook delivery worker failed; pending events retained",
@@ -94,7 +107,8 @@ export const webhookService = {
         })
         .finally(() => {
           pending = undefined;
-          if (!stopped) timer = setTimeout(tick, 1000);
+          // Keep going while there is work; idle once the queue is empty.
+          if (!stopped) timer = setTimeout(tick, busy ? 0 : 1000);
         });
     };
     tick();
@@ -106,9 +120,11 @@ export const webhookService = {
     await pending;
   },
 
-  async processDeliveries(): Promise<void> {
-    // Lock one delivery at a time; multiple application instances cannot send it concurrently.
-    await db.transaction(async (tx) => {
+  /** Sends at most one due delivery; returns whether there was one to handle. */
+  async processDeliveries(): Promise<boolean> {
+    // Claim one delivery in a short transaction (other instances skip it), then send outside
+    // it: holding a transaction and a pooled connection through a 10 s HTTP call starved the pool.
+    const claimed = await db.transaction(async (tx) => {
       const [delivery] = await tx
         .select()
         .from(webhookDeliveries)
@@ -122,7 +138,7 @@ export const webhookService = {
         .orderBy(asc(webhookDeliveries.nextAttemptAt))
         .limit(1)
         .for("update", { skipLocked: true });
-      if (!delivery) return;
+      if (!delivery) return null;
       const event = delivery.event as {
         type?: string;
         payload?: { id?: number; machineId?: number };
@@ -157,7 +173,7 @@ export const webhookService = {
               ),
             })
             .where(eq(webhookDeliveries.id, delivery.id));
-          return;
+          return "deferred" as const;
         }
       }
       const [destination] = await tx
@@ -174,47 +190,69 @@ export const webhookService = {
           preserved.rows[0]?.destination_digest ===
             cmmsDestinationDigest(destination);
       }
-      const result = !(destination?.isActive && reviewedDestination)
-        ? {
-            success: false,
-            statusCode: 0,
-            message: destination?.isActive
-              ? "Destination changed after the handoff was reviewed"
-              : "Destination is inactive or deleted",
-          }
-        : destination.kind === "email"
-          ? await deliverEmail(
-              destination,
-              delivery.event as WebhookEvent,
-              delivery.id,
-            )
-          : await deliverWebhook(
-              destination,
-              {
-                id: delivery.id,
-                schemaVersion: delivery.schemaVersion,
-                ...(delivery.event as WebhookEvent),
-              },
-              delivery.id,
-            );
-      const attempts = delivery.attempts + 1;
       await tx
         .update(webhookDeliveries)
-        .set({
-          attempts,
-          lastStatus: result.statusCode,
-          lastError: result.success ? null : result.message.slice(0, 500),
-          deliveredAt: result.success ? new Date() : null,
-          deadLetteredAt:
-            !result.success && attempts >= MAX_DELIVERY_ATTEMPTS
-              ? new Date()
-              : null,
-          nextAttemptAt: new Date(
-            Date.now() + Math.min(900000, 1000 * 2 ** Math.min(attempts, 10)),
-          ),
-        })
+        .set({ nextAttemptAt: new Date(Date.now() + CLAIM_MS) })
         .where(eq(webhookDeliveries.id, delivery.id));
+      return { delivery, destination, reviewedDestination };
     });
+    if (!claimed) return false;
+    if (claimed === "deferred") return true;
+    const { delivery, destination, reviewedDestination } = claimed;
+    const result = !(destination?.isActive && reviewedDestination)
+      ? {
+          success: false,
+          statusCode: 0,
+          message: destination?.isActive
+            ? "Destination changed after the handoff was reviewed"
+            : "Destination is inactive or deleted",
+        }
+      : destination.kind === "email"
+        ? await deliverEmail(
+            destination,
+            delivery.event as WebhookEvent,
+            delivery.id,
+          )
+        : await deliverWebhook(
+            destination,
+            {
+              id: delivery.id,
+              schemaVersion: delivery.schemaVersion,
+              ...(delivery.event as WebhookEvent),
+            },
+            delivery.id,
+          );
+    const attempts = delivery.attempts + 1;
+    await db
+      .update(webhookDeliveries)
+      .set({
+        attempts,
+        lastStatus: result.statusCode,
+        lastError: result.success ? null : result.message.slice(0, 500),
+        deliveredAt: result.success ? new Date() : null,
+        deadLetteredAt:
+          !result.success && attempts >= MAX_DELIVERY_ATTEMPTS
+            ? new Date()
+            : null,
+        nextAttemptAt: new Date(
+          Date.now() + Math.min(900000, 1000 * 2 ** Math.min(attempts, 10)),
+        ),
+      })
+      .where(eq(webhookDeliveries.id, delivery.id));
+    return true;
+  },
+
+  /** Delivered rows are kept 30 days for inspection; dead letters stay until reviewed. */
+  async pruneDelivered(): Promise<number> {
+    let total = 0;
+    for (let round = 0; round < 100; round++) {
+      const result = await db.execute(
+        sql`DELETE FROM webhook_deliveries WHERE id IN (SELECT id FROM webhook_deliveries WHERE delivered_at < now() - interval '30 days' LIMIT 10000)`,
+      );
+      total += result.rowCount ?? 0;
+      if ((result.rowCount ?? 0) < 10000) break;
+    }
+    return total;
   },
 
   async listDeliveries() {
@@ -286,6 +324,7 @@ export const webhookService = {
   async createWebhook(input: {
     name: string;
     kind?: "webhook" | "email";
+    format?: "json" | "slack" | "teams";
     url?: string;
     recipients?: string[];
     minSeverity?: string | null;
@@ -294,6 +333,8 @@ export const webhookService = {
     createdBy?: number;
   }): Promise<WebhookRow> {
     const email = input.kind === "email";
+    const format = email ? "json" : (input.format ?? "json");
+    assertChatEvents(format, input.events);
     const url = email
       ? null
       : (await assertSafeOutboundUrl(input.url!, "Webhook URL")).toString();
@@ -305,6 +346,7 @@ export const webhookService = {
         .values({
           name: input.name,
           kind: email ? "email" : "webhook",
+          format,
           url,
           recipients: email ? (input.recipients ?? []) : [],
           minSeverity: input.minSeverity ?? null,
@@ -337,10 +379,15 @@ export const webhookService = {
       machineIds?: number[];
       events?: string[];
       isActive?: boolean;
+      format?: "json" | "slack" | "teams";
     },
   ): Promise<WebhookRow> {
     const [existing] = await db
-      .select({ kind: webhooks.kind })
+      .select({
+        kind: webhooks.kind,
+        format: webhooks.format,
+        events: webhooks.events,
+      })
       .from(webhooks)
       .where(eq(webhooks.id, id));
     if (!existing) throw new NotFoundError("Webhook");
@@ -350,6 +397,10 @@ export const webhookService = {
           input.events?.some((e) => !e.startsWith("alarm."))
         : input.recipients !== undefined
     )
+      throw new ValidationError(
+        "Email destinations take recipients and alarm events; webhooks take a URL",
+      );
+    if (existing.kind === "email" && input.format !== undefined)
       throw new ValidationError(
         "Email destinations take recipients and alarm events; webhooks take a URL",
       );
@@ -365,6 +416,11 @@ export const webhookService = {
     if (input.machineIds !== undefined) updates.machineIds = input.machineIds;
     if (input.events !== undefined) updates.events = input.events;
     if (input.isActive !== undefined) updates.isActive = input.isActive;
+    if (input.format !== undefined) updates.format = input.format;
+    assertChatEvents(
+      updates.format ?? existing.format,
+      (updates.events ?? existing.events) as string[],
+    );
 
     const [updated] = await db
       .update(webhooks)
@@ -440,12 +496,16 @@ export const webhookService = {
   },
 };
 
-/** Alarm mail through SMTP_*. The delivery ID is the Message-ID, so retries are one message. */
-async function deliverEmail(
-  destination: WebhookRow,
-  event: WebhookEvent,
-  deliveryId?: number,
-): Promise<{ success: boolean; statusCode: number; message: string }> {
+/** Chat messages carry alarms only; a handoff needs a receiver that verifies the signature. */
+function assertChatEvents(format: string, events: string[]) {
+  if (format !== "json" && events.some((e) => !e.startsWith("alarm.")))
+    throw new ValidationError(
+      "Slack and Teams destinations receive alarm events only",
+    );
+}
+
+/** The human-readable alarm message shared by email and chat destinations. */
+export function eventMessage(event: WebhookEvent) {
   const payload = event.payload as Record<string, unknown>;
   const subject =
     event.type === "test"
@@ -468,6 +528,42 @@ async function deliverEmail(
     `Recorded: ${event.timestamp}`,
     "This message reports recorded data; check the machine before acting.",
   ].join("\n");
+  return { subject, text };
+}
+
+/**
+ * Body for a chat destination: Slack incoming webhooks take {text}; Microsoft Teams
+ * (Workflows "post to a channel when a webhook request is received") takes an Adaptive Card.
+ */
+export function chatPayload(event: WebhookEvent, format: "slack" | "teams") {
+  const { subject, text } = eventMessage(event);
+  if (format === "slack") return { text: `*${subject}*\n${text}` };
+  return {
+    type: "message",
+    attachments: [
+      {
+        contentType: "application/vnd.microsoft.card.adaptive",
+        content: {
+          $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
+          type: "AdaptiveCard",
+          version: "1.4",
+          body: [
+            { type: "TextBlock", text: subject, weight: "Bolder", wrap: true },
+            { type: "TextBlock", text, wrap: true },
+          ],
+        },
+      },
+    ],
+  };
+}
+
+/** Alarm mail through SMTP_*. The delivery ID is the Message-ID, so retries are one message. */
+async function deliverEmail(
+  destination: WebhookRow,
+  event: WebhookEvent,
+  deliveryId?: number,
+): Promise<{ success: boolean; statusCode: number; message: string }> {
+  const { subject, text } = eventMessage(event);
   try {
     const rejected = await reportEmailService.sendText(
       destination.recipients,
@@ -505,7 +601,12 @@ async function deliverWebhook(
   event: WebhookEvent,
   deliveryId?: number,
 ): Promise<{ success: boolean; statusCode: number; message: string }> {
-  const body = JSON.stringify(event);
+  // Chat destinations get a readable message; the signed event JSON stays the default.
+  const body = JSON.stringify(
+    webhook.format === "slack" || webhook.format === "teams"
+      ? chatPayload(event, webhook.format)
+      : event,
+  );
   try {
     const signature = signPayload(body, await signingSecret(webhook));
     const safeUrl = await assertSafeOutboundUrl(

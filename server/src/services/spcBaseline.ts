@@ -219,6 +219,11 @@ export async function approveBaseline(
       )
     ).rows[0];
     await c.query("COMMIT");
+    // New limits apply to live evaluation right away (lazy import keeps the statistics
+    // helpers in this module free of the ORM).
+    (
+      await import("../repositories/spcRepository.js")
+    ).clearActiveProfileCache();
     return saved;
   } catch (error) {
     await c.query("ROLLBACK");

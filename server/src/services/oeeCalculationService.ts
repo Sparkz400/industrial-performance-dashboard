@@ -4,6 +4,7 @@ import {
   stateTimeline,
   type ShiftSample,
 } from "./shiftCalculation.js";
+import { localInstant } from "./productionCalendar.js";
 import { NotFoundError, ValidationError } from "../utils/errors.js";
 import logger from "../utils/logger.js";
 import type { OeeConfigRow } from "../database/schema.js";
@@ -115,15 +116,60 @@ function classifyDataPoints(
   return result;
 }
 
-async function manualDays(machineId: number, start: Date, end: Date) {
-  const dayMs = 86_400_000;
-  // Daily declarations cannot be apportioned to an hour or a partial day.
-  if (+start % dayMs || +end % dayMs) return [];
-  return oeeRepository.getManualEntries(
-    machineId,
-    start.toISOString().slice(0, 10),
-    new Date(+end - 1).toISOString().slice(0, 10),
+const wallClock = (instant: Date, timezone: string) => {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(instant)
+      .map((part) => [part.type, part.value]),
   );
+  return {
+    date: `${p.year}-${p.month}-${p.day}`,
+    time: `${p.hour}:${p.minute}`,
+  };
+};
+
+/** Same plant wall-clock time `days` later, so day buckets follow local midnight across DST. */
+export function addLocalDays(instant: Date, days: number, timezone: string) {
+  const { date, time } = wallClock(instant, timezone);
+  const next = new Date(`${date}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + days);
+  const subMinute = instant.getTime() % 60_000;
+  try {
+    const local = localInstant(
+      next.toISOString().slice(0, 10),
+      time,
+      timezone,
+      "earlier",
+    );
+    return new Date(local.getTime() + subMinute);
+  } catch {
+    // The wall time falls in a DST gap on the target day: fall back to elapsed days.
+    return new Date(instant.getTime() + days * 86_400_000);
+  }
+}
+
+async function manualDays(
+  machineId: number,
+  start: Date,
+  end: Date,
+  timezone: string,
+) {
+  // Daily declarations cannot be apportioned to an hour or a partial plant day.
+  const first = wallClock(start, timezone),
+    last = wallClock(new Date(+end - 1), timezone);
+  const midnight = (instant: Date) =>
+    instant.getTime() % 60_000 === 0 &&
+    wallClock(instant, timezone).time === "00:00";
+  if (!midnight(start) || !midnight(end)) return [];
+  return oeeRepository.getManualEntries(machineId, first.date, last.date);
 }
 
 function validateRange(startDate: Date, endDate: Date) {
@@ -140,6 +186,7 @@ function generateBuckets(
   startDate: Date,
   endDate: Date,
   granularity: Granularity,
+  timezone: string,
 ): { start: Date; end: Date }[] {
   const buckets: { start: Date; end: Date }[] = [];
   let current = new Date(startDate);
@@ -153,12 +200,10 @@ function generateBuckets(
         bucketEnd = new Date(current.getTime() + 60 * 60 * 1000);
         break;
       case "day":
-        bucketEnd = new Date(current);
-        bucketEnd.setUTCDate(bucketEnd.getUTCDate() + 1);
+        bucketEnd = addLocalDays(current, 1, timezone);
         break;
       case "week":
-        bucketEnd = new Date(current);
-        bucketEnd.setUTCDate(bucketEnd.getUTCDate() + 7);
+        bucketEnd = addLocalDays(current, 7, timezone);
         break;
     }
 
@@ -236,7 +281,12 @@ export const oeeCalculationService = {
       totalCount = measured.count ?? 0;
       dataComplete = measured.complete;
     } else if (config.manualEntryEnabled) {
-      const entries = await manualDays(machineId, startDate, endDate);
+      const entries = await manualDays(
+        machineId,
+        startDate,
+        endDate,
+        await oeeRepository.getTimezone(machineId),
+      );
       totalCount = entries.reduce(
         (sum: number, e: { productionCount: number | null }) =>
           sum + (e.productionCount ?? 0),
@@ -309,7 +359,12 @@ export const oeeCalculationService = {
       rejectCount = reject.count ?? 0;
       dataComplete = good.complete && reject.complete;
     } else if (config.manualEntryEnabled) {
-      const entries = await manualDays(machineId, startDate, endDate);
+      const entries = await manualDays(
+        machineId,
+        startDate,
+        endDate,
+        await oeeRepository.getTimezone(machineId),
+      );
       goodCount = entries.reduce(
         (sum: number, e: { goodCount: number | null }) =>
           sum + (e.goodCount ?? 0),
@@ -386,7 +441,12 @@ export const oeeCalculationService = {
     // Validate config exists before iterating buckets
     ensureConfig(await oeeRepository.getConfig(machineId));
 
-    const buckets = generateBuckets(startDate, endDate, granularity);
+    const buckets = generateBuckets(
+      startDate,
+      endDate,
+      granularity,
+      await oeeRepository.getTimezone(machineId),
+    );
     const results: OeeHistoryEntry[] = [];
 
     for (const bucket of buckets) {

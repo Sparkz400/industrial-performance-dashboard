@@ -1,0 +1,1 @@
+ALTER TABLE "webhooks" ADD COLUMN "format" varchar(10) DEFAULT 'json' NOT NULL;

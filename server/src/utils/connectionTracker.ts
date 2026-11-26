@@ -30,7 +30,10 @@ class ConnectionTracker {
     this.connectedClients = new Map();
   }
 
-  addConnection(socketId: string, info: Omit<ClientConnectionInfo, "id" | "connectedAt"> = {}): number {
+  addConnection(
+    socketId: string,
+    info: Omit<ClientConnectionInfo, "id" | "connectedAt"> = {},
+  ): number {
     this.activeConnections++;
 
     const connectionInfo: ClientConnectionInfo = {

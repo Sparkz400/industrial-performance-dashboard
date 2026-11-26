@@ -15,8 +15,8 @@ export function currentInspections<T extends InspectionRecord>(rows: T[]) {
 }
 
 /**
- * Per product and check: parts inspected first time, passed, failed, unknown, and reworked
- * (failed parts a passing reinspection cleared). A reworked part counts once, never as both
+ * Per product and check: parts inspected first time, passed, failed, unknown, reworked
+ * (failed parts a passing reinspection cleared) and first-pass yield. A reworked part counts once, never as both
  * scrap and good output. Plan checks without any inspection are listed as missing.
  */
 export function summarizeInspections(
@@ -68,7 +68,15 @@ export function summarizeInspections(
     e.reworked += moved;
   }
   return {
-    checks: [...checks.values()],
+    // First-pass yield: parts that passed their first inspection, of parts with a known
+    // first result. Reworked parts count as failures here; unknown results are left out.
+    checks: [...checks.values()].map((e) => ({
+      ...e,
+      firstPassYield:
+        e.inspected - e.unknown > 0
+          ? e.passed / (e.inspected - e.unknown)
+          : null,
+    })),
     missing: plans.flatMap((p) =>
       p.checks
         .filter((check) => !checks.has(JSON.stringify([p.product, check])))

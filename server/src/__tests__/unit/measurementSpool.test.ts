@@ -223,4 +223,28 @@ describe("durable measurement spool", () => {
       spool.close();
     }
   });
+  it("checks capacity once per batch and rejects a batch that would overflow", () => {
+    const spool = new MeasurementSpool(":memory:", {
+      maxEntries: 3,
+      minFreeBytes: 0,
+    });
+    try {
+      const count = vi.spyOn(spool, "count");
+      const at = (second: number) => ({
+        ...sample,
+        eventId: `e${second}`,
+        timestamp: `2026-01-01T00:00:0${second}Z`,
+      });
+      spool.enqueueBatch([at(1), at(2)]);
+      expect(count).toHaveBeenCalledTimes(1);
+      expect(() => spool.enqueueBatch([at(3), at(4)])).toThrow(
+        "capacity reached",
+      );
+      expect(spool.count()).toBe(2);
+      spool.enqueue(at(3));
+      expect(spool.count()).toBe(3);
+    } finally {
+      spool.close();
+    }
+  });
 });

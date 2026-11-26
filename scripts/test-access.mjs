@@ -158,17 +158,12 @@ await dailyFixture(
       assert.equal(list.total, 1);
       assert.equal(list.data[0].machineId, a);
       // E01: alarm rules are scoped by site on every read path.
-      for (const path of ["/api/v1/alerts/rules", "/api/v1/alarms/rules"])
-        assert.deepEqual(
-          (await (await call(role, "GET", path)).json()).map((r) => r.name),
-          ["Site A rule"],
-          `${role} ${path}`,
-        );
       assert.deepEqual(
-        (
-          await (await call(role, "GET", "/api/trpc/alarm.listRules")).json()
-        ).result.data.map((r) => r.name),
+        (await (await call(role, "GET", "/api/v1/alerts/rules")).json()).map(
+          (r) => r.name,
+        ),
         ["Site A rule"],
+        `${role} /api/v1/alerts/rules`,
       );
       assert.ok(
         [403, 404].includes(
@@ -181,26 +176,6 @@ await dailyFixture(
             )
           ).status(),
         ),
-      );
-      const rpc = new URLSearchParams({
-        input: JSON.stringify({ nodeKey: "Count", machineId: b }),
-      });
-      assert.equal(
-        (await call(role, "GET", "/api/trpc/nodeData.history?" + rpc)).status(),
-        403,
-      );
-      assert.equal(
-        (
-          await call(
-            role,
-            "GET",
-            "/api/trpc/nodeData.history?" +
-              new URLSearchParams({
-                input: JSON.stringify({ nodeKey: "Count", machineId: a }),
-              }),
-          )
-        ).status(),
-        200,
       );
       assert.equal(
         (await call(role, "GET", `/api/v1/oee/${a}/manual-entries`)).status(),
@@ -449,7 +424,7 @@ await dailyFixture(
       page.getByRole("tab", { name: "Visible A", exact: true }),
     ).toBeVisible();
     console.log(
-      "PASS: roles, two-site REST/tRPC/export/live isolation, default-deny modules, scoped totals, immediate revocation and browser permission editing",
+      "PASS: roles, two-site REST/export/live isolation, default-deny modules, scoped totals, immediate revocation and browser permission editing",
     );
   },
 );

@@ -1,19 +1,16 @@
 import React from 'react';
 import { Avatar, Box, Chip, Typography, alpha } from '@mui/material';
 import type { SvgIconProps } from '@mui/material';
-import * as MuiIcons from '@mui/icons-material';
+import WidgetsIcon from '@mui/icons-material/Widgets';
+import { WIDGET_ICONS } from '../registry/widgetIcons';
 import { CATEGORY_COLORS, type CategoryColor } from '../registry/WidgetRegistry';
 import type { WidgetMeta } from '@/types';
 import { motion } from 'framer-motion';
 
 type WidgetGridItem = WidgetMeta & { type: string };
 
-const resolveIcon = (iconName: string | undefined): React.ComponentType<SvgIconProps> => {
-  if (!iconName) return MuiIcons.Widgets;
-  const icons = MuiIcons as Record<string, React.ComponentType<SvgIconProps>>;
-  // eslint-disable-next-line security/detect-object-injection -- iconName is a known MUI icon name from widget config
-  return icons[iconName] || MuiIcons.Widgets;
-};
+const resolveIcon = (iconName: string | undefined): React.ComponentType<SvgIconProps> =>
+  (iconName && WIDGET_ICONS.get(iconName)) || WidgetsIcon;
 
 const getCategoryColor = (category: string | undefined): CategoryColor => {
   const key = category || '';

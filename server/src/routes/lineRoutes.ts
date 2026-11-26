@@ -12,9 +12,11 @@ import {
 import { ValidationError, NotFoundError } from "../utils/errors.js";
 import {
   analyzeLine,
+  hasCycle,
   type LineConfig,
   type LineSample,
 } from "../services/lineAnalysis.js";
+import { machineReliability } from "../services/reliability.js";
 const router = Router();
 router.use(requireRole("admin", "supervisor"));
 const id = Joi.object({ id: Joi.number().integer().positive().required() });
@@ -75,6 +77,14 @@ router.post(
           }),
         )
         .max(60)
+        // The same buffer twice is a mistake (one link may still carry several buffers).
+        .unique(
+          (a, b) =>
+            a.from === b.from &&
+            a.to === b.to &&
+            a.machineId === b.machineId &&
+            a.nodeKey === b.nodeKey,
+        )
         .required(),
     }),
   ),
@@ -97,12 +107,7 @@ router.post(
       throw new ValidationError(
         "Buffers must link distinct machines in this line",
       );
-    const walk = (id: number, seen: Set<number>): boolean =>
-      seen.has(id) ||
-      config.buffers
-        .filter((b) => b.from === id)
-        .some((b) => walk(b.to, new Set([...seen, id])));
-    if (ids.some((i) => walk(i, new Set())))
+    if (hasCycle(ids, config.buffers))
       throw new ValidationError("Line relationships must not contain cycles");
     if (
       (
@@ -122,6 +127,50 @@ router.post(
           )
         ).rows[0],
       );
+  }),
+);
+// Line reliability: each machine's MTBF/MTTR, and the line's as total running time and
+// total fault time over all observed failures.
+router.get(
+  "/:id/reliability",
+  validateParams(id),
+  validateQuery(
+    Joi.object({
+      from: Joi.date().iso().required(),
+      to: Joi.date().iso().required(),
+    }),
+  ),
+  asyncHandler(async (req, res) => {
+    const line = (
+      await manager.pool.query("SELECT * FROM production_lines WHERE id=$1", [
+        Number(req.params.id),
+      ])
+    ).rows[0];
+    if (!line) throw new NotFoundError("Line");
+    const config = line.config as LineConfig;
+    config.machines.forEach((m) => assertMachine(m.machineId));
+    const from = new Date(String(req.query.from)),
+      to = new Date(String(req.query.to));
+    const machines: (Awaited<ReturnType<typeof machineReliability>> & {
+      machineId: number;
+    })[] = [];
+    for (const m of config.machines)
+      machines.push({
+        machineId: m.machineId,
+        ...(await machineReliability(m.machineId, from, to)),
+      });
+    const sum = (key: "failures" | "runningSeconds" | "faultSeconds") =>
+      machines.reduce((total, m) => total + m[key], 0);
+    const failures = sum("failures");
+    res.json({
+      machines,
+      line: {
+        failures,
+        mtbfSeconds: failures ? sum("runningSeconds") / failures : null,
+        mttrSeconds: failures ? sum("faultSeconds") / failures : null,
+        complete: machines.every((m) => m.complete),
+      },
+    });
   }),
 );
 router.get(

@@ -31,7 +31,7 @@ export interface BrowseNodesInput {
   parentNodeId?: string;
 }
 
-export interface MappingDraftInput extends NodeMappingUpsertInput {}
+export type MappingDraftInput = NodeMappingUpsertInput;
 
 function normalizeResourcePath(resourcePath: unknown): string {
   if (typeof resourcePath !== "string") {

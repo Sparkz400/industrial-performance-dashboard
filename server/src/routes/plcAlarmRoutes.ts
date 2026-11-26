@@ -1,12 +1,9 @@
+import { machineRepository } from "../repositories/machineRepository.js";
 import { Router } from "express";
 import Joi from "joi";
 import { desc, eq } from "drizzle-orm";
 import db from "../database/db.js";
-import {
-  machines,
-  plcAlarmEvents,
-  plcAlarmSubscriptions,
-} from "../database/schema.js";
+import { plcAlarmEvents, plcAlarmSubscriptions } from "../database/schema.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { requireRole } from "../middleware/auth.js";
 import { validateBody, validateParams } from "../middleware/validation.js";
@@ -60,11 +57,8 @@ router.put(
   ),
   asyncHandler(async (req, res) => {
     const machineId = Number(req.params.id);
-    const [machine] = await db
-      .select({ id: machines.id })
-      .from(machines)
-      .where(eq(machines.id, machineId));
-    if (!machine) throw new NotFoundError("Machine");
+    if (!(await machineRepository.findMachineById(machineId)))
+      throw new NotFoundError("Machine");
     const [saved] = await db
       .insert(plcAlarmSubscriptions)
       .values({

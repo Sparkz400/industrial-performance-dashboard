@@ -4,6 +4,8 @@ import { eq, and } from "drizzle-orm";
 import * as opcua from "node-opcua";
 import * as opcuaClient from "../opcuaClient.js";
 import logger from "../../utils/logger.js";
+import { machineRepository } from "../../repositories/machineRepository.js";
+import { holdsCollectorLock } from "../../services/collectorLock.js";
 import db from "../../database/db.js";
 import {
   machines,
@@ -47,15 +49,44 @@ class MultiMachineManager extends EventEmitter {
     return next;
   }
   private isInitialized = false;
+  // Machines that failed to connect keep retrying with growing delay, so a PLC that
+  // powers up after the server still gets collected without anyone clicking Connect.
+  private retries = new Map<
+    number,
+    { attempt: number; timer?: ReturnType<typeof setTimeout> }
+  >();
+
+  private scheduleRetry(machineId: number): void {
+    const retry = this.retries.get(machineId) ?? { attempt: 0 };
+    if (retry.timer) return;
+    const delay = Math.min(5_000 * 2 ** retry.attempt, 300_000);
+    retry.attempt += 1;
+    retry.timer = setTimeout(() => {
+      retry.timer = undefined;
+      if (!holdsCollectorLock()) return;
+      this.refreshMachineConnection(machineId).catch((e: any) =>
+        logger.error(
+          `[MultiMachine] Reconnect failed for machine ${machineId}: ${e.message}`,
+        ),
+      );
+    }, delay);
+    retry.timer.unref?.();
+    this.retries.set(machineId, retry);
+    logger.info(
+      `[MultiMachine] Retrying machine ${machineId} in ${delay / 1000} s.`,
+    );
+  }
+
+  private cancelRetry(machineId: number): void {
+    clearTimeout(this.retries.get(machineId)?.timer);
+    this.retries.delete(machineId);
+  }
 
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
     try {
-      const activeMachines = await db
-        .select()
-        .from(machines)
-        .where(eq(machines.isActive, true));
+      const activeMachines = await machineRepository.listActiveMachines();
 
       if (activeMachines.length === 0) {
         logger.info(
@@ -150,6 +181,7 @@ class MultiMachineManager extends EventEmitter {
           healthCheckInterval,
         });
 
+        this.cancelRetry(machine.id);
         await this.updateMachineStatus(machine.id, "connected");
         logger.info(
           `[MultiMachine] Machine ${machine.name} connected successfully.`,
@@ -163,9 +195,11 @@ class MultiMachineManager extends EventEmitter {
         logger.error(
           `[MultiMachine] Machine ${machine.name} connection returned null.`,
         );
+        this.scheduleRetry(machine.id);
       }
     } catch (err: any) {
       await this.updateMachineStatus(machine.id, "error");
+      this.scheduleRetry(machine.id);
       logger.error(
         `[MultiMachine] Machine ${machine.name} connection failed: ${err.message}`,
       );
@@ -174,6 +208,8 @@ class MultiMachineManager extends EventEmitter {
   }
 
   disconnectMachine(machineId: number): Promise<void> {
+    // An explicit disconnect (or deactivation) stops pending retries too.
+    this.cancelRetry(machineId);
     return this.serial(machineId, () => this.disconnectNow(machineId));
   }
 
@@ -209,6 +245,7 @@ class MultiMachineManager extends EventEmitter {
   }
 
   async disconnectAll(): Promise<void> {
+    for (const id of [...this.retries.keys()]) this.cancelRetry(id);
     const machineIds = Array.from(this.connections.keys());
     for (const id of machineIds) {
       await this.disconnectMachine(id);
@@ -254,12 +291,9 @@ class MultiMachineManager extends EventEmitter {
 
         // Attempt reconnect
         try {
-          const result = await db
-            .select()
-            .from(machines)
-            .where(eq(machines.id, machineId));
+          const current = await machineRepository.findMachineById(machineId);
 
-          if (result.length > 0 && result[0].isActive) {
+          if (current?.isActive) {
             // Re-read the machine when reconnecting: it may be deactivated meanwhile.
             setTimeout(() => {
               this.refreshMachineConnection(machineId).catch((e: any) => {
@@ -294,14 +328,9 @@ class MultiMachineManager extends EventEmitter {
         session = entry.connection.session;
       } else {
         // Create temp connection just for browsing
-        const result = await db
-          .select()
-          .from(machines)
-          .where(eq(machines.id, machineId));
+        const machine = await machineRepository.findMachineById(machineId);
+        if (!machine) throw new Error("Machine not found");
 
-        if (result.length === 0) throw new Error("Machine not found");
-
-        const machine = result[0];
         const clientOptions =
           await opcuaClient.certificateManager.getClientOptions(
             machine.securityMode ?? "None",
@@ -401,14 +430,9 @@ class MultiMachineManager extends EventEmitter {
   }
 
   async refreshMachineConnection(machineId: number): Promise<void> {
-    const result = await db
-      .select()
-      .from(machines)
-      .where(eq(machines.id, machineId));
+    const machine = await machineRepository.findMachineById(machineId);
+    if (!machine) throw new Error("Machine not found");
 
-    if (result.length === 0) throw new Error("Machine not found");
-
-    const machine = result[0];
     if (!machine.isActive) {
       await this.disconnectMachine(machineId);
       return;

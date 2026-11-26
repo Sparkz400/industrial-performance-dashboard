@@ -365,10 +365,6 @@ class OpcuaConnectionManager extends EventEmitter {
             ),
           ]);
           logger.debug("[Manager Shutdown] Session closed or timed out.");
-        } else if (session) {
-          logger.debug(
-            "[Manager Shutdown] Session already closed or not open.",
-          );
         } else {
           logger.debug("[Manager Shutdown] No session object found to close.");
         }

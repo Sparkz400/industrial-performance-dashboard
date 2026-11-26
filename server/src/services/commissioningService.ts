@@ -1,3 +1,4 @@
+import { machineRepository } from "../repositories/machineRepository.js";
 import {
   createMachineSession,
   machineAuthentication,
@@ -27,10 +28,7 @@ export async function withMachineSession<T>(
     machine: typeof machines.$inferSelect,
   ) => Promise<T>,
 ): Promise<T> {
-  const [machine] = await db
-    .select()
-    .from(machines)
-    .where(eq(machines.id, machineId));
+  const machine = await machineRepository.findMachineById(machineId);
   if (!machine) throw new NotFoundError("Machine");
   let session =
     multiMachineManager.getMachineConnection(machineId)?.connection?.session;

@@ -1,7 +1,7 @@
 # Integration API contract (v1)
 
 This is the supported, bounded surface for systems that read from the dashboard or
-receive its events. Other `/api/v1` routes and every tRPC procedure serve the
+receive its events. Other `/api/v1` routes serve the
 browser application; they can change without notice and are not part of this
 contract. Integrations must not depend on them.
 
@@ -87,15 +87,20 @@ outbox written in the same transaction as the alarm or handoff:
   HMAC-SHA256 over the exact body in `X-Webhook-Signature`. `id` (also
   `X-Webhook-Delivery-Id`) is stable across retries and requeues; **deduplicate
   on it**. `X-Webhook-Schema-Version` repeats `schemaVersion` (currently 1).
-- Delivery is at least once. A crash after sending and before recording the
-  result resends the identical body.
+- Delivery is at least once. A sender claims a delivery for 120 seconds before sending;
+  a crash after sending and before recording the result resends the identical body once
+  that claim expires.
 - Failures retry with exponential delay capped at 15 minutes. After 100 failed
   attempts (about a day) the delivery stops, an `Integration delivery stopped`
   incident opens and administrators can inspect
   (`GET /api/v1/webhooks/deliveries/{id}`) and requeue it
-  (`POST /api/v1/webhooks/deliveries/{id}/requeue`, audited). Nothing is deleted.
+  (`POST /api/v1/webhooks/deliveries/{id}/requeue`, audited). Dead letters are never
+  deleted; delivered rows are pruned after 30 days.
 - Destinations must pass the outbound URL checks; private addresses need
   `ALLOW_PRIVATE_OUTBOUND_URLS=true`.
+- Chat destinations (`format`: `slack` or `teams`) receive alarm events only, as a readable
+  message instead of the signed JSON: Slack incoming webhooks get `{ text }`; Microsoft
+  Teams Workflows webhooks get an Adaptive Card. Use `json` (the default) for systems.
 
 ## Version policy
 

@@ -8,6 +8,25 @@ never closes an open acceptance item.
 
 ## [Unreleased]
 
+- Plant insights, experimental (2026-11-26): a managed downtime-reason list operators pick
+  from (one spelling per reason; recorded labels never change), MTBF/MTTR per machine and
+  line from observed states, first-pass yield per inspection check, losses in money from
+  per-product unit value and scrap cost, an hour-by-hour plan-vs-actual board, and Slack or
+  Microsoft Teams alarm messages on webhook destinations. Unknown time stays unknown in all
+  of them. Migrations 0044–0046 are additive.
+- Fix whole-repo audit findings (2026-11-26). Collection: the queue drains a backlog
+  without waiting, the spool checks capacity once per batch, machines offline at startup
+  are retried with backoff, and SPC profiles are cached per signal. Correctness: dashboard
+  saves keep a failed history row from undoing the save, legacy OEE days follow plant
+  local midnight, alarm acknowledge and annotations send the CSRF token, Backup/Restore
+  uses the dashboard API, and widgets keep their last values while the time window moves.
+  Security: the line cycle check is linear, edge sync authenticates before parsing,
+  e-signatures have a per-account limit, and an OIDC sign-in that drops a site revokes
+  live sessions. Webhooks are claimed then sent outside the transaction; receipts and
+  delivered webhooks are pruned hourly (migration 0043 adds their indexes). The unused
+  tRPC endpoint and duplicate `/alarms/rules` API are removed; the server is linted in CI;
+  dead files, 12 unused dependencies and 128 unused shared types are gone; coverage
+  thresholds now track measured coverage.
 - Legacy OEE uses the gap limit and counter policy (including rollover) of the
   machine's latest production profile; machines without one keep 60 seconds and
   reset-to-zero. Endurance receipts record host kernel pool and handle totals to

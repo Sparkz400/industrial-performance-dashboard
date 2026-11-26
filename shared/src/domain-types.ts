@@ -265,6 +265,8 @@ export interface Webhook {
   id: number;
   name: string;
   kind?: "webhook" | "email";
+  /** Body of a webhook destination: signed JSON, or a Slack/Teams alarm message. */
+  format?: "json" | "slack" | "teams";
   url: string | null;
   recipients?: string[];
   minSeverity?: string | null;
