@@ -29,6 +29,9 @@ import OperatorWorkspace from './OperatorWorkspace';
 import ShiftInspectionsPanel from './ShiftInspectionsPanel';
 import MqttSourcesPanel from './MqttSourcesPanel';
 import IncidentReplayPanel from './IncidentReplayPanel';
+import { ReasonCatalogPanel, ReasonPicker } from './ReasonCatalog';
+import { ProductValuesPanel, ShiftLossValue } from './LossValue';
+import { HourlyBoard } from './HourlyBoard';
 import { Link, useSearchParams } from 'react-router-dom';
 
 interface Shift {
@@ -81,8 +84,9 @@ export default function ProductionPage() {
     end: string;
     category: DowntimeReason['category'];
     reason: string;
+    codeId: number | null;
     supersedesId: number | null;
-  }>({ start: '', end: '', category: 'unplanned', reason: '', supersedesId: null });
+  }>({ start: '', end: '', category: 'unplanned', reason: '', codeId: null, supersedesId: null });
   const [evidence, setEvidence] = useState({ ...emptyEvidence });
   const assets = useQuery({
     queryKey: ['production-assets'],
@@ -117,7 +121,14 @@ export default function ProductionPage() {
     refetchInterval: 5000,
   });
   useEffect(() => {
-    setReason({ start: '', end: '', category: 'unplanned', reason: '', supersedesId: null });
+    setReason({
+      start: '',
+      end: '',
+      category: 'unplanned',
+      reason: '',
+      codeId: null,
+      supersedesId: null,
+    });
     setEvidence({ ...emptyEvidence });
   }, [selected]);
   const run = async (action: () => Promise<void>) => {
@@ -145,6 +156,7 @@ export default function ProductionPage() {
       end,
       category: previous?.category ?? 'unplanned',
       reason: previous?.reason ?? '',
+      codeId: null,
       supersedesId: previous?.id ?? null,
     });
   return (
@@ -463,12 +475,14 @@ export default function ProductionPage() {
                   ))}
                 </Box>
               )}
+              <HourlyBoard shiftId={selected} timezone={data.timezone} />
               <Typography variant="h6">{t('Largest losses and data gaps')} </Typography>
               {data.losses.map((loss) => (
                 <Typography key={loss.reason}>
                   {loss.reason}: {(loss.seconds / 60).toFixed(2)} {t('min')}{' '}
                 </Typography>
               ))}
+              <ShiftLossValue shiftId={selected} />
               <Typography variant="h6">{t('Open handover items')}</Typography>
               {data.handover?.length ? (
                 <Box component="ul">
@@ -636,10 +650,10 @@ export default function ProductionPage() {
                   <MenuItem value="changeover">{t('Changeover')} </MenuItem>
                   <MenuItem value="planned">{t('Planned')} </MenuItem>
                 </TextField>
-                <TextField
-                  label={t('Reason / correction explanation')}
-                  value={reason.reason}
-                  onChange={(e) => setReason((r) => ({ ...r, reason: e.target.value }))}
+                <ReasonPicker
+                  category={reason.category}
+                  reason={reason.reason}
+                  onChange={(picked) => setReason((r) => ({ ...r, ...picked }))}
                 />
                 <Button
                   variant="contained"
@@ -648,7 +662,13 @@ export default function ProductionPage() {
                     void run(async () => {
                       await productionRequest(`/shifts/${selected}/reasons`, reason);
                       await report.refetch();
-                      setReason((r) => ({ ...r, start: '', reason: '', supersedesId: null }));
+                      setReason((r) => ({
+                        ...r,
+                        start: '',
+                        reason: '',
+                        codeId: null,
+                        supersedesId: null,
+                      }));
                     })
                   }
                 >
@@ -657,6 +677,8 @@ export default function ProductionPage() {
               </Stack>
             </Paper>
           )}
+          {admin && <ReasonCatalogPanel />}
+          {admin && <ProductValuesPanel />}
           {selected && data && (
             <ShiftInspectionsPanel
               key={selected}

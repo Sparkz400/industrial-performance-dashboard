@@ -25,6 +25,7 @@ const RecommendationsPanel = React.lazy(() => import('./RecommendationsPanel'));
 const CompletionForecastPanel = React.lazy(() => import('./CompletionForecastPanel'));
 const PlcAlarmsPanel = React.lazy(() => import('./PlcAlarmsPanel'));
 const SitesOverviewPanel = React.lazy(() => import('./SitesOverviewPanel'));
+const ReliabilityPanel = React.lazy(() => import('./ReliabilityPanel'));
 /**
  *
  */
@@ -110,6 +111,12 @@ export default function OperationsPage() {
       content: <PlcAlarmsPanel machineId={Number(machine)} />,
     },
     { name: 'Sites', de: 'Standorte', content: <SitesOverviewPanel /> },
+    // Appended last: remembered tabs are stored by index, so earlier panels keep their numbers.
+    {
+      name: 'Reliability',
+      de: 'Zuverlässigkeit',
+      content: <ReliabilityPanel machineId={Number(machine)} />,
+    },
   ];
   // Role changes can shorten the tab list since the tab was remembered.
   const tab =
@@ -123,6 +130,7 @@ export default function OperationsPage() {
       label: t('Maintenance'),
       names: [
         'Maintenance',
+        'Reliability',
         'Alarm actions',
         'Alarm usefulness',
         'Improvement actions',

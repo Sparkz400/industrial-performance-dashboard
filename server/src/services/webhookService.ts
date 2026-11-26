@@ -324,6 +324,7 @@ export const webhookService = {
   async createWebhook(input: {
     name: string;
     kind?: "webhook" | "email";
+    format?: "json" | "slack" | "teams";
     url?: string;
     recipients?: string[];
     minSeverity?: string | null;
@@ -332,6 +333,8 @@ export const webhookService = {
     createdBy?: number;
   }): Promise<WebhookRow> {
     const email = input.kind === "email";
+    const format = email ? "json" : (input.format ?? "json");
+    assertChatEvents(format, input.events);
     const url = email
       ? null
       : (await assertSafeOutboundUrl(input.url!, "Webhook URL")).toString();
@@ -343,6 +346,7 @@ export const webhookService = {
         .values({
           name: input.name,
           kind: email ? "email" : "webhook",
+          format,
           url,
           recipients: email ? (input.recipients ?? []) : [],
           minSeverity: input.minSeverity ?? null,
@@ -375,10 +379,15 @@ export const webhookService = {
       machineIds?: number[];
       events?: string[];
       isActive?: boolean;
+      format?: "json" | "slack" | "teams";
     },
   ): Promise<WebhookRow> {
     const [existing] = await db
-      .select({ kind: webhooks.kind })
+      .select({
+        kind: webhooks.kind,
+        format: webhooks.format,
+        events: webhooks.events,
+      })
       .from(webhooks)
       .where(eq(webhooks.id, id));
     if (!existing) throw new NotFoundError("Webhook");
@@ -388,6 +397,10 @@ export const webhookService = {
           input.events?.some((e) => !e.startsWith("alarm."))
         : input.recipients !== undefined
     )
+      throw new ValidationError(
+        "Email destinations take recipients and alarm events; webhooks take a URL",
+      );
+    if (existing.kind === "email" && input.format !== undefined)
       throw new ValidationError(
         "Email destinations take recipients and alarm events; webhooks take a URL",
       );
@@ -403,6 +416,11 @@ export const webhookService = {
     if (input.machineIds !== undefined) updates.machineIds = input.machineIds;
     if (input.events !== undefined) updates.events = input.events;
     if (input.isActive !== undefined) updates.isActive = input.isActive;
+    if (input.format !== undefined) updates.format = input.format;
+    assertChatEvents(
+      updates.format ?? existing.format,
+      (updates.events ?? existing.events) as string[],
+    );
 
     const [updated] = await db
       .update(webhooks)
@@ -478,12 +496,16 @@ export const webhookService = {
   },
 };
 
-/** Alarm mail through SMTP_*. The delivery ID is the Message-ID, so retries are one message. */
-async function deliverEmail(
-  destination: WebhookRow,
-  event: WebhookEvent,
-  deliveryId?: number,
-): Promise<{ success: boolean; statusCode: number; message: string }> {
+/** Chat messages carry alarms only; a handoff needs a receiver that verifies the signature. */
+function assertChatEvents(format: string, events: string[]) {
+  if (format !== "json" && events.some((e) => !e.startsWith("alarm.")))
+    throw new ValidationError(
+      "Slack and Teams destinations receive alarm events only",
+    );
+}
+
+/** The human-readable alarm message shared by email and chat destinations. */
+export function eventMessage(event: WebhookEvent) {
   const payload = event.payload as Record<string, unknown>;
   const subject =
     event.type === "test"
@@ -506,6 +528,42 @@ async function deliverEmail(
     `Recorded: ${event.timestamp}`,
     "This message reports recorded data; check the machine before acting.",
   ].join("\n");
+  return { subject, text };
+}
+
+/**
+ * Body for a chat destination: Slack incoming webhooks take {text}; Microsoft Teams
+ * (Workflows "post to a channel when a webhook request is received") takes an Adaptive Card.
+ */
+export function chatPayload(event: WebhookEvent, format: "slack" | "teams") {
+  const { subject, text } = eventMessage(event);
+  if (format === "slack") return { text: `*${subject}*\n${text}` };
+  return {
+    type: "message",
+    attachments: [
+      {
+        contentType: "application/vnd.microsoft.card.adaptive",
+        content: {
+          $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
+          type: "AdaptiveCard",
+          version: "1.4",
+          body: [
+            { type: "TextBlock", text: subject, weight: "Bolder", wrap: true },
+            { type: "TextBlock", text, wrap: true },
+          ],
+        },
+      },
+    ],
+  };
+}
+
+/** Alarm mail through SMTP_*. The delivery ID is the Message-ID, so retries are one message. */
+async function deliverEmail(
+  destination: WebhookRow,
+  event: WebhookEvent,
+  deliveryId?: number,
+): Promise<{ success: boolean; statusCode: number; message: string }> {
+  const { subject, text } = eventMessage(event);
   try {
     const rejected = await reportEmailService.sendText(
       destination.recipients,
@@ -543,7 +601,12 @@ async function deliverWebhook(
   event: WebhookEvent,
   deliveryId?: number,
 ): Promise<{ success: boolean; statusCode: number; message: string }> {
-  const body = JSON.stringify(event);
+  // Chat destinations get a readable message; the signed event JSON stays the default.
+  const body = JSON.stringify(
+    webhook.format === "slack" || webhook.format === "teams"
+      ? chatPayload(event, webhook.format)
+      : event,
+  );
   try {
     const signature = signPayload(body, await signingSecret(webhook));
     const safeUrl = await assertSafeOutboundUrl(

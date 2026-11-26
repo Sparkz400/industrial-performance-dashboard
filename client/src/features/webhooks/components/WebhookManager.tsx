@@ -46,7 +46,8 @@ const AVAILABLE_EVENTS = [
 
 const emptyForm = {
   name: '',
-  kind: 'webhook' as 'webhook' | 'email',
+  // Slack and Teams are webhook destinations with a chat message body.
+  kind: 'webhook' as 'webhook' | 'slack' | 'teams' | 'email',
   url: '',
   recipients: '',
   events: [] as string[],
@@ -126,8 +127,13 @@ export default function WebhookManager() {
         .filter((n) => Number.isInteger(n) && n > 0);
       const created = (await api.endpoints.createWebhook({
         name: form.name,
-        kind: form.kind,
-        ...(email ? { recipients } : { url: form.url }),
+        kind: email ? 'email' : 'webhook',
+        ...(email
+          ? { recipients }
+          : {
+              url: form.url,
+              format: form.kind === 'slack' || form.kind === 'teams' ? form.kind : 'json',
+            }),
         events: form.events,
         minSeverity: form.minSeverity || null,
         machineIds,
@@ -342,7 +348,7 @@ export default function WebhookManager() {
                       >
                         {webhook.kind === 'email'
                           ? `Email to ${(webhook.recipients ?? []).join(', ')}`
-                          : webhook.url}
+                          : `${webhook.format === 'slack' ? 'Slack · ' : webhook.format === 'teams' ? 'Teams · ' : ''}${webhook.url}`}
                         {webhook.minSeverity ? ` · ${webhook.minSeverity} and above` : ''}
                         {webhook.machineIds?.length
                           ? ` · machines ${webhook.machineIds.join(', ')}`
@@ -420,14 +426,26 @@ export default function WebhookManager() {
             onChange={(e) =>
               setForm((f) => ({
                 ...f,
-                kind: e.target.value as 'webhook' | 'email',
+                kind: e.target.value as typeof f.kind,
                 events: f.events.filter(
-                  (ev) => e.target.value !== 'email' || ev.startsWith('alarm.'),
+                  (ev) => e.target.value === 'webhook' || ev.startsWith('alarm.'),
                 ),
               }))
             }
           >
             <MenuItem value="webhook">Webhook (signed JSON)</MenuItem>
+            <MenuItem value="slack">
+              {t(
+                'Slack (alarm message to an incoming webhook)',
+                'Slack (Alarmnachricht an einen eingehenden Webhook)',
+              )}
+            </MenuItem>
+            <MenuItem value="teams">
+              {t(
+                'Microsoft Teams (alarm card to a Workflows webhook)',
+                'Microsoft Teams (Alarmkarte an einen Workflows-Webhook)',
+              )}
+            </MenuItem>
             <MenuItem value="email">Email (alarm events, via the configured mail server)</MenuItem>
           </TextField>
           {form.kind === 'email' ? (
@@ -490,7 +508,7 @@ export default function WebhookManager() {
               )}
             >
               {AVAILABLE_EVENTS.filter(
-                (event) => form.kind !== 'email' || event.value.startsWith('alarm.'),
+                (event) => form.kind === 'webhook' || event.value.startsWith('alarm.'),
               ).map((event) => (
                 <MenuItem key={event.value} value={event.value}>
                   {event.value === 'cmms.handoff'

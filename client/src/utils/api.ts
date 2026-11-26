@@ -251,6 +251,7 @@ export const api = {
     createWebhook: (data: {
       name: string;
       kind?: 'webhook' | 'email';
+      format?: 'json' | 'slack' | 'teams';
       url?: string;
       recipients?: string[];
       events: string[];

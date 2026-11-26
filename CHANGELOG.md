@@ -8,6 +8,12 @@ never closes an open acceptance item.
 
 ## [Unreleased]
 
+- Plant insights, experimental (2026-11-26): a managed downtime-reason list operators pick
+  from (one spelling per reason; recorded labels never change), MTBF/MTTR per machine and
+  line from observed states, first-pass yield per inspection check, losses in money from
+  per-product unit value and scrap cost, an hour-by-hour plan-vs-actual board, and Slack or
+  Microsoft Teams alarm messages on webhook destinations. Unknown time stays unknown in all
+  of them. Migrations 0044–0046 are additive.
 - Fix whole-repo audit findings (2026-11-26). Collection: the queue drains a backlog
   without waiting, the spool checks capacity once per batch, machines offline at startup
   are retried with backoff, and SPC profiles are cached per signal. Correctness: dashboard

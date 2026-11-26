@@ -392,6 +392,8 @@ export const webhooks = pgTable("webhooks", {
   name: varchar("name", { length: 255 }).notNull(),
   // "webhook" posts signed JSON to url; "email" sends alarm mail to recipients via SMTP_*.
   kind: varchar("kind", { length: 10 }).notNull().default("webhook"),
+  // Body of a "webhook" destination: signed event JSON, or a Slack/Teams chat message.
+  format: varchar("format", { length: 10 }).notNull().default("json"),
   url: varchar("url", { length: 2048 }),
   recipients: jsonb("recipients").$type<string[]>().default([]).notNull(),
   // Alarm routing: lowest severity delivered, and machines (empty means all).
@@ -1303,6 +1305,30 @@ export const operatorEntryEvents = pgTable(
   ],
 );
 
+/**
+ * Managed downtime reasons. Operators pick from this list so the loss ranking groups by
+ * one spelling; a recorded reason copies the label, so retiring a code never rewrites history.
+ */
+export const downtimeReasonCodes = pgTable(
+  "downtime_reason_codes",
+  {
+    id: serial("id").primaryKey(),
+    category: varchar("category", { length: 20 }).notNull(),
+    label: varchar("label", { length: 200 }).notNull(),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("downtime_reason_code_label").on(t.category, t.label),
+    check(
+      "downtime_reason_code_category",
+      sql`${t.category} IN ('planned','unplanned','changeover')`,
+    ),
+  ],
+);
+
 export const downtimeReasons = pgTable("downtime_reasons", {
   id: serial("id").primaryKey(),
   shiftId: integer("shift_id")
@@ -1312,6 +1338,7 @@ export const downtimeReasons = pgTable("downtime_reasons", {
   end: timestamp("end", { withTimezone: true }).notNull(),
   category: varchar("category", { length: 20 }).notNull(),
   reason: varchar("reason", { length: 500 }).notNull(),
+  codeId: integer("code_id").references(() => downtimeReasonCodes.id),
   supersedesId: integer("supersedes_id").unique(),
   actorId: integer("actor_id")
     .notNull()
@@ -1320,6 +1347,35 @@ export const downtimeReasons = pgTable("downtime_reasons", {
     .notNull()
     .defaultNow(),
 });
+
+/**
+ * Money value of a product, append-only: the newest row per product applies and older rows
+ * stay as history. unitValue prices a part not made during a stop; scrapCost a rejected part.
+ */
+export const productValues = pgTable(
+  "product_values",
+  {
+    id: serial("id").primaryKey(),
+    product: varchar("product", { length: 160 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull(),
+    unitValue: doublePrecision("unit_value").notNull(),
+    scrapCost: doublePrecision("scrap_cost").notNull(),
+    reference: text("reference").notNull(),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("product_values_product").on(t.product, t.id),
+    check(
+      "product_value_amounts",
+      sql`${t.unitValue} >= 0 AND ${t.scrapCost} >= 0`,
+    ),
+  ],
+);
 
 // ===== Feature 5: Scheduled Reports =====
 

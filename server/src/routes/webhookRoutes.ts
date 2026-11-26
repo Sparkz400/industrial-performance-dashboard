@@ -24,6 +24,12 @@ const recipients = Joi.array().items(Joi.string().email()).min(1).max(20);
 const createWebhookSchema = Joi.object({
   name: Joi.string().required().trim().min(1).max(255),
   kind: Joi.string().valid("webhook", "email").default("webhook"),
+  // Slack/Teams destinations receive a readable alarm message instead of signed JSON.
+  format: Joi.when("kind", {
+    is: "email",
+    then: Joi.forbidden(),
+    otherwise: Joi.string().valid("json", "slack", "teams").default("json"),
+  }),
   // Email destinations carry alarm events only; handoffs need a signed receiver.
   url: Joi.when("kind", {
     is: "email",
@@ -58,6 +64,7 @@ const createWebhookSchema = Joi.object({
 
 const updateWebhookSchema = Joi.object({
   name: Joi.string().trim().min(1).max(255),
+  format: Joi.string().valid("json", "slack", "teams"),
   url: Joi.string().uri().max(2048),
   recipients,
   events: Joi.array()

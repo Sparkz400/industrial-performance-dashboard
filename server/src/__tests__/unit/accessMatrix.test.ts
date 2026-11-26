@@ -122,6 +122,9 @@ describe("REST access matrix", () => {
       "GET /dashboards",
       "GET /production/assets",
       "GET /production/operator/owners",
+      // Plant-wide product values and reason catalog; no machine data.
+      "GET /production/product-values",
+      "GET /production/reason-codes",
       "GET /production/shifts",
       // Public metadata of registered widgets; no machine data.
       "GET /widget-runtime/registrations",
@@ -130,6 +133,7 @@ describe("REST access matrix", () => {
     ];
     const supervisorChecked = [
       "GET /lines",
+      "GET /lines/:id/reliability",
       "GET /lines/:id/report",
       "GET /maintenance-actions/:id/revisions",
       "GET /maintenance-actions/machines/:id",
@@ -176,6 +180,8 @@ describe("REST access matrix", () => {
       "GET /lines",
       "GET /production/assets",
       "GET /production/operator/owners",
+      "GET /production/product-values",
+      "GET /production/reason-codes",
       "GET /production/shifts",
       "GET /widget-runtime/registrations",
       "POST /lines",
