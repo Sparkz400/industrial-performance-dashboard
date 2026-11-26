@@ -17,7 +17,7 @@ import {
 import { safeFailure } from "./endurance-harness.mjs";
 
 const { manifest, baseline } = await loadCiSuites();
-assert.equal(validateCiSuites(manifest, baseline), 63);
+assert.equal(validateCiSuites(manifest, baseline), 64);
 const removed = structuredClone(manifest);
 removed.shards["1"].pop();
 assert.throws(
