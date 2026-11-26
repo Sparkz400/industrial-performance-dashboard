@@ -56,6 +56,12 @@ export default tseslint.config(
           selector: 'JSXText[raw=/[>"}\u0027]/]',
           message: 'Escape quotes, apostrophes and closing brackets in JSX text.',
         },
+        {
+          // Plain fetch sends no CSRF token, so the server refuses every write with 403.
+          selector:
+            "CallExpression[callee.name='fetch'] > ObjectExpression > Property[key.name='method'][value.value!='GET']",
+          message: 'Send writes with protectedFetch (or api.*), which adds the CSRF token.',
+        },
       ],
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
@@ -88,6 +94,11 @@ export default tseslint.config(
         { allowConstantExport: true, allowExportNames: ['useSystemStatus', 'useTheme', 'useWidgets', 'useLoading', 'useCsrf', 'StatusContext', 'ThemeContext', 'templates', 'useStatusStore', 'useThemeStore', 'modeMapping', 'queryClient'] },
       ],
     },
+  },
+  {
+    // The two modules that implement the CSRF-aware fetch itself.
+    files: ['src/utils/protectedFetch.ts', 'src/utils/csrf.ts'],
+    rules: { 'no-restricted-syntax': 'off' },
   },
   prettierConfig,
 );

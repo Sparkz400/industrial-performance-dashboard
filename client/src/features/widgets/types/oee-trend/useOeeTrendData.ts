@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { keepSameSubject } from '@/utils/keepSameSubject';
 import { API_ENDPOINTS } from '@/config/config';
 import { protectedFetch } from '@/utils/protectedFetch';
 import { useTimeRangeStore } from '@/stores/useTimeRangeStore';
@@ -43,6 +44,7 @@ export function useOeeTrendData(machineId: number | null, granularity: Granulari
       return rows.map((row) => ({ ...toOeeDisplay(row), timestamp: row.bucketStart }));
     },
     enabled: !!machineId,
+    placeholderData: keepSameSubject(['oee-trend', machineId, granularity]),
     staleTime: 30_000,
     refetchInterval: 60_000,
   });

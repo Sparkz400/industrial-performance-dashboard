@@ -10,6 +10,7 @@ import { escalateMaintenanceActions } from "./maintenanceActions.js";
 import { storageRunway } from "./storageRunway.js";
 import { runRetentionSchedules } from "./historyRetention.js";
 import { reportJobService } from "./reportJobService.js";
+import { collectorLockHeldElsewhere } from "./collectorLock.js";
 
 class HealthIncidentService {
   private timer?: ReturnType<typeof setInterval>;
@@ -47,31 +48,7 @@ class HealthIncidentService {
       });
     return this.pending;
   }
-  private async inspect(): Promise<void> {
-    await escalateMaintenanceActions();
-    await runRetentionSchedules();
-    await reportJobService.pruneFiles();
-    for (const disk of await storageRunway())
-      await alarmEvaluator.observeHealth(
-        `disk-runway-${disk.kind}`,
-        null,
-        disk.daysToReserve == null
-          ? null
-          : disk.daysToReserve < config.STORAGE_RUNWAY_ALERT_DAYS,
-        "Storage runway",
-        `${disk.kind}: ${disk.daysToReserve == null ? "unknown" : disk.daysToReserve.toFixed(1) + " days to reserve"} based on observed free-space decline`,
-      );
-    const [{ n: deadLetters }] = await db
-      .select({ n: count() })
-      .from(webhookDeliveries)
-      .where(isNotNull(webhookDeliveries.deadLetteredAt));
-    await alarmEvaluator.observeHealth(
-      "integration-dead-letter",
-      null,
-      deadLetters > 0,
-      "Integration delivery stopped",
-      `${deadLetters} webhook deliveries stopped retrying. Inspect and requeue them under Settings → Webhooks.`,
-    );
+  private async inspectCollector(): Promise<void> {
     let health: Awaited<ReturnType<typeof worker.getHealth>>;
     try {
       health = await worker.getHealth();
@@ -120,6 +97,36 @@ class HealthIncidentService {
       "Collector low disk space",
       "Free collector storage is below twice its configured safety reserve.",
     );
+  }
+
+  private async inspect(): Promise<void> {
+    await escalateMaintenanceActions();
+    await runRetentionSchedules();
+    await reportJobService.pruneFiles();
+    for (const disk of await storageRunway())
+      await alarmEvaluator.observeHealth(
+        `disk-runway-${disk.kind}`,
+        null,
+        disk.daysToReserve == null
+          ? null
+          : disk.daysToReserve < config.STORAGE_RUNWAY_ALERT_DAYS,
+        "Storage runway",
+        `${disk.kind}: ${disk.daysToReserve == null ? "unknown" : disk.daysToReserve.toFixed(1) + " days to reserve"} based on observed free-space decline`,
+      );
+    const [{ n: deadLetters }] = await db
+      .select({ n: count() })
+      .from(webhookDeliveries)
+      .where(isNotNull(webhookDeliveries.deadLetteredAt));
+    await alarmEvaluator.observeHealth(
+      "integration-dead-letter",
+      null,
+      deadLetters > 0,
+      "Integration delivery stopped",
+      `${deadLetters} webhook deliveries stopped retrying. Inspect and requeue them under Settings → Webhooks.`,
+    );
+    // When a collector runs in another instance, it owns the spool these incidents describe;
+    // this instance's empty spool would resolve them and make them flap.
+    if (!(await collectorLockHeldElsewhere())) await this.inspectCollector();
     let batch = await db
       .selectDistinct({ id: machineProfiles.machineId })
       .from(machineProfiles)

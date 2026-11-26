@@ -63,7 +63,7 @@ where marked *(local)*.
 
 | Boundary | Evidence | Levels |
 | --- | --- | --- |
-| Route × role × identifier matrix (REST and tRPC) | `accessMatrix.test.ts` (snapshot), `anonymous.test.ts`, `test-access.mjs`, `test-supervisor-workflows.mjs`; see [security boundaries](SECURITY_BOUNDARIES.md#access-matrix-f07) | U D B |
+| Route × role × identifier matrix (REST) | `accessMatrix.test.ts` (snapshot), `anonymous.test.ts`, `test-access.mjs`, `test-supervisor-workflows.mjs`; see [security boundaries](SECURITY_BOUNDARIES.md#access-matrix-f07) | U D B |
 | Live sockets | `test-access.mjs` (rooms, alarm events, revocation), `socketSessions.test.ts`, `accessMatrix.test.ts` (no global broadcasts) | U D |
 | Durable acquisition and replay | `test-recovery.mjs`, `measurementSpool.test.ts`, `opcuaQueueWorker.test.ts` (capacity, quarantine), `test-database-client-errors.mjs`, `test-spool-quarantine.mjs`, `test-collector-lock.mjs`, `test-collector-fencing.mjs` (fencing; two collector processes, takeover after kill -9, no duplicates) | U D S |
 | Integration API v1 and webhook contract | `test-api-contract.mjs` runs `scripts/examples/integration-client.mjs`; `test-integration-outbox.mjs`; see [integration contract](INTEGRATION_API.md) | D B |

@@ -35,7 +35,7 @@ running state. Failed or overdue display updates also replace states with unknow
 Administrators can create a dedicated `wallboard` account from the wallboard.
 It uses ordinary expiring login sessions and can read only its granted machine/site data,
 but cannot acknowledge alarms, classify stops, create entries or alter settings
-through REST, tRPC or alarm sockets. Use it on shared displays instead of an admin
+through REST or alarm sockets. Use it on shared displays instead of an admin
 account. Session expiry requires sign-in again; there are no permanent public links.
 
 ## Evidence and limits

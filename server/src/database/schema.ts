@@ -973,36 +973,52 @@ export const alarmEvaluationState = pgTable("alarm_evaluation_state", {
   state: jsonb("state").notNull(),
 });
 
-export const alarmEvaluationReceipts = pgTable("alarm_evaluation_receipts", {
-  key: varchar("key").primaryKey(),
-  ruleId: integer("rule_id")
-    .notNull()
-    .references(() => alertRules.id, { onDelete: "cascade" }),
-  processedAt: timestamp("processed_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const alarmEvaluationReceipts = pgTable(
+  "alarm_evaluation_receipts",
+  {
+    key: varchar("key").primaryKey(),
+    ruleId: integer("rule_id")
+      .notNull()
+      .references(() => alertRules.id, { onDelete: "cascade" }),
+    processedAt: timestamp("processed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("idx_alarm_evaluation_receipts_processed").on(table.processedAt),
+  ],
+);
 
-export const webhookDeliveries = pgTable("webhook_deliveries", {
-  id: serial("id").primaryKey(),
-  webhookId: integer("webhook_id")
-    .notNull()
-    .references(() => webhooks.id, { onDelete: "cascade" }),
-  event: jsonb("event").notNull(),
-  // Version of the payload shape when queued; bump the default when the shape changes.
-  schemaVersion: integer("schema_version").notNull().default(1),
-  attempts: integer("attempts").notNull().default(0),
-  nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  deliveredAt: timestamp("delivered_at", { withTimezone: true }),
-  deadLetteredAt: timestamp("dead_lettered_at", { withTimezone: true }),
-  lastStatus: integer("last_status"),
-  lastError: text("last_error"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const webhookDeliveries = pgTable(
+  "webhook_deliveries",
+  {
+    id: serial("id").primaryKey(),
+    webhookId: integer("webhook_id")
+      .notNull()
+      .references(() => webhooks.id, { onDelete: "cascade" }),
+    event: jsonb("event").notNull(),
+    // Version of the payload shape when queued; bump the default when the shape changes.
+    schemaVersion: integer("schema_version").notNull().default(1),
+    attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    deadLetteredAt: timestamp("dead_lettered_at", { withTimezone: true }),
+    lastStatus: integer("last_status"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // The delivery worker polls pending rows every second.
+    index("idx_webhook_deliveries_pending")
+      .on(table.nextAttemptAt)
+      .where(sql`delivered_at IS NULL AND dead_lettered_at IS NULL`),
+    index("idx_webhook_deliveries_delivered").on(table.deliveredAt),
+  ],
+);
 
 export const machineProfiles = pgTable("machine_profiles", {
   id: serial("id").primaryKey(),

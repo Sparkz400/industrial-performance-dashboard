@@ -111,7 +111,12 @@ export const validateQuery = (schema: Joi.ObjectSchema) => {
       return;
     }
     // req.query is a getter-only property in Express 5; shadow it with an own data property
-    Object.defineProperty(req, 'query', { value, writable: true, configurable: true, enumerable: true });
+    Object.defineProperty(req, "query", {
+      value,
+      writable: true,
+      configurable: true,
+      enumerable: true,
+    });
     next();
   };
 };

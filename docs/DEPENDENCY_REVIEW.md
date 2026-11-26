@@ -1,5 +1,13 @@
 # Dependency PR disposition — 2026-10-26
 
+## Server tRPC endpoint removed — 2026-11-26
+
+No first-party client called `/api/trpc`. Its dashboard save and delete skipped the audit and
+compliance records that the REST routes write, and its access check copied the REST allowlist
+by hand. The endpoint, `server/src/trpc/` and `@trpc/server` are removed; REST is the only API.
+The duplicate `/api/v1/alarms/rules` CRUD went with it; `/api/v1/alerts/rules` (used by the UI)
+remains the one rule API.
+
 ## Client tRPC packages removed — 2026-11-07
 
 No client code called the tRPC hooks; only the provider referenced them. `@trpc/client`

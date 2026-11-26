@@ -188,7 +188,7 @@ machine counts (`test-job-inspections.mjs`).
 
 ## Alarm and delivery contract
 
-One evaluator serves both alarm APIs and tRPC. It consumes the durable measurement
+One evaluator serves the alarm and alert APIs. It consumes the durable measurement
 spool after PostgreSQL insertion and before spool acknowledgment. A transaction
 records the incident transition, rule/machine cursor, unique event receipt and
 pending webhook deliveries. Retries and equal-timestamp replay do not duplicate
@@ -231,17 +231,17 @@ previously advertised webhook event families are not implemented. Existing
 
 ## Permissions and failure behavior
 
-REST and tRPC check the current active account and its session version. A role,
+REST checks the current active account and its session version. A role,
 account or password change invalidates earlier sessions. Sessions last at most
 two hours on each socket. Logout/account changes disconnect local sockets;
 store/account revocations performed elsewhere are checked at most every second.
 Incoming socket actions revalidate the session and ignore client-supplied actors.
 Browser socket origins must match the configured application origin; an untrusted
 origin cannot use a signed session cookie. State-changing HTTP requests require
-the matching session CSRF token, including tRPC mutations.
+the matching session CSRF token.
 Metrics, infrastructure settings and legacy scheduled-report distribution require
 an administrator. Direct machine grants and active site memberships scope read and
-write paths, including tRPC, sockets and exports. Dashboards require all their listed
+write paths, including sockets and exports. Dashboards require all their listed
 assets. See [daily operations](DAILY_OPERATIONS.md) for the role matrix and migration
 behavior. Use separate installations for companies; tenant isolation is unqualified.
 

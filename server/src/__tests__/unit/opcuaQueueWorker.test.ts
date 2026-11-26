@@ -164,3 +164,28 @@ it("estimates backlog recovery from the net change, never from writes alone", as
   // Empty backlog is cleared.
   expect(backlogTrend([at(0, 10), at(60, 0)]).backlogClearSeconds).toBe(0);
 });
+it("reports a full batch so the loop drains a backlog without waiting", async () => {
+  dir = mkdtempSync(join(tmpdir(), "dashboard-worker-"));
+  config.OPCUA_SPOOL_PATH = join(dir, "queue.sqlite");
+  const size = config.OPCUA_BATCH_SIZE;
+  config.OPCUA_BATCH_SIZE = 2;
+  mocks.insert.mockReturnValue({ values: mocks.values });
+  mocks.values.mockReturnValue({ onConflictDoNothing: mocks.commit });
+  mocks.commit.mockResolvedValue(undefined);
+  worker = new OpcuaQueueWorker();
+  for (let value = 0; value < 3; value++)
+    await worker.enqueue({
+      key: "Counter",
+      label: "Counter",
+      timestamp: new Date(Date.now() + value),
+      value,
+      statusCode: "Good",
+    });
+  try {
+    expect(await worker.processBatch()).toBe(2);
+    expect(await worker.processBatch()).toBe(1);
+    expect(await worker.processBatch()).toBe(0);
+  } finally {
+    config.OPCUA_BATCH_SIZE = size;
+  }
+});

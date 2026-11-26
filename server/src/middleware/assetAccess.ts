@@ -311,12 +311,7 @@ export async function authorizeAssetRequest(
     assertMachine(found[1]);
     return;
   }
-  if (
-    read &&
-    ["/alarms", "/alarms/rules", "/alerts/history", "/alerts/rules"].includes(
-      path,
-    )
-  ) {
+  if (read && ["/alarms", "/alerts/history", "/alerts/rules"].includes(path)) {
     if (query.machineId !== undefined) assertMachine(query.machineId);
     return;
   }

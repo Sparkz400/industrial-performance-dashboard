@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { keepSameSubject } from '@/utils/keepSameSubject';
 import { API_ENDPOINTS } from '@/config/config';
 import { protectedFetch } from '@/utils/protectedFetch';
 import { useTimeRangeStore } from '@/stores/useTimeRangeStore';
@@ -56,6 +57,7 @@ export function useOeeData(machineId: number | null) {
       return toOeeDisplay(await res.json());
     },
     enabled: !!machineId,
+    placeholderData: keepSameSubject(['oee', machineId]),
     staleTime: 30_000,
     refetchInterval: 60_000,
   });

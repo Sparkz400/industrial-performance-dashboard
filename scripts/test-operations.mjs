@@ -273,15 +273,6 @@ try {
       503,
     );
   }
-  assert.equal(
-    (
-      await page.request.post(
-        `http://localhost:${nextPort}/api/trpc/dashboard.save`,
-        { data: {}, headers: { "x-csrf-token": csrf } },
-      )
-    ).status(),
-    403,
-  );
   await page.screenshot({
     path: join(directory, "recovery-preview.png"),
     fullPage: true,

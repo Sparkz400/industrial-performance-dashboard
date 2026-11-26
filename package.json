@@ -24,7 +24,7 @@
     "test:server": "npm run build:shared && npm run test -w server",
     "test:e2e": "npx playwright test",
     "test:coverage": "npm run build:shared && concurrently \"npm run test:coverage -w client\" \"npm run test:coverage -w server\"",
-    "lint": "npm run lint -w client",
+    "lint": "npm run lint --workspaces --if-present",
     "prepare": "husky",
     "demo": "npm run build:server && node scripts/interactive-demo.mjs",
     "demo:reset": "node scripts/interactive-demo.mjs reset",
@@ -39,7 +39,8 @@
       "eslint --fix --config client/eslint.config.js"
     ],
     "server/src/**/*.{js,ts}": [
-      "prettier --write"
+      "prettier --write",
+      "eslint --fix --config server/eslint.config.js"
     ]
   },
   "devDependencies": {

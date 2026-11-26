@@ -13,7 +13,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { MachineLiveSummary } from '@performance-dashboard/shared';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -43,12 +43,16 @@ export default function Wallboard() {
   const ids = selected.length ? selected : (assets.data?.map((asset) => asset.id) ?? []);
   const pages = Math.max(1, Math.ceil(ids.length / 6));
   const visible = ids.slice((page % pages) * 6, ((page % pages) + 1) * 6);
-  const live = useQuery({
-    queryKey: ['wallboard', visible.join(',')],
+  const queryClient = useQueryClient();
+  const liveQuery = (machineIds: number[]) => ({
+    queryKey: ['wallboard', machineIds.join(',')],
     queryFn: () =>
       productionRequest<{ checkedAt: string; machines: MachineLiveSummary[] }>(
-        `/operator/live?ids=${visible.join(',')}`,
+        `/operator/live?ids=${machineIds.join(',')}`,
       ),
+  });
+  const live = useQuery({
+    ...liveQuery(visible),
     enabled: visible.length > 0,
     refetchInterval: 5000,
     refetchIntervalInBackground: true,
@@ -58,11 +62,22 @@ export default function Wallboard() {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
+  const idList = ids.join(',');
   useEffect(() => {
     if (!rotate || pages < 2) return;
-    const timer = setInterval(() => setPage((value) => (value + 1) % pages), 30000);
-    return () => clearInterval(timer);
-  }, [rotate, pages]);
+    // Load the next page before showing it, so rotation never flashes "unavailable".
+    const next = (page + 1) % pages;
+    const nextIds = idList
+      .split(',')
+      .map(Number)
+      .slice(next * 6, (next + 1) * 6);
+    const timer = setTimeout(() => {
+      void queryClient
+        .prefetchQuery({ ...liveQuery(nextIds), staleTime: 0 })
+        .finally(() => setPage(next));
+    }, 30000);
+    return () => clearTimeout(timer);
+  }, [rotate, pages, page, idList, queryClient]);
   const stale = !live.data || now - live.dataUpdatedAt > 15000 || !!live.error;
   return (
     <Box

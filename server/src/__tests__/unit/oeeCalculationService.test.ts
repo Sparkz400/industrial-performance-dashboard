@@ -6,11 +6,15 @@ vi.mock("../../repositories/oeeRepository.js", () => ({
     getOperationModeData: vi.fn(),
     getNodeData: vi.fn(),
     getManualEntries: vi.fn(),
+    getTimezone: vi.fn(),
   },
 }));
 vi.mock("../../utils/logger.js", () => ({ default: { debug: vi.fn() } }));
 import { oeeRepository } from "../../repositories/oeeRepository.js";
-import { oeeCalculationService as service } from "../../services/oeeCalculationService.js";
+import {
+  addLocalDays,
+  oeeCalculationService as service,
+} from "../../services/oeeCalculationService.js";
 const start = new Date("2026-01-01T08:00:00Z");
 const end = new Date("2026-01-01T09:00:00Z");
 const point = (minutes: number, value: number | null) => ({
@@ -20,6 +24,7 @@ const point = (minutes: number, value: number | null) => ({
 });
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(oeeRepository.getTimezone).mockResolvedValue("UTC");
   vi.mocked(oeeRepository.getConfig).mockResolvedValue({
     runningModeValues: [1],
     idleModeValues: [0],
@@ -207,5 +212,42 @@ it("uses the machine profile's gap and rollover rules instead of the legacy 60 s
   expect(await service.calculatePerformance(1, start, end, 60)).toMatchObject({
     totalCount: 120,
     dataComplete: true,
+  });
+});
+describe("plant-local days", () => {
+  it("keeps local midnight across daylight-saving changes", () => {
+    // Berlin spring change: 29 March 2026 has 23 hours, 25 October has 25.
+    const spring = new Date("2026-03-28T23:00:00Z");
+    expect(addLocalDays(spring, 1, "Europe/Berlin").toISOString()).toBe(
+      "2026-03-29T22:00:00.000Z",
+    );
+    const autumn = new Date("2026-10-24T22:00:00Z");
+    expect(addLocalDays(autumn, 1, "Europe/Berlin").toISOString()).toBe(
+      "2026-10-25T23:00:00.000Z",
+    );
+    expect(addLocalDays(start, 7, "UTC").toISOString()).toBe(
+      "2026-01-08T08:00:00.000Z",
+    );
+  });
+  it("reads manual daily entries for a range aligned to plant midnight", async () => {
+    vi.mocked(oeeRepository.getConfig).mockResolvedValue({
+      manualEntryEnabled: true,
+      idealCycleTimeMs: null,
+    } as any);
+    vi.mocked(oeeRepository.getTimezone).mockResolvedValue("Europe/Berlin");
+    vi.mocked(oeeRepository.getManualEntries).mockResolvedValue([
+      { goodCount: 90, rejectCount: 10 },
+    ] as any);
+    const result = await service.calculateQuality(
+      1,
+      new Date("2026-01-01T23:00:00Z"),
+      new Date("2026-01-02T23:00:00Z"),
+    );
+    expect(oeeRepository.getManualEntries).toHaveBeenCalledWith(
+      1,
+      "2026-01-02",
+      "2026-01-02",
+    );
+    expect(result).toMatchObject({ goodCount: 90, rejectCount: 10 });
   });
 });

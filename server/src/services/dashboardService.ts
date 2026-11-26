@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { dashboardRepository } from "../repositories/dashboardRepository.js";
 import { accessScope } from "./accessScope.js";
 import logger from "../utils/logger.js";
@@ -71,7 +72,8 @@ export const dashboardService = {
 
   async importDashboard(input: DashboardImportInput) {
     return dashboardRepository.create({
-      id: `dashboard-imported-${Date.now()}`,
+      // Several imports in the same millisecond must not collide on the primary key.
+      id: `dashboard-imported-${Date.now()}-${randomUUID().slice(0, 8)}`,
       name: input.name.trim(),
       widgets: toArray(input.widgets),
       layout: toArray(input.layout),

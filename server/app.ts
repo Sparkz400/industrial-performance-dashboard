@@ -53,8 +53,6 @@ import {
   startOpcuaServices,
   createShutdown,
 } from "./src/opcuaBridge.js";
-import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { appRouter, createContext } from "./src/trpc/index.js";
 import { reportSchedulerService } from "./src/services/reportSchedulerService.js";
 import { healthIncidentService } from "./src/services/healthIncidentService.js";
 
@@ -245,12 +243,6 @@ export function createApp() {
   app.use("/api/v1/edges", edgeAdminRoutes);
   app.use("/api/v1/forecasts", forecastRoutes);
   app.use("/api/v1/recommendations", recommendationRoutes);
-
-  // --- tRPC API ---
-  app.use(
-    "/api/trpc",
-    createExpressMiddleware({ router: appRouter, createContext }),
-  );
 
   const publicDir = path.resolve("public");
   if (existsSync(path.join(publicDir, "index.html"))) {

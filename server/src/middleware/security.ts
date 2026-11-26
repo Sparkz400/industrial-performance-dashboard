@@ -1,4 +1,5 @@
 import rateLimit from "express-rate-limit";
+import type { Request, Response } from "express";
 import { createHash } from "node:crypto";
 import config from "../config/config.js";
 import { PostgresRateLimitStore } from "./postgresRateLimitStore.js";
@@ -41,6 +42,27 @@ export const credentialRateLimit = [
     message: { error: "Too many sign-in attempts. Try again later." },
   }),
 ];
+
+/**
+ * E-signature password checks, per signed-in account and in their own bucket, so routine
+ * signing never uses up the plant's shared sign-in allowance. A wrong password answers
+ * 200 {verified:false}, so failures are recognised from res.locals, not the status code.
+ */
+export const signatureRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  store: new PostgresRateLimitStore("signature-account"),
+  keyGenerator: (req) =>
+    createHash("sha256")
+      .update(`user:${req.session?.userId ?? "anonymous"}`)
+      .digest("hex"),
+  skipSuccessfulRequests: true,
+  requestWasSuccessful: (_req: Request, res: Response) =>
+    res.statusCode < 400 && res.locals.credentialRejected !== true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many signature attempts. Try again later." },
+});
 
 export const rateLimiter = rateLimit({
   windowMs: config.RATE_LIMIT_WINDOW_MS,

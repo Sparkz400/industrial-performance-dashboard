@@ -1,5 +1,5 @@
 /**
- * F07 access matrix: every mounted REST route and tRPC procedure, every non-admin role,
+ * F07 access matrix: every mounted REST route, every non-admin role,
  * with a granted identifier (1), a foreign identifier (2) and no identifier.
  * Router-level role gates can narrow these results further; they never widen them.
  */
@@ -46,7 +46,6 @@ vi.mock("../../services/accessScope.js", async (original) => {
 import { accessScope, type AccessScope } from "../../services/accessScope.js";
 import { authorizeAssetRequest } from "../../middleware/assetAccess.js";
 import { requireMutationAccess, type UserRole } from "../../middleware/auth.js";
-import { appRouter } from "../../trpc/index.js";
 
 const ROLES: UserRole[] = ["viewer", "wallboard", "operator", "supervisor"];
 
@@ -170,7 +169,6 @@ describe("REST access matrix", () => {
     expect([...unscoped].sort()).toEqual([
       "GET /access/me",
       "GET /alarms",
-      "GET /alarms/rules",
       "GET /alerts/history",
       "GET /alerts/rules",
       "GET /dashboards",
@@ -198,67 +196,6 @@ describe("REST access matrix", () => {
     }
     expect(matrix.wallboard).toEqual(matrix.viewer);
     expect(matrix).toMatchSnapshot();
-  });
-});
-
-describe("tRPC access matrix", () => {
-  const procedures = Object.keys(
-    (appRouter as unknown as { _def: { procedures: Record<string, unknown> } })
-      ._def.procedures,
-  ).sort();
-  const call = async (role: UserRole, path: string, input: unknown) => {
-    const caller = appRouter.createCaller({
-      session: { userId: 9, userRole: role },
-    }) as unknown as Record<
-      string,
-      Record<string, (input: unknown) => Promise<unknown>>
-    >;
-    const [group, name] = path.split(".");
-    try {
-      await caller[group][name](input);
-      return "ok";
-    } catch (error) {
-      return (error as { code?: string }).code ?? "error";
-    }
-  };
-
-  it("lists the procedures this matrix covers", () => {
-    expect(procedures).toMatchSnapshot();
-  });
-
-  it("rejects foreign identifiers and non-administrator procedures", async () => {
-    const foreign = { id: 2, machineId: 2, dashboardId: "2", nodeKey: "Count" };
-    for (const role of ROLES) {
-      const passed: string[] = [];
-      for (const path of procedures)
-        if ((await call(role, path, foreign)) !== "FORBIDDEN")
-          passed.push(path);
-      // dashboard.list has no identifiers; its resolver applies dashboardScope.
-      expect(passed, role).toEqual(["dashboard.list"]);
-    }
-  });
-
-  it("allows granted reads and operator acknowledgement only", async () => {
-    const own = { id: 1, machineId: 1, dashboardId: "1", nodeKey: "Count" };
-    for (const role of ROLES) {
-      const passed: string[] = [];
-      for (const path of procedures)
-        if ((await call(role, path, own)) !== "FORBIDDEN") passed.push(path);
-      expect(passed, role).toEqual(
-        [
-          "alarm.list",
-          "alarm.listRules",
-          ...(["operator", "supervisor"].includes(role)
-            ? ["alarm.acknowledge"]
-            : []),
-          "annotation.list",
-          "dashboard.getById",
-          "dashboard.list",
-          "nodeData.aggregates",
-          "nodeData.history",
-        ].sort(),
-      );
-    }
   });
 });
 

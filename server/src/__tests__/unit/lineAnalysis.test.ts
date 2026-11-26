@@ -177,3 +177,36 @@ it("builds a cycle histogram only from ten or more cycles", () => {
   expect(bins[9].count).toBe(1);
   expect(bins.reduce((n, b) => n + b.count, 0)).toBe(10);
 });
+
+it("finds cycles in linear time, even with duplicate links", async () => {
+  const { hasCycle } = await import("../../services/lineAnalysis.js");
+  const ids = Array.from({ length: 15 }, (_, i) => i + 1);
+  // 4 parallel links between each neighbour: the old path walk explored 4^14 paths.
+  const chain = ids
+    .slice(0, -1)
+    .flatMap((from) =>
+      Array.from({ length: 4 }, () => ({ from, to: from + 1 })),
+    );
+  const started = Date.now();
+  expect(hasCycle(ids, chain)).toBe(false);
+  expect(Date.now() - started).toBeLessThan(100);
+  expect(hasCycle(ids, [...chain, { from: 15, to: 3 }])).toBe(true);
+  expect(
+    hasCycle(
+      [1, 2],
+      [
+        { from: 1, to: 2 },
+        { from: 2, to: 1 },
+      ],
+    ),
+  ).toBe(true);
+  expect(
+    hasCycle(
+      [1, 2, 3],
+      [
+        { from: 1, to: 3 },
+        { from: 2, to: 3 },
+      ],
+    ),
+  ).toBe(false);
+});

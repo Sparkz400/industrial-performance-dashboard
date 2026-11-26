@@ -207,7 +207,7 @@ export function westernElectricRules(
   }
 
   // Determine alert type
-  let alertType: WesternElectricResult["alertType"] = "shift";
+  let alertType: WesternElectricResult["alertType"];
   if (triggeredRules.includes("rule1_beyond_3sigma")) {
     alertType = latest > mean ? "ucl_breach" : "lcl_breach";
   } else if (triggeredRules.includes("rule4_8_consecutive_same_side")) {

@@ -20,6 +20,9 @@ vi.mock("../../opc-ua/opcuaClient.js", () => ({
   connectAndSubscribe: mocks.connectAndSubscribe,
 }));
 vi.mock("../../services/machineIdentity.js", () => ({}));
+vi.mock("../../services/collectorLock.js", () => ({
+  holdsCollectorLock: () => true,
+}));
 import multiMachineManager from "../../opc-ua/services/multiMachineManager.js";
 
 const machine = {
@@ -91,4 +94,35 @@ it("applies a disconnect requested during a connect after that connect", async (
   await Promise.all([connecting, disconnecting]);
   expect(only.closed.subscription).toBe(true);
   expect(multiMachineManager.getMachineConnection(7)).toBeUndefined();
+});
+
+it("keeps retrying a machine that is offline at startup, with growing delay", async () => {
+  vi.useFakeTimers();
+  try {
+    const refresh = vi
+      .spyOn(multiMachineManager, "refreshMachineConnection")
+      .mockImplementation(() => multiMachineManager.connectMachine(machine));
+    const up = fakeConnection();
+    mocks.connectAndSubscribe
+      .mockResolvedValueOnce(null)
+      .mockRejectedValueOnce(new Error("PLC still booting"))
+      .mockResolvedValueOnce(up.connection);
+    await multiMachineManager.connectMachine(machine);
+    expect(refresh).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(refresh).toHaveBeenCalledTimes(1);
+    // The second failure waits twice as long.
+    await vi.advanceTimersByTimeAsync(9_999);
+    expect(refresh).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(refresh).toHaveBeenCalledTimes(2);
+    expect(multiMachineManager.getMachineConnection(7)?.connection).toBe(
+      up.connection,
+    );
+    await vi.advanceTimersByTimeAsync(600_000);
+    expect(refresh).toHaveBeenCalledTimes(2);
+    refresh.mockRestore();
+  } finally {
+    vi.useRealTimers();
+  }
 });

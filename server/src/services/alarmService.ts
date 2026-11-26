@@ -503,6 +503,31 @@ export class AlarmEvaluator extends EventEmitter {
     }
   }
 
+  /**
+   * Receipts only guard replays of events at or after a rule's cursor; older events are
+   * already skipped by the cursor. Keep a day for late replays and always keep the cursor's
+   * own receipt, so the table stops growing by one row per rule and sample.
+   */
+  async pruneReceipts(): Promise<number> {
+    // Bounded batches: the first run on an existing install may face millions of rows.
+    let total = 0;
+    for (let round = 0; round < 100; round++) {
+      const result = await db.execute(sql`
+        DELETE FROM alarm_evaluation_receipts WHERE key IN (
+          SELECT r.key FROM alarm_evaluation_receipts r
+          WHERE r.processed_at < now() - interval '1 day'
+            AND NOT EXISTS (
+              SELECT 1 FROM alarm_evaluation_state s
+              WHERE s.rule_id = r.rule_id
+                AND r.key = s.rule_id::text || ':' || (s.state->>'eventId')
+            )
+          LIMIT 10000)`);
+      total += result.rowCount ?? 0;
+      if ((result.rowCount ?? 0) < 10000) break;
+    }
+    return total;
+  }
+
   async acknowledge(
     id: number,
     userId: number,

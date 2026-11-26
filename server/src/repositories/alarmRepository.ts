@@ -1,5 +1,4 @@
 import { eq, and, desc, gte, lte, sql, isNull } from "drizzle-orm";
-import { validateAlarmRule } from "../services/alarmRuleValidation.js";
 import db, { getReadDb } from "../database/db.js";
 import { machineScope } from "../services/accessScope.js";
 import {
@@ -9,56 +8,7 @@ import {
 } from "../database/schema.js";
 
 export const alarmRepository = {
-  // ===== Alert Rules =====
-
-  async listRules(filters?: { machineId?: number; isActive?: boolean }) {
-    const readDb = getReadDb();
-    const conditions = [machineScope(alertRules.machineId)];
-    if (filters?.machineId != null)
-      conditions.push(eq(alertRules.machineId, filters.machineId));
-    if (filters?.isActive != null)
-      conditions.push(eq(alertRules.isActive, filters.isActive));
-
-    return readDb
-      .select()
-      .from(alertRules)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(alertRules.createdAt));
-  },
-
-  async findRuleById(id: number) {
-    const [rule] = await getReadDb()
-      .select()
-      .from(alertRules)
-      .where(and(eq(alertRules.id, id), machineScope(alertRules.machineId)));
-    return rule ?? null;
-  },
-
-  async createRule(input: typeof alertRules.$inferInsert) {
-    validateAlarmRule(input);
-    const [created] = await db.insert(alertRules).values(input).returning();
-    return created;
-  },
-
-  async updateRule(id: number, input: Partial<typeof alertRules.$inferInsert>) {
-    const current = await this.findRuleById(id);
-    if (!current) return null;
-    validateAlarmRule({ ...current, ...input });
-    const [updated] = await db
-      .update(alertRules)
-      .set({ ...input, updatedAt: new Date() })
-      .where(eq(alertRules.id, id))
-      .returning();
-    return updated ?? null;
-  },
-
-  async deleteRule(id: number) {
-    const [deleted] = await db
-      .delete(alertRules)
-      .where(eq(alertRules.id, id))
-      .returning();
-    return deleted ?? null;
-  },
+  // Rule CRUD lives in alertRepository (/alerts/rules); this keeps the evaluator's read.
 
   async getActiveRulesForNode(machineId: number, nodeKey: string) {
     return getReadDb()

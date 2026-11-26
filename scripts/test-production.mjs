@@ -192,7 +192,6 @@ try {
   for (const path of [
     "/api/v1/dashboards",
     "/api/v1/production/shifts",
-    "/api/trpc/dashboard.save",
   ]) {
     assert.equal(
       (await context.request.post(`${apiUrl}${path}`, { data: {} })).status(),
@@ -222,7 +221,7 @@ try {
   }
   for (const [method, path, data] of [
     ["POST", "/api/v1/dashboards", {}],
-    ["POST", "/api/v1/alarms/rules", {}],
+    ["POST", "/api/v1/alerts/rules", {}],
     ["POST", "/api/v1/reports/schedules/1/run-now", {}],
     ["POST", "/api/v1/share/dashboards/x", {}],
     ["GET", "/api/v1/db/status"],
@@ -250,28 +249,8 @@ try {
     ).status(),
     410,
   );
-  const { appRouter } = await import("../server/dist/src/trpc/index.js");
-  const version = (
-    await pool.query("SELECT updated_at FROM users WHERE id=$1", [viewerId])
-  ).rows[0].updated_at.toISOString();
-  const viewerCaller = appRouter.createCaller({
-    session: { userId: viewerId, userRole: "admin", userVersion: version },
-  });
-  await assert.rejects(
-    viewerCaller.dashboard.save({
-      id: "unauthorized",
-      name: "bad",
-      widgets: [],
-      layout: [],
-    }),
-    /Admin access/,
-  );
-  await assert.rejects(
-    appRouter.createCaller({ session: {} }).nodeData.history({ nodeKey: "x" }),
-    /Authentication/,
-  );
   console.log(
-    "PASS: REST, reports, tRPC, metrics and public-share negative access checks",
+    "PASS: REST, reports, metrics and public-share negative access checks",
   );
 
   // Owned OPC UA endpoint, never a configured external endpoint.
@@ -1252,9 +1231,8 @@ try {
     ).status(),
     401,
   );
-  await assert.rejects(viewerCaller.dashboard.list(), /Authentication/);
   console.log(
-    "PASS: logout and account deactivation revoke REST, report exports, tRPC and live streams",
+    "PASS: logout and account deactivation revoke REST, report exports and live streams",
   );
   const { opcuaEmitter: emitter } =
     await import("../server/dist/src/opc-ua/opcuaClient.js");

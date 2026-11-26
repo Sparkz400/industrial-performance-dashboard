@@ -6,7 +6,6 @@ exports[`REST access matrix > matches the reviewed per-role matrix 1`] = `
     "GET /access/me",
     "GET /aggregates",
     "GET /alarms",
-    "GET /alarms/rules",
     "GET /alerts/history",
     "GET /alerts/rules",
     "GET /annotations",
@@ -73,7 +72,6 @@ exports[`REST access matrix > matches the reviewed per-role matrix 1`] = `
     "GET /alarm-review/machines/:id",
     "GET /alarm-review/machines/:id/replay/:ruleId",
     "GET /alarms",
-    "GET /alarms/rules",
     "GET /alerts/history",
     "GET /alerts/rules",
     "GET /annotations",
@@ -177,7 +175,6 @@ exports[`REST access matrix > matches the reviewed per-role matrix 1`] = `
     "GET /access/me",
     "GET /aggregates",
     "GET /alarms",
-    "GET /alarms/rules",
     "GET /alerts/history",
     "GET /alerts/rules",
     "GET /annotations",
@@ -234,7 +231,6 @@ exports[`REST access matrix > matches the reviewed per-role matrix 1`] = `
     "GET /access/me",
     "GET /aggregates",
     "GET /alarms",
-    "GET /alarms/rules",
     "GET /alerts/history",
     "GET /alerts/rules",
     "GET /annotations",
@@ -288,27 +284,4 @@ exports[`REST access matrix > matches the reviewed per-role matrix 1`] = `
     "GET /widget-runtime/registrations",
   ],
 }
-`;
-
-exports[`tRPC access matrix > lists the procedures this matrix covers 1`] = `
-[
-  "alarm.acknowledge",
-  "alarm.clear",
-  "alarm.createRule",
-  "alarm.deleteRule",
-  "alarm.list",
-  "alarm.listRules",
-  "alarm.updateRule",
-  "annotation.create",
-  "annotation.delete",
-  "annotation.list",
-  "annotation.update",
-  "dashboard.delete",
-  "dashboard.getById",
-  "dashboard.list",
-  "dashboard.save",
-  "nodeData.aggregates",
-  "nodeData.history",
-  "status.current",
-]
 `;

@@ -12,6 +12,7 @@ import {
 import { ValidationError, NotFoundError } from "../utils/errors.js";
 import {
   analyzeLine,
+  hasCycle,
   type LineConfig,
   type LineSample,
 } from "../services/lineAnalysis.js";
@@ -75,6 +76,14 @@ router.post(
           }),
         )
         .max(60)
+        // The same buffer twice is a mistake (one link may still carry several buffers).
+        .unique(
+          (a, b) =>
+            a.from === b.from &&
+            a.to === b.to &&
+            a.machineId === b.machineId &&
+            a.nodeKey === b.nodeKey,
+        )
         .required(),
     }),
   ),
@@ -97,12 +106,7 @@ router.post(
       throw new ValidationError(
         "Buffers must link distinct machines in this line",
       );
-    const walk = (id: number, seen: Set<number>): boolean =>
-      seen.has(id) ||
-      config.buffers
-        .filter((b) => b.from === id)
-        .some((b) => walk(b.to, new Set([...seen, id])));
-    if (ids.some((i) => walk(i, new Set())))
+    if (hasCycle(ids, config.buffers))
       throw new ValidationError("Line relationships must not contain cycles");
     if (
       (

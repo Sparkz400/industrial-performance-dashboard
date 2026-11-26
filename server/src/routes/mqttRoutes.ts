@@ -1,9 +1,10 @@
+import { machineRepository } from "../repositories/machineRepository.js";
 import { Router } from "express";
 import Joi from "joi";
 import { randomBytes, X509Certificate } from "node:crypto";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import db from "../database/db.js";
-import { machines, mqttSources, nodeMappings } from "../database/schema.js";
+import { mqttSources, nodeMappings } from "../database/schema.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { validateBody, validateParams } from "../middleware/validation.js";
 import { auditRequest } from "../services/auditLogService.js";
@@ -145,11 +146,8 @@ router.post(
       payloadFormat: "json" | "sparkplug-b";
       mappings: (MqttMapping | SparkplugMapping)[];
     };
-    const [machine] = await db
-      .select({ id: machines.id })
-      .from(machines)
-      .where(eq(machines.id, machineId));
-    if (!machine) throw new NotFoundError("Machine");
+    if (!(await machineRepository.findMachineById(machineId)))
+      throw new NotFoundError("Machine");
     try {
       new X509Certificate(body.caCertificate);
     } catch {

@@ -10,7 +10,7 @@ The behavioral contract and upgrade notes are in [daily operations](DAILY_OPERAT
 | --- | --- |
 | Both builds and client type check | `npm run build`; `npx tsc --noEmit -p client/tsconfig.json` |
 | Unit and coverage suites | 155 server tests, 72 client tests; `npm run test:coverage` |
-| Roles and asset/site isolation | `node scripts/test-access.mjs`: five roles, two sites, REST, tRPC, CSV, live rooms, negative routes, counts, grant revocation, browser grant editing and account cache isolation |
+| Roles and asset/site isolation | `node scripts/test-access.mjs`: five roles, two sites, REST, CSV, live rooms, negative routes, counts, grant revocation, browser grant editing and account cache isolation |
 | Retention and sustained history | `node scripts/test-history.mjs`: 200,000-row raw export, disconnected-reader cursor release, explicit aggregation, concurrent reads/ingestion, policy revision rejection, 5,000-row deletion batches, late historical arrivals, quality summaries |
 | Planning, maintenance, energy | `node scripts/test-daily-workflows.mjs`: calendars/holidays, replay-safe publication, run overlap/stale edits, non-running breaks, immutable canonical snapshots, metered energy, independent reconciliation, required checks and retry-safe service history |
 | Browser daily work | Set `DAILY_BROWSER=1` for the preceding script: saved/published calendar, product run/revision download, German inspection without losing a draft, energy setup, 390-pixel layout, coarse-pointer targets, focus and retention confirmation |

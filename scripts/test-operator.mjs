@@ -339,7 +339,6 @@ export async function testOperator({
     for (const [method, path, data] of [
       ["POST", `${base}/entries`, draft],
       ["POST", "/api/v1/alarms/1/acknowledge", {}],
-      ["POST", "/api/trpc/alarm.acknowledge", { id: 1 }],
       ["POST", "/api/v1/production/shifts/1/reasons", {}],
     ])
       assert.equal(

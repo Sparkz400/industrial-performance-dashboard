@@ -128,3 +128,13 @@ describe('getWidgetsByCategory', () => {
     expect(totalGrouped).toBe(Object.keys(widgetRegistry).length);
   });
 });
+
+describe('widget icons', () => {
+  it('has an explicit icon import for every registered widget', async () => {
+    const { WIDGET_ICONS } = await import('../widgetIcons');
+    const missing = Object.values(widgetRegistry)
+      .map((widget) => widget.icon)
+      .filter((icon) => icon && !WIDGET_ICONS.has(icon));
+    expect(missing).toEqual([]);
+  });
+});

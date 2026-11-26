@@ -1,7 +1,7 @@
 # Integration API contract (v1)
 
 This is the supported, bounded surface for systems that read from the dashboard or
-receive its events. Other `/api/v1` routes and every tRPC procedure serve the
+receive its events. Other `/api/v1` routes serve the
 browser application; they can change without notice and are not part of this
 contract. Integrations must not depend on them.
 

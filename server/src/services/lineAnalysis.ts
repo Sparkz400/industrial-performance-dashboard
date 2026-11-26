@@ -26,6 +26,25 @@ export interface LineConfig {
     capacity: number;
   }[];
 }
+// Linear-time cycle check: each machine is finished once, so duplicate links cannot blow up.
+export function hasCycle(
+  ids: number[],
+  buffers: Pick<LineConfig["buffers"][number], "from" | "to">[],
+): boolean {
+  const next = new Map<number, number[]>();
+  for (const b of buffers)
+    next.set(b.from, [...(next.get(b.from) ?? []), b.to]);
+  const state = new Map<number, 1 | 2>(); // 1 = on the current path, 2 = done
+  const visit = (id: number): boolean => {
+    if (state.get(id) === 1) return true;
+    if (state.get(id) === 2) return false;
+    state.set(id, 1);
+    if ((next.get(id) ?? []).some(visit)) return true;
+    state.set(id, 2);
+    return false;
+  };
+  return ids.some(visit);
+}
 const good = (s: LineSample) =>
   s.value != null &&
   Number.isFinite(s.value) &&

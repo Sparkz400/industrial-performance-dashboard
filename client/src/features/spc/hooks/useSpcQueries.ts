@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { keepSameSubject } from '@/utils/keepSameSubject';
 import { api } from '@/utils/api';
 import { API_ENDPOINTS } from '@/config/config';
 import type { SpcProfile, SpcAlert, SpcChartData } from '@performance-dashboard/shared';
@@ -170,6 +171,7 @@ export function useComputeBaseline() {
 export function useSpcChartData(profileId: number, startDate?: string, endDate?: string) {
   return useQuery({
     queryKey: spcKeys.chartData(profileId, startDate, endDate),
+    placeholderData: keepSameSubject(spcKeys.chartData(profileId).slice(0, 3)),
     queryFn: () => {
       const params = new URLSearchParams();
       if (startDate) params.set('startDate', startDate);

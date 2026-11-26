@@ -302,6 +302,13 @@
       "when": 1793642906453,
       "tag": "0042_security_boundaries",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1795707998767,
+      "tag": "0043_bookkeeping_indexes",
+      "breakpoints": true
     }
   ]
 }

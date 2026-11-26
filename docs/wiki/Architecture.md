@@ -16,7 +16,7 @@ Maintenance correction history is preserved without a fixed count ceiling and
 browsed in pages; shift calculations use a boundary sweep with unchanged evidence rules.
 Short runs do not establish multi-day reliability; physical qualification remains open.
 
-The React client connects to the Node.js server through authenticated REST/tRPC
+The React client connects to the Node.js server through authenticated REST
 and live socket updates. The collector buffers samples on local disk before
 writing PostgreSQL history. Shared TypeScript contracts connect the workspaces.
 

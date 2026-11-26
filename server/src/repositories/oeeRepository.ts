@@ -3,6 +3,8 @@ import db from "../database/db.js";
 import { getReadDb } from "../database/db.js";
 import {
   machineProfiles,
+  machineSites,
+  plants,
   oeeConfig,
   oeeManualEntries,
   opcuaData,
@@ -54,6 +56,17 @@ export const oeeRepository = {
     const { maxGapSeconds, counterPolicy, counterModulus } =
       row.profile as ProductionProfile;
     return { maxGapSeconds, counterPolicy, counterModulus };
+  },
+
+  /** The machine's plant time zone; machines without a site stay on UTC. */
+  async getTimezone(machineId: number): Promise<string> {
+    const [row] = await getReadDb()
+      .select({ timezone: plants.timezone })
+      .from(machineSites)
+      .innerJoin(plants, eq(plants.id, machineSites.plantId))
+      .where(eq(machineSites.machineId, machineId))
+      .limit(1);
+    return row?.timezone ?? "UTC";
   },
 
   async saveConfig(machineId: number, input: OeeConfigInput) {

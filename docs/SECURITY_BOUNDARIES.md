@@ -20,7 +20,7 @@ verification, not an internet penetration test or production qualification.
 | 3   | Use public DB key          | **Not applicable.** This is private PostgreSQL, not a browser-accessible database service. No database credential should be made public. New production installs already use a restricted application role.                                                                                                                                                                                                                                                                               |
 | 4   | Enable RLS                 | Migration 0042 enables and **forces** RLS on machine/dashboard records and their dependent evidence. Every pooled query installs its server-owned scope; missing context denies access. Reads and writes are tested as a non-superuser table owner, including callbacks, concurrent reuse and rollback. Production rejects SUPERUSER/BYPASSRLS roles. This is a backstop for trusted application code, not a boundary against stolen database-owner credentials or multi-company hosting. |
 | 5   | Encrypt sensitive data     | Machine/MQTT/edge/webhook secrets use AES-256-GCM with an independent key file. The prepared deployment verifies database TLS and rejects plaintext database connections. Backup encryption uses streaming AES-256-GCM with per-file nonces, path binding and a separate key; wrong-key/tamper tests pass. Database/spool/report disks still require host-managed encryption; it has not been enabled or certified on this machine.                                                       |
-| 6   | Server-side authentication | REST, tRPC and sockets check server-side identities. Fixed tRPC's omission of the OIDC sign-in time, which previously bypassed the configured maximum identity-provider session age.                                                                                                                                                                                                                                                                                                      |
+| 6   | Server-side authentication | REST and sockets check server-side identities. The unused tRPC endpoint (which had once omitted the OIDC sign-in time) was removed on 2026-11-26.                                                                                                                                                                                                                                                                                                      |
 | 7   | Record access              | Deny-by-default route policy, machine/site grants, scoped exports and socket rooms. Real two-site access/revocation tests passed. Keep declared dashboard assets aligned with widget contents; this remains one-company isolation.                                                                                                                                                                                                                                                        |
 | 8   | Field tampering            | Schemas and explicit writable fields protect account roles and record metadata. Fixed a dashboard body `id` overriding the URL's destination.                                                                                                                                                                                                                                                                                                                                             |
 | 9   | Session cookies            | HttpOnly, SameSite=Lax and two-hour expiry; Secure for HTTPS. Explicit proxy IP/CIDR trust now allows Secure cookies through approved TLS proxies without trusting arbitrary forwarded headers. API responses are no-store.                                                                                                                                                                                                                                                               |
@@ -91,8 +91,7 @@ changes. See [HTTPS configuration](OPERATIONS.md#https-and-trusted-proxies).
 
 Every `/api/v1` route except sign-in and selected-data links passes `requireAuth`,
 `requireMutationAccess` and the deny-by-default `authorizeAssetRequest` allowlist.
-tRPC procedures map onto the same allowlist; mutations other than alarm
-acknowledgement are administrator-only. Socket clients join only
+Socket clients join only
 `access:admin` or `access:machine:<id>` rooms derived from their signed session.
 
 | Check                                                                                                                                                                                                               | Where                                                                                                   |
@@ -101,11 +100,10 @@ acknowledgement are administrator-only. Socket clients join only
 | Reviewed per-role allow-list, frozen as a snapshot; any policy change fails until reviewed                                                                                                                          | `__snapshots__/accessMatrix.test.ts.snap`                                                               |
 | Foreign identifiers reach only five scoped list routes and eight supervisor routes whose handlers check every referenced machine                                                                                    | same test; real-database proof in `scripts/test-access.mjs` and `scripts/test-supervisor-workflows.mjs` |
 | Viewer and wallboard accounts have no write route                                                                                                                                                                   | same test                                                                                               |
-| All tRPC procedures: foreign identifiers refused; granted reads and operator acknowledgement only                                                                                                                   | same test                                                                                               |
-| Anonymous requests refused on every inventoried route, tRPC and `/metrics`                                                                                                                                          | `server/src/__tests__/integration/anonymous.test.ts`                                                    |
+| Anonymous requests refused on every inventoried route and `/metrics`                                                                                                                                                | `server/src/__tests__/integration/anonymous.test.ts`                                                    |
 | No server code broadcasts to every socket                                                                                                                                                                           | `accessMatrix.test.ts`                                                                                  |
 
-An independent read of every allowed handler, tRPC procedure and socket event found
+An independent read of every allowed handler, the former tRPC procedures and socket events found
 and closed:
 
 - **Alarm events reached every signed-in socket.** `alertTriggered`, `alertUpdated`,
@@ -124,7 +122,7 @@ Background work (alarm evaluation, report jobs, webhook delivery, retention, hea
 incidents) runs without an account scope. It delivers only to administrator-configured
 destinations (webhooks, SMTP recipients) and never to an account directly; anything
 pushed to signed-in browsers goes through machine rooms. Two-site evidence covers
-history, live rooms, exports, alarm history and alarm rules on REST and tRPC, and
+history, live rooms, exports, alarm history and alarm rules on REST, and
 immediate revocation (`scripts/test-access.mjs`).
 
 Single-company limits: site/asset grants isolate machines inside one installation.

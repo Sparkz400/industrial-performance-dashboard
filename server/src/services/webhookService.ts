@@ -58,6 +58,10 @@ export const MAX_DELIVERY_ATTEMPTS = 100;
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 let pending: Promise<void> | undefined;
+const DELIVERY_WORKERS = 4;
+// A claimed delivery is retried after this long if the sender dies mid-send (at-least-once;
+// receivers deduplicate on X-Webhook-Delivery-Id). Longer than the 10 s send timeout.
+const CLAIM_MS = 120_000;
 let stopped = true;
 
 export const webhookService = {
@@ -85,7 +89,16 @@ export const webhookService = {
     if (!stopped) return;
     stopped = false;
     const tick = () => {
-      pending = this.processDeliveries()
+      let busy = false;
+      // A few deliveries in parallel so one slow receiver cannot hold up an alarm storm.
+      pending = Promise.all(
+        Array.from({ length: DELIVERY_WORKERS }, () =>
+          this.processDeliveries(),
+        ),
+      )
+        .then((worked) => {
+          busy = worked.some(Boolean);
+        })
         .catch((error) => {
           logger.error(
             "Webhook delivery worker failed; pending events retained",
@@ -94,7 +107,8 @@ export const webhookService = {
         })
         .finally(() => {
           pending = undefined;
-          if (!stopped) timer = setTimeout(tick, 1000);
+          // Keep going while there is work; idle once the queue is empty.
+          if (!stopped) timer = setTimeout(tick, busy ? 0 : 1000);
         });
     };
     tick();
@@ -106,9 +120,11 @@ export const webhookService = {
     await pending;
   },
 
-  async processDeliveries(): Promise<void> {
-    // Lock one delivery at a time; multiple application instances cannot send it concurrently.
-    await db.transaction(async (tx) => {
+  /** Sends at most one due delivery; returns whether there was one to handle. */
+  async processDeliveries(): Promise<boolean> {
+    // Claim one delivery in a short transaction (other instances skip it), then send outside
+    // it: holding a transaction and a pooled connection through a 10 s HTTP call starved the pool.
+    const claimed = await db.transaction(async (tx) => {
       const [delivery] = await tx
         .select()
         .from(webhookDeliveries)
@@ -122,7 +138,7 @@ export const webhookService = {
         .orderBy(asc(webhookDeliveries.nextAttemptAt))
         .limit(1)
         .for("update", { skipLocked: true });
-      if (!delivery) return;
+      if (!delivery) return null;
       const event = delivery.event as {
         type?: string;
         payload?: { id?: number; machineId?: number };
@@ -157,7 +173,7 @@ export const webhookService = {
               ),
             })
             .where(eq(webhookDeliveries.id, delivery.id));
-          return;
+          return "deferred" as const;
         }
       }
       const [destination] = await tx
@@ -174,47 +190,69 @@ export const webhookService = {
           preserved.rows[0]?.destination_digest ===
             cmmsDestinationDigest(destination);
       }
-      const result = !(destination?.isActive && reviewedDestination)
-        ? {
-            success: false,
-            statusCode: 0,
-            message: destination?.isActive
-              ? "Destination changed after the handoff was reviewed"
-              : "Destination is inactive or deleted",
-          }
-        : destination.kind === "email"
-          ? await deliverEmail(
-              destination,
-              delivery.event as WebhookEvent,
-              delivery.id,
-            )
-          : await deliverWebhook(
-              destination,
-              {
-                id: delivery.id,
-                schemaVersion: delivery.schemaVersion,
-                ...(delivery.event as WebhookEvent),
-              },
-              delivery.id,
-            );
-      const attempts = delivery.attempts + 1;
       await tx
         .update(webhookDeliveries)
-        .set({
-          attempts,
-          lastStatus: result.statusCode,
-          lastError: result.success ? null : result.message.slice(0, 500),
-          deliveredAt: result.success ? new Date() : null,
-          deadLetteredAt:
-            !result.success && attempts >= MAX_DELIVERY_ATTEMPTS
-              ? new Date()
-              : null,
-          nextAttemptAt: new Date(
-            Date.now() + Math.min(900000, 1000 * 2 ** Math.min(attempts, 10)),
-          ),
-        })
+        .set({ nextAttemptAt: new Date(Date.now() + CLAIM_MS) })
         .where(eq(webhookDeliveries.id, delivery.id));
+      return { delivery, destination, reviewedDestination };
     });
+    if (!claimed) return false;
+    if (claimed === "deferred") return true;
+    const { delivery, destination, reviewedDestination } = claimed;
+    const result = !(destination?.isActive && reviewedDestination)
+      ? {
+          success: false,
+          statusCode: 0,
+          message: destination?.isActive
+            ? "Destination changed after the handoff was reviewed"
+            : "Destination is inactive or deleted",
+        }
+      : destination.kind === "email"
+        ? await deliverEmail(
+            destination,
+            delivery.event as WebhookEvent,
+            delivery.id,
+          )
+        : await deliverWebhook(
+            destination,
+            {
+              id: delivery.id,
+              schemaVersion: delivery.schemaVersion,
+              ...(delivery.event as WebhookEvent),
+            },
+            delivery.id,
+          );
+    const attempts = delivery.attempts + 1;
+    await db
+      .update(webhookDeliveries)
+      .set({
+        attempts,
+        lastStatus: result.statusCode,
+        lastError: result.success ? null : result.message.slice(0, 500),
+        deliveredAt: result.success ? new Date() : null,
+        deadLetteredAt:
+          !result.success && attempts >= MAX_DELIVERY_ATTEMPTS
+            ? new Date()
+            : null,
+        nextAttemptAt: new Date(
+          Date.now() + Math.min(900000, 1000 * 2 ** Math.min(attempts, 10)),
+        ),
+      })
+      .where(eq(webhookDeliveries.id, delivery.id));
+    return true;
+  },
+
+  /** Delivered rows are kept 30 days for inspection; dead letters stay until reviewed. */
+  async pruneDelivered(): Promise<number> {
+    let total = 0;
+    for (let round = 0; round < 100; round++) {
+      const result = await db.execute(
+        sql`DELETE FROM webhook_deliveries WHERE id IN (SELECT id FROM webhook_deliveries WHERE delivered_at < now() - interval '30 days' LIMIT 10000)`,
+      );
+      total += result.rowCount ?? 0;
+      if ((result.rowCount ?? 0) < 10000) break;
+    }
+    return total;
   },
 
   async listDeliveries() {

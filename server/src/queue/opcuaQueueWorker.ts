@@ -165,11 +165,11 @@ export class OpcuaQueueWorker {
     return accepted;
   }
 
-  async processBatch(): Promise<void> {
-    let batch = await this.fence(
-      await this.getSpool().peek(config.OPCUA_BATCH_SIZE),
-    );
-    if (!batch.length) return;
+  /** Returns how many spooled rows this pass took, so a full batch can drain the backlog at once. */
+  async processBatch(): Promise<number> {
+    const peeked = await this.getSpool().peek(config.OPCUA_BATCH_SIZE);
+    let batch = await this.fence(peeked);
+    if (!batch.length) return 0;
     try {
       await this.write(batch);
     } catch (error) {
@@ -201,13 +201,18 @@ export class OpcuaQueueWorker {
     await this.getSpool().acknowledge(batch);
     this.writeFailure = null;
     this.commits.push({ at: Date.now(), count: batch.length });
+    return peeked.length;
   }
 
   start(): void {
     if (this.pending || this.timer) return;
     this.stopped = false;
     const tick = () => {
+      let backlog = false;
       this.pending = this.processBatch()
+        .then((taken) => {
+          backlog = taken >= config.OPCUA_BATCH_SIZE;
+        })
         .catch((error) => {
           logger.error(
             "Measurement write failed; samples retained on disk for retry",
@@ -216,8 +221,12 @@ export class OpcuaQueueWorker {
         })
         .finally(() => {
           this.pending = undefined;
+          // A full batch means more rows are waiting: drain them now instead of idling.
           if (!this.stopped)
-            this.timer = setTimeout(tick, config.OPCUA_QUEUE_DELAY);
+            this.timer = setTimeout(
+              tick,
+              backlog ? 0 : config.OPCUA_QUEUE_DELAY,
+            );
         });
     };
     tick();

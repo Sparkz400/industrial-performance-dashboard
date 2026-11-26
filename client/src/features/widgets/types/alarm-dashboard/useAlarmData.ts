@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSnackbar } from 'notistack';
 import { API_ENDPOINTS } from '@/config/config';
+import { protectedFetch } from '@/utils/protectedFetch';
 import { useStatusStore } from '@/stores/useStatusStore';
 import type { AlarmEvent } from '@/types';
 
@@ -123,21 +125,26 @@ export function useAlarmData(): UseAlarmDataReturn {
     };
   }, [socket, socketConnected]);
 
-  const acknowledgeAlarm = useCallback(async (id: number) => {
-    try {
-      const response = await fetch(API_ENDPOINTS.alarms.acknowledge(id), {
-        method: 'POST',
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-      const { alarm } = await response.json();
-      setData((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, ...alarm, status: alarm.status } : a)),
-      );
-    } catch (err) {
-      console.error('Error acknowledging alarm:', err);
-    }
-  }, []);
+  const { enqueueSnackbar } = useSnackbar();
+  const acknowledgeAlarm = useCallback(
+    async (id: number) => {
+      try {
+        // protectedFetch adds the CSRF token; plain fetch was refused with 403 on every click.
+        const response = await protectedFetch(API_ENDPOINTS.alarms.acknowledge(id), {
+          method: 'POST',
+        });
+        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+        const { alarm } = await response.json();
+        setData((prev) =>
+          prev.map((a) => (a.id === id ? { ...a, ...alarm, status: alarm.status } : a)),
+        );
+      } catch (err) {
+        console.error('Error acknowledging alarm:', err);
+        enqueueSnackbar('The alarm could not be acknowledged', { variant: 'error' });
+      }
+    },
+    [enqueueSnackbar],
+  );
 
   return { data, loading, error, acknowledgeAlarm };
 }

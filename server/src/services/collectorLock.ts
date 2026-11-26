@@ -88,6 +88,16 @@ function watch(client: PoolClient) {
 /** Whether this process collects: only the lock holder connects to machines or ships history. */
 export const holdsCollectorLock = () => holder !== undefined;
 
+/** True when a different database session holds the collector lock (an active collector elsewhere). */
+export async function collectorLockHeldElsewhere(): Promise<boolean> {
+  if (holder) return false;
+  const { rows } = await manager.pool.query(
+    "SELECT EXISTS (SELECT 1 FROM pg_locks WHERE locktype='advisory' AND classid=0 AND objid=$1 AND objsubid=1 AND granted) AS held",
+    [COLLECTOR_LOCK_KEY],
+  );
+  return rows[0].held === true;
+}
+
 export async function acquireCollectorLock(
   taken: () => void,
   retryEveryMs = 5000,

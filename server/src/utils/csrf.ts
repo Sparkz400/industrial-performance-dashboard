@@ -88,7 +88,7 @@ export const fetchCsrfToken = async (csrfEndpoint: string): Promise<string> => {
     let data: Record<string, string>;
     try {
       data = await response.json();
-    } catch (_error) {
+    } catch (error) {
       const headerToken = response.headers.get(CSRF_HEADER_NAME);
       if (headerToken) {
         storeCsrfToken(headerToken);
@@ -96,6 +96,7 @@ export const fetchCsrfToken = async (csrfEndpoint: string): Promise<string> => {
       }
       throw new Error(
         "Failed to parse CSRF token response and no token header found",
+        { cause: error },
       );
     }
 
